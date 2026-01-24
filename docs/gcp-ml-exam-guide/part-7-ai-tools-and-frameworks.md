@@ -2825,9 +2825,41 @@ Regardless of vendor/framework, the same controls repeat:
 
 These are not frameworks, but they matter in real engineering orgs (policy, security, workflows):
 
-- **Coding assistants**: GitHub Copilot, Codeium, Replit Ghostwriter, “AI code review” tools (varies by org).
-- **AI-native IDEs / coding agents**: Cursor (`https://www.cursor.com/`), Claude Code (Anthropic), etc.
+- **Coding assistants**: GitHub Copilot, Codeium, Replit Ghostwriter, "AI code review" tools (varies by org).
+- **AI-native IDEs / coding agents**: Cursor (`https://www.cursor.com/`), Claude Code (Anthropic), **Google Antigravity** (`https://antigravity.google/`).
 - **General assistants**: ChatGPT, Claude, Gemini, Perplexity, Microsoft Copilot.
+
+#### Google Antigravity (Desktop Agent Development Tool)
+
+**Google Antigravity** is Google's desktop application for building and orchestrating AI agents. Launched November 2025.
+
+| Aspect | Details |
+|--------|---------|
+| **Platform** | macOS (Apple Silicon + Intel); enterprise version coming soon |
+| **Price** | Free for individual developers |
+| **Model support** | Gemini 3 Flash, Nano Banana Pro |
+| **Use cases** | UX automation (browser-in-the-loop), production artifact generation, multi-agent orchestration |
+
+**Key features**:
+- **Browser-in-the-loop agents**: Automate repetitive UX tasks via browser automation (similar to Browser Use)
+- **Agent Manager**: Orchestrate multiple agents across workspaces; reduce context switching
+- **Production artifacts**: Generate thoroughly designed code with comprehensive verification tests
+- **Verification tests**: Built-in testing for agent outputs
+
+**When to use Antigravity**:
+- You want a **desktop-native experience** for agent development (not cloud-first)
+- You need **browser automation** built into the development workflow
+- You prefer **Google's agent stack** (Gemini models) vs. OpenAI/Anthropic-first tools
+
+**Comparison with other AI IDEs**:
+
+| Tool | Focus | Models | Browser Automation |
+|------|-------|--------|-------------------|
+| **Google Antigravity** | Agent development + orchestration | Gemini 3, Nano Banana Pro | ✅ Built-in |
+| **Cursor** | General coding + AI assistance | Multiple (OpenAI, Anthropic, etc.) | ❌ |
+| **Claude Code** | Agentic coding with Claude | Claude models | ❌ |
+
+Source: [https://antigravity.google/](https://antigravity.google/)
 - **Automation / app builders**: Zapier, Make, n8n (AI nodes), voice-agent builders, no/low-code agent builders.
 - **Business suites**: Intercom/Zendesk/HubSpot AI features, etc.
 

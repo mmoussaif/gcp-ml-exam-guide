@@ -106,6 +106,25 @@ These posts from the [Google Developers Blog](https://developers.googleblog.com/
 - **What**: AI agent for code review, integrated into dev workflows
 - **Pattern**: Specialized single-purpose agent with deep domain expertise
 
+#### Google Antigravity: Desktop Agent Development Tool
+
+- **Source**: [https://antigravity.google/](https://antigravity.google/)
+- **Launched**: November 2025
+- **What**: Desktop application (macOS) for building and orchestrating AI agents
+- **Pricing**: Free for developers; enterprise version coming soon
+- **Key capabilities**:
+  | Feature | Description |
+  |---------|-------------|
+  | **Browser-in-the-loop agents** | Automate UX development and repetitive tasks via browser automation |
+  | **Agent Manager** | Orchestrate agents across workspaces; reduce context switching |
+  | **Production artifacts** | Generate production-ready code with comprehensive verification tests |
+  | **Model support** | Gemini 3 Flash, Nano Banana Pro |
+- **Target personas**: Professional, Frontend, Full Stack developers
+- **Related blog posts**:
+  - "Gemini 3 Flash in Google Antigravity" (Dec 17, 2025)
+  - "Nano Banana Pro in Google Antigravity" (Nov 20, 2025)
+  - "Introducing Google Antigravity" (Nov 18, 2025)
+
 #### Confidential AI on Google Cloud
 
 - **Source**: [Don't Trust, Verify: Building End-to-End Confidential Applications on Google Cloud](https://developers.googleblog.com/dont-trust-verify-building-end-to-end-confidential-applications-on-google-cloud/)
