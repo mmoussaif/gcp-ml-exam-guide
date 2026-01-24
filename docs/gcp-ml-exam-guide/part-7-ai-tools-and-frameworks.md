@@ -1858,6 +1858,34 @@ Official docs: [docs.crewai.com](https://docs.crewai.com/)
 | **Crew**    | A team of agents working together                 |
 | **Process** | How tasks are executed (sequential, hierarchical) |
 
+**Agent**: Autonomous entity with:
+
+- **Role**: Function and expertise (e.g., "Senior Technical Writer")
+- **Goal**: Individual objective (e.g., "Craft a publication-ready article")
+- **Backstory**: Context and personality (e.g., "Seasoned researcher with knack for uncovering latest AI developments")
+- Can use tools, make decisions, collaborate, maintain memory, delegate tasks
+
+**Task**: Specific assignment with:
+
+- **Description**: Clear action the agent must complete
+- **Assigned Agent**: Who is responsible
+- **Execution Strategy**: Sequential or hierarchical
+- **Dependencies**: Input from other agents (if any)
+- **Expected Output**: Well-defined goal for success evaluation
+
+**Crew**: Structured team of agents working together:
+
+- Orchestrates task assignment, execution, and handoffs
+- Manages workflow between agents
+- Supports sequential (one after another) or hierarchical (manager delegates) execution
+
+**Best practices**:
+
+- **Role definition**: Spend time crafting Role, Goal, and Backstory - these control most of agent behavior. Keywords like "Senior", "Expert", "Head" are highly effective.
+- **Tool selection**: Equip agents with only essential tools for their tasks (more tools ≠ better results)
+- **YAML configuration**: Use YAML files to decouple agent/task definitions from code for better maintainability
+- **Multi-agent over single-agent**: Use specialized agents instead of one "do-everything" agent for better focus and accuracy
+
 #### CrewAI: Research team example
 
 ```python
