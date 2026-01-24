@@ -1007,6 +1007,35 @@ Foundation models are powerful, but they have predictable limitations. Grounding
 
 **EXAM TIP:** Questions about "semantic search" → think **dense embeddings**. Questions about "keyword matching" → think **sparse embeddings**. Questions about "production RAG" → think **hybrid search**.
 
+#### What are Vector Databases?
+
+**Objective**: Vector databases store unstructured data (text, images, audio, video, etc.) in the form of **vector embeddings**—numerical vectors that capture the essential features and characteristics of the underlying data.
+
+**Key concepts**:
+
+- **Not new**: Vector databases have existed for a long time and are used in recommendation systems, search engines, and many applications you interact with daily.
+- **Embeddings**: Each data point (word, document, image, etc.) is transformed into a numerical vector using ML techniques. These vectors capture semantic characteristics—similar entities cluster together in the embedding space.
+- **Similarity operations**: Once stored as vectors, we can perform sophisticated operations like similarity search, clustering, and classification over unstructured data, which is difficult with traditional databases.
+
+**Real-world examples**:
+
+- **E-commerce recommendations**: When a website suggests similar items or searches for products based on a query, vector databases are often used behind the scenes.
+- **Image organization**: Photo apps can organize images by visual similarity (beaches, mountains, cities) rather than just date/location, using vector representations of color, shapes, textures, and objects.
+- **Semantic search**: Finding documents or content based on meaning rather than exact keyword matches.
+
+**How it works**:
+
+1. **Encoding**: Transform unstructured data into vector embeddings using ML models (e.g., BERT for text, CLIP for images).
+2. **Storage**: Store embeddings in a vector database optimized for similarity search.
+3. **Query**: Encode query into a vector and find nearest neighbors in the embedding space.
+4. **Retrieval**: Return original objects corresponding to similar vectors.
+
+**Why vector databases matter**:
+
+- **Semantic understanding**: Can find similar content even when exact keywords don't match (e.g., "AI" vs "artificial intelligence").
+- **Multimodal**: Can handle text, images, audio, video in the same system.
+- **Scalable**: Efficient similarity search even with millions/billions of vectors.
+
 #### Vector Search Algorithms
 
 | Algorithm                                     | Description                                           | Trade-offs                                                                          |
