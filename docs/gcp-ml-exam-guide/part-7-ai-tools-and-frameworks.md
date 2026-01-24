@@ -2439,6 +2439,181 @@ class BookWriterFlow(Flow[BookState]):
 
 **EXAM TIP:** Questions about "event-driven workflows" or "conditional task execution" → think **CrewAI Flows** with `@start()`, `@listen()`, `or_()`, `and_()`, `@router()`. Questions about "state management" → think **unstructured** (flexible) vs **structured** (Pydantic schema) state.
 
+#### Advanced CrewAI Techniques
+
+**Guardrails**: Enforce constraints to ensure agents produce reliable and expected outputs.
+
+**Why guardrails?**: Without constraints, agents can hallucinate, enter infinite loops, or make unreliable decisions. Guardrails ensure agents stay on track and maintain quality standards.
+
+**Guardrail function structure**:
+
+- Must return tuple: `(Boolean, result_or_error)`
+  - First value: `True` (success) or `False` (failure)
+  - Second value: Validated result (if success) or error message string (if failure)
+- Must accept one parameter: the output of the Agent
+
+**Example: Length validation**:
+
+```python
+def validate_summary_length(task_output):
+    word_count = len(task_output.split())
+    if word_count > 150:
+        return (False, f"Summary is {word_count} words. Must be under 150 words.")
+    if word_count == 0:
+        return (False, "Summary cannot be empty.")
+    return (True, task_output)
+
+task = Task(
+    description="Summarize research paper in under 150 words",
+    agent=summarizer_agent,
+    guardrails=[validate_summary_length],
+    max_retries=3  # Default is 3
+)
+```
+
+**Example: JSON validation**:
+
+```python
+def validate_json_report(task_output):
+    try:
+        data = json.loads(task_output)
+        required_fields = ["title", "summary", "key_points"]
+        missing = [f for f in required_fields if f not in data]
+        if missing:
+            return (False, f"Missing required fields: {missing}")
+        return (True, task_output)
+    except json.JSONDecodeError:
+        return (False, "Invalid JSON format. Check syntax.")
+
+task = Task(
+    description="Generate research report in JSON format",
+    agent=researcher_agent,
+    output_pydantic=ResearchReport,  # Also validates structure
+    guardrails=[validate_json_report],
+    max_retries=3
+)
+```
+
+**Guardrail retry mechanism**:
+
+- When guardrail returns `(False, error)`, error message is sent to Agent
+- Agent considers error and retries to fix the issue
+- Cycle repeats until `(True, result)` OR `max_retries` reached
+- Default `max_retries=3`
+
+**Best practices**:
+
+- Provide clear error messages (not just "Output is invalid") - Agent uses these to improve
+- Apply guardrails where errors cause serious problems:
+  - Data validation (JSON, CSV, financial reports)
+  - Length constraints (Twitter posts, summaries)
+  - Fact-checking outputs (news, research)
+- Always set maximum retry limit to prevent wasted API calls
+- Note: If using Pydantic `output_pydantic`, validation is automatic (may not need separate guardrail)
+
+**Referencing Tasks and Outputs**: Allow agents to dynamically use previous task results.
+
+**TaskOutput class**: Each task produces a `TaskOutput` object with fields:
+
+- `description`: Task description
+- `summary`: First 10 words of description
+- `raw`: Raw AI-generated output
+- `pydantic`: Structured Pydantic model output (if any)
+- `json_dict`: JSON dictionary output
+
+**Accessing outputs**:
+
+```python
+# Access task output
+research_output = research_task.output.raw
+research_pydantic = research_task.output.pydantic
+
+# Reference in next task
+blog_task = Task(
+    description="Write blog post",
+    agent=writer_agent,
+    context=[research_task, analysis_task]  # References previous outputs
+)
+```
+
+**Benefits**:
+
+- Chain multiple AI-generated outputs for complex workflows
+- Avoid redundant AI generations by reusing previous results
+- Pass structured JSON/Pydantic models between tasks for better accuracy
+- Useful for debugging (understand what tasks produce what outputs)
+
+**Asynchronous Task Execution**: Run independent tasks in parallel to optimize performance.
+
+**When to use async**:
+
+- Tasks are independent (no dependencies)
+- Some tasks take longer than others (web scraping, deep research)
+- Need to maximize efficiency
+
+**Implementation**:
+
+```python
+# Independent tasks can run in parallel
+research_task = Task(
+    description="Research AI breakthroughs",
+    agent=researcher_agent,
+    async_execution=True  # Enable parallel execution
+)
+
+regulation_task = Task(
+    description="Analyze AI regulations",
+    agent=policy_agent,
+    async_execution=True  # Runs simultaneously with research_task
+)
+
+# Dependent task waits for both
+report_task = Task(
+    description="Create report from research and regulations",
+    agent=writer_agent,
+    context=[research_task, regulation_task]  # Waits for both
+)
+```
+
+**Benefits**:
+
+- Reduces overall execution time
+- Maximizes efficiency for independent tasks
+- Tasks run simultaneously instead of sequentially
+
+**Callbacks**: Execute functions immediately after task completion.
+
+**Use cases**:
+
+- Store results in database or file
+- Trigger another process (run Python script)
+- Send notifications
+- Logging and monitoring
+
+**Implementation**:
+
+```python
+def save_research_callback(task_output):
+    # Save to file
+    with open("research_results.txt", "w") as f:
+        f.write(task_output.raw)
+    print("Research saved to file!")
+
+research_task = Task(
+    description="Research latest AI news",
+    agent=researcher_agent,
+    callback=save_research_callback  # Executes after task completes
+)
+```
+
+**Callback execution**:
+
+- Runs automatically after task completes
+- Receives task output as parameter
+- Can perform any post-processing action
+
+**EXAM TIP:** Questions about "validating AI outputs" or "ensuring constraints" → think **guardrails** with retry mechanism. Questions about "parallel task execution" → think **async_execution=True** for independent tasks. Questions about "post-processing" or "logging" → think **callbacks**.
+
 ---
 
 ### LangGraph — State Machine Orchestration for Agents
