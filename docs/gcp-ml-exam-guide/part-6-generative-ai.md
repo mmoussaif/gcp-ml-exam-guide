@@ -63,6 +63,22 @@ flowchart TB
   A --> App[Applications\nchat/apps/workflows]
 ```
 
+#### The infrastructure layer (what it provides, and why it matters)
+
+The infrastructure layer is the **hardware + software foundation** that provides the compute, storage, and networking required to train, serve, and scale GenAI systems—especially large models with heavy data and compute needs.
+
+**What “good AI infrastructure” includes**
+
+- **High-performance compute**: accelerators like **GPUs** and **TPUs** for training and inference (and clusters to scale them).
+- **High-performance storage**: capacity + fast access to very large datasets (often at TB/PB scale) so training isn’t bottlenecked on I/O.
+- **Networking**: high-bandwidth, low-latency communication so distributed training/serving can coordinate efficiently.
+
+**Quiz-style takeaway (when you’re not using a managed platform)**
+
+If you aren’t building on a platform that abstracts infrastructure, you need to plan infrastructure requirements for **all** stages:
+
+- **Data collection/prep**, **model training**, **model deployment**, **model refinement**, and **model monitoring**.
+
 #### The platform layer (Vertex AI as the “glue”)
 
 The platform layer is what makes complex ML/GenAI systems practical to build and operate. It brings the pieces together—**infrastructure, models, data access, deployment, security, and operations**—behind consistent APIs and workflows.

@@ -199,6 +199,7 @@
 - Definitions: AI ⊃ ML ⊃ GenAI (GenAI creates new content; ML learns a model from data; AI is the broader goal)
 - DL/foundation/GenAI: deep learning (neural nets) underpins foundation models; GenAI is an application of these models to generate new content
 - GenAI layers (leader mental model): infrastructure → models → platform → agents → applications (apps are just the top layer)
+- Infrastructure layer: compute (GPUs/TPUs), storage, networking; if no managed platform, plan infra for data prep + training + deployment + refinement + monitoring
 - Platform layer (Vertex AI): the “glue” that unifies infra + models + deployment + MLOps (pipelines/metadata/monitoring) + security/IAM
 - Vertex AI MLOps: model registry + evaluation + pipelines (orchestration) + monitoring (skew/drift/perf degradation)
 - Model layer (Vertex AI): Model Garden for ready models (Google/partners/open) + tuning; choose custom training when you need full control
