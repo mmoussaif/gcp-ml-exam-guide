@@ -149,6 +149,11 @@
 | Estimate LLM cost / check context window fit         | Count tokens (Vertex AI `countTokens`, tiktoken, HF tokenizer)                    |
 | Input silently truncated / weird special chars       | Tokenization issue — use model's matched tokenizer, handle truncation explicitly  |
 | Multilingual text uses way more tokens than expected | Non-Latin scripts often 2–3x tokens — test with representative samples            |
+| Build agent on GCP with code-first control           | ADK (Agent Development Kit) → deploy to Vertex AI Agent Engine                    |
+| Need role-based multi-agent team quickly             | CrewAI (Agents + Tasks + Crew with sequential/hierarchical process)               |
+| Need explicit state machine control for agents       | LangGraph (StateGraph + conditional edges + checkpointer)                         |
+| Traditional RAG misses context / needs refinement    | Agentic RAG: agent decides when to retrieve, multi-hop + query rewriting          |
+| Complex workflow needs specialist delegation         | Supervisor pattern (manager agent + specialist agents)                            |
 
 ### Common Exam Traps
 

@@ -271,6 +271,697 @@ Example table: agent and LLM application frameworks
 | Classic assistants/chatbots  | Rasa                                                  |
 | Vendor-native                | OpenAI (Agents/SDK patterns), Semantic Kernel, Vellum |
 
+---
+
+## 7.5.3 Deep Dive: Agent Frameworks with Code Examples
+
+This section provides implementation-ready code snippets for the most important agent frameworks.
+
+### Vertex AI Agent Engine (Google Cloud's Managed Agent Platform)
+
+**Vertex AI Agent Engine** is Google Cloud's managed runtime for deploying, scaling, and operating AI agents in production. It handles infrastructure, scaling, traffic management, and integrates with Vertex AI's MLOps ecosystem.
+
+#### Key capabilities
+
+| Capability             | Description                                                                  |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| **Managed deployment** | Deploy agents built with ADK or custom code; auto-scaling, traffic splitting |
+| **Tool orchestration** | Built-in support for function calling, grounding, and tool execution         |
+| **Session management** | Conversation state, memory persistence across turns                          |
+| **Evaluation**         | Integrated agent evaluation and testing workflows                            |
+| **Observability**      | Logging, tracing, metrics for agent behavior (latency, tool calls, errors)   |
+| **Safety**             | Content filters, guardrails, and AI red teaming integration                  |
+
+#### Agent Engine vs Agent Builder
+
+| Concept                         | What It Is                                                                            |
+| ------------------------------- | ------------------------------------------------------------------------------------- |
+| **Vertex AI Agent Builder**     | Visual/low-code UI for building agents (playbooks, data stores, tools)                |
+| **Vertex AI Agent Engine**      | Runtime/infrastructure for deploying agents (from ADK, custom code, or Agent Builder) |
+| **ADK (Agent Development Kit)** | Code-first Python SDK for building agents programmatically                            |
+
+**EXAM TIP:** When a question says "production deployment" + "managed" + "traffic splitting" + "agents" → think **Agent Engine**. When it says "code-first" + "custom logic" → think **ADK**.
+
+---
+
+### ADK (Agent Development Kit) — Google's Code-First Agent Framework
+
+**ADK** is Google's open-source Python framework for building agents that can be deployed to Vertex AI Agent Engine or run locally.
+
+Official repo: `https://github.com/google/adk-python`
+
+#### ADK core concepts
+
+| Concept     | Description                                                                            |
+| ----------- | -------------------------------------------------------------------------------------- |
+| **Agent**   | The main orchestrator — decides what to do, calls tools, maintains state               |
+| **Tool**    | A callable function the agent can invoke (API calls, database queries, code execution) |
+| **Session** | Conversation context and memory                                                        |
+| **Runner**  | Executes the agent locally or remotely                                                 |
+
+#### ADK: Simple agent with tools
+
+```python
+from google.adk import Agent, Tool
+from google.adk.tools import FunctionTool
+
+# Define a tool as a Python function
+def get_weather(city: str) -> str:
+    """Get current weather for a city."""
+    # In production, call a real weather API
+    return f"Weather in {city}: 72°F, sunny"
+
+def search_database(query: str) -> str:
+    """Search internal knowledge base."""
+    # In production, query your vector DB or search service
+    return f"Found 3 results for '{query}': [doc1, doc2, doc3]"
+
+# Wrap functions as tools
+weather_tool = FunctionTool(get_weather)
+search_tool = FunctionTool(search_database)
+
+# Create agent with tools
+agent = Agent(
+    name="assistant",
+    model="gemini-2.0-flash",
+    instruction="""You are a helpful assistant.
+    Use the weather tool for weather questions.
+    Use the search tool for knowledge base queries.
+    Always cite your sources.""",
+    tools=[weather_tool, search_tool],
+)
+
+# Run locally
+from google.adk.runners import LocalRunner
+
+runner = LocalRunner(agent)
+response = runner.run("What's the weather in Seattle and find docs about ML pipelines")
+print(response.text)
+```
+
+#### ADK: Multi-agent with delegation
+
+```python
+from google.adk import Agent, Tool
+from google.adk.agents import SequentialAgent, ParallelAgent
+
+# Specialist agents
+researcher = Agent(
+    name="researcher",
+    model="gemini-2.0-flash",
+    instruction="You research topics and provide detailed analysis.",
+    tools=[search_tool],
+)
+
+writer = Agent(
+    name="writer",
+    model="gemini-2.0-flash",
+    instruction="You write clear, concise summaries based on research.",
+)
+
+reviewer = Agent(
+    name="reviewer",
+    model="gemini-2.0-flash",
+    instruction="You review content for accuracy and clarity. Suggest improvements.",
+)
+
+# Sequential pipeline: research → write → review
+pipeline = SequentialAgent(
+    name="content_pipeline",
+    agents=[researcher, writer, reviewer],
+)
+
+# Run the pipeline
+response = pipeline.run("Create a summary of recent developments in agentic AI")
+```
+
+#### ADK: Deploy to Vertex AI Agent Engine
+
+```python
+from google.adk.deploy import deploy_to_vertex
+
+# Deploy agent to managed infrastructure
+deployed_agent = deploy_to_vertex(
+    agent=agent,
+    project_id="your-project",
+    location="us-central1",
+    display_name="my-assistant-agent",
+    # Optional: configure scaling, traffic splitting
+    min_replica_count=1,
+    max_replica_count=10,
+)
+
+# Get endpoint URL for production use
+print(f"Agent deployed at: {deployed_agent.endpoint}")
+```
+
+---
+
+### Agentic RAG (Retrieval as an Agent Decision)
+
+Traditional RAG: query → retrieve → generate (single pass).  
+**Agentic RAG**: the agent **decides** when/whether to retrieve, can do **multi-step retrieval**, and **validates** retrieved context.
+
+#### Why agentic RAG?
+
+| Traditional RAG                    | Agentic RAG                                              |
+| ---------------------------------- | -------------------------------------------------------- |
+| Always retrieves on every query    | Agent decides if retrieval is needed                     |
+| Single retrieval step              | Multi-hop: retrieve → reason → retrieve more             |
+| No validation of retrieved docs    | Agent can verify relevance, ask clarifying questions     |
+| Fixed retrieval query = user query | Agent can rewrite/decompose queries for better retrieval |
+
+#### Agentic RAG with ADK
+
+```python
+from google.adk import Agent, Tool
+from google.adk.tools import FunctionTool
+
+def retrieve_documents(query: str, top_k: int = 5) -> list[dict]:
+    """Retrieve relevant documents from vector store."""
+    # In production: embed query, search vector DB, return chunks
+    return [
+        {"content": "ML pipelines automate...", "source": "doc1.pdf", "score": 0.92},
+        {"content": "Feature stores provide...", "source": "doc2.pdf", "score": 0.87},
+    ]
+
+def verify_source(claim: str, source_id: str) -> str:
+    """Verify a specific claim against the original source document."""
+    # In production: fetch full doc, check if claim is supported
+    return f"Claim '{claim}' is supported by {source_id}"
+
+retrieve_tool = FunctionTool(retrieve_documents)
+verify_tool = FunctionTool(verify_source)
+
+agentic_rag_agent = Agent(
+    name="agentic_rag",
+    model="gemini-2.0-flash",
+    instruction="""You are a research assistant with access to a knowledge base.
+
+    RETRIEVAL STRATEGY:
+    1. First, decide if retrieval is needed (skip for general knowledge questions)
+    2. If needed, decompose complex queries into sub-queries
+    3. Retrieve documents for each sub-query
+    4. If initial results are insufficient, reformulate and retrieve again
+    5. Always verify key claims using the verify_source tool
+    6. Cite sources in your final answer
+
+    IMPORTANT: Do NOT hallucinate. If you can't find information, say so.""",
+    tools=[retrieve_tool, verify_tool],
+)
+```
+
+#### Multi-hop retrieval pattern
+
+```python
+# Agent instruction for multi-hop reasoning
+multi_hop_instruction = """
+When answering complex questions:
+
+1. DECOMPOSE: Break the question into sub-questions
+   Example: "How does X compare to Y for use case Z?"
+   → Sub-Q1: "What is X and its capabilities?"
+   → Sub-Q2: "What is Y and its capabilities?"
+   → Sub-Q3: "What are requirements for use case Z?"
+
+2. RETRIEVE: Search for each sub-question separately
+
+3. SYNTHESIZE: Combine retrieved information to answer the original question
+
+4. VALIDATE: Cross-check key facts across multiple sources
+
+5. ITERATE: If gaps remain, formulate follow-up queries
+"""
+```
+
+---
+
+### Multi-Agent Architectures
+
+Multi-agent systems use multiple specialized agents that collaborate on complex tasks.
+
+#### Common patterns
+
+| Pattern                 | Description                                       | When to Use                                |
+| ----------------------- | ------------------------------------------------- | ------------------------------------------ |
+| **Sequential pipeline** | Agent A → Agent B → Agent C (linear handoff)      | Content creation, review workflows         |
+| **Parallel fan-out**    | Query sent to multiple agents; results aggregated | Research, multi-perspective analysis       |
+| **Router/dispatcher**   | Classifier routes to specialist agents            | Customer support, domain-specific handling |
+| **Supervisor/manager**  | Manager delegates to workers, tracks progress     | Complex projects, iterative refinement     |
+| **Debate/adversarial**  | Agents argue opposing views; judge decides        | High-stakes decisions, red teaming         |
+
+#### Supervisor pattern diagram
+
+```
+                    ┌─────────────────┐
+                    │   Supervisor    │
+                    │ (orchestrates)  │
+                    └────────┬────────┘
+                             │
+           ┌─────────────────┼─────────────────┐
+           │                 │                 │
+           ▼                 ▼                 ▼
+    ┌─────────────┐   ┌─────────────┐   ┌─────────────┐
+    │  Researcher │   │   Writer    │   │  Reviewer   │
+    │   Agent     │   │   Agent     │   │   Agent     │
+    └─────────────┘   └─────────────┘   └─────────────┘
+```
+
+---
+
+### CrewAI — Role-Based Multi-Agent Orchestration
+
+**CrewAI** makes it easy to define "crews" of agents with roles, goals, and backstories that work together on tasks.
+
+Official docs: `https://docs.crewai.com/`
+
+#### CrewAI core concepts
+
+| Concept     | Description                                       |
+| ----------- | ------------------------------------------------- |
+| **Agent**   | A role with goals, backstory, and tools           |
+| **Task**    | A specific job assigned to an agent               |
+| **Crew**    | A team of agents working together                 |
+| **Process** | How tasks are executed (sequential, hierarchical) |
+
+#### CrewAI: Research team example
+
+```python
+from crewai import Agent, Task, Crew, Process
+from crewai_tools import SerperDevTool, WebsiteSearchTool
+
+# Tools
+search_tool = SerperDevTool()  # Web search
+web_rag_tool = WebsiteSearchTool()  # RAG over websites
+
+# Define agents with roles
+researcher = Agent(
+    role="Senior Research Analyst",
+    goal="Uncover cutting-edge developments in AI agents",
+    backstory="""You are a senior researcher at a leading tech think tank.
+    You have a knack for finding obscure but important information.
+    You're known for thorough, well-sourced analysis.""",
+    tools=[search_tool, web_rag_tool],
+    verbose=True,
+    llm="gemini/gemini-2.0-flash",  # or "openai/gpt-4o"
+)
+
+writer = Agent(
+    role="Tech Content Strategist",
+    goal="Craft compelling content about AI technology",
+    backstory="""You are a renowned content strategist who specializes
+    in making complex technical topics accessible to business leaders.
+    You create clear, engaging narratives backed by solid research.""",
+    verbose=True,
+    llm="gemini/gemini-2.0-flash",
+)
+
+editor = Agent(
+    role="Senior Editor",
+    goal="Ensure content is accurate, clear, and publication-ready",
+    backstory="""You are a meticulous editor with decades of experience
+    in technical publishing. You catch errors others miss and improve
+    clarity without losing technical accuracy.""",
+    verbose=True,
+    llm="gemini/gemini-2.0-flash",
+)
+
+# Define tasks
+research_task = Task(
+    description="""Research the latest developments in AI agent frameworks.
+    Focus on: ADK, LangGraph, CrewAI, AutoGen.
+    Compare their architectures, use cases, and production readiness.
+    Include code examples where relevant.""",
+    expected_output="Detailed research report with comparisons and examples",
+    agent=researcher,
+)
+
+writing_task = Task(
+    description="""Using the research report, write a comprehensive article
+    about AI agent frameworks for technical decision makers.
+    Make it engaging but technically accurate.
+    Include a comparison table and recommendations.""",
+    expected_output="Publication-ready article (1500-2000 words)",
+    agent=writer,
+    context=[research_task],  # Depends on research
+)
+
+editing_task = Task(
+    description="""Review and edit the article for:
+    - Technical accuracy
+    - Clarity and flow
+    - Grammar and style
+    Provide the final polished version.""",
+    expected_output="Final edited article ready for publication",
+    agent=editor,
+    context=[writing_task],
+)
+
+# Create crew
+crew = Crew(
+    agents=[researcher, writer, editor],
+    tasks=[research_task, writing_task, editing_task],
+    process=Process.sequential,  # or Process.hierarchical
+    verbose=True,
+)
+
+# Run the crew
+result = crew.kickoff()
+print(result)
+```
+
+#### CrewAI: Hierarchical process (manager delegates)
+
+```python
+from crewai import Crew, Process
+
+# Create a crew with hierarchical management
+managed_crew = Crew(
+    agents=[researcher, writer, editor],
+    tasks=[research_task, writing_task, editing_task],
+    process=Process.hierarchical,
+    manager_llm="gemini/gemini-2.0-flash",  # Manager uses this LLM
+    verbose=True,
+)
+
+# The manager agent is created automatically
+# It decides task order, delegation, and iteration
+result = managed_crew.kickoff()
+```
+
+#### CrewAI: Custom tools
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+
+class DatabaseQueryInput(BaseModel):
+    query: str = Field(..., description="SQL query to execute")
+    database: str = Field(default="analytics", description="Target database")
+
+class DatabaseQueryTool(BaseTool):
+    name: str = "database_query"
+    description: str = "Execute SQL queries against internal databases"
+    args_schema: type[BaseModel] = DatabaseQueryInput
+
+    def _run(self, query: str, database: str = "analytics") -> str:
+        # In production: execute query securely
+        return f"Query results from {database}: [row1, row2, row3]"
+
+# Use custom tool with agent
+data_analyst = Agent(
+    role="Data Analyst",
+    goal="Extract insights from company data",
+    backstory="Expert SQL analyst with deep knowledge of the data warehouse.",
+    tools=[DatabaseQueryTool()],
+    llm="gemini/gemini-2.0-flash",
+)
+```
+
+---
+
+### LangGraph — State Machine Orchestration for Agents
+
+**LangGraph** provides explicit control flow for agent workflows using graph-based state machines. It's ideal when you need deterministic, testable, and debuggable agent behavior.
+
+Official docs: `https://langchain-ai.github.io/langgraph/`
+
+#### LangGraph core concepts
+
+| Concept          | Description                                                               |
+| ---------------- | ------------------------------------------------------------------------- |
+| **StateGraph**   | Defines the workflow as a graph of nodes and edges                        |
+| **State**        | TypedDict that flows through the graph; nodes read/write to it            |
+| **Node**         | A function that takes state, does work, returns updated state             |
+| **Edge**         | Connection between nodes; can be conditional                              |
+| **Checkpointer** | Persistence layer for state (enables pause/resume, time-travel debugging) |
+
+#### LangGraph: Simple agent loop
+
+```python
+from typing import TypedDict, Annotated, Literal
+from langgraph.graph import StateGraph, END
+from langgraph.prebuilt import ToolNode
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, AIMessage
+import operator
+
+# Define state schema
+class AgentState(TypedDict):
+    messages: Annotated[list, operator.add]  # Message history (append-only)
+    iteration: int
+
+# Initialize LLM
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+# Define tools
+from langchain_core.tools import tool
+
+@tool
+def search_web(query: str) -> str:
+    """Search the web for information."""
+    return f"Search results for '{query}': [result1, result2, result3]"
+
+@tool
+def calculate(expression: str) -> str:
+    """Evaluate a mathematical expression."""
+    try:
+        return str(eval(expression))
+    except:
+        return "Error: invalid expression"
+
+tools = [search_web, calculate]
+llm_with_tools = llm.bind_tools(tools)
+
+# Define nodes
+def agent_node(state: AgentState) -> AgentState:
+    """Main agent reasoning node."""
+    response = llm_with_tools.invoke(state["messages"])
+    return {"messages": [response], "iteration": state["iteration"] + 1}
+
+def should_continue(state: AgentState) -> Literal["tools", "end"]:
+    """Decide whether to call tools or end."""
+    last_message = state["messages"][-1]
+    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+        return "tools"
+    return "end"
+
+# Build graph
+graph = StateGraph(AgentState)
+
+# Add nodes
+graph.add_node("agent", agent_node)
+graph.add_node("tools", ToolNode(tools))
+
+# Set entry point
+graph.set_entry_point("agent")
+
+# Add edges
+graph.add_conditional_edges(
+    "agent",
+    should_continue,
+    {"tools": "tools", "end": END}
+)
+graph.add_edge("tools", "agent")  # After tools, go back to agent
+
+# Compile
+app = graph.compile()
+
+# Run
+result = app.invoke({
+    "messages": [HumanMessage(content="What is 25 * 4 and search for LangGraph tutorials")],
+    "iteration": 0
+})
+
+for msg in result["messages"]:
+    print(f"{msg.type}: {msg.content}")
+```
+
+#### LangGraph: Multi-agent supervisor pattern
+
+```python
+from typing import TypedDict, Annotated, Literal
+from langgraph.graph import StateGraph, END
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, SystemMessage
+import operator
+
+class MultiAgentState(TypedDict):
+    messages: Annotated[list, operator.add]
+    next_agent: str
+    research_output: str
+    writing_output: str
+    final_output: str
+
+# Specialist LLMs (could be different models)
+supervisor_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+researcher_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+writer_llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+def supervisor_node(state: MultiAgentState) -> MultiAgentState:
+    """Supervisor decides which agent to call next."""
+    system = """You are a supervisor managing a research and writing team.
+    Based on the current state, decide the next step:
+    - 'researcher': if we need more research
+    - 'writer': if research is complete and we need writing
+    - 'FINISH': if the task is complete
+
+    Respond with just the agent name or FINISH."""
+
+    messages = [SystemMessage(content=system)] + state["messages"]
+    response = supervisor_llm.invoke(messages)
+    next_agent = response.content.strip().lower()
+
+    return {"next_agent": next_agent, "messages": [response]}
+
+def researcher_node(state: MultiAgentState) -> MultiAgentState:
+    """Research agent gathers information."""
+    system = """You are a research specialist. Gather comprehensive information
+    on the topic and provide a detailed research summary."""
+
+    messages = [SystemMessage(content=system)] + state["messages"]
+    response = researcher_llm.invoke(messages)
+
+    return {
+        "research_output": response.content,
+        "messages": [response]
+    }
+
+def writer_node(state: MultiAgentState) -> MultiAgentState:
+    """Writer agent creates content based on research."""
+    system = f"""You are a skilled writer. Using this research:
+
+    {state.get('research_output', 'No research yet')}
+
+    Create a well-structured, engaging piece of content."""
+
+    messages = [SystemMessage(content=system)] + state["messages"]
+    response = writer_llm.invoke(messages)
+
+    return {
+        "writing_output": response.content,
+        "final_output": response.content,
+        "messages": [response]
+    }
+
+def route_supervisor(state: MultiAgentState) -> Literal["researcher", "writer", "end"]:
+    """Route based on supervisor decision."""
+    next_agent = state.get("next_agent", "").lower()
+    if "research" in next_agent:
+        return "researcher"
+    elif "writ" in next_agent:
+        return "writer"
+    else:
+        return "end"
+
+# Build multi-agent graph
+multi_graph = StateGraph(MultiAgentState)
+
+# Add nodes
+multi_graph.add_node("supervisor", supervisor_node)
+multi_graph.add_node("researcher", researcher_node)
+multi_graph.add_node("writer", writer_node)
+
+# Set entry
+multi_graph.set_entry_point("supervisor")
+
+# Routing from supervisor
+multi_graph.add_conditional_edges(
+    "supervisor",
+    route_supervisor,
+    {"researcher": "researcher", "writer": "writer", "end": END}
+)
+
+# After specialist work, go back to supervisor
+multi_graph.add_edge("researcher", "supervisor")
+multi_graph.add_edge("writer", "supervisor")
+
+# Compile with memory (enables pause/resume)
+from langgraph.checkpoint.memory import MemorySaver
+memory = MemorySaver()
+multi_app = multi_graph.compile(checkpointer=memory)
+
+# Run with thread_id for persistence
+config = {"configurable": {"thread_id": "project-123"}}
+result = multi_app.invoke(
+    {
+        "messages": [HumanMessage(content="Write an article about agentic RAG patterns")],
+        "next_agent": "",
+        "research_output": "",
+        "writing_output": "",
+        "final_output": ""
+    },
+    config
+)
+```
+
+#### LangGraph: Human-in-the-loop (approval gates)
+
+```python
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+
+class ApprovalState(TypedDict):
+    messages: Annotated[list, operator.add]
+    draft: str
+    approved: bool
+    feedback: str
+
+def generate_draft(state: ApprovalState) -> ApprovalState:
+    """Generate initial draft."""
+    # ... generate content ...
+    return {"draft": "Generated draft content...", "approved": False}
+
+def human_review(state: ApprovalState) -> ApprovalState:
+    """This node will pause for human input."""
+    # LangGraph automatically pauses here when using interrupt_before
+    # Human provides feedback via external mechanism
+    return state
+
+def revise_draft(state: ApprovalState) -> ApprovalState:
+    """Revise based on feedback."""
+    # ... revise using state["feedback"] ...
+    return {"draft": f"Revised based on: {state['feedback']}"}
+
+def route_after_review(state: ApprovalState) -> Literal["revise", "end"]:
+    if state.get("approved"):
+        return "end"
+    return "revise"
+
+# Build graph with human checkpoint
+approval_graph = StateGraph(ApprovalState)
+approval_graph.add_node("generate", generate_draft)
+approval_graph.add_node("review", human_review)
+approval_graph.add_node("revise", revise_draft)
+
+approval_graph.set_entry_point("generate")
+approval_graph.add_edge("generate", "review")
+approval_graph.add_conditional_edges("review", route_after_review, {"revise": "revise", "end": END})
+approval_graph.add_edge("revise", "review")
+
+# Compile with interrupt for human review
+approval_app = approval_graph.compile(
+    checkpointer=MemorySaver(),
+    interrupt_before=["review"]  # Pause before human review
+)
+```
+
+---
+
+### Framework Comparison: When to Use What
+
+| Framework      | Best For                                      | Strengths                                    | Considerations                        |
+| -------------- | --------------------------------------------- | -------------------------------------------- | ------------------------------------- |
+| **ADK**        | Google Cloud production, Vertex AI deployment | Native GCP integration, managed scaling      | Google ecosystem focus                |
+| **CrewAI**     | Role-based teams, creative workflows          | Easy multi-agent setup, role/goal paradigm   | Less fine-grained control than graphs |
+| **LangGraph**  | Complex workflows, deterministic control      | Explicit state machine, debuggable, testable | More boilerplate than CrewAI          |
+| **AutoGen**    | Research, conversational multi-agent          | Strong conversation patterns                 | Can be complex for simple use cases   |
+| **LlamaIndex** | RAG-first applications                        | Best-in-class data connectors, indexing      | Less focus on agent orchestration     |
+
+**EXAM TIP:** The exam tests concepts, not specific framework syntax. Understand the **patterns** (ReAct, routing, supervisor, agentic RAG) rather than memorizing API calls.
+
+---
+
 ### 7.6 Vector stores & retrieval infrastructure (RAG substrate)
 
 Common options (managed or self-hosted):
