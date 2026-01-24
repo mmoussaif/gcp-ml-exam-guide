@@ -149,20 +149,21 @@ These posts from the [Google Developers Blog](https://developers.googleblog.com/
 
 ### Key Learning Resources
 
-| Resource                                                                 | Focus                                          |
-| ------------------------------------------------------------------------ | ---------------------------------------------- |
-| [5-Day GenAI Intensive Course (Kaggle)](https://www.kaggle.com/learn-guide/5-day-genai) | Google's official whitepapers + hands-on labs |
-| [Google DeepMind Blog](https://deepmind.google/discover/blog/)           | Research, new models, scientific breakthroughs |
-| [Google Research Blog](https://research.google/blog/)                  | Research papers, techniques, benchmarks        |
-| [Google Developers Blog](https://developers.googleblog.com/)           | Developer tools, SDKs, APIs                    |
-| [Google Cloud Blog](https://cloud.google.com/blog/)                      | Vertex AI, BigQuery, GCP services              |
-| [The Keyword (Innovation & AI)](https://blog.google/innovation-and-ai/) | Product announcements, AI strategy             |
+| Resource                                                                                | Focus                                          |
+| --------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| [5-Day GenAI Intensive Course (Kaggle)](https://www.kaggle.com/learn-guide/5-day-genai) | Google's official whitepapers + hands-on labs  |
+| [Google DeepMind Blog](https://deepmind.google/discover/blog/)                          | Research, new models, scientific breakthroughs |
+| [Google Research Blog](https://research.google/blog/)                                   | Research papers, techniques, benchmarks        |
+| [Google Developers Blog](https://developers.googleblog.com/)                            | Developer tools, SDKs, APIs                    |
+| [Google Cloud Blog](https://cloud.google.com/blog/)                                     | Vertex AI, BigQuery, GCP services              |
+| [The Keyword (Innovation & AI)](https://blog.google/innovation-and-ai/)                 | Product announcements, AI strategy             |
 
 #### Kaggle 5-Day GenAI Course: Official Google Whitepapers
 
 Google has published comprehensive whitepapers as part of the **5-Day GenAI Intensive Course** on Kaggle. These are authoritative resources for understanding Google's approach to agents and GenAI:
 
 **Key whitepapers**:
+
 - **"Generative AI Agents"** (Day 3): Core components, iterative development, agent patterns
 - **"Agents Companion"** (Day 3): Additional agent patterns and production best practices
 - **"MLOps for Generative AI"** (Day 5): Adapting MLOps for GenAI, Vertex AI tooling

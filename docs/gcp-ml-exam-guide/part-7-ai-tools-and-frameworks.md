@@ -1156,8 +1156,6 @@ Agents can create **subcontracts**—delegating portions of their contract to ot
 
 Think of agentic/LLM systems as a set of layers:
 
-Think of agentic/LLM systems as a set of layers:
-
 - **Models**: foundation models (proprietary or open weights).
 - **App frameworks**: prompts, tool calling, RAG chains, memory, routing.
 - **Agent orchestration**: multi-step execution, planners/routers, multi-agent supervision, retries/timeouts.
