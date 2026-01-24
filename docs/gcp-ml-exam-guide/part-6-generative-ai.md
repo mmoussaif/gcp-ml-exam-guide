@@ -25,6 +25,22 @@ This is **not official exam scope**; it’s included to make the guide feel less
 - **Make it personal**: apply GenAI to individual workflows (where adoption often starts).
 - **Make it durable**: move toward custom tools/agents that fit the organization (with guardrails, evaluation, and governance).
 
+### Why GenAI became a huge buzzword (what changed around 2022)
+
+AI as a field has been around for a long time and has quietly powered everyday products (feeds, recommendations, voice assistants, autocomplete). What changed with “GenAI” is that:
+
+- **LLMs suddenly got much more capable** at understanding complex instructions and producing high-quality text (and later, multimodal outputs).
+- **Compute became more accessible** for training and deployment, alongside tooling designed for AI workloads.
+
+Together, these shifts made GenAI feel like a step-change in what teams could do “out of the box”, and created the adoption wave we’re seeing.
+
+**What you should be able to explain (foundational concepts checklist)**
+
+- **AI vs ML vs GenAI**: where each fits and why GenAI is different from traditional task-specific models
+- **Data types + requirements**: how modality (text, image, audio, video) and data quality shape what’s possible
+- **Strategies to address foundation-model limitations**: prompting, grounding/RAG, tuning, evaluation, and guardrails (pick the lightest that works)
+- **Responsible + secure AI in orgs**: privacy, safety, policy, and operational controls (before scaling)
+
 ### The business impact of GenAI (beyond the chatbot)
 
 This framing is adapted from the GenAI Leader curriculum and is meant to sound like how leaders talk about adoption (concise, practical, not hype).
