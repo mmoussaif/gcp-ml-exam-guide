@@ -14,6 +14,17 @@ This section is intentionally short and more “human”: it reflects how GenAI 
 
 **Note:** Some productivity figures in training materials (e.g., “hours saved per year”) are often context-dependent—treat them as hypotheses to validate in your organization.
 
+### A practical learning journey (from the “GenAI Leader” learning path)
+
+This is **not official exam scope**; it’s included to make the guide feel less robotic and to reflect how Google’s GenAI Leader curriculum frames adoption for non-technical leaders.
+
+- **Start simple**: GenAI “beyond the chatbot” — focus on what it can do in business settings, not the math.
+- **Earn buy-in**: learn how to talk about use cases and value with both technical and non-technical teams.
+- **Build shared language**: cover foundational terms (LLMs, prompts, responsible AI) so teams can collaborate.
+- **Understand the landscape**: think in layers (models → apps → data/RAG → ops/governance), with different opportunities/risks at each layer.
+- **Make it personal**: apply GenAI to individual workflows (where adoption often starts).
+- **Make it durable**: move toward custom tools/agents that fit the organization (with guardrails, evaluation, and governance).
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
