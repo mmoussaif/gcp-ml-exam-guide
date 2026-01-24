@@ -157,7 +157,101 @@ Regression predicts continuous numeric values.
 
 - **Formula**: \(y = \beta_0 + \beta_1x_1 + \beta_2x_2 + \dots + \beta_nx_n + \epsilon\)
 
-Key assumptions: linearity, independence of errors, homoscedasticity (constant variance), normally distributed errors, and NO MULTICOLLINEARITY between independent variables.
+**Why Mean Squared Error (MSE)?**
+
+Linear regression minimizes MSE, which comes from **Maximum Likelihood Estimation (MLE)** under the assumption that errors follow a **normal distribution**:
+
+1. **Data generation process**: We assume \(y = X\theta + \epsilon\), where \(\epsilon \sim \mathcal{N}(0, \sigma^2)\)
+2. **Likelihood**: The probability of observing data given parameters is maximized when MSE is minimized
+3. **Result**: Minimizing MSE is equivalent to finding the parameters that maximize the probability of observing the data
+
+**COMMON TRAP:** MSE is NOT chosen because it's differentiable or penalizes large errors. It's chosen because it's the optimal loss function under the Gaussian noise assumption.
+
+**Key Assumptions of Linear Regression**:
+
+Linear regression is only effective when certain assumptions are validated. These assumptions originate from the **data generation process** we assume when modeling:
+
+**Assumption #1: Linearity**
+
+- **What it means**: The relationship between features \(X\) and target \(y\) is linear
+- **Origin**: We model \(y = X\theta + \epsilon\), which inherently assumes linearity
+- **Violation**: Non-linear relationships (e.g., exponential, polynomial) cannot be captured
+- **Detection**: Plot residuals vs. predicted values; look for patterns
+- **Fix**: Transform features (log, polynomial), use non-linear models, or add interaction terms
+
+**Assumption #2: Normal Distribution of Errors**
+
+- **What it means**: Error terms \(\epsilon\) follow a normal distribution with zero mean: \(\epsilon \sim \mathcal{N}(0, \sigma^2)\)
+- **Origin**:
+  - **Central Limit Theorem**: Errors are the sum of many unmodeled factors, which tend toward normal distribution
+  - **Statistical inference**: OLS estimators are linear functions of errors; normality enables hypothesis testing and confidence intervals
+- **Violation**: Skewed or heavy-tailed error distributions affect statistical tests
+- **Detection**:
+  - Histogram/KDE plot of residuals
+  - Q-Q plot of residuals (should follow diagonal line)
+- **Fix**: Transform response variable (log, Box-Cox), use robust regression methods
+
+**Assumption #3: Homoscedasticity (Constant Variance)**
+
+- **What it means**: Error variance is constant across all levels of \(X\): \(\text{Var}(\epsilon_i) = \sigma^2\) for all \(i\)
+- **Origin**: In the data generation process, we sample errors from the same distribution \(\mathcal{N}(0, \sigma^2)\) for all observations
+- **Violation (Heteroscedasticity)**: Variance changes with \(X\) (e.g., larger errors for larger predictions)
+- **Consequences**:
+  - **Biased estimates**: OLS estimators are biased
+  - **Inefficient estimates**: Larger standard errors than optimal
+  - **Invalid inferences**: t-tests and confidence intervals become unreliable
+- **Detection**:
+  - Scatter plot of residuals vs. predicted values (should show constant spread)
+  - Look for funnel shapes or patterns
+- **Fix**:
+  - Transform response variable (log, Box-Cox)
+  - **Weighted Least Squares (WLS)**: Weight observations by inverse variance
+  - Use robust standard errors (Huber-White)
+
+**Assumption #4: No Autocorrelation (Independence of Errors)**
+
+- **What it means**: Error terms are independent: \(\text{Cov}(\epsilon_i, \epsilon_j) = 0\) for \(i \neq j\)
+- **Origin**: In the data generation process, we sample each error independently from the same distribution
+- **Violation**: Errors are correlated (common in time series data)
+- **Consequences**:
+  - Standard errors are underestimated
+  - Invalid statistical tests
+- **Detection**:
+  - **Domain knowledge**: Time series data often has autocorrelation
+  - **Lag-based features**: Add lagged dependent variables; if coefficients are significant, autocorrelation exists
+  - **Durbin-Watson test**: Statistical test for autocorrelation
+- **Fix**:
+  - **Time series models**: Use ARIMA, AR models that explicitly model autocorrelation
+  - **Add lag features**: Include lagged values of dependent variable as features
+  - **Generalized Least Squares (GLS)**: Accounts for correlation structure
+
+**Assumption #5: No Multicollinearity**
+
+- **What it means**: Independent variables are not highly correlated with each other
+- **Origin**: When features are linearly dependent, the model cannot distinguish individual effects
+- **Violation**: High correlation between features (e.g., height and weight, income and education)
+- **Consequences**:
+  - **Numerical instability**: Coefficient estimates become unstable
+  - **Interpretation difficulty**: Cannot determine individual effect of each variable
+  - **Inflated standard errors**: Makes coefficients appear insignificant
+- **Detection**:
+  - **Scatter plots**: Visual inspection of feature correlations
+  - **Variance Inflation Factor (VIF)**:
+    - Regress each feature against all other features
+    - Calculate \(R^2_i\) for each feature
+    - Compute \(\text{VIF}\_i = 1/(1-R^2_i)\)
+    - **Rule of thumb**: VIF > 5 indicates multicollinearity
+- **Fix**:
+  - **Remove redundant features**: Drop highly correlated features
+  - **L2 Regularization (Ridge)**: Shrinks coefficients, handles multicollinearity
+  - **Principal Component Analysis (PCA)**: Transform to orthogonal components (loses interpretability)
+  - **Feature engineering**: Combine correlated features into single feature
+
+**EXAM TIP:** Questions about "assumptions violated" → check for **non-linearity** (residual plots), **heteroscedasticity** (funnel-shaped residuals), **autocorrelation** (time series), or **multicollinearity** (VIF > 5).
+
+**EXAM TIP:** "Standard errors seem too small" → likely **autocorrelation** (time series) or **heteroscedasticity**.
+
+**EXAM TIP:** "Cannot interpret individual feature effects" → likely **multicollinearity** → use **Ridge regression** or remove redundant features.
 
 ##### Regularization
 
