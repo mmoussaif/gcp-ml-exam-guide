@@ -221,7 +221,29 @@ Source: [Agent Tools and Interoperability with MCP Whitepaper](https://www.kaggl
 
 #### MCP (Model Context Protocol) Deep Dive
 
-MCP enables **standardized communication** between agents/hosts and tools/data sources.
+**What is MCP?**: MCP is a standardized interface and framework that allows AI models to seamlessly interact with external tools, resources, and environments. Think of it as a **universal adapter** or "USB-C for AI applications" - just as USB-C standardized device connections, MCP standardizes how AI models connect to external capabilities.
+
+**Why MCP was needed**: The **M×N integration problem**
+
+Before MCP, connecting M AI applications to N tools required **M × N custom integrations** (each AI needed unique code for each tool). This was:
+
+- **Fragmented**: Each developer built custom integration logic
+- **Non-scalable**: Adding one tool meant updating all AI applications
+- **Fragile**: Ad-hoc prompt chaining and vendor-specific plugins
+
+**MCP solution**: Reduces complexity from **M × N to M + N**
+
+- Each AI application implements MCP client **once**
+- Each tool implements MCP server **once**
+- They can then work together without custom code
+
+**Evolution of context management**:
+
+1. **Static prompting**: All information in prompt (limited by context window, frozen knowledge)
+2. **RAG**: External system retrieves documents, adds to prompt (still passive, developer wires retrieval)
+3. **Prompt chaining/agents**: Model outputs interpreted as commands (ReAct pattern) - ad-hoc, fragile
+4. **Function calling**: Structured function definitions (OpenAI 2023) - better but still vendor-specific
+5. **MCP**: Standardized protocol for any AI to connect to any tool
 
 **MCP Architecture**:
 
@@ -250,6 +272,47 @@ MCP enables **standardized communication** between agents/hosts and tools/data s
 │                                                                 │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+**Three main roles**:
+
+1. **Host**: User-facing AI application (chat app, IDE, custom assistant)
+
+   - Manages user interaction, session state, workflow orchestration
+   - Examples: Claude Desktop, Cursor IDE, custom LangChain app
+   - **Decides** when and which tools to use
+
+2. **MCP Client**: Component within Host that handles MCP protocol communication
+
+   - Manages 1:1 connection to a single MCP Server
+   - Sends requests, listens for responses, handles errors
+   - Like a web browser's networking layer (HTTP client)
+
+3. **MCP Server**: External program/service providing capabilities
+   - Exposes tools, resources, prompts in standardized format
+   - Can run locally or remotely
+   - Examples: File system MCP, GitHub MCP, database MCP, calculator MCP
+
+**Operational flow**:
+
+1. **User interaction**: User asks question via Host
+2. **Host decides**: Determines tool needed (e.g., weather lookup)
+3. **Client connects**: MCP Client connects to appropriate Server
+4. **Capability discovery**: Client queries Server for available tools (`tools/list`, `resources/list`)
+5. **Tool invocation**: Client sends request to invoke tool with parameters
+6. **Server executes**: Server runs underlying function, returns result
+7. **Results integrated**: Client passes result to Host, Host adds to model context
+8. **Iteration**: Process can repeat for multi-step operations
+
+**Key advantages**:
+
+- **Dynamic tool discovery**: AI can query available capabilities at runtime (no hardcoding)
+- **Stateful interactions**: Maintains context across session
+- **Multi-step orchestration**: Can chain multiple tools with conditional logic
+- **Separation of concerns**: Client (what to do) vs Server (how to do it)
+- **Standardized execution**: Any MCP-compatible AI + tool work together
+- **Safety and control**: Centralized point for safety checks and user approval
+
+**Inspired by**: Language Server Protocol (LSP) - LSP standardized code editors ↔ language engines; MCP does the same for AI ↔ tools.
 
 **MCP Server Types**:
 
