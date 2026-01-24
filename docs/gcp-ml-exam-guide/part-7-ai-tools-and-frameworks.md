@@ -2471,6 +2471,53 @@ task = Task(
 )
 ```
 
+**Example: Article word count validation**:
+
+```python
+def validate_article_length(task_output):
+    """Validate article is between 500-1500 words"""
+    word_count = len(task_output.split())
+    if word_count < 500:
+        return (False, f"Article is {word_count} words. Must be at least 500 words.")
+    if word_count > 1500:
+        return (False, f"Article is {word_count} words. Must be under 1500 words.")
+    return (True, task_output)
+
+edit_task = Task(
+    description="Edit and finalize article",
+    agent=editor_agent,
+    guardrails=[validate_article_length],
+    max_retries=3
+)
+```
+
+**Example: Section count validation**:
+
+```python
+def validate_article_headings(task_output, min_sections=5):
+    """Ensure article has minimum number of sections"""
+    # Count headings (assuming markdown format)
+    headings = [line for line in task_output.split('\n') if line.startswith('#')]
+    if len(headings) < min_sections:
+        return (False, f"Article has {len(headings)} sections. Must have at least {min_sections} sections.")
+    return (True, task_output)
+```
+
+**Example: Section length validation**:
+
+```python
+def validate_section_length(task_output, min_words=100, max_words=300):
+    """Ensure each section has appropriate word count"""
+    sections = task_output.split('\n\n')  # Split by paragraphs
+    for i, section in enumerate(sections, 1):
+        word_count = len(section.split())
+        if word_count < min_words:
+            return (False, f"Section {i} has {word_count} words. Must be at least {min_words} words.")
+        if word_count > max_words:
+            return (False, f"Section {i} has {word_count} words. Must be under {max_words} words.")
+    return (True, task_output)
+```
+
 **Example: JSON validation**:
 
 ```python
@@ -2513,6 +2560,8 @@ task = Task(
 
 **Referencing Tasks and Outputs**: Allow agents to dynamically use previous task results.
 
+**Why task referencing?**: Without referencing previous work, agents may rework already completed content, drift away from intended structure, or miss key insights gathered earlier. Task referencing ensures consistency, flow, and shared context across the agentic pipeline.
+
 **TaskOutput class**: Each task produces a `TaskOutput` object with fields:
 
 - `description`: Task description
@@ -2536,12 +2585,52 @@ blog_task = Task(
 )
 ```
 
+**Example: Multi-step content pipeline**:
+
+```python
+# Step 1: Research
+research_task = Task(
+    description="Research AI industry trends",
+    agent=researcher_agent
+)
+
+# Step 2: Analysis (automatically references research_task)
+analysis_task = Task(
+    description="Summarize research findings",
+    agent=analyst_agent
+    # No explicit context needed - defaults to previous task
+)
+
+# Step 3: Writing (references both research and analysis)
+blog_task = Task(
+    description="Write blog post using research and analysis",
+    agent=writer_agent,
+    context=[research_task, analysis_task]  # Explicitly reference both
+)
+
+# Step 4: Editing (references outline and article)
+edit_task = Task(
+    description="Edit article ensuring alignment with original outline",
+    agent=editor_agent,
+    context=[research_task, blog_task]  # Reference outline + article
+)
+```
+
+**Default behavior**:
+
+- **Default**: Task automatically references immediate previous task output
+- **Explicit context**: Use `context=[task1, task2]` to reference non-adjacent or multiple tasks
+- **Multiple references**: Editor can reference both outline (from researcher) and article (from writer) for fact-checking
+
 **Benefits**:
 
 - Chain multiple AI-generated outputs for complex workflows
 - Avoid redundant AI generations by reusing previous results
 - Pass structured JSON/Pydantic models between tasks for better accuracy
 - Useful for debugging (understand what tasks produce what outputs)
+- **Consistency**: Editor can verify article matches original outline
+- **Continuity**: Agents build on each other's work, not regenerate
+- **Fact-checking**: Editor can cross-reference outline and article for accuracy
 
 **Asynchronous Task Execution**: Run independent tasks in parallel to optimize performance.
 
@@ -2583,12 +2672,16 @@ report_task = Task(
 
 **Callbacks**: Execute functions immediately after task completion.
 
+**Why callbacks?**: In many AI-driven workflows, you need to trigger additional actions once a task completes. Callbacks make AI pipelines more autonomous and production-ready by automating post-processing steps.
+
 **Use cases**:
 
 - Store results in database or file
 - Trigger another process (run Python script)
 - Send notifications
 - Logging and monitoring
+- Publishing workflows
+- Data persistence
 
 **Implementation**:
 
@@ -2606,11 +2699,58 @@ research_task = Task(
 )
 ```
 
+**Example: Article publishing callback**:
+
+```python
+def publish_article_callback(task_output):
+    """Save finalized article to file after human approval"""
+    # Save to Markdown file
+    with open("final_article.md", "w") as f:
+        f.write(task_output.raw)
+
+    print(f"✅ Article published successfully!")
+    print(f"📄 Saved to: final_article.md")
+    print(f"📝 Task: {task_output.description}")
+
+edit_task = Task(
+    description="Edit and finalize article",
+    agent=editor_agent,
+    human_input=True,  # Human approves first
+    callback=publish_article_callback  # Then auto-saves
+)
+```
+
+**Complete workflow example**:
+
+```python
+# Research → Write → Edit → Human Approval → Auto-Save
+crew = Crew(
+    agents=[researcher_agent, writer_agent, editor_agent],
+    tasks=[plan_task, write_task, edit_task],
+    process=Process.sequential
+)
+
+# Execution flow:
+# 1. Researcher creates outline (HITL: human reviews)
+# 2. Writer generates article (automatic)
+# 3. Editor polishes article (HITL: human approves)
+# 4. Callback saves to file (automatic)
+```
+
 **Callback execution**:
 
 - Runs automatically after task completes
-- Receives task output as parameter
+- Receives task output as parameter (`TaskOutput` object)
 - Can perform any post-processing action
+- Executes even if HITL is enabled (runs after human approval)
+- Can access `task_output.raw`, `task_output.pydantic`, `task_output.json_dict`
+
+**Benefits**:
+
+- **Automation**: No manual copying, saving, or moving files
+- **Production-ready**: Seamless integration with publishing systems
+- **End-to-end**: Complete workflow from research to publication
+- **Hands-off**: System handles boring tasks automatically
 
 **EXAM TIP:** Questions about "validating AI outputs" or "ensuring constraints" → think **guardrails** with retry mechanism. Questions about "parallel task execution" → think **async_execution=True** for independent tasks. Questions about "post-processing" or "logging" → think **callbacks**.
 
