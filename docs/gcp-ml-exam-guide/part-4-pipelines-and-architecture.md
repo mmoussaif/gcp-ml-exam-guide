@@ -42,7 +42,57 @@ Automating ingestion, preprocessing, training, evaluation, and deployment reduce
 - **Logging/monitoring**: Detect pipeline failures and bottlenecks early
 - **Version control**: Reproducibility of pipeline code/config and rollbacks
 
-**EXAM TIP:** Pipeline automation/orchestration is about streamlining the **end-to-end workflow**, not making data “random” or changing model accuracy.
+**EXAM TIP:** Pipeline automation/orchestration is about streamlining the **end-to-end workflow**, not making data "random" or changing model accuracy.
+
+#### MLOps: Background and Foundations
+
+**What is MLOps?**: Machine Learning Operations (MLOps) is about integrating ML models into real-world software systems. It's where machine learning meets software engineering, DevOps, and data engineering.
+
+**Key realization**: The ML model itself is only a **small part** of a production ML system. The surrounding infrastructure (data pipelines, feature engineering, serving infrastructure, monitoring, etc.) is much larger and more complex.
+
+**Why MLOps matters**:
+
+- **Models degrade over time**: Real-world conditions change (user behavior, data drift, concept drift)
+- **Production requirements**: Must run continuously (24/7), handle evolving data, meet latency/throughput requirements
+- **Without MLOps**: Manual, brittle processes lead to slow iteration, error-prone deployments, stale models in production
+
+**MLOps vs DevOps**:
+
+| Aspect | Traditional Software | ML Systems |
+|--------|---------------------|------------|
+| **Development** | Deterministic | Experimental, data-driven |
+| **Versioning** | Code only | Code + data + models |
+| **Testing** | Functional correctness | Functional + data validation + model performance |
+| **Deployment** | Code push | Multi-step pipeline (retraining, validation, deployment) |
+| **Performance** | Code/infrastructure issues | Model quality degradation (drift) |
+| **Monitoring** | Service health (latency, errors) | Service health + model predictions (distribution shifts, accuracy) |
+| **Lifecycle** | Linear | Cyclical (feedback loops back to data collection) |
+
+**MLOps = DevOps + data + models**
+
+**System-level concerns in production ML**:
+
+1. **Latency and throughput**:
+   - **Latency**: Time from input to prediction (critical for user-facing apps)
+   - **Throughput**: Predictions per unit time (critical for high-volume tasks)
+   - **Trade-offs**: Model accuracy vs speed (simpler models, quantization, batch processing, caching)
+
+2. **Data and concept drift**:
+   - **Data drift**: Changes in input data distribution (e.g., summer photos → winter photos)
+   - **Concept drift**: Changes in input-output relationship (e.g., pre-pandemic vs post-pandemic churn signals)
+   - **Handling**: Monitoring (statistical tests, distribution tracking), thresholds/alerts, periodic retraining, online learning (with caution)
+
+3. **Feedback loops**:
+   - Model's predictions influence future input data (e.g., recommendation systems showing certain content → users click → skewed data)
+   - **Managing**: Explore-exploit trade-off, debiasing training data, simulations/A/B tests, breaking the loop periodically
+
+4. **Reproducibility**:
+   - Ability to recreate model results reliably
+   - **Requirements**: Version control (code, data, models), containerization (Docker), tests for data/models, fixed random seeds
+   - **Why important**: Debugging, consistency across environments, collaboration
+
+**EXAM TIP:** Questions about "model performance degrading over time" → think **data drift** or **concept drift** → solution is **monitoring + retraining**.  
+**EXAM TIP:** Questions about "recreating results" or "consistency across environments" → think **reproducibility** → solution is **version control + containerization + tests**.
 
 ```mermaid
 flowchart LR
