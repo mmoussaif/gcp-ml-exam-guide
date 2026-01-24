@@ -2140,6 +2140,10 @@ result = managed_crew.kickoff()
 
 #### CrewAI: Custom tools
 
+**Creating custom tools**: Subclass `BaseTool` and implement `_run` method.
+
+**Example: Database query tool**:
+
 ```python
 from crewai.tools import BaseTool
 from pydantic import BaseModel, Field
@@ -2166,6 +2170,58 @@ data_analyst = Agent(
     llm="gemini/gemini-2.0-flash",
 )
 ```
+
+**Example: Web scraping tool (Firecrawl)**:
+
+```python
+from crewai.tools import BaseTool
+from pydantic import BaseModel, Field
+from firecrawl import FirecrawlApp
+import os
+
+class ScrapeInput(BaseModel):
+    url: str = Field(..., description="URL to scrape")
+
+class WebScrapeTool(BaseTool):
+    name: str = "Web Scraper"
+    description: str = "Scrapes full content from web pages, extracting text, links, and structure"
+    args_schema: type[BaseModel] = ScrapeInput
+
+    def _run(self, url: str) -> str:
+        app = FirecrawlApp(api_key=os.getenv("FIRECRAWL_API_KEY"))
+        result = app.scrape_url(url, params={"formats": ["markdown"]})
+        return result.get("markdown", "Failed to scrape content")
+
+# Usage: Combine search + scrape for deeper research
+researcher_agent = Agent(
+    role="Content Researcher",
+    goal="Research topics and gather detailed information",
+    backstory="You are an expert researcher who finds and analyzes web content.",
+    tools=[SerperDevTool(), WebScrapeTool()]  # Search first, then scrape
+)
+
+research_task = Task(
+    description="Research {topic}. First search for relevant links, then scrape the top result for detailed content.",
+    agent=researcher_agent
+)
+```
+
+**Why custom scraping tools matter**:
+
+- **Beyond search metadata**: Search tools only return titles, descriptions, snippets
+- **Full content access**: Scraping retrieves complete page content, paragraphs, structure
+- **Deeper insights**: Agents can extract detailed information not visible in summaries
+- **Better grounding**: Content generation based on actual page content, not just search results
+- **Workflow**: Search → Find URLs → Scrape top results → Extract insights
+
+**Best practices**:
+
+- Use Pydantic models for input validation
+- Provide clear descriptions for tool discovery
+- Handle errors gracefully
+- Return string outputs for agent consumption
+- **Combine tools**: Use search to find URLs, then scrape for full content
+- **Incremental enhancement**: Start with search, add scraping when deeper research needed
 
 #### CrewAI Flows: Event-Driven Workflows
 
@@ -2846,6 +2902,8 @@ crew = Crew(
 
 **Why human-in-the-loop?**: While AI agents are powerful, we're far from fully autonomous systems. One mistake in a multi-step process can derail the entire operation. Human-in-the-loop workflows combine AI autonomy with human oversight for critical decision-making.
 
+**Background**: Given the scale and capabilities of modern LLMs, their true potential is realized in compound AI systems where they can access, retrieve, filter, and analyze data to make real-time decisions. However, fully autonomous agents are still limited—one mistake can derail entire operations. HITL provides feedback mechanisms to guide agents through complex tasks.
+
 **Use cases**:
 
 - **Critical decisions**: Medical AI, financial reports, legal advice
@@ -2876,17 +2934,66 @@ crew = Crew(
 )
 ```
 
+**Example: Content writing workflow with HITL**:
+
+```python
+# HITL after planning (before writing)
+plan_task = Task(
+    description="Create article outline and research plan",
+    agent=researcher_agent,
+    human_input=True  # Human reviews outline before writing begins
+)
+
+# Writer task (no HITL - fully automated)
+write_task = Task(
+    description="Write article based on outline",
+    agent=writer_agent
+    # No human_input - proceeds automatically after plan approval
+)
+
+# HITL after editing (before publishing)
+edit_task = Task(
+    description="Edit and finalize article",
+    agent=editor_agent,
+    human_input=True  # Human gives final approval before publishing
+)
+
+crew = Crew(
+    agents=[researcher_agent, writer_agent, editor_agent],
+    tasks=[plan_task, write_task, edit_task]
+)
+```
+
+**HITL workflow**:
+
+1. **Agent completes task** → System pauses execution
+2. **Human reviews output** → Provides feedback (e.g., "Looks great" or "Add section on trends")
+3. **Agent receives feedback** → Continues with revised plan or makes changes
+4. **Process repeats** → Until human approves or task completes
+
 **How it works**:
 
 - When `human_input=True`, agent prompts user for feedback after task completion
 - User provides feedback in natural language (e.g., "looks perfect", "add more details")
 - Agent reworks the step if needed based on feedback
 - Moves to next step only when human approves
+- **Integration with callbacks**: Callbacks execute after human approval
 
 **Benefits**:
 
 - **Quality assurance**: Human validation ensures accuracy
 - **Error prevention**: Catches mistakes before they propagate
+- **Collaboration**: AI handles heavy lifting, human steers at key checkpoints
+- **Trust**: Human oversight increases confidence in AI outputs
+- **Flexibility**: Human can guide or course-correct when needed
+
+**Best practices**:
+
+- Use HITL at key decision points, not every step
+- Combine with guardrails: Use HITL for subjective decisions, guardrails for objective validation
+- Provide clear prompts for human reviewers
+- Allow natural language feedback
+- Consider UI integration for better UX
 - **Customization**: Allows human refinement of AI outputs
 - **Trust**: Human oversight builds confidence in AI systems
 
