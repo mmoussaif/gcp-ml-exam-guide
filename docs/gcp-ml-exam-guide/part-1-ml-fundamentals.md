@@ -801,3 +801,118 @@ For models predicting outcomes based on geographic location:
 
 **EXAM TIP:** Predict profit by location → Feature cross lat×long + binning as features, profit as single output.  
 **COMMON TRAP:** Don't use revenue AND expenses as separate outputs when profit is the actual target.
+
+### 1.10 COMMON DATA SCIENCE PITFALLS
+
+This section covers non-obvious pitfalls that can significantly impact model quality and reliability.
+
+#### Pitfall #1: Decision Trees and Diagonal Boundaries
+
+**Problem**: Decision trees create **perpendicular splits** (parallel to feature axes). If data has a **diagonal decision boundary**, trees require many splits to approximate it.
+
+**Detection**:
+
+- Visualize decision tree splits - if thresholds are very close together, tree is struggling
+- Run PCA on features, fit tree on PCA projections
+- If tree depth **significantly decreases** on PCA data, original data likely has diagonal separation
+
+**Solution**:
+
+- Use algorithms better suited for diagonal boundaries (logistic regression, SVM, neural networks)
+- Or engineer features that align with perpendicular splits
+
+**EXAM TIP:** Decision tree with many close thresholds → likely diagonal boundary → consider linear models or feature engineering.
+
+#### Pitfall #2: Euclidean Distance with Correlated Features
+
+**Problem**: Euclidean distance assumes **independent axes**. If features are correlated, Euclidean distance produces misleading results.
+
+**Example**: Two points equidistant by Euclidean distance, but one lies within data distribution (should be closer).
+
+**Solution**: **Mahalanobis Distance**
+
+- Accounts for data distribution and feature correlations
+- Steps: (1) Transform to uncorrelated variables, (2) Scale to unit variance, (3) Compute Euclidean distance in transformed space
+- Formula accounts for covariance matrix
+
+**Use cases**:
+
+- **Outlier detection**: Better identifies outliers in high-dimensional correlated data
+- **kNN variant**: Use Mahalanobis distance instead of Euclidean for correlated features
+
+**EXAM TIP:** "Distance metric for correlated features" → **Mahalanobis distance** (not Euclidean).
+
+#### Pitfall #3: Correlation ≠ Predictiveness
+
+**Problem**: Correlation measures **symmetric linear association**, but:
+
+- Associations can be **asymmetric** (date → month is easy, month → date is impossible)
+- Correlation ignores **non-linear relationships**
+- Correlation doesn't work on **categorical data**
+
+**Solution**: **Predictive Power Score (PPS)**
+
+- Measures **directional predictive power** (asymmetric: PPS(A→B) ≠ PPS(B→A))
+- Works with **categorical and numerical** data
+- Captures **linear and non-linear** relationships
+- Uses decision tree to predict target, compares to baseline (F1 for classification, MAE for regression)
+
+**When to use**:
+
+- **Correlation**: General monotonic trend between variables
+- **PPS**: Predictive power of a feature toward an outcome
+
+**Pearson vs Spearman correlation**:
+
+- **Pearson**: Only measures **linear** relationships
+- **Spearman**: Measures **monotonic** relationships (linear + non-linear monotonic)
+- Use Spearman for non-linear but monotonic relationships
+
+**EXAM TIP:** "Measure how well feature X predicts outcome Y" → **Predictive Power Score** (not correlation).  
+**EXAM TIP:** "Non-linear monotonic relationship" → **Spearman correlation** (not Pearson).
+
+#### Pitfall #4: Summary Statistics Can Mislead
+
+**Problem**: Summary statistics lose essential information. Multiple different distributions can have identical statistics.
+
+**Examples**:
+
+- **Anscombe's Quartet**: Four datasets with identical mean, variance, correlation, R² but very different distributions
+- **Box plots**: Two different distributions can have identical box plots (same min, Q1, median, Q3, max)
+
+**Solution**:
+
+- **Always visualize** underlying data distribution
+- Use **violin plots** or **KDE plots** alongside box plots
+- **Raincloud plots**: Combine box plots + strip plots + KDE plots
+
+**EXAM TIP:** "Good R² but poor model performance" → Check for non-linearity, outliers, or Anscombe's Quartet issues (visualize data).
+
+#### Pitfall #5: Multivariate Covariate Shift
+
+**Problem**: Univariate covariate shift detection (comparing individual feature distributions) misses **multivariate covariate shift**.
+
+**Multivariate covariate shift**:
+
+- Individual feature distributions remain the same: P(X₁) and P(X₂) unchanged
+- But **joint distribution changes**: P(X₁, X₂) changes
+- Univariate methods (Bhattacharyya distance, KS test) will miss this
+
+**Detection methods**:
+
+1. **Visual inspection**: For 2-3 features, scatter plots can reveal joint distribution changes
+2. **Data reconstruction**:
+   - Train **Autoencoder** (or PCA) on training data
+   - Measure reconstruction error on production data
+   - High reconstruction error → distribution has changed
+   - **Advantage**: Works on **unlabeled data** (no need for immediate labels)
+
+**Baseline approach**:
+
+- Establish baseline reconstruction error on first week of production data
+- Compare future weeks to baseline
+- Large increase → covariate shift detected
+
+**EXAM TIP:** "Individual features look same but model performance drops" → **Multivariate covariate shift** → Use **Autoencoder reconstruction error** to detect.
+
+**EXAM TIP:** "Detect covariate shift without labels" → **Autoencoder reconstruction error** (works on unlabeled data).
