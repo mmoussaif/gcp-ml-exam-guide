@@ -1381,19 +1381,63 @@ Two interoperability ideas are showing up more and more in agent stacks:
 
 **MCP** is an open standard (originating from Anthropic) for connecting LLMs/agents to tools, APIs, files, and databases via a consistent protocol.
 
-- **Architecture**: client–server.
-  - A **host** (chat app, IDE, agent runtime) runs an **MCP client**.
-  - The client connects to one or more **MCP servers** that expose:
-    - **Tools** (callable actions)
-    - **Resources** (files, KB snippets, data sources)
-    - **Prompts** (reusable prompt templates)
-- **Why it matters**: replaces bespoke plugin systems and one-off integrations with a universal “adapter layer” for context + tools (capability discovery, structured calls, streaming, standardized errors).
-- **Newer feature direction**: “sampling”-style features can allow an MCP server to ask the client’s model to generate text, enabling richer workflows without the server owning model keys.
+**The M×N Integration Problem**:
+
+Before MCP, connecting M AI applications to N tools required **M × N custom integrations**. MCP reduces this to **M + N**:
+
+- Each AI application implements MCP client **once**
+- Each tool implements MCP server **once**
+- They work together without custom code
+
+**Evolution of Context Management**:
+
+1. **Static prompting**: All info in prompt (limited, frozen knowledge)
+2. **RAG**: External retrieval, still passive
+3. **Prompt chaining**: ReAct pattern, ad-hoc and fragile
+4. **Function calling**: Structured but vendor-specific (OpenAI 2023)
+5. **MCP**: Standardized protocol for any AI ↔ any tool
+
+**Architecture**: client–server with three roles:
+
+- **Host**: User-facing AI application (Claude Desktop, Cursor IDE, custom app)
+  - Manages user interaction, session state, workflow orchestration
+  - Decides when and which tools to use
+- **MCP Client**: Component within Host handling protocol communication
+  - Manages 1:1 connection to single MCP Server
+  - Sends requests, listens for responses, handles errors
+- **MCP Server**: External program/service providing capabilities
+  - Exposes **Tools** (callable actions), **Resources** (files/data), **Prompts** (templates), **Sampling** (LLM requests)
+  - Can run locally or remotely
+
+**Operational Flow**:
+
+1. User asks question via Host
+2. Host determines tool needed
+3. Client connects to appropriate Server
+4. **Capability discovery**: Client queries Server (`tools/list`, `resources/list`)
+5. **Tool invocation**: Client sends request with parameters
+6. Server executes function, returns result
+7. Results integrated into model context
+8. Process can repeat for multi-step operations
+
+**Key Advantages**:
+
+- **Dynamic tool discovery**: Query capabilities at runtime (no hardcoding)
+- **Stateful interactions**: Maintains context across session
+- **Multi-step orchestration**: Chain tools with conditional logic
+- **Separation of concerns**: Client (what) vs Server (how)
+- **Standardized execution**: Any MCP-compatible AI + tool work together
+- **Safety and control**: Centralized safety checks and user approval
+
+**Why it matters**: Replaces bespoke plugin systems and one-off integrations with a universal "adapter layer" for context + tools (capability discovery, structured calls, streaming, standardized errors).
+
+**Inspired by**: Language Server Protocol (LSP) - LSP standardized editors ↔ languages; MCP does the same for AI ↔ tools.
 
 **When to use MCP**
 
 - You want a single tool spec (e.g., Jira, GitHub, Snowflake) reusable across multiple hosts/runtimes.
 - You need secure, auditable access to enterprise systems via a well-defined interface (instead of ad-hoc plugins).
+- You need dynamic tool discovery and stateful interactions.
 
 #### A2A: Agent2Agent protocol (agent ↔ agent)
 
