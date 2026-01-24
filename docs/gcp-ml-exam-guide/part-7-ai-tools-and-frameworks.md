@@ -5452,9 +5452,382 @@ app = graph.compile(
 - Short-term memory = state carried forward across steps/invocations
 - Long-term memory = information persisted in store, retrieved later
 - Checkpoints provide full timeline for inspection and debugging
-- Production requires optimization (not covered here, see Part B)
+- Production requires optimization (covered in next section)
 
 **EXAM TIP:** Questions about "conversation continuity" or "multi-turn interactions" → think **threads** and **checkpoints**. Questions about "cross-session memory" or "user preferences" → think **long-term memory** with **Stores**. Questions about "memory optimization" → think **cost, latency, reliability** challenges in production.
+
+#### LangGraph: Memory Optimization Techniques
+
+**Goal**: Move beyond "how do I give the model more memory?" to "how do I give the model the right memory at the right time, for optimum performance?"
+
+**System evolution roadmap**:
+
+1. Sequential memory (baseline) → send full conversation history
+2. Sliding window → bound recent context
+3. Summarization → compress older parts
+4. Retrieval-based → pull only relevant past interactions
+5. Hierarchical → separate tiers (session, user, knowledge)
+6. OS-like → treat context as limited budget
+
+**Use case**: Customer support chatbot for SaaS product that needs to:
+
+- Handle long, messy support threads with follow-ups
+- Refer back to earlier messages without re-asking
+- Remember user-level information across tickets
+- Stay within reasonable latencies
+
+**1. Sequential Memory (Baseline)**
+
+**What it is**: Store all messages in a list, send full conversation history to LLM on every turn. This is the simplest approach and serves as a reference baseline.
+
+**How it works**:
+
+- User starts conversation → agent generates response
+- Each user-AI interaction saved as a turn
+- For each subsequent turn, agent takes entire conversation history (Turn 1 + Turn 2 + Turn 3...) and combines with new query
+- Massive block sent to LLM to generate next response
+
+**Implementation**:
+
+```python
+from langgraph.graph import StateGraph, START, END
+from langgraph.checkpoint.memory import MemorySaver
+from typing import Annotated
+from langchain_core.messages import HumanMessage, AIMessage
+import operator
+
+class MessagesState(TypedDict):
+    messages: Annotated[list, operator.add]  # Append, don't replace
+
+def chat_llm_node(state: MessagesState) -> dict:
+    # Build prompt with full conversation history
+    system_msg = {"role": "system", "content": "You are a helpful support agent."}
+    all_messages = [system_msg] + state["messages"]
+
+    reply = llm.invoke(all_messages)
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Compile with checkpointer
+graph = StateGraph(MessagesState)
+graph.add_node("chat", chat_llm_node)
+graph.add_edge(START, "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+
+# Multi-turn conversation
+config = {"configurable": {"thread_id": "ticket-seq"}}
+
+# Turn 1
+app.invoke({"messages": [HumanMessage(content="I can't log in")]}, config)
+
+# Turn 2 (automatically loads previous checkpoint)
+app.invoke({"messages": [HumanMessage(content="I tried resetting password")]}, config)
+
+# Turn 3 (sees full history)
+app.invoke({"messages": [HumanMessage(content="What did we try?")]}, config)
+```
+
+**Performance characteristics**:
+
+- **Tokens**: Grow roughly linearly with number of turns
+- **Cost**: Pay for all past tokens on every call
+- **Latency**: Response time increases as prompts get larger
+- **Recall**: Perfect recall inside single conversation
+
+**When to use**: Short conversations, internal tools, early-stage prototypes. Works fine when conversations are brief.
+
+**Limitations**:
+
+- Every extra token has a cost
+- Large prompts lead to high inference latency
+- Not scalable for long conversations
+
+**2. Sliding Window Memory**
+
+**What it is**: Keep only the most recent N messages as context. As new messages arrive, oldest ones are dropped, and the window slides forward.
+
+**How it works**:
+
+- Each turn added to conversation history
+- Before generating response, keep only last N messages (e.g., last 6 messages or last 1,000 tokens)
+- Trimmed window + new user query sent to LLM
+- Everything outside window is effectively forgotten
+
+**Implementation**:
+
+```python
+MAX_MESSAGES = 4  # Window size (small for demo, larger in production)
+
+def truncate_messages_node(state: MessagesState) -> dict:
+    """Keep only the last MAX_MESSAGES messages."""
+    messages = state["messages"]
+
+    if len(messages) <= MAX_MESSAGES:
+        return {}  # No truncation needed
+
+    # Keep only the last MAX_MESSAGES
+    truncated = messages[-MAX_MESSAGES:]
+    return {"messages": truncated}
+
+def chat_llm_node(state: MessagesState) -> dict:
+    # Same as before - uses truncated messages
+    system_msg = {"role": "system", "content": "You are a helpful support agent."}
+    all_messages = [system_msg] + state["messages"]
+
+    reply = llm.invoke(all_messages)
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Graph with truncation
+graph = StateGraph(MessagesState)
+graph.add_node("truncate", truncate_messages_node)
+graph.add_node("chat", chat_llm_node)
+graph.add_edge(START, "truncate")
+graph.add_edge("truncate", "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+**Behavior example** (MAX_MESSAGES = 4):
+
+- **Turn 1**: 1 message → no truncation
+- **Turn 2**: 3 messages → no truncation
+- **Turn 3**: 5 messages → drops oldest, keeps last 4
+- **Turn 4+**: Always keeps last 4 messages
+
+**Performance characteristics**:
+
+- **Tokens**: Grow until window is full, then stabilize
+- **Latency**: Grows early, then plateaus once prompt size stabilizes
+- **Cost**: Bounded by window size
+- **Recall**: Only remembers recent context
+
+**When to use**: Relatively short, focused conversations where most important information is in last few messages.
+
+**Limitations**:
+
+- Critical information mentioned early can scroll out of window
+- User referring back to old messages won't work
+- Long-running support tickets with interleaved threads problematic
+- No way to remember older, relevant details once outside window
+
+**3. Summarization-Based Memory**
+
+**What it is**: Instead of dropping old information entirely, compress older parts of conversation into short summaries. Regularly take conversation so far, create brief summary of important points, use summary as substitute for full history.
+
+**How it works**:
+
+- Each user + agent response pair treated as one turn, added to buffer
+- Once conversation grows beyond certain size, take older part and distill into short summary
+- Keep new summary and clear conversation buffer
+- From next turn, buffer starts to fill again
+- Agent sees: running summary (high-level context) + most recent unsummarized turns (buffer) + latest user query
+
+**Implementation**:
+
+```python
+class SummarizationState(TypedDict):
+    summary: str  # Running compressed story
+    buffer: Annotated[list, operator.add]  # Recent unsummarized messages
+
+SUMMARY_THRESHOLD_MESSAGES = 4  # Summarize after 2 full turns (4 messages)
+
+def summarize_buffer_node(state: SummarizationState) -> dict:
+    """Summarize buffer if threshold reached."""
+    buffer = state.get("buffer", [])
+    summary = state.get("summary", "")
+
+    if len(buffer) < SUMMARY_THRESHOLD_MESSAGES:
+        return {}  # Not enough to summarize
+
+    # Merge existing summary and buffer into new summary
+    conversation_text = "\n".join([msg.content for msg in buffer])
+
+    summary_prompt = f"""Summarize this conversation, preserving key facts, decisions, and context:
+
+Previous summary: {summary}
+New conversation: {conversation_text}
+
+Create a concise summary combining both."""
+
+    new_summary = llm.invoke([{"role": "user", "content": summary_prompt}]).content
+
+    # Clear buffer (new messages will be added by chat_llm_node)
+    return {"summary": new_summary, "buffer": []}
+
+def chat_llm_node(state: SummarizationState) -> dict:
+    """Generate response using summary + buffer."""
+    summary = state.get("summary", "")
+    buffer = state.get("buffer", [])
+
+    # Build context from summary and buffer
+    context_parts = []
+    if summary:
+        context_parts.append(f"Conversation summary: {summary}")
+    if buffer:
+        context_parts.append("Recent messages:")
+        context_parts.extend([msg.content for msg in buffer])
+
+    system_prompt = f"""You are a helpful support agent.
+
+{chr(10).join(context_parts)}
+
+Respond to the user's latest message."""
+
+    # Get latest user message
+    latest_user_msg = buffer[-1] if buffer else None
+    if not latest_user_msg:
+        return {}
+
+    reply = llm.invoke([
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": latest_user_msg.content}
+    ])
+
+    return {"buffer": [AIMessage(content=reply.content)]}
+
+# Graph with summarization
+graph = StateGraph(SummarizationState)
+graph.add_node("summarize", summarize_buffer_node)
+graph.add_node("chat", chat_llm_node)
+graph.add_edge(START, "summarize")
+graph.add_edge("summarize", "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+**Behavior example**:
+
+- **Turn 1**: Buffer has 1 message → no summarization, summary empty
+- **Turn 2**: Buffer has 3 messages → no summarization yet
+- **Turn 3**: Buffer has 4 messages → threshold reached, summarize buffer into summary, clear buffer
+- **Turn 4+**: Agent sees summary + new buffer messages
+
+**Performance characteristics**:
+
+- **Tokens**: Increase early, then stabilize once summarization starts
+- **Latency**: Grows a bit as context grows, then flattens
+- **Cost**: Trade-off: occasional summarization calls vs consistent reduction in prompt size
+- **Recall**: Preserves important facts while compressing details
+
+**Optimization tips**:
+
+- Use smaller/cheaper model for summarization calls
+- Make trigger token-based rather than turn-based
+- Summarization call is one-time cost, but reduces prompt size on every response
+
+**When to use**: Long conversations where you want to preserve important context without sending full history. Works well for coding editors, support agents, planning assistants.
+
+**Limitations**:
+
+- Quality depends on summary quality (might miss minor details that become crucial later)
+- Doesn't help with cross-thread or cross-user knowledge sharing
+- Can't be used to power reliable agentic systems by itself
+- Not scalable without additional techniques
+
+**4. Compression and Consolidation**
+
+**What it is**: Advanced summarization pattern that treats conversation segments differently based on importance. Score importance of each segment, keep high-importance segments with little/no compression, aggressively compress (or drop) low-importance segments.
+
+**How it works**:
+
+1. Maintain list of segments in state (per turn, per block, per type)
+2. For each segment, ask LLM to assign importance score (0-1)
+3. Split segments into:
+   - High-importance (score ≥ threshold) → keep as-is or lightly compressed
+   - Low-importance (score < threshold) → compress into single shorter summary
+4. Result: dramatic space savings while maintaining ability to recall important details
+
+**Implementation pattern**:
+
+```python
+class MemoryCompressionState(TypedDict):
+    segments: list  # List of conversation segments
+    compressed_summary: str  # Aggregated compressed content
+
+def compress_memory_node(state: MemoryCompressionState) -> dict:
+    """Compress low-importance segments, keep high-importance."""
+    segments = state.get("segments", [])
+    importance_threshold = 0.5
+    compression_ratio = 0.3  # Compress to 30% of original size
+
+    # Step 1: Score each segment
+    scored_segments = []
+    for segment in segments:
+        scoring_prompt = f"""Rate the importance of this conversation segment (0.0-1.0):
+
+{segment['content']}
+
+Consider: key decisions, user preferences, critical errors, architectural changes = high importance.
+Small talk, minor clarifications, greetings = low importance.
+
+Respond with just a number."""
+
+        score = float(llm.invoke([{"role": "user", "content": scoring_prompt}]).content)
+        scored_segments.append({**segment, "importance": score})
+
+    # Step 2: Split by importance
+    high_importance = [s for s in scored_segments if s["importance"] >= importance_threshold]
+    low_importance = [s for s in scored_segments if s["importance"] < importance_threshold]
+
+    # Step 3: Keep high-importance, compress low-importance
+    compressed_low = ""
+    if low_importance:
+        compression_prompt = f"""Compress these conversation segments into a concise summary ({compression_ratio*100}% of original length), preserving only essential facts:
+
+{chr(10).join([s['content'] for s in low_importance])}"""
+
+        compressed_low = llm.invoke([{"role": "user", "content": compression_prompt}]).content
+
+    # Step 4: Combine results
+    compressed_summary = "\n".join([
+        "High-importance segments:",
+        "\n".join([s['content'] for s in high_importance]),
+        "\nCompressed low-importance:",
+        compressed_low
+    ])
+
+    return {"compressed_summary": compressed_summary}
+
+# Wire into graph
+graph.add_node("compress", compress_memory_node)
+# ... rest of graph
+```
+
+**Key parameters**:
+
+- **Importance threshold**: Value above which segment is "important" (e.g., 0.5)
+- **Compression ratio**: How much context to compress while retaining quality (e.g., 0.3 = 30% of original)
+
+**Design decisions**:
+
+- How to break conversation into segments (per turn, per block, per type)?
+- Where to call `compress_memory_node` in graph?
+- What thresholds make sense for your use case?
+
+**Benefits**:
+
+- Better trade-off than pure sliding windows (doesn't purely forget)
+- Distills older turns into concise summaries
+- Keeps context compact while preserving main facts
+- Can be quite effective in managing token costs
+
+**When to use**: Production systems where some conversation parts are more important than others. Works well when you can clearly distinguish high-value vs low-value content.
+
+**Comparison summary**:
+
+| Technique          | Tokens        | Latency   | Recall      | Use Case                             |
+| ------------------ | ------------- | --------- | ----------- | ------------------------------------ |
+| **Sequential**     | Linear growth | Increases | Perfect     | Short conversations, prototypes      |
+| **Sliding Window** | Stabilizes    | Plateaus  | Recent only | Focused, short conversations         |
+| **Summarization**  | Stabilizes    | Flattens  | Compressed  | Long conversations, preserve context |
+| **Compression**    | Optimized     | Flattens  | Selective   | Production systems, importance-aware |
+
+**Next steps**: Part C covers retrieval-based memory, hierarchical memory, and OS-like memory management.
+
+**EXAM TIP:** Questions about "memory optimization" → understand trade-offs: **Sequential** (perfect recall, expensive) → **Sliding Window** (bounded cost, loses old info) → **Summarization** (preserves context, compresses) → **Compression** (importance-aware, optimized). Questions about "production memory" → think **cost, latency, reliability** trade-offs, not just "more memory".
 
 ---
 
