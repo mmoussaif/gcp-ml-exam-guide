@@ -1885,6 +1885,153 @@ Official docs: [docs.crewai.com](https://docs.crewai.com/)
 - **Tool selection**: Equip agents with only essential tools for their tasks (more tools ≠ better results)
 - **YAML configuration**: Use YAML files to decouple agent/task definitions from code for better maintainability
 - **Multi-agent over single-agent**: Use specialized agents instead of one "do-everything" agent for better focus and accuracy
+- **Modular Crews**: Use class-based approach with `@CrewBase` decorator for better organization and scalability
+- **Structured outputs**: Use Pydantic schemas to enforce consistent JSON outputs (especially for API/database integration)
+- **Custom tools**: Build domain-specific tools by inheriting from `BaseTool` and implementing `_run` method
+
+#### Building Modular Crews (Class-Based Approach)
+
+**Why modular Crews?**: Instead of manually mapping YAML config entries to Agent/Task parameters, use CrewAI's decorator-based approach for cleaner, more maintainable code.
+
+**Structure**:
+
+```
+project/
+├── config/
+│   ├── agents.yaml    # Agent definitions
+│   └── tasks.yaml     # Task definitions
+├── research_crew.py   # Crew class definition
+└── .env               # API keys
+```
+
+**Key components**:
+
+1. **@CrewBase decorator**: Marks class as modular Crew
+
+   ```python
+   @CrewBase
+   class ResearchCrew:
+       agents_config = 'config/agents.yaml'
+       tasks_config = 'config/tasks.yaml'
+   ```
+
+2. **@agent decorator**: Dynamically creates agents from YAML
+
+   ```python
+   @agent
+   def researcher(self) -> Agent:
+       return Agent(config='researcher')
+   ```
+
+3. **@task decorator**: Dynamically creates tasks from YAML
+
+   ```python
+   @task
+   def research_task(self) -> Task:
+       return Task(config='research_task')
+   ```
+
+4. **@crew decorator**: Defines the workflow
+   ```python
+   @crew
+   def crew(self) -> Crew:
+       return Crew(
+           agents=self.agents,
+           tasks=self.tasks,
+           process=Process.sequential
+       )
+   ```
+
+**Benefits**:
+
+- Cleaner code (no manual config mapping)
+- Better maintainability (separate config from logic)
+- Reusability (instantiate with different configs/LLMs)
+- Automatic YAML loading (CrewAI handles parsing)
+
+#### Structured Outputs with Pydantic
+
+**Problem**: LLMs generate raw text, which requires parsing for structured applications (APIs, databases, automation).
+
+**Solution**: Use Pydantic schemas to enforce structured JSON outputs.
+
+**Implementation**:
+
+1. **Define Pydantic schema**:
+
+   ```python
+   from pydantic import BaseModel, Field
+
+   class EntityTriplet(BaseModel):
+       entity1: str = Field(..., description="First entity")
+       relation: str = Field(..., description="Relationship")
+       entity2: str = Field(..., description="Second entity")
+   ```
+
+2. **Add to Task**:
+   ```python
+   task = Task(
+       description="Extract entity-relation-entity triplets",
+       output_pydantic=EntityTriplet  # Enforces structured output
+   )
+   ```
+
+**Benefits**:
+
+- Predictable, parseable outputs
+- Consistent formatting across runs
+- No manual cleanup required
+- Works for multi-agent workflows
+
+**Best practice**: Always add descriptions to each Pydantic field for better model guidance.
+
+#### Custom Tools (Advanced)
+
+**When to build custom tools**: When you need domain-specific functionality (currency conversion, weather APIs, document processing) that isn't available in standard CrewAI tools.
+
+**Implementation**:
+
+1. **Define input schema** (Pydantic):
+
+   ```python
+   class CurrencyInput(BaseModel):
+       amount: float = Field(..., description="Amount to convert")
+       from_currency: str = Field(..., description="Source currency")
+       to_currency: str = Field(..., description="Target currency")
+   ```
+
+2. **Create tool class** (inherit from BaseTool):
+
+   ```python
+   from crewai_tools import BaseTool
+
+   class CurrencyConverterTool(BaseTool):
+       name: str = "currency_converter"
+       description: str = "Convert currencies using live exchange rates"
+       args_schema: type[BaseModel] = CurrencyInput
+
+       def _run(self, amount: float, from_currency: str, to_currency: str) -> str:
+           # API call, error handling, return result
+           return f"{amount} {from_currency} = {result} {to_currency}"
+   ```
+
+3. **Attach to Agent**:
+   ```python
+   agent = Agent(
+       role="Currency Analyst",
+       tools=[CurrencyConverterTool()],
+       ...
+   )
+   ```
+
+**Key points**:
+
+- `_run` method is executed when agent calls the tool
+- Handle errors gracefully (invalid inputs, API failures)
+- Return string results (agent processes the output)
+- Can combine with Query Parsing Agent for natural language → structured input conversion
+
+**EXAM TIP:** Questions about "structured outputs" or "consistent JSON responses" → think **Pydantic schemas** with `output_pydantic` parameter. Questions about "custom functionality" or "domain-specific tools" → think **custom tools** inheriting from `BaseTool`.
 
 #### CrewAI: Research team example
 
