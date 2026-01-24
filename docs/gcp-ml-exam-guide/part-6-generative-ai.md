@@ -586,6 +586,38 @@ When picking a model for a GenAI use case, start with the **requirements** (not 
 - **Fine-tuning and customization**: do you need prompting/RAG only, or tuning for a domain/style?
 - **Ease of integration**: APIs/SDKs, tool calling/structured output, observability hooks, deployment surface.
 
+#### GenAI project resources: people, cost, and time (leader checklist)
+
+Before building, sanity-check **who**, **how much**, and **how long**.
+
+**People (roles across the stack)**
+
+- **Business leaders / business users**: define outcomes, constraints, and success metrics; often start with pre-built GenAI apps.
+- **Developers**: integrate models into products (APIs, data sources, workflows, UI) and ship reliable experiences.
+- **AI practitioners (ML/GenAI engineers, data scientists)**: develop/tune models, run evals, handle safety/security, and operationalize with MLOps.
+
+**Cost (what you pay for)**
+
+GenAI projects typically pay for three activities:
+
+- **Training** (if you train/tune): compute time + storage for data/artifacts.
+- **Deploying**: running endpoints/serving infrastructure + supporting services.
+- **Using models (inference)**: often **usage-based**, commonly measured in **tokens/characters**.
+
+Common cost drivers:
+
+- **Model size/capability** (bigger often costs more)
+- **Context window + token usage** (longer prompts/outputs cost more)
+- **Traffic volume** and latency targets
+
+**Time (time-to-value ladder)**
+
+- **Use a pre-built GenAI application**: seconds/minutes to try and adopt.
+- **Use pre-built agents / AI Applications-style tooling**: often weeks (faster than full custom code).
+- **Custom app with grounding/RAG**: weeks-to-months (often best for “enterprise truth”).
+- **Tuning/fine-tuning**: weeks-to-months (needs data + evals).
+- **Brand-new model**: months (rarely necessary).
+
 **Google Cloud’s ML models (via Vertex AI)**
 
 Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google’s suite:

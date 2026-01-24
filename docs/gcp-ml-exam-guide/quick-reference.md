@@ -216,6 +216,7 @@
 - Semi-supervised learning: combine a small labeled set with a large unlabeled set (common when labels are expensive)
 - Diffusion models: generate media by iteratively denoising noise into structured outputs (common for image generation)
 - Model selection factors: modality, context window, security, availability/reliability, cost, performance, tuning/customization, ease of integration
+- GenAI project resources: align people (business/dev/AI practitioners), cost (train + deploy + infer/tokens), and time (prebuilt app < agent tooling < RAG < tuning < new model)
 - Gemini vs Gemma: Gemini = multimodal model family; Gemma = lightweight open models for local/specialized deployments
 - Imagen vs Veo: Imagen = text-to-image diffusion; Veo = text/image-to-video generation
 - Foundation model limitations: hallucinations + knowledge cutoff + bias/fairness + edge cases + data dependency; grounding/RAG ties answers to trusted sources
