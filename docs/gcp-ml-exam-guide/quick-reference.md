@@ -200,6 +200,7 @@
 - DL/foundation/GenAI: deep learning (neural nets) underpins foundation models; GenAI is an application of these models to generate new content
 - GenAI layers (leader mental model): infrastructure → models → platform → agents → applications (apps are just the top layer)
 - Platform layer (Vertex AI): the “glue” that unifies infra + models + deployment + MLOps (pipelines/metadata/monitoring) + security/IAM
+- Vertex AI MLOps: model registry + evaluation + pipelines (orchestration) + monitoring (skew/drift/perf degradation)
 - Agents vs apps: the app is the user-facing product/framework; the agent is the “actor” inside it that reasons + uses tools + takes actions (often multi-agent)
 - Agents beyond models: reasoning loop (observe → interpret → plan → act) + tools (APIs/data/actions) enable multi-step work; conversational vs workflow agents are common patterns
 - Quiz recall: infrastructure = compute/storage foundation; agents layer defines the “actions/tasks” inside an app (filter/summarize/recommend); applications layer = user-facing UI/experience

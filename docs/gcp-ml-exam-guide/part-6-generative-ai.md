@@ -82,6 +82,11 @@ In Google Cloud, **Vertex AI** is the canonical example of a platform layer: a u
 
 - Orchestrate workflows (**pipelines**), track experiments and iterations, manage ML metadata, and monitor/evaluate model quality over time.
 - **Feature store** (where used): share/serve/reuse features to keep training-serving consistent.
+- Common “platform layer” building blocks you’ll see referenced:
+  - **Model registry**: manage model versions, track changes, and organize models across their lifecycle.
+  - **Model evaluation**: compare model performance to pick the best model for the use case.
+  - **Workflow orchestration**: automate end-to-end workflows with **Vertex AI Pipelines**.
+  - **Model monitoring**: detect performance degradation, input skew/drift, and trigger updates/retraining.
 
 #### Agents and GenAI-powered applications (how they relate)
 
