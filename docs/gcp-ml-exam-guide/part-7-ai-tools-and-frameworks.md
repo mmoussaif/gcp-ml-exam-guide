@@ -4009,10 +4009,84 @@ Representative tools (vendor-agnostic):
 - **TruLens**: [truera/trulens](https://github.com/truera/trulens)
 - **Arize Phoenix**: [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix)
 - **promptfoo**: [promptfoo/promptfoo](https://github.com/promptfoo/promptfoo)
+- **Opik** (CometML): [comet-ml/opik](https://github.com/comet-ml/opik) - Open-source LLM evaluation and observability framework with tracing, evaluations, and dashboards
 - **LangSmith** (LangChain ecosystem): [docs.smith.langchain.com](https://docs.smith.langchain.com/)
 - **Weights & Biases Weave**: [weave.wandb.ai](https://weave.wandb.ai/)
 
-**EXAM TIP:** The “correct” operational answer is almost never “manually test a few prompts.” It’s usually **eval dataset + automated evals + monitoring/tracing + safety tests**.
+**EXAM TIP:** The "correct" operational answer is almost never "manually test a few prompts." It's usually **eval dataset + automated evals + monitoring/tracing + safety tests**.
+
+### 7.24.1 Opik: Open-Source LLM Evaluation and Observability Framework
+
+**Opik** (by CometML) is an open-source framework for evaluating and monitoring LLM applications in production. It provides tracing, evaluations, and dashboards to help teams build LLM systems that run better, faster, and cheaper.
+
+**Key capabilities**:
+
+- **Automatic tracing**: Track LLM calls, RAG pipelines, and multi-agent systems with minimal code changes
+- **Evaluation framework**: Evaluate LLM applications against predefined metrics (relevance, factuality, coherence, hallucination)
+- **Observability dashboard**: Real-time monitoring of system behavior, performance, and costs
+- **Multi-provider support**: Works with OpenAI, Ollama, Anthropic, and other LLM providers
+- **Framework integrations**: Native support for LlamaIndex, LangChain, and custom Python functions
+
+**How Opik works**:
+
+1. **Simple tracking**: Use `@track` decorator to automatically trace Python functions
+
+   - Wraps any function to log inputs, outputs, and execution details
+   - No complex boilerplate code required
+
+2. **LLM call tracking**: Wrap LLM clients (e.g., `track_openai`) to automatically log:
+
+   - Input prompts and outputs
+   - Token usage and costs
+   - Latency and performance metrics
+   - Model parameters and configuration
+
+3. **Evaluation workflow**:
+
+   - **Define dataset**: Create evaluation datasets with questions, expected answers, and context
+   - **Create evaluation task**: Define LLM application function to evaluate
+   - **Run evaluation**: Execute evaluation against dataset with predefined metrics
+   - **Track results**: View scores, traces, and detailed analysis in dashboard
+
+4. **Integration with RAG pipelines**:
+   - **LlamaIndex integration**: Use `LlamaIndexCallbackHandler` to track document ingestion, chunking, retrieval, and generation
+   - **Automatic tracing**: All RAG operations (indexing, querying, retrieval) are automatically logged
+   - **Retrieval evaluation**: Compare retrieved context with expected context
+
+**Evaluation metrics supported**:
+
+- **Relevance**: How relevant is the response to the query?
+- **Factuality**: Is the response factually correct?
+- **Coherence**: Is the response coherent and well-structured?
+- **Hallucination**: Does the response contain hallucinations or made-up information?
+
+**Key features**:
+
+- **Zero-code tracking**: Minimal code changes required (just decorators)
+- **Self-hosted option**: Can be self-hosted on your own infrastructure
+- **Cost tracking**: Monitor token usage and costs per invocation
+- **Debugging support**: Detailed traces help identify issues in RAG pipelines
+- **Experiment tracking**: Compare different versions of prompts/models
+
+**Use cases**:
+
+- **RAG applications**: Evaluate retrieval quality and generation accuracy
+- **Multi-agent systems**: Track interactions and outputs across agents
+- **Production monitoring**: Real-time observability of LLM applications
+- **Prompt optimization**: Compare different prompts and configurations
+
+**Example workflow**:
+
+1. **Track simple functions**: `@track` decorator for any Python function
+2. **Track LLM calls**: Wrap OpenAI/Ollama clients with `track_openai`
+3. **Build RAG pipeline**: Use LlamaIndex with Opik callback handler
+4. **Create evaluation dataset**: Define questions, answers, and context
+5. **Run evaluation**: Execute evaluation task with metrics
+6. **Analyze results**: View scores and traces in dashboard
+
+**EXAM TIP:** Questions about "LLM evaluation framework" or "observability for RAG" → think **Opik** or similar frameworks (Ragas, TruLens, LangSmith). Questions about "minimal code changes for tracking" → **decorator-based tracking** (like Opik's `@track`).
+
+**Source**: [Opik GitHub](https://github.com/comet-ml/opik)
 
 ### 7.24.1 MLOps, Pipelines, and Observability (Classic ML + GenAI)
 
