@@ -125,6 +125,20 @@ These posts from the [Google Developers Blog](https://developers.googleblog.com/
   - "Nano Banana Pro in Google Antigravity" (Nov 20, 2025)
   - "Introducing Google Antigravity" (Nov 18, 2025)
 
+#### Nano Banana Pro: Efficient Image Generation Model
+
+- **Source**: [Nano Banana Pro in Google Antigravity](https://antigravity.google/blog) (Nov 20, 2025)
+- **What**: Efficient text-to-image model, part of the Imagen family, optimized for speed and cost
+- **Key features**:
+  | Feature | Description |
+  |---------|-------------|
+  | **Speed** | Faster inference than full Imagen; optimized for low latency |
+  | **Cost** | Lower cost per image generation |
+  | **Use cases** | Agent workflows, browser automation, rapid prototyping, iterative design |
+  | **Integration** | Available in Google Antigravity, Vertex AI Model Garden |
+- **When to use**: Agent workflows requiring rapid image generation (browser-in-the-loop), cost-sensitive applications, rapid prototyping
+- **When NOT to use**: High-quality marketing images where maximum fidelity is priority (use Imagen instead)
+
 #### Confidential AI on Google Cloud
 
 - **Source**: [Don't Trust, Verify: Building End-to-End Confidential Applications on Google Cloud](https://developers.googleblog.com/dont-trust-verify-building-end-to-end-confidential-applications-on-google-cloud/)

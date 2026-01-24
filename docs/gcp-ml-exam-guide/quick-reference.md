@@ -173,6 +173,7 @@
 | Block prompt injection / jailbreaks at agent level   | **Model Armor** (LLM-level guardrails); Cloud Armor is HTTP-level, not semantic       |
 | Agent leaking PII / sensitive data in responses      | **Model Armor** output filters + Cloud DLP for redaction                              |
 | Desktop tool for agent dev with browser automation   | **Google Antigravity** (`antigravity.google`) — agent manager + browser-in-the-loop   |
+| Fast, cost-effective image generation for agents     | **Nano Banana Pro** (efficient Imagen variant); use Imagen for max quality marketing |
 
 ### Common Exam Traps
 

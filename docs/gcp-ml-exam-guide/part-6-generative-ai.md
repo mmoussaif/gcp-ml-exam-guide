@@ -423,6 +423,36 @@ For enterprise ML/GenAI work, the hard part is often the **journey from scattere
 - **Localization**: adjust prompts to reflect regional context (e.g., landmarks) to make content feel locally relevant.
 - **Outcome**: reported improvements like higher engagement (e.g., a “click-through rate” lift in a regional market). Treat such numbers as directional until validated in your own setup and measurement.
 
+#### Nano Banana Pro: Efficient Image Generation for Agent Workflows
+
+**Nano Banana Pro** is Google's efficient text-to-image model, part of the Imagen family, optimized for **speed and cost-effectiveness**. Launched November 2025.
+
+| Aspect           | Details                                                           |
+| ---------------- | ----------------------------------------------------------------- |
+| **Model type**   | Text-to-image diffusion model (efficient variant of Imagen)       |
+| **Optimization** | Speed and cost (faster inference, lower cost per image)           |
+| **Use cases**    | Agent workflows, browser automation, rapid iteration, prototyping |
+| **Integration**  | Available in Google Antigravity, Vertex AI Model Garden           |
+
+**When to choose Nano Banana Pro vs Imagen**:
+
+| Scenario                                                   | Model Choice    | Rationale                                  |
+| ---------------------------------------------------------- | --------------- | ------------------------------------------ |
+| **Agent workflows** (browser automation, iterative design) | Nano Banana Pro | Fast response times needed for agent loops |
+| **High-quality marketing images**                          | Imagen          | Maximum quality/fidelity priority          |
+| **Rapid prototyping**                                      | Nano Banana Pro | Lower cost enables more iterations         |
+| **Production e-commerce** (PUMA-style)                     | Imagen          | Quality matters more than speed            |
+| **Cost-sensitive applications**                            | Nano Banana Pro | Lower per-image cost                       |
+
+**Key characteristics**:
+
+- **Faster inference**: Optimized for low latency, suitable for real-time agent interactions
+- **Cost-effective**: Lower cost per image generation compared to full Imagen
+- **Agent-friendly**: Designed for integration into agent workflows (e.g., Google Antigravity's browser-in-the-loop agents)
+- **Iterative workflows**: Enables rapid iteration without prohibitive costs
+
+**EXAM TIP:** When questions mention "agent workflows", "rapid iteration", "cost-effective image generation", or "browser automation" → consider **Nano Banana Pro** over Imagen.
+
 #### Multimodal GenAI (why it changes workflows)
 
 Multimodal models can work across **text, images, video, audio, and PDFs**—either separately or combined in one task. This is why “GenAI” shows up in places like marketing content, document understanding, analytics dashboards, and support operations (not just chat).
@@ -480,6 +510,7 @@ This framing is adapted from the GenAI Leader curriculum and is useful for exam-
 
 - **Gemini**: multimodal foundation model trained across text, images, code, audio, video, etc.
 - **Imagen**: image generation/editing foundation model trained primarily on images + text descriptions.
+  - **Nano Banana Pro**: efficient variant of Imagen optimized for speed and cost; ideal for agent workflows requiring rapid image generation (e.g., browser automation, iterative design).
 - **Chirp**: audio/speech foundation model trained on multilingual audio (speech recognition / transcription / translation use cases).
 - **Diffusion models**: a common foundation-model family for media generation (especially images, and sometimes audio/video) that generates outputs by **iteratively denoising** (refining noise into structure).
 
@@ -668,11 +699,12 @@ Once you’ve assessed needs and resources, treat GenAI as an ongoing product: *
 
 **Google Cloud’s ML models (via Vertex AI)**
 
-Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google’s suite:
+Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google's suite:
 
 - **Gemini**: **multimodal** model family (text + images + audio + video) for complex understanding, conversational AI, and content generation.
 - **Gemma**: **lightweight, open** model family (built on research/tech behind Gemini) that can be a good fit for local deployments and specialized apps.
 - **Imagen**: **text-to-image diffusion** model for high-quality image generation/editing from prompts.
+- **Nano Banana Pro**: **efficient text-to-image** model optimized for speed and cost-effectiveness. Part of the Imagen family, designed for rapid iteration and agent workflows (e.g., browser-in-the-loop automation in Google Antigravity).
 - **Veo**: **video generation** model (from text prompts and/or still images) for generating video content.
 
 #### Keeping humans at the forefront (augmentation vs automation)
