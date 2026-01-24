@@ -3024,6 +3024,146 @@ crew = Crew(
 
 **EXAM TIP:** Questions about "static reference material" or "preloaded context" → think **knowledge sources**. Questions about "dynamic actions" or "real-time operations" → think **tools**. Questions about "agent-specific vs shared knowledge" → think **agent-level** vs **crew-level** access.
 
+#### Memory for Agents
+
+**What is memory?**: Memory is the mechanism that allows AI agents to remember information from past interactions, ensuring continuity and learning over time. Unlike knowledge (static reference material) or tools (dynamic actions), memory is **contextual and dynamic**—it stores data during agent operations (conversation history, user preferences, learned facts).
+
+**Memory vs Knowledge vs Tools**:
+
+| Aspect          | Memory                                                     | Knowledge                     | Tools                |
+| --------------- | ---------------------------------------------------------- | ----------------------------- | -------------------- |
+| **Nature**      | Contextual, dynamic                                        | Static reference              | Dynamic actions      |
+| **Content**     | Past interactions, user preferences, learned facts         | Preloaded documents, datasets | Real-time operations |
+| **Persistence** | Across sessions (long-term) or within session (short-term) | Preprocessed and stored       | No inherent memory   |
+| **Example**     | "User likes pizza without capsicum"                        | Employee handbook PDF         | Web search API       |
+
+**Why memory matters**:
+
+Without memory, agents are stateless:
+
+- Users must repeat themselves constantly
+- Agents lose context between steps
+- Personalization is impossible
+- Agents can't learn from past experiences
+
+With memory, agents become context-aware:
+
+- Remember user preferences and facts
+- Maintain continuity across multi-turn conversations
+- Personalize responses based on user history
+- Learn from past experiences and avoid repeating mistakes
+
+**Benefits**:
+
+- **Context retention**: Coherent dialogue referring back to earlier conversation
+- **Personalization**: Store user-specific information (name, preferences, past queries)
+- **Continuous learning**: Accumulate experience, improve decision-making
+- **Collaboration**: Multi-agent crews leverage information from prior steps
+
+**Types of Memory in CrewAI**:
+
+1. **Short-Term Memory (STM)**: Maintains immediate context within a session
+
+   - Query-specific retrieval
+   - Recent conversation history
+   - Current task context
+
+2. **Long-Term Memory (LTM)**: Accumulates knowledge and experience across sessions
+
+   - Task description-based retrieval
+   - Broad ideas and context
+   - Structured outcomes and reflections
+   - Stores metadata: datetime, score, reflections, feedback
+
+3. **Entity Memory**: Tracks information about specific entities (people, objects, concepts)
+
+   - Query-specific retrieval
+   - Named relationships (e.g., "John's birthday is March 15th")
+   - Structured facts and attributes
+   - Mini-knowledge graph for entities
+
+4. **User Memory**: Personalization, tracking individual user details
+   - User-specific preferences
+   - Tailored interactions
+
+**Enabling memory**:
+
+```python
+# Simple: Enable all memory types
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    memory=True  # Enables short-term, long-term, and entity memory
+)
+```
+
+**How memory works internally**:
+
+1. **Memory creation** (`create_crew_memory`):
+
+   - Checks if `memory=True`
+   - Creates long-term memory object
+   - Creates short-term memory object
+   - Creates entity memory object
+
+2. **Context building** (`build_context_for_task`):
+
+   - Retrieves context from long-term memory (using task description)
+   - Retrieves context from short-term memory (using query)
+   - Retrieves context from entity memory (using query)
+   - Combines contexts and adds to task prompt
+
+3. **Memory retrieval**:
+   - **Short-term memory**: `crew._short_term_memory.search(query)` returns recent conversation context
+   - **Long-term memory**: `crew._long_term_memory.search(task_description)` returns structured memory entries with metadata, datetime, score
+   - **Entity memory**: `crew._entity_memory.search(query)` returns entity facts with ID, metadata, context, relevance score
+
+**Memory entry structure** (long-term memory):
+
+```python
+{
+    "metadata": {
+        "reflections": "...",
+        "feedback": "...",
+        "insights": "..."
+    },
+    "datetime": "2025-03-30T10:00:00",
+    "score": 0.85,  # Relevance score
+    "context": "Actual memory content..."
+}
+```
+
+**Entity memory structure**:
+
+```python
+{
+    "id": "unique_entity_id",
+    "metadata": {
+        "associated_with": "personal preference",
+        "represents": "specific color",
+        "referenced_as": "user's favorite color"
+    },
+    "context": "favorite color(Color): A color that is preferred by someone.",
+    "score": 0.92  # Vector similarity score
+}
+```
+
+**Key differences**:
+
+- **Short-term memory**: Session-specific, query-based, recent interactions
+- **Long-term memory**: Cross-session, task description-based, structured learnings
+- **Entity memory**: Entity-specific, query-based, named relationships and facts
+
+**Best practices**:
+
+- **Enable memory** for multi-turn conversations or personalization needs
+- **Use short-term memory** for within-session context
+- **Use long-term memory** for cross-session learning and reflections
+- **Use entity memory** for tracking facts about specific people, objects, or concepts
+- **Memory is automatic**: Once enabled, agents automatically store and retrieve relevant context
+
+**EXAM TIP:** Questions about "remembering past interactions" or "user preferences" → think **memory** (`memory=True`). Questions about "context retention" → think **short-term memory**. Questions about "cross-session learning" → think **long-term memory**. Questions about "tracking facts about entities" → think **entity memory**.
+
 ---
 
 ### LangGraph — State Machine Orchestration for Agents
