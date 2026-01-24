@@ -194,6 +194,7 @@
 - LLMs are a specialized type of foundation model (LLM ⊂ foundation model); not all foundation models are LLMs
 - GenAI strategy: don’t start with the tech — start with business priorities, run safe bottom-up experiments, and scale with top-down guardrails
 - Augment vs automate: use GenAI to augment human judgment/strategy, and automate repetitive tasks — keep humans-in-the-loop for data, prompts, QA, and monitoring
+- AI-assisted captioning pattern: generate a time-coded draft artifact (captions/transcript) + human review/QA gate; track edits as feedback/eval data
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)

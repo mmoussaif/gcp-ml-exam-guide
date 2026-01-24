@@ -252,6 +252,38 @@ As you adopt GenAI, the “best” use cases usually **augment human strategic w
 - **Output evaluation & refinement**: review/edit for correctness, compliance, and brand alignment.
 - **Continuous monitoring & feedback**: measure quality/drift/safety issues and improve over time.
 
+#### Case study (GenAI Leader): AI-assisted captioning with humans-in-the-loop (Warner Bros.)
+
+This example is a clean “augmentation, not replacement” pattern: **AI generates a first-pass caption file**, then **humans edit and verify** for correctness and sync.
+
+**What changes operationally**
+
+- The model produces a **time-coded, formatted caption file** that lands in a folder and is ready to edit.
+- Human captioners shift from “type everything” to **review + correction + sync validation**.
+- Reported impact (as shared in the course): **~50% cost reduction** and **~80% reduction in manual captioning time**.
+
+**Why this is a good GenAI/ML use case**
+
+- Captioning is **time-consuming** and benefits from a strong “draft → review” loop.
+- Quality requirements are high; the human review step acts as a quality gate.
+- You can iterate on model choice and approach; Vertex AI is positioned as **model-choice flexible** (platform not locked to one model).
+
+**Reference architecture on Google Cloud (one reasonable implementation)**
+
+```mermaid
+flowchart TD
+  V[Video asset] --> I[Ingest to Cloud Storage]
+  I --> T[Transcribe / caption draft generation\n(Vertex AI or Speech APIs)]
+  T --> C[Caption file output\n(time-coded + formatted)]
+  C --> B[(Cloud Storage bucket/folder)]
+  B --> H[Human review + edit\n(QA + sync check)]
+  H --> P[Publish captions\n(distribution pipeline)]
+  H --> F[Feedback loop\n(error patterns, glossary, eval set)]
+  F --> T
+```
+
+**EXAM TIP:** When an answer mentions “reduce human time but keep quality high” → pick designs that output **editable artifacts** (drafts, structured files) and include a **human-in-the-loop quality gate**, rather than “fully automate with no review”.
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
