@@ -3163,6 +3163,7 @@ crew = Crew(
 **Purpose**: Agent's "working memory" for the current session or task sequence. Stores recent interactions and outcomes so the agent can recall information relevant to the ongoing context.
 
 **How it works**:
+
 - Uses **RAG (Retrieval-Augmented Generation)** approach
 - Embeds text of recent prompts and results into a vector store
 - Default: OpenAI embeddings + local Chroma vector database
@@ -3174,6 +3175,7 @@ crew = Crew(
 **Usage**: No separate API call needed—CrewAI automatically captures each agent's input/output and significant intermediate results into the short-term memory store.
 
 **Internal mechanism**:
+
 1. **Embedding**: After each task, prompt/response text is embedded using embedding model (default: OpenAI)
 2. **Storage**: Vectors stored in ChromaDB via RAGStorage interface
 3. **Similarity search**: On new task, CrewAI retrieves top-K relevant memory chunks using cosine similarity
@@ -3221,6 +3223,7 @@ crew.kickoff()  # Agent retrieves color from short-term memory
 ```
 
 **Key characteristics**:
+
 - **Transient**: Per session only
 - **Query-based**: Uses current query for similarity search
 - **Automatic**: No manual management needed
@@ -3231,6 +3234,7 @@ crew.kickoff()  # Agent retrieves color from short-term memory
 **Purpose**: Persistence across sessions. Retrieves high-level information related to the task. Used for broader information rather than specific details (like short-term memory).
 
 **How it works**:
+
 - Uses **lightweight database (SQLite3)** to store task results persistently on disk
 - Stores structured outcomes, reflections, feedback, insights
 - Task description-based retrieval (not query-based like STM)
@@ -3285,12 +3289,14 @@ crew2.kickoff()  # Retrieves fact from long-term memory
 ```
 
 **Key characteristics**:
+
 - **Persistent**: Across sessions (cumulative)
 - **Task description-based**: Uses task description for retrieval
 - **Structured**: Stores metadata, reflections, feedback
 - **SQLite-backed**: Lightweight database storage
 
 **Use cases**:
+
 - Gradually building up knowledge
 - Research findings accumulation
 - Learning from past mistakes
@@ -3301,6 +3307,7 @@ crew2.kickoff()  # Retrieves fact from long-term memory
 **Purpose**: Captures and organizes information about specific entities (people, organizations, products, concepts). Creates a profile or knowledge card for each entity.
 
 **How it works**:
+
 - Uses **vector store (RAG)** like short-term memory
 - Indexes information by or alongside entity name
 - Stores facts or statements per entity
@@ -3363,6 +3370,7 @@ crew.kickoff()  # Retrieves Alice's color from entity memory
 ```
 
 **How it works internally**:
+
 1. **Entity extraction**: CrewAI extracts entities from statements (e.g., "Alice", "Acme Corp")
 2. **Chunking and embedding**: Chunks and embeds statements using LLM's embedding model
 3. **Storage**: Stores using RAGStorage with entity associations
@@ -3371,12 +3379,14 @@ crew.kickoff()  # Retrieves Alice's color from entity memory
 6. **Context injection**: Injects relevant details into context window
 
 **Key characteristics**:
+
 - **Entity-specific**: Tracks facts per entity separately
 - **Query-based**: Uses current query for similarity search
 - **RAG-based**: Vector embeddings + similarity search
 - **Structured**: Named relationships and facts
 
 **Use cases**:
+
 - Research assistant tracking multiple companies
 - Customer support handling multiple customers
 - Story-writing agent maintaining character consistency
@@ -3387,6 +3397,7 @@ crew.kickoff()  # Retrieves Alice's color from entity memory
 **Purpose**: Intelligent retrieval layer that blends short-term, long-term, and entity memory types to present the most relevant information to the agent at any given point.
 
 **How it works**:
+
 - Automatically merges relevant pieces from:
   - Short-term memory (recent task interactions)
   - Long-term memory (persisted insights from past sessions)
@@ -3397,6 +3408,7 @@ crew.kickoff()  # Retrieves Alice's color from entity memory
 **Implementation**: In `execute_task` method, all memory objects are combined into a single `contextual_memory` object, which is then used by `build_context_for_task` to find relevant context.
 
 **Key characteristics**:
+
 - **Automatic**: No separate configuration needed
 - **Intelligent**: Prioritizes by relevance
 - **Comprehensive**: Combines all memory types
@@ -3407,6 +3419,7 @@ crew.kickoff()  # Retrieves Alice's color from entity memory
 **Purpose**: Personalization—stores user-specific information and preferences to enhance user experience. Allows agent to distinguish and remember individual users' data separately.
 
 **How it works**:
+
 - Associates `user_id` with agent's memory system
 - Integrates with external memory services (e.g., Mem0) for user-specific storage
 - Isolates memories between users
@@ -3448,12 +3461,14 @@ crew_bob = Crew(
 ```
 
 **Key characteristics**:
+
 - **User-scoped**: Isolated per user ID
 - **Personalization**: Tailors interactions per user
 - **Privacy**: Data isolation between users
 - **External integration**: Can use Mem0 or custom storage
 
 **Use cases**:
+
 - Multi-user applications
 - Personalization requirements
 - Privacy-sensitive scenarios
@@ -3485,6 +3500,7 @@ crew.reset_memories(command_type='all')
 ```
 
 **When to reset**:
+
 - **Development/testing**: Rerun scenarios from scratch
 - **Incorrect information**: Clear outdated/incorrect long-term memory
 - **Context switching**: Reset when switching between distinct projects/domains
@@ -3522,15 +3538,373 @@ crew.kickoff(inputs={"user_task": "What is my favorite color?"})
 
 **Decision guide**:
 
-| Use Case | Memory Type(s) |
-|----------|----------------|
-| Multi-turn conversation | Short-term + Contextual |
-| Cross-session learning | Long-term + Contextual |
-| Entity tracking | Entity + Contextual |
-| User personalization | User memory |
-| Complex workflows | All types (default with `memory=True`) |
+| Use Case                | Memory Type(s)                         |
+| ----------------------- | -------------------------------------- |
+| Multi-turn conversation | Short-term + Contextual                |
+| Cross-session learning  | Long-term + Contextual                 |
+| Entity tracking         | Entity + Contextual                    |
+| User personalization    | User memory                            |
+| Complex workflows       | All types (default with `memory=True`) |
 
 **EXAM TIP:** Questions about "remembering past interactions" or "user preferences" → think **memory** (`memory=True`). Questions about "context retention within session" → think **short-term memory**. Questions about "cross-session learning" → think **long-term memory**. Questions about "tracking facts about entities" → think **entity memory**. Questions about "user-specific personalization" → think **user memory**. Questions about "intelligent retrieval combining all types" → think **contextual memory**.
+
+---
+
+### ReAct Pattern: Reasoning and Acting from Scratch
+
+**ReAct (Reasoning and Acting)** is a fundamental paradigm for AI agent design where an agent uses chain-of-thought reasoning and tool-using actions in an interleaved manner. Instead of generating a direct answer in one step, a ReAct agent thinks step-by-step and can perform intermediate actions (like looking something up or calculating a value) before finalizing its answer.
+
+**Why ReAct matters**:
+
+- **Transparency**: Reasoning traces make agent decision-making visible and debuggable
+- **Reliability**: Reduces hallucination by letting the model retrieve real information to verify facts
+- **Power**: Turns a passive LLM into an active problem solver that can interact with external data sources
+- **Widely used**: Most agent frameworks (CrewAI, LangChain, etc.) use ReAct internally
+
+**How ReAct works**:
+
+A ReAct agent operates in a loop of **Thought → Action → Observation**, repeating until it reaches a solution or a final answer:
+
+1. **Thought**: Agent analyzes the query and produces reasoning step in natural language
+2. **Action**: Agent decides on external tool/operation to perform (e.g., `WebSearch("population of Canada")`)
+3. **Observation**: Environment executes action and returns result back to agent
+4. **Repeat**: Agent takes new information and goes back to Thought step
+
+This cycle continues until the agent has enough information to produce a **Final Answer**.
+
+**ReAct format template**:
+
+The agent follows a structured format enforced through prompt engineering:
+
+```
+Thought: [agent's reasoning about what to do]
+Action: [tool name]
+Action Input: [JSON object with tool arguments]
+Observation: [result from tool execution]
+```
+
+Once all information is gathered:
+
+```
+Thought: I now know the final answer
+Final Answer: [final answer to original question]
+```
+
+**Key characteristics**:
+
+- **Step-by-step**: Forces LLM to operate incrementally
+- **Separated concerns**: Clearly separates thinking from acting
+- **Deterministic**: Guarantees predictable input-output behavior for tools
+- **Traceable**: Produces reasoning chains you can inspect or debug
+
+**ReAct in CrewAI**:
+
+CrewAI implements ReAct internally. When using tools, agents follow this pattern:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.tools import SerperDevTool
+
+# Initialize web search tool
+search_tool = SerperDevTool()
+
+# Define agent with tool
+agent = Agent(
+    role="News Reporter",
+    goal="Create validated news headlines",
+    backstory="You are a journalist who verifies facts.",
+    tools=[search_tool],
+    verbose=True  # Shows ReAct trace
+)
+
+task = Task(
+    description="Create a news headline about {topic}. Validate it with a web search.",
+    agent=agent,
+    tools=[search_tool]
+)
+
+crew = Crew(agents=[agent], tasks=[task])
+result = crew.kickoff(inputs={"topic": "Agent2Agent Protocol"})
+```
+
+**Verbose output shows ReAct trace**:
+
+```
+Thought: I should validate the information by performing a quick search
+Action: Search the internet
+Action Input: {"search_query": "Agent2Agent Protocol news November 2023"}
+Observation: [search results...]
+Thought: Now I have validated information, I can create the headline
+Final Answer: [headline]
+```
+
+**Action protocol in CrewAI**:
+
+CrewAI uses a strict tool prompt format:
+
+```
+You ONLY have access to the following tools,
+and should NEVER make up tools that are not listed here:
+
+Tool Name: Search the internet
+Tool Arguments: {'search_query': {'description': 'Mandatory search query', 'type': 'str'}}
+Tool Description: A tool that can be used to search the internet.
+
+IMPORTANT: Use the following format in your response:
+
+Thought: you should always think about what to do
+Action: the action to take, only one name of [Search the internet]
+Action Input: the input to the action, just a simple JSON object
+Observation: the result of the action
+```
+
+**Building ReAct from scratch**:
+
+Understanding ReAct implementation helps debug frameworks and build custom agents.
+
+**1. Agent class**:
+
+```python
+import os
+from litellm import completion
+
+class MyAgent:
+    def __init__(self, system=None):
+        self.messages = []
+        if system:
+            self.messages.append({"role": "system", "content": system})
+    
+    def complete(self, message=None):
+        if message:
+            self.messages.append({"role": "user", "content": message})
+        
+        result = completion(
+            model="openai/gpt-4o",
+            messages=self.messages
+        )
+        
+        reply = result.choices[0].message.content
+        self.messages.append({"role": "assistant", "content": reply})
+        return reply
+```
+
+**2. ReAct system prompt**:
+
+```python
+system_prompt = """
+You run in a loop and do JUST ONE thing in a single iteration:
+
+1) "Thought" to describe your thoughts about the input question.
+2) "PAUSE" to pause and think about the action to take.
+3) "Action" to decide what action to take from the list of actions available to you.
+4) "PAUSE" to pause and wait for the result of the action.
+5) "Observation" will be the output returned by the action.
+
+At the end of the loop, you produce an Answer.
+
+The actions available to you are:
+
+math:
+e.g. math: (14 * 5) / 4
+Evaluates mathematical expressions using Python syntax.
+
+lookup_population:
+e.g. lookup_population: India
+Returns the latest known population of the specified country.
+
+Here's a sample run for your reference:
+
+Question: What is double the population of Japan?
+
+Iteration 1:
+Thought: I need to find the population of Japan first.
+
+Iteration 2:
+PAUSE
+
+Iteration 3:
+Action: lookup_population: Japan
+
+Iteration 4:
+PAUSE
+
+Iteration 5:
+Observation: 125000000
+
+Iteration 6:
+Thought: Now I need to double this value.
+
+Iteration 7:
+PAUSE
+
+Iteration 8:
+Action: math: 125000000 * 2
+
+Iteration 9:
+PAUSE
+
+Iteration 10:
+Observation: 250000000
+
+Iteration 11:
+Answer: Double the population of Japan is 250 million.
+
+Whenever you have the answer, stop the loop and output it to the user.
+
+Now begin solving:
+"""
+```
+
+**3. Tools**:
+
+```python
+import math
+import re
+
+def math_tool(expression):
+    """Evaluate mathematical expression"""
+    try:
+        # Remove "math:" prefix if present
+        expression = expression.replace("math:", "").strip()
+        result = eval(expression)
+        return str(result)
+    except Exception as e:
+        return f"Error: {e}"
+
+def lookup_population(country):
+    """Lookup population of a country"""
+    populations = {
+        "India": "1400000000",
+        "Japan": "125000000",
+        "Canada": "38000000"
+    }
+    return populations.get(country, "Unknown")
+```
+
+**4. Automated ReAct loop**:
+
+```python
+import re
+
+def agent_loop(query, system_prompt):
+    # Initialize agent
+    agent = MyAgent(system=system_prompt)
+    
+    # Define tools
+    tools = {
+        "math": math_tool,
+        "lookup_population": lookup_population
+    }
+    
+    current_prompt = query
+    previous_step = None
+    
+    while True:
+        # Get agent response
+        response = agent.complete(current_prompt)
+        print(f"Agent: {response}\n")
+        
+        # Check for final answer
+        if "Answer:" in response:
+            break
+        
+        # Parse Thought
+        if "Thought:" in response:
+            previous_step = "Thought"
+            current_prompt = ""  # Continue to next step
+            continue
+        
+        # Handle PAUSE
+        if "PAUSE" in response:
+            current_prompt = ""
+            continue
+        
+        # Parse Action
+        if "Action:" in response:
+            previous_step = "Action"
+            # Extract tool name and argument
+            match = re.search(r"Action:\s*(\w+):\s*(.+)", response)
+            if match:
+                tool_name = match.group(1)
+                tool_arg = match.group(2).strip()
+                
+                # Execute tool
+                if tool_name in tools:
+                    observation = tools[tool_name](tool_arg)
+                    current_prompt = f"Observation: {observation}"
+                else:
+                    current_prompt = "Observation: Tool not found. Please retry."
+            continue
+    
+    return response
+
+# Run agent
+result = agent_loop(
+    "What is the sum of the population of India and Japan?",
+    system_prompt
+)
+```
+
+**Output example**:
+
+```
+Agent: Thought: I need to find the population of India first.
+
+Agent: PAUSE
+
+Agent: Action: lookup_population: India
+
+Agent: PAUSE
+
+Agent: Observation: 1400000000
+
+Agent: Thought: Now I need to find the population of Japan.
+
+Agent: PAUSE
+
+Agent: Action: lookup_population: Japan
+
+Agent: PAUSE
+
+Agent: Observation: 125000000
+
+Agent: Thought: I now have the populations of both India and Japan. I need to add them together.
+
+Agent: PAUSE
+
+Agent: Action: math: 1400000000 + 125000000
+
+Agent: PAUSE
+
+Agent: Observation: 1525000000
+
+Agent: Answer: The sum of the population of India and the population of Japan is 1,525,000,000.
+```
+
+**Key implementation details**:
+
+- **Prompt engineering**: ReAct is implemented via carefully crafted prompt templates, not built-in LLM ability
+- **Parsing**: Use regex or structured outputs to parse Thought/Action/Observation
+- **Tool execution**: Execute tools based on Action, inject results as Observation
+- **Loop control**: Continue until Final Answer is produced
+- **Error handling**: Validate tools exist, handle failures gracefully
+
+**Production considerations**:
+
+- **Robust parsing**: Use structured prompts with JSON outputs or function calling instead of regex
+- **Tool validation**: Validate tool existence, parameters, and permissions
+- **Retries**: Implement retry logic for failed tool calls
+- **Guardrails**: Add output formatters to constrain LLM responses
+- **Exception handling**: Handle tool failures, timeouts, and edge cases
+
+**Benefits of understanding ReAct**:
+
+- **Debugging**: Understand why agents make specific decisions
+- **Customization**: Build custom agents with full control
+- **Optimization**: Fine-tune agent behavior for specific use cases
+- **Transparency**: Inspect reasoning chains for trust and compliance
+
+**EXAM TIP:** Questions about "step-by-step reasoning with tools" or "transparent agent decision-making" → think **ReAct pattern**. Questions about "reducing hallucination through verification" → think **ReAct** (Thought → Action → Observation). Questions about "how frameworks like CrewAI work internally" → think **ReAct** as the underlying pattern.
 
 ---
 
