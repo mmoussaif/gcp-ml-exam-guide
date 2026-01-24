@@ -1257,14 +1257,26 @@ The core mechanism that allows transformers to weigh relationships between all p
 
 ### 6.1.1 Tokenization (how text becomes numbers for LLMs)
 
-Tokenization is the **first step** in any LLM pipeline: converting raw text into a sequence of integer IDs that the model can process. Understanding tokenization is critical for:
+**Introduction**:
+
+**At the heart of an LLM's input processing**: Is tokenization: breaking text into discrete units called tokens, and assigning each a unique token ID, because before a neural network can process human language, that language must be translated into a format the machine can understand: numerical vectors.
+
+**Tokenization is one stage**: Of this two-stage critical translation process, with the other stage being embedding, which maps the tokens into a continuous vector space.
+
+**Early techniques relied**: On word-level tokenization (splitting by spaces) or character-level tokenization. Both approaches have significant limitations.
+
+**Word-level tokenization**: Results in massive vocabulary sizes and cannot handle unseen words, while character-level tokenization produces excessively long sequences that dilute semantic meaning and increase computational cost.
+
+**Hence**: Modern LLMs adopt subword tokenization, which strikes an optimal balance. Here, tokens are often words and subwords, depending on frequency of occurrence. For example, the sentence "Transformers are amazing!" might be tokenized into pieces like ["Transform", "ers", " are", " amazing", "!"].
+
+**Understanding tokenization is critical for**:
 
 - Estimating **cost** (most LLM APIs charge per token)
 - Managing **context window** limits
 - Debugging unexpected model behavior (tokenization artifacts)
 - Optimizing **chunking** for RAG
 
-#### What is a token?
+**What is a token?**
 
 A token is a **sub-word unit** — not necessarily a full word. Modern tokenizers split text into pieces that balance vocabulary size with sequence length.
 
@@ -1278,18 +1290,327 @@ A token is a **sub-word unit** — not necessarily a full word. Modern tokenizer
 
 **Rule of thumb**: ~4 characters ≈ 1 token (for English). But this varies by tokenizer and language.
 
-#### Common tokenization algorithms
+**Why Subword Tokenization?**
 
-| Algorithm                    | Used By                           | How It Works                                         |
-| ---------------------------- | --------------------------------- | ---------------------------------------------------- |
-| **BPE (Byte-Pair Encoding)** | GPT, LLaMA, many open models      | Iteratively merges most frequent character pairs     |
-| **WordPiece**                | BERT, DistilBERT                  | Similar to BPE but uses likelihood-based merging     |
-| **SentencePiece**            | T5, Gemini, multilingual models   | Language-agnostic; treats input as raw bytes/unicode |
-| **Unigram**                  | XLNet, some SentencePiece configs | Probabilistic model; keeps most likely subwords      |
+**More formally**: The reasons behind using subword units are:
 
-**EXAM TIP:** You don't need to implement these from scratch — use the tokenizer that matches your model (e.g., `transformers.AutoTokenizer`).
+**1. Subwords Capture Meaning**:
 
-#### Implementation: How to tokenize (Hugging Face example)
+**Unlike single characters**: Subword tokens can represent meaningful chunks of words. For instance, the word "cooking" can be split into tokens "cook" and "ing", each carrying part of the meaning.
+
+**A purely character-based model**: Would have to learn "cook" vs "cooking" relationships from scratch, whereas subwords provide a head start by preserving linguistic structure.
+
+**2. Vocabulary Efficiency**:
+
+**There are far fewer**: Unique subword tokens than full words. Using subword tokens reduces the vocabulary size dramatically compared to word-level tokenizers, which makes the model more efficient to train and use.
+
+**For example**: Instead of needing a vocabulary containing every form of a word (run, runs, running, ran, etc.), a tokenizer might include base tokens like "run" and suffix tokens like "ning" or past tense markers. This keeps the vocabulary (and therefore model size) manageable.
+
+**Most LLMs have vocabularies**: On the order of tens to hundreds of thousands of tokens, far smaller than the number of possible words.
+
+**3. Handling Unknown or Rare Words**:
+
+**Subword tokenization naturally handles**: Out-of-vocabulary words better by breaking them into pieces. If the model encounters a new word it wasn't trained on, it can split it into familiar segments rather than treating it as an entirely unknown token.
+
+**This helps the model**: Generalize to new words by understanding their components.
+
+**Subword Tokenization Algorithms**:
+
+**The three dominant algorithms**: In this space are byte-pair encoding (BPE), WordPiece, and Unigram tokenization.
+
+**These algorithms build**: A vocabulary of tokens by starting from characters and iteratively merging common sequences to form longer tokens. The result is a fixed vocabulary where each token may be a word or a frequent subword.
+
+**1. Byte-Pair Encoding (BPE)**:
+
+**Byte-Pair Encoding (BPE)**: Is the standard for models like GPT-2, GPT-3, GPT-4, and the Llama family. It is a frequency-based compression algorithm that iteratively merges the most frequent adjacent pairs of symbols into new tokens.
+
+**Mechanism**:
+
+1. **Initialization**: The vocabulary is initialized with all unique characters in the corpus
+2. **Statistical Counting**: The algorithm scans the corpus and counts the frequency of all adjacent symbol pairs (e.g., "e" followed by "r")
+3. **Merge Operation**: The most frequent pair is merged into a new token (e.g., "er"). This new token is added to the vocabulary
+4. **Iteration**: This process repeats until a pre-defined vocabulary size (hyperparameter) is reached
+
+**Implementations, such as those in GPT models**: Utilize Byte-level BPE (BBPE). Instead of directly operating on Unicode characters, BBPE defines the base vocabulary as the 256 possible byte values of UTF-8 encoding.
+
+**This ensures**: That any input string, regardless of language, script, or emoji content, can be tokenized without generating unknown tokens, as every character decomposes into bytes.
+
+**Important Note**:
+
+**Unicode**: Is a universal character standard that assigns a unique number (called a code point) to every character, symbol, and emoji in all the world's writing systems.
+
+**UTF-8**: Is a specific, widely-used method of encoding those Unicode code points into a sequence of bytes for storage and transmission on computers. UTF-8 is an implementation of the Unicode standard. It defines how to translate the abstract Unicode code points into binary data (sequences of 8-bit bytes) that computers can store and process.
+
+**How does this help?**
+
+**Byte-level BPE (BBPE)**: Works on raw bytes, not characters or words. Any text you type (English, Hindi, Chinese, emojis, symbols) is first converted into UTF-8 bytes.
+
+**Since UTF-8 represents**: Everything using combinations of 256 possible byte values (0-255). BBPE starts with these 256 bytes as its base vocabulary and then learns frequent byte sequences and merges them into larger tokens.
+
+**Now, as we know**: Simple BPE (Byte Pair Encoding) operates on text units; hence, while it significantly reduces the out-of-vocabulary (OOV) problem compared to word-level tokenization, it does not eliminate it entirely.
+
+**This is because**: If a character or symbol was never seen during training, such as a rare Unicode character or emoji, simple BPE can fail to represent the input correctly.
+
+**Byte-level BPE (BBPE) addresses**: This limitation by changing the fundamental unit of tokenization. Instead of starting from characters, BBPE first converts text into UTF-8 bytes and uses the 256 possible byte values as its base vocabulary.
+
+**Since every possible character**: In any language or script can be represented as a sequence of UTF-8 bytes, any input string can always be tokenized, even if the character itself was never seen during training.
+
+**As a result**: BBPE completely eliminates the OOV problem by design. Rare characters, emojis, mixed scripts, and noisy user inputs are always representable as byte sequences, which can then be merged into larger subword tokens if they appear frequently.
+
+**This universality and robustness**: Are the two main reasons why GPT models and many other LLMs use byte-level BPE instead of traditional character-based BPE.
+
+**2. WordPiece Algorithm**:
+
+**WordPiece was popularized**: By BERT. Like BPE, it is an additive algorithm (it starts with characters and merges them). However, the "greedy" selection criteria is different.
+
+**Mechanism**:
+
+**While BPE asks**: "Which pair of tokens appears most often together?"
+
+**WordPiece asks**: "Which merge increases the probability of the training data the most?"
+
+**Conceptually**: This preference can be expressed using the ratio:
+
+$$\frac{P(AB)}{P(A) P(B)}$$
+
+**where**:
+
+- **P(AB)**: The probability of the merged unit appearing
+- **P(A) P(B)**: The probability of the two units appearing independently
+
+**This ratio measures**: How much more likely A and B are to appear together than by chance.
+
+**Note**: This ratio is an intuitive proxy, not the exact training objective. In practice, WordPiece greedily selects merges that maximize the improvement in corpus log-likelihood under a unigram language model.
+
+**A Unigram language model**: Is a type of language model that considers each token to be independent of the tokens before it. It's the simplest language model.
+
+**Formally**: WordPiece chooses the merge (A, B) that maximizes:
+
+$$\Delta \log P(D) = \log P(D | V \cup \{AB\}) - \log P(D | V)$$
+
+**where V**: Is the current vocabulary and D is the training corpus.
+
+**This measures**: How much adding the merged token AB to the vocabulary V improves the model's ability to explain the training data, compared to using the vocabulary alone.
+
+**A larger positive Δ log P(D)**: Means that adding the merge AB explains the training data significantly better, so that merge is preferred.
+
+**How does it help?**
+
+**Raw frequency alone**: Can promote merges that occur often by coincidence, such as common prefixes or character patterns that attach to many different words.
+
+**A likelihood-based criterion**: Corrects for this by comparing how often two units appear together relative to how often they appear independently.
+
+**As a result**: Highly generic pieces like "un", which appear in thousands of words, are not automatically merged with every stem they touch. However, if a specific combination such as "un" + "happy" occurs far more often than expected given their individual frequencies, the merge "unhappy" is favored.
+
+**This selective merging**: Naturally preserves meaningful linguistic structure, producing subwords that align with true prefixes, suffixes, and roots rather than arbitrary character sequences.
+
+**Hence, to summarize**: WordPiece prioritizes merges where the components are "stuck" to each other, often resulting in subwords that better capture prefixes, suffixes, and linguistic roots.
+
+**Note**: In implementation (like BERT), WordPiece uses the `##` prefix (e.g., playing → play, ##ing) to signify that a subword is a continuation of some previous token, maintaining the distinction between a character at the start of a word and one in the middle.
+
+**3. Unigram Tokenization**:
+
+**Used in SentencePiece** (and models like T5): Unigram reverses the logic of BPE and WordPiece. Instead of building up, it starts "too big" and trims down.
+
+**Mechanism**:
+
+1. **Initialization**: The process starts by being deliberately generous. Instead of deciding upfront what the "right" words or subwords are, the algorithm begins with a very large list of candidates. This includes many possible pieces of text that appear in the data, from short character fragments to longer word-like chunks
+
+2. **The probabilistic model**: Each candidate piece is given a probability that reflects how often it seems to be useful. The key simplifying assumption is that these pieces are treated independently. In other words, the model does not try to understand grammar or context at this stage, only how likely each piece is to appear on its own. So each token t is assigned a probability p(t), and tokens are assumed to occur independently (unigram assumption). For a fixed segmentation s = (x₁, …, xₙ) of a string x:
+
+$$P(s) = \prod_{i=1}^{n} p(x_i)$$
+
+**Any sentence or word**: Can usually be split into pieces in many different ways. Instead of picking just one split, the algorithm considers all reasonable ways of breaking the text into these pieces. The likelihood of the text is then computed by combining the probabilities of all these possible splits. In other words, because multiple segmentations are possible, the total probability of x marginalizes over all valid segmentations S(x):
+
+$$P(x) = \sum_{s \in S(x)} P(s)$$
+
+3. **Iterative pruning**: Now comes the cleanup step. The algorithm asks a simple question for each token: "If I remove this piece, how much worse does the model become at explaining the data?" So the algorithm estimates how much each token contributes to the overall corpus likelihood under the unigram model. Tokens with the smallest contribution (i.e., whose removal causes minimal likelihood loss) are discarded in batches, typically the bottom 10-20%. This process is repeated until the vocabulary reaches the desired size
+
+**The "sampling" superpower**:
+
+**The most significant advantage**: Of Unigram is that it is non-deterministic during training. Because it is based on a probabilistic model, a single sentence like "unhappily" can be segmented in multiple ways:
+
+- un + happily
+- un + happi + ly
+- u + n + happily
+
+**During training**: We can sample these different versions. This acts as subword regularization, forcing the model to be robust and learn that "unhappily" carries the same meaning regardless of how the "slices" fall.
+
+**Hence, to summarize**: Unigram tokenization starts with an oversized vocabulary and prunes it down using a probabilistic model that scores how much each token contributes to corpus likelihood.
+
+**Because multiple segmentations**: Are possible, it can sample different tokenizations during training, acting as subword regularization and making models robust to how words are split.
+
+**At this point**: We have answered the first fundamental question in an LLM's input pipeline: "How do we convert raw text into a finite, structured set of discrete symbols that a model can reason over?"
+
+**Tokenization provides**: That answer. Through subword tokenization algorithms like BPE, WordPiece, and Unigram, we transform arbitrary text into a sequence of tokens and hence token IDs drawn from a fixed vocabulary.
+
+**However**: Tokenization alone does not make text understandable to a neural network.
+
+**Tokens at this stage**: Are still discrete, symbolic identifiers: integers with no inherent notion of similarity, meaning, or geometry. For example, the token IDs for "cat", "dog", and "quantum" are just numbers; the model has no reason to believe that the first two are semantically related while the third is not.
+
+**This brings us**: To the second half of the translation process, i.e., embeddings.
+
+**Vector Space Representations: Embeddings**:
+
+**Tokenization answers**: "What are the units of text?"
+
+**Embeddings answer**: "How should those units be represented so a neural network can learn from them?"
+
+**Once your text**: Has been split into tokens and mapped into integer IDs (token IDs), the model still can't "understand" anything, integers are just indices.
+
+**The embedding stack**: Is the bridge that turns discrete symbols into continuous vectors that can be manipulated by matrix multiplications, dot products, and gradients.
+
+**Definition**:
+
+**An embedding**: Is a learned mapping from a discrete object (like a token ID) into a vector in R^D.
+
+**The core idea is simple**:
+
+- **Discrete tokens**: Are not "numerical" in any meaningful sense
+- **Neural networks**: Work with real-valued vectors
+- **So we learn**: A lookup table that assigns each token a dense vector
+
+**What an embedding is not**:
+
+- **It is not**: A precomputed dictionary of "meanings"
+- **It is not necessarily**: "Semantic" in a human sense
+- **It is not fixed or universal**: Across models; embeddings depend on the corpus, model size, objective, and training dynamics
+
+**Embeddings are best understood**: As a trainable interface layer that converts token IDs into a geometric representation that makes the rest of the network's job easier.
+
+**Token Embeddings**:
+
+**Token embeddings**: Are the lookup table actually being trained. As discussed earlier, these are learned representations that map token IDs to vectors.
+
+**The Embedding Matrix**:
+
+**Let the vocabulary size**: Be V, and the model dimension be D (often called d_model). Then the token embedding layer is a matrix:
+
+$$E \in \mathbb{R}^{V \times D}$$
+
+**Row E[t]**: Is the embedding vector for token ID t.
+
+**If V = 50,000 and D = 768**: Then E has 50,000 × 768 parameters.
+
+**That's the entire "token embedding" mechanism**: Indexing into a matrix.
+
+**Forward Pass Mechanics: Gather, Don't Multiply**:
+
+**Suppose your input token IDs are**: x = [t₁, t₂, …, t_L].
+
+**Then the token embeddings are**: X = [E[t₁], E[t₂], …, E[t_L]] ∈ R^(L×D).
+
+**In most implementations**: This is done by a gather operation:
+
+- **It's not**: A dense matrix multiplication
+- **It's a "pick these rows" operation**
+- **During backpropagation**: Gradients only update the rows that were actually used
+
+**How Dense Vectors Help Learning**:
+
+**Embeddings give the model**: A continuous space where:
+
+- **Similar tokens**: Can have similar representations
+- **Linear operations** (like dot products): Can capture relationships
+- **Gradients**: Can smoothly adjust the representation during training
+
+**Note**: But remember: "similar" here is defined by what helps predict tokens under the training objective, not by human intuition.
+
+**How Embeddings Are Learned**:
+
+**A key point to note**: Is that token embeddings are learned end-to-end as part of the language modeling objective. They're not trained separately.
+
+**In next-token prediction**: The cross-entropy loss backpropagates through the transformer stack and into the embedding table, updating only the rows corresponding to tokens that appeared in the input.
+
+**So, token embeddings become "good"**: Only because they become useful for predicting the next token under massive data.
+
+**From Static Tokens to Contextual Meaning**:
+
+**At the embedding layer**: Token embeddings are context-free. Each token ID maps to exactly one learned vector in the embedding matrix, and this lookup is deterministic.
+
+**No matter where**: A token appears in a sequence, the same embedding vector is returned. For example, the token "bank" always starts with the same vector, even though the word itself is ambiguous and can refer to a financial institution or the side of a river. The embedding table does not encode this distinction.
+
+**This design is deliberate**: The role of the embedding layer is only to provide a continuous, learnable representation of discrete tokens so that the transformer can process them numerically.
+
+**Moreover**: At this stage, embeddings contain no information about neighboring tokens, sentence structure, or overall meaning.
+
+**Context is introduced**: Only after embeddings enter the transformer layers. Through self-attention, each token representation is updated by attending to other tokens in the sequence.
+
+**As a result**: While the input embedding for "bank" is identical in all cases, its hidden state becomes different in contexts like "river bank overflowed" versus "bank approved the loan".
+
+**The key idea is**:
+
+- **Input token embeddings**: Are static and context-independent
+- **Transformer hidden states**: Are dynamic and context-dependent
+
+**Positional Embeddings**:
+
+**Self-attention is permutation-invariant**: If you do not add position.
+
+**Here's the core issue**:
+
+**Attention computes**: Relationships between tokens by comparing their representations.
+
+**If the model sees tokens**: But not their order, it cannot distinguish:
+
+- "The dog bit the man"
+- "The man bit the dog"
+
+**Technically**: If your model uses the same embedding vectors regardless of order, then reordering the sequence doesn't change the set of inputs, only their arrangement. And attention, without position, treats them as a collection, not a sequence.
+
+**So we must inject**: Position information.
+
+**This implies**: That positional embeddings are not optional in transformers. Without them, a vanilla self-attention block can't express order-sensitive functions reliably.
+
+**1. Absolute Positional Embeddings**:
+
+**The simplest approach**:
+
+1. **Compute token embeddings**: X ∈ R^(L×D)
+2. **Compute positional embeddings**: P ∈ R^(L×D)
+3. **Add them**: Z₀ = X + P
+4. **Then Z₀**: Is fed into the first transformer block
+
+**Here**: Position vectors are learned parameters, i.e., P ∈ R^(L_max×D), where L_max is the maximum sequence length the model was built/trained to handle. It is a fixed architectural hyperparameter.
+
+**Each position i**: Has its own trainable vector P[i]. This is literally another lookup table, just like token embeddings.
+
+**2. Relative Positional Embedding**:
+
+**In natural language**: What matters more is how words sit relative to each other. A verb agreeing with its subject, a modifier attaching to a nearby noun, or a phrase referring back to something mentioned earlier are all examples where relative distance and ordering are more important than whether a token sits at position 7 or position 42.
+
+**This intuition motivates**: Relative positional embeddings. Instead of treating each position as a unique coordinate with its own identity, relative approaches encourage the model to reason in terms of relationships between tokens.
+
+**The emphasis shifts**: From "where is this token in the sequence?" to "how far is this token from another one, and in which direction?"
+
+**Key ideas behind relative positional embeddings include**:
+
+- **Embedding information**: About the distance between tokens rather than fixed indices
+- **Capturing**: Whether tokens are close together or far apart
+- **Representing**: Directional relationships such as "before" and "after"
+- **Allowing**: The same pattern to apply regardless of where it appears in the sequence
+
+**Many linguistic dependencies**: Naturally fit this framing. Subject-verb agreement depends on the connection between the subject and verb, not their absolute positions.
+
+**Attention to recent words**: Is usually stronger than attention to distant ones. Quoted or bracketed spans form local regions that matter as a group, independent of their absolute location in the text.
+
+**Because of this**: Relative positional embeddings often generalize better. When a model learns rules based on relative distance, those rules can transfer across sequences of different lengths.
+
+**A pattern learned**: In short sentences can still apply in much longer documents, as long as the relative structure is preserved. This makes relative approaches especially attractive for long-context modeling and for settings where input lengths vary significantly.
+
+**Another practical advantage**: Is reduced dependence on fixed sequence sizes. Absolute positional embeddings are typically tied to a maximum length seen during training, whereas relative schemes are less anchored to specific positions.
+
+**This can help models**: Extrapolate more gracefully beyond the exact conditions they were trained on, although this is not a guarantee and still depends on the overall architecture.
+
+**Moreover**: It is important to note that although relative positional methods have certain advantages over absolute ones, neither is universally superior; the choice depends on the task, data, and model design.
+
+**Finally**: Another important point is that in modern architectures, positional information is not always added directly to token embeddings at the input. In many designs, positional structure is introduced later and more implicitly in the model, but discussing those mechanisms is beyond the scope of this course.
+
+**Note**: Because of this, it is important to understand that it is not accurate to treat "adding positional embeddings to token embeddings" as a universal rule.
+
+**Now, with embeddings**: We have completed the second and final stage of the translation process. Tokenization converts raw text into discrete symbols drawn from a finite vocabulary, while embeddings convert those symbols into continuous vector representations that neural networks operate on.
+
+**Implementation: How to Tokenize (Hugging Face Example)**:
 
 ```python
 from transformers import AutoTokenizer
@@ -1312,7 +1633,7 @@ tokens = tokenizer.tokenize(text)
 print(tokens)  # ['▁Token', 'ization', '▁is', '▁essential', '▁for', '▁L', 'LM', 's', '.']
 ```
 
-#### Counting tokens (for cost/context estimation)
+**Counting Tokens (for Cost/Context Estimation)**:
 
 ```python
 # Count tokens in a string
@@ -1327,9 +1648,81 @@ num_tokens = len(enc.encode(text))
 
 **Google Cloud / Vertex AI**: Use the `countTokens` API method to get accurate token counts for Gemini models before sending requests.
 
-#### Why tokenization matters for RAG chunking
+**Hands-On: GPT Tokenizers Comparison**:
 
-When chunking documents for RAG, chunk size is usually specified in **tokens**, not characters:
+**Below is a small experiment**: That compares how different OpenAI tokenizers segment the same multilingual sentence.
+
+**We encode the text**: Using GPT-2, GPT-3, GPT-4, and GPT-4o tokenizers, verify round-trip correctness, and align decoded token pieces side-by-side for inspection.
+
+**The input text**: Is deliberately chosen to include English, Hindi, Japanese, separators, and an emoji, since tokenizers often behave very differently across scripts and Unicode symbols.
+
+**Key observations from GPT tokenizer comparison**:
+
+- **Vocabulary size**: Should be read as a structural property of the tokenizer, not a guarantee of fewer tokens for all inputs
+- **Round-trip correctness**: All tokenizers successfully round-trip the text, meaning decode(encode(text)) reproduces the original string exactly in every case
+- **GPT-2 and GPT-3**: Have almost identical vocabulary sizes (~50k) and produce the same token count (51 tokens) for our input sentence
+- **GPT-4**: Has a much larger vocabulary (~100k) and reduces the token count significantly to 38 tokens, indicating better coverage of non-Latin scripts and more compact subword units
+- **GPT-4o**: Has the largest vocabulary (~200k) and produces only 20 tokens for the same sentence, showing a dramatic improvement in token efficiency, especially for multilingual text
+- **Key takeaway**: Newer tokenizers don't just add vocabulary, they materially reduce token counts, which directly affects context usage, latency, and cost
+- **Repeated � (replacement character)**: Visible in GPT-2, GPT-3 and GPT-4 columns around the Hindi/Japanese and emoji segments indicates that these tokenizers are effectively operating at a fragmented Unicode level for those scripts
+- **This fragmentation happens**: Because these tokenizers were trained with weaker coverage for non-Latin scripts, so they fall back to representing tokens as smaller, less meaningful units
+- **Note**: In the table, we are decoding one token at a time, which means each token is decoded in isolation, without its neighboring bytes. Many Unicode characters (such as Hindi letters, Japanese characters, and emojis) are represented by multiple bytes (due to weaker coverage for non-Latin scripts), and decoding only a fragment of those bytes produces invalid Unicode, which when decoded on their own, are shown as �. This is why the full round-trip decode works correctly, but several individual token pieces are unable to render when shown separately
+- **In contrast**: GPT-4o shows clean, readable fragments for Hindi and Japanese characters, even showing the entire emoji as a single token (hence it got rendered for GPT-4o tokenizer) meaning those scripts are directly and well represented in the vocabulary rather than decomposed
+- **GPT-4o groups**: Larger semantic chunks together, which is why it needs far fewer rows (tokens) overall
+- **Leading spaces and separators**: Appear attached to tokens in several places, which is expected behavior and reflects how tokenizers optimize for natural language statistics rather than word boundaries
+
+**The most important practical insight**: From this output is that tokenization quality strongly affects multilingual robustness and efficiency, even before embeddings, attention, or model architecture come into play.
+
+**This is why**: Prompt length, context limits, and cost estimates must always be understood relative to the tokenizer used by the target model, not by counting characters or words. Hence, the token count is practically a very important metric for performance evaluations and cost management.
+
+**Key takeaways**:
+
+- **Tokenization is model-specific**: The same sentence can map to very different token sequences depending on the tokenizer being used
+- **Newer tokenizers**: Are far more token-efficient, especially for multilingual text and emojis
+- **Vocabulary size matters**: But what matters more is coverage of Unicode and common subwords, not just raw scale
+- **Older tokenizers**: Often fall back to individual byte-level fragmentation, which is why isolated token pieces may not render cleanly
+- **Token count, not character count**: Is the unit that actually governs context limits, latency, and cost
+
+**Hands-On: Token Embeddings**:
+
+**Below is a small experiment**: That shows token embeddings as a lookup table and demonstrates the "picking" of rows:
+
+```python
+import torch
+import torch.nn as nn
+
+# Create embedding layer
+vocab_size = 50000
+embedding_dim = 128
+embed_layer = nn.Embedding(vocab_size, embedding_dim)
+
+# Token IDs (batch of one sequence with 4 tokens)
+token_ids = torch.tensor([[40, 1842, 616, 3290]])
+
+# Forward pass: lookup operation
+embeddings = embed_layer(token_ids)
+print(embeddings.shape)  # (1, 4, 128)
+```
+
+**This demo shows**: The exact next step after tokenization: mapping token IDs to continuous vectors using an embedding layer:
+
+- **nn.Embedding(vocab_size, embedding_dim)**: Creates a learnable lookup table of shape (50000, 128), where each row corresponds to one token ID
+- **Printing embed_layer.weight**: Reveals this table directly: each row is a 128-dimensional vector, initialized randomly
+- **Note**: These vectors have no semantic meaning yet; they are just parameters that will be shaped during training
+- **The tensor token_ids**: = [[40, 1842, 616, 3290]] represents a batch of one sequence containing four token IDs
+- **Passing this tensor**: Through the embedding layer performs a pure lookup operation ("picking"), not a matrix multiplication
+- **Each token ID**: Indexes into the embedding table and retrieves its corresponding vector
+- **The output shape (1, 4, 128)**: Reflects batch size = 1, sequence length = 4 tokens, embedding dimension = 128 per token
+
+**In a real scenario**: During training, gradients from the language modeling loss flow back into this embedding table, gradually organizing token vectors so that useful patterns emerge.
+
+**The key takeaway**: From this demo is that embeddings are simply a learned bridge from discrete token IDs to a continuous vector space, enabling the rest of the neural network to operate. Plus, token embeddings is a lookup table, where we perform a pure lookup operation ("picking"), not a matrix multiplication.
+
+**As a follow-up self-learning exercise**: We encourage readers to extend this demo by incorporating simple absolute positional embeddings alongside the token embeddings. You can assume L_max to be 64. Doing so can help deepen understanding of how positional information is represented and integrated.
+
+**Why Tokenization Matters for RAG Chunking**:
+
+**When chunking documents**: For RAG, chunk size is usually specified in **tokens**, not characters:
 
 - **Typical chunk size**: 256–1024 tokens
 - **Overlap**: 10–20% overlap between chunks to preserve context at boundaries
@@ -1346,7 +1739,7 @@ def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
     return chunks
 ```
 
-#### Common tokenization pitfalls
+**Common Tokenization Pitfalls**:
 
 | Pitfall                        | Problem                                       | Solution                                                               |
 | ------------------------------ | --------------------------------------------- | ---------------------------------------------------------------------- |
@@ -1356,7 +1749,7 @@ def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
 | **Multilingual surprises**     | Non-English text uses many more tokens        | Test with representative samples; budget for 2–3x token count          |
 | **Whitespace handling**        | Leading spaces become separate tokens         | Be consistent with whitespace in prompts                               |
 
-#### Official documentation links
+**Official Documentation Links**:
 
 - Hugging Face Tokenizers: [huggingface.co/docs/tokenizers](https://huggingface.co/docs/tokenizers/)
 - Hugging Face Transformers AutoTokenizer: [Transformers Tokenizer Documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer)
@@ -1364,7 +1757,16 @@ def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
 - OpenAI tiktoken: [openai/tiktoken](https://github.com/openai/tiktoken)
 - SentencePiece: [google/sentencepiece](https://github.com/google/sentencepiece)
 
-**EXAM TIP:** If a question mentions "unexpected behavior with special characters" or "input truncated" → think **tokenization issues** first.
+**Key Takeaways**:
+
+- **Tokenization and embeddings**: Form the foundational translation layer between human language and neural computation
+- **Subword tokenization**: Is not a minor implementation detail, it fundamentally shapes vocabulary efficiency, robustness, and model behavior
+- **Embeddings are learned interfaces**: Meaning emerges later through attention and context
+- **Positional information**: Is essential for sequence modeling, and different positional schemes reflect different inductive biases
+- **Tokenization is model-specific**: The same sentence can map to very different token sequences depending on the tokenizer
+- **Token count, not character count**: Is the unit that actually governs context limits, latency, and cost
+
+**EXAM TIP:** If a question mentions "unexpected behavior with special characters" or "input truncated" → think **tokenization issues** first. Questions about "tokenization algorithms" → think **BPE** (frequency-based, iteratively merges pairs, GPT/Llama) → **WordPiece** (likelihood-based merging, prioritizes "stuck" components, BERT) → **Unigram** (probabilistic model, starts large/prunes down, subword regularization, T5/SentencePiece). Questions about "Byte-level BPE" → think **256 byte vocabulary** (UTF-8 bytes), **eliminates OOV problem** (any character representable), **universality/robustness** (handles rare characters, emojis, mixed scripts). Questions about "embeddings" → think **learned mapping** (token ID → vector), **embedding matrix** (V×D parameters), **gather operation** (not matrix multiplication, pick rows), **context-free at input** (static, same token = same vector), **context introduced via attention** (dynamic hidden states). Questions about "positional embeddings" → think **absolute** (learned lookup table, fixed L_max, each position has unique vector) → **relative** (distance-based, directional relationships, generalizes better, less tied to fixed sequence sizes) → **self-attention permutation-invariant** (needs position to distinguish order).
 
 ### 6.2 Prompting & Inference Controls (fastest "customization")
 
