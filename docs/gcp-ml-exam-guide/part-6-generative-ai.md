@@ -2,6 +2,18 @@
 
 The October 2024 exam version includes Generative AI topics.
 
+### Executive lens (why leaders care, and what can go wrong)
+
+This section is intentionally short and more “human”: it reflects how GenAI leaders describe the space in practice.
+
+- **The upside**: GenAI can help teams work faster and unlock new workflows (summarization, translation/rewriting for tone, coding, multimodal creation).
+- **The risk**: One of the biggest risks is **slowing down productivity**—tools can distract, add review burden, or create “busywork outputs” if the organization doesn’t set expectations and guardrails.
+- **The competitive reality**: Not using these tools can be a disadvantage because you miss new ways of working and new opportunities.
+- **Multimodal matters**: The better your organization can provide **high-quality inputs** across modalities (text, images, video), the better these systems tend to perform in real workflows.
+- **Leadership’s lever**: Education + enablement. Teams need practical training on **capabilities and limitations** so they adopt GenAI intentionally (not blindly).
+
+**Note:** Some productivity figures in training materials (e.g., “hours saved per year”) are often context-dependent—treat them as hypotheses to validate in your organization.
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
