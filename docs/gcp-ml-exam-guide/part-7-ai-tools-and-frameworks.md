@@ -1,5 +1,7 @@
 ## PART VII: AI TOOLS & FRAMEWORKS (Agents + LLM Apps)
 
+**Important note:** This part is **not** official exam content/scope. It’s included as an author-curated reference to capture extra details and practical ecosystem knowledge that often helps in real projects (and sometimes informs exam intuition).
+
 This part is a **tooling map** (commercial + open-source) for building LLM apps and AI agents. The goal is to help you:
 
 - Pick the right layer to “buy vs build” (managed agent platform vs OSS framework vs custom code).

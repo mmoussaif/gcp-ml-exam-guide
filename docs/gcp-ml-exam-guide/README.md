@@ -13,6 +13,8 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 - **Part VII**: [`part-7-ai-tools-and-frameworks.md`](./part-7-ai-tools-and-frameworks.md)
 - **Quick Reference + Common Exam Traps**: [`quick-reference.md`](./quick-reference.md)
 
+**Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam guide/scope. It’s included as an author-curated “tooling + ecosystem” reference to capture additional details and practical knowledge.
+
 ### Web verification note (current blocker)
 
 I attempted to use automated web search to validate technical claims, but the tool output is currently **not returning real web results** (it echoes conversation text instead). Until that is fixed, this repo includes a short checklist of the highest-impact claims to verify manually, with official doc starting points in `quick-reference.md`.
