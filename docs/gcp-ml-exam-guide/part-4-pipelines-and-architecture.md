@@ -4233,6 +4233,307 @@ Building ML systems in the cloud is largely about matching workload patterns to 
 
 **EXAM TIP:** Questions about "cloud computing characteristics" → think **NIST five essential characteristics** (on-demand self-service, broad network access, resource pooling, rapid elasticity, measured service). Questions about "cloud service models" → think **IaaS** (manage OS/runtime/apps), **PaaS** (provider manages runtime/middleware), **SaaS** (fully managed). Questions about "storage types" → think **Object storage** (scalable, durable, cost-efficient, S3/Blob/GCS), **Block storage** (low latency, high IOPS, EBS/Disk/Persistent Disk), **File storage** (shared, hierarchical, NFS/SMB, EFS/Files/Filestore). Questions about "cloud networking" → think **VPC** (isolated private network), **Subnets** (public/private segments), **Availability Zones** (fault tolerance), **Load Balancers** (traffic distribution), **API Gateways** (authentication, routing, rate limiting). Questions about "IAM" → think **Users, Groups, Roles, Policies** (principle of least privilege), **Service roles** (for compute services), **Roles for Pods** (fine-grained access in Kubernetes). Questions about "why cloud for ML" → think **scalability/elasticity** (horizontal/vertical scaling), **cost efficiency** (pay-as-you-go, spot instances), **managed ecosystem** (integrated services), **high availability** (multi-region/AZ redundancy).
 
+**J. AWS: Introduction and EKS**:
+
+**AWS: Introduction**:
+
+**What is AWS**: Amazon Web Services (AWS) is a comprehensive and widely used cloud computing platform that provides IT resources such as computing power, storage, and databases over the internet.
+
+**Key Concept**: It allows businesses and individuals to run applications without managing physical servers, data centers, or underlying infrastructure.
+
+**Market Position**: AWS holds the largest market share in the cloud computing space, currently around 30–31%, maintaining its leadership despite increasing competition from Microsoft Azure and Google Cloud. It describes itself as "the world's most comprehensive and broadly adopted cloud, offering over 200 fully-featured services from data centers globally."
+
+**Layered Platform**: AWS, and other cloud platforms, operate as a layered platform: starting with global infrastructure primitives (regions, availability zones, networks, and identities), moving to general-purpose compute and storage, then to managed services, and finally to domain-specific offerings such as analytics, streaming, observability, machine learning, and security.
+
+**In Practice**: AWS is far more than a virtual data center. It serves as a versatile platform for building almost any type of digital system, ranging from simple websites and mobile back-ends to complex data pipelines, global IoT deployments, or real-time machine learning systems.
+
+**Defining Characteristic**: AWS, and many other major cloud providers, has evolved from providing basic infrastructure to delivering managed, integrated, and automated services. This shift from "infrastructure provision" to "platform service" has fundamentally changed how systems are architected, operated, and governed.
+
+**The AWS Ecosystem: Layers and Composition**:
+
+To understand AWS effectively, it helps to view it as a layered platform:
+
+**1. Global Infrastructure**:
+- **Underpins everything**: AWS operates globally distributed regions and availability zones built on high-performance networking and storage fabrics
+- **Multi-region architecture**: Allows systems to be deployed worldwide with low latency and high availability
+
+**2. Core Services**:
+- **Foundational components**: EC2 (compute), EBS (block storage), and S3 (object storage) provide the foundational components that mirror traditional data centers
+
+**3. Managed Platform Services**:
+- **Higher-level managed services**: Databases (relational and NoSQL), analytics, serverless computing, containers, managed Kubernetes (EKS), IoT, edge computing, and AI/ML platforms
+
+**4. Developer Tools and Automation**:
+- **Robust tools**: CI/CD pipelines, infrastructure management, monitoring, logging, and deployment automation frameworks
+
+**5. Operational Governance, Security, and Cost Management**:
+- **Strong suite of services**: IAM for identity and access control, encryption and auditing tools, cost tracking, and compliance management
+- **Spans across all layers**: Effectively spans across all other layers too
+
+**6. Partner, Marketplace, and Community Ecosystem**:
+- **Large ecosystem**: Partners, including consulting firms and independent software vendors, as well as a marketplace of third-party integrations and an open-source community around its platform
+
+**Why This Matters**:
+
+**The richness of the AWS ecosystem** has fundamentally changed how modern systems are designed. AWS is not merely infrastructure; it shapes the principles and patterns of cloud-native architecture.
+
+**Key Transformations**:
+- **Modular, composable, and managed services**: AWS encourages architects to think in terms of abstractions, automation, and resilience rather than servers and manual configurations
+- **Rapid innovation**: Foundational components such as databases, queues, and streaming systems are available as managed services, so teams can focus on building product features rather than managing infrastructure
+- **Global scale and reach**: Multi-region architecture allows systems to be deployed worldwide with low latency and high availability
+- **Elasticity**: Infrastructure is designed to scale automatically based on demand, making scalability a built-in architectural property instead of a later concern
+- **API-driven paradigm**: Every resource, like compute, database, or networking, is programmable. This supports event-driven architectures, auto-scaling, and seamless service integrations without constant human intervention
+
+**In essence**: AWS has transformed architecture into a discipline of composition, automation, and managed abstraction. Its ecosystem doesn't merely simplify operations; it changes how teams design, collaborate, and scale in the cloud-native era.
+
+**Key Characteristics and Design Dimensions**:
+
+When evaluating AWS from a system-design perspective, several defining characteristics stand out:
+
+**1. Service Breadth**:
+- **Core strength**: Offers one of the most extensive portfolios in the cloud ecosystem, spanning compute, storage, databases, analytics, AI/ML, IoT, developer tools, and more
+- **Benefit**: Allows architects to design end-to-end solutions using native services without relying heavily on external tools or third-party integrations
+
+**2. Global Infrastructure**:
+- **Robust foundation**: Provides a robust foundation for distributed, low-latency, and highly available systems
+- **Multiple regions and availability zones**: Across the world, enabling fault-tolerant architectures and disaster recovery scenarios
+- **Geographical diversity**: Enables compliance with data sovereignty requirements and performance optimization for users in different locations
+
+**3. Managed Operations**:
+- **Key differentiator**: AWS takes on the responsibility of patching, scaling, and backing up managed services, freeing engineering teams from much of the operational overhead
+- **Benefit**: Lets developers focus more on business logic and innovation rather than maintenance and infrastructure management
+
+**4. Pay-as-You-Go Model and Elasticity**:
+- **Fundamental change**: Instead of provisioning for peak capacity, teams can build architectures that automatically scale up and down with demand, optimizing both performance and cost
+- **Flexibility**: Promotes efficiency and supports variable workloads with minimal manual intervention
+
+**5. Ecosystem Integration**:
+- **Seamless integration**: Services work seamlessly together. Data can flow efficiently between compute, storage, and analytics components, simplifying workflows and enabling complex architectures such as data lakes, event-driven systems, and microservices-based applications
+
+**6. Continuous Evolution**:
+- **Regular releases**: New services and features are released regularly, allowing architects to refine or re-architect components to leverage improved capabilities
+- **Encourages**: Modular, adaptable designs that can evolve alongside AWS's rapidly changing landscape
+
+**Together**: These characteristics shape how architects think about scalability, resilience, cost optimization, and innovation when designing systems on AWS.
+
+**Strategic Implications for Organizations**:
+
+For organizations designing or managing architectures on AWS, several strategic and organizational implications come into play:
+
+**1. Platform Engineering Mindset**:
+- **Essential**: Successful organizations often go beyond using AWS services ad hoc; they manage multiple accounts within the organization in a centralized manner
+- **Create**: Internal service catalogs, standardized landing zones, CI/CD pipelines, and cost-security guardrails
+- **Benefit**: Allows teams to consume pre-built, compliant, and secure capabilities efficiently, reducing friction and ensuring consistency across projects
+
+**2. Cost Governance**:
+- **Establish early**: Because AWS managed services can scale and proliferate rapidly, it's easy for expenses to grow unnoticed
+- **Embed**: Cost-tracking, budgeting, and tagging practices from the outset helps maintain financial visibility and accountability, preventing surprises in cloud bills and promoting a culture of cost awareness
+
+**3. Security and Compliance**:
+- **First-class citizens**: Organizations need to implement principles such as least privilege access, strong network isolation, encryption in transit and at rest, and continuous audit logging
+- **Integrate early**: By integrating these measures early, teams can ensure that their architectures remain secure and compliant without introducing friction later in the development lifecycle
+
+**4. Operational Monitoring and Observability**:
+- **Critical**: Traditional CPU and memory metrics are not enough; teams need visibility into service interactions, latency, data transfers, and even cost anomalies
+- **AWS-native tools**: Like CloudWatch provide valuable insights that support proactive issue resolution and performance optimization
+
+**5. Vendor Lock-In Awareness**:
+- **Remain aware**: While deep adoption of AWS-native services brings efficiency, it can limit long-term flexibility
+- **Maintain**: Interoperability, abstraction layers and multi-cloud setups, can help preserve future options and reduce dependency on any single provider
+
+**6. Continuous Evolution and Training**:
+- **Non-negotiable**: The AWS landscape evolves rapidly, with new features and best practices emerging frequently
+- **Invest**: Teams must invest in ongoing learning, certifications, and architectural reviews to stay current and ensure that their systems remain efficient, secure, and aligned with organizational goals
+
+**In a nutshell**: Based on everything we've discussed about AWS so far, it's clear that we shouldn't reduce it to just "compute and storage in the cloud." Instead, think of it as a comprehensive ecosystem. The strength of AWS lies not only in its foundational resources but in how its interconnected services enable modern system design, emphasizing velocity, scalability, and resilience.
+
+**AWS: Elastic Kubernetes Service (EKS)**:
+
+**Why EKS**: When Kubernetes became the de facto standard for container orchestration, enterprises quickly discovered that while Kubernetes provided immense flexibility and scalability, it also carried significant operational complexity. Setting up clusters, securing communication between control planes and nodes, managing upgrades, ensuring high availability, and handling networking were all non-trivial challenges.
+
+**What is EKS**: Amazon Elastic Kubernetes Service (EKS) was designed to remove much of that undifferentiated heavy lifting, allowing teams to focus on applications rather than cluster plumbing.
+
+**EKS is Amazon's managed Kubernetes control plane**. It delivers upstream-compliant Kubernetes with integrated AWS identity, networking, and scaling features. You get the same APIs, ecosystem, and tooling as in open-source Kubernetes, but AWS takes responsibility for operating, patching, and scaling the control plane components.
+
+**In other words**: EKS lets you run Kubernetes the efficient way: highly available, integrated, and secure.
+
+**The EKS Architecture**:
+
+At the highest level, an EKS cluster consists of two planes:
+
+**1. Control Plane (Managed by AWS)**:
+- **Includes**: The Kubernetes API server, etcd (the key-value store for cluster state), the controller manager, and scheduler
+- **AWS automatically provisions and operates**: These components across multiple availability zones to ensure fault tolerance
+- **You never directly manage**: Or SSH into these control plane nodes; instead, you interact via the Kubernetes API endpoint exposed by AWS
+- **The control plane**: Scales automatically and is fully redundant
+- **AWS also handles**: Patching, version upgrades, and backups of etcd
+- **"Redundant"**: Means that the Kubernetes control plane is built with multiple, duplicate components running across different availability zones (AZs) to ensure high availability and fault tolerance
+
+**2. Data Plane (Managed by Users)**:
+- **Comprises**: The worker nodes, the actual compute instances where your pods run
+- **These nodes can be**: Either EC2 instances that you manage or Fargate tasks (serverless nodes) that AWS runs on your behalf
+- **Fargate**: A serverless compute engine for containers that works with Amazon's ECS and EKS services. It allows users to run containers without the need to manage the underlying servers or virtual machines, meaning users only have to specify their application's resource requirements (like CPU and memory) and Fargate handles the infrastructure provisioning, scaling, and management
+- **The data plane**: Connects securely to the control plane using the AWS-managed networking layer and IAM-based authentication
+
+**When you create an EKS cluster**: AWS provisions an endpoint for the Kubernetes API, an identity mapping through AWS IAM, and an associated set of networking resources such as VPC (Virtual Private Cloud) subnets, security groups, and load balancers. You can then register worker nodes to the cluster using a node group.
+
+**Node Group**: A collection of worker nodes within a Kubernetes cluster that share the same configuration. These nodes are the machines (physical or virtual) where your applications, packaged as containers within Pods, actually run.
+
+**Control Plane Internals and Security**:
+
+**AWS hosts each EKS control plane** across three availability zones for high availability. The API server endpoints are exposed through a load balancer in the user's VPC, and etcd is encrypted at rest.
+
+**You can choose**: Whether your cluster endpoint is public (accessible over the internet but IAM-secured) or private (accessible only within your VPC).
+
+**Authentication**: Happens via AWS IAM roles or users, while authorization within Kubernetes is handled by standard RBAC (Role-Based Access Control) mechanisms. This dual-layer model, IAM for cluster access, RBAC for in-cluster permissions, is a hallmark of AWS security design.
+
+**Data Plane Variants: EC2 and Fargate**:
+
+The data plane is where your workloads run, and EKS provides two ways to host them:
+
+**1. EKS on EC2**:
+- **You manage**: A node group of EC2 instances
+- **AWS provides**: The Amazon EKS-optimized AMI (Amazon Machine Image) that comes preconfigured with the kubelet, containerd, and AWS integrations (such as the VPC CNI plugin)
+- **You control**: The instance type, scaling group, and lifecycle, giving you flexibility for performance-sensitive workloads
+
+**2. EKS on Fargate**:
+- **AWS provisions compute automatically**: You define Fargate profiles mapping namespaces and labels to pods, and AWS runs those pods on managed serverless infrastructure
+- **Eliminates**: Node management entirely but limits some customizations
+- **Ideal for**: Event-driven tasks
+
+**AWS: EC2 and Its Role in EKS Node Provisioning**:
+
+**To grasp how EKS works in practice**, we must understand Amazon EC2 (Elastic Compute Cloud). EC2 provides the raw compute foundation for the AWS ecosystem.
+
+**What is EC2**: It's a virtualization service offering resizable compute capacity in the cloud. You choose instance types (CPU, memory, GPU, network performance), storage (EBS volumes), and networking (VPC configuration).
+
+**EKS builds its worker layer** atop this service.
+
+**EC2's Architecture and Resource Model**:
+
+**Each EC2 instance** runs within your VPC and subnets. It can have one or more network interfaces, EBS volumes, and IAM roles attached. Instances are grouped by type: general-purpose, compute-optimized, memory-optimized, GPU, or burstable. They also come in various sizes (e.g., t3.small, t3.medium, m6a.large, g5.xlarge).
+
+**For EKS**: You can select the instance type that best matches your workload's resource demands.
+
+**EC2 integrates deeply** with AWS services. For Kubernetes, these integrations map naturally: EC2 instances form your cluster nodes; Auto Scaling groups become node pools, and load balancers expose Kubernetes Services.
+
+**EC2 and EKS Node Provisioning**:
+
+When you use `eksctl` or the AWS Management Console to create a cluster, you can specify managed node groups or self-managed nodes.
+
+**eksctl**: An open-source command-line interface (CLI) tool for creating and managing EKS clusters. It simplifies the process of setting up and operating EKS clusters by automating many of the underlying tasks, including the provisioning of necessary AWS resources.
+
+**1. Managed Node Groups (Recommended)**:
+- **AWS automatically handles**: Provisioning and lifecycle for your EC2 instances
+- **You define**: Parameters such as instance type, desired capacity, and scaling configuration
+- **AWS creates**: An Auto Scaling group, joins instances to the cluster, and keeps them updated
+- **Rolling upgrades**: Are supported to minimize downtime
+- **Ideal for**: Most production clusters because they reduce administrative overhead
+
+**2. Self-Managed Nodes**:
+- **You manually provision**: EC2 instances, using CloudFormation, Terraform, or other tooling, and join them to the cluster using the aws-auth ConfigMap
+- **Offers**: Maximum control but also full operational responsibility
+- **You must manage**: Scaling, updates, and health checks yourself
+
+**Node Lifecycle and Scaling**:
+
+**Each EC2 worker node** runs the kubelet agent, which communicates with the control plane. The kubelet registers the node, reports status, and ensures pods defined in its node manifest are running.
+
+**AWS's EKS-optimized AMI** (Amazon Machine Image is a template for creating EC2 instances) includes this configuration, so nodes automatically register when launched with the right bootstrap parameters.
+
+**Scaling**: Is achieved through Cluster Autoscaler, a Kubernetes component that integrates with EC2 Auto Scaling groups. When Kubernetes detects unschedulable pods, it requests new EC2 instances; when nodes are underutilized, it can terminate them. Combined with EC2's pay-as-you-go model, this creates a fully elastic compute environment.
+
+**Networking and Security**:
+
+**Each EC2 node in an EKS cluster** runs the AWS VPC Container Network Interface (CNI) plugin, which assigns IP addresses to pods directly from the VPC's CIDR range.
+
+**CIDR (Classless Inter-Domain Routing)**: A method for assigning and routing IP addresses on the internet that allows for more efficient use of the limited IPv4 address space.
+
+**This gives pods first-class network citizenship**: They appear as native VPC endpoints and can communicate securely with other AWS services without NAT. Security Groups can be applied per node, and network policies can restrict pod-to-pod traffic.
+
+**NAT Gateway**: A managed service that allows instances in a private subnet to access the internet for outbound connections, such as software updates, without allowing the internet to initiate inbound connections to those instances. It achieves this by performing Network Address Translation, replacing the instance's private IP address with the NAT Gateway's public IP address for outbound requests.
+
+**Based on what NAT means and the first-class network citizenship of pods**: We mean to explain that each pod gets its own IP address directly in the AWS VPC network, not hidden behind another layer. Hence, they appear as native VPC endpoints, meaning pods can directly talk to other AWS resources using the VPC network, as if they were regular EC2 instances. Thus, there is no need for Network Address Translation because traffic stays inside the VPC, which is more secure and efficient.
+
+**IAM roles**: Can also be associated with EC2 instances. This lets workloads assume fine-grained permissions to access other AWS resources.
+
+**EKS Networking and Add-On Services**:
+
+Running Kubernetes in production involves more than control and data planes. Networking, logging, scaling, and observability are essential for stable operations.
+
+**AWS provides several EKS add-ons**, managed integrations that tie native AWS services into your cluster. These can be configured automatically through eksctl.
+
+**Some Popular EKS Add-Ons and EKS-Related Services**:
+
+**1. AWS VPC CNI**:
+- **Default add-on**: Among the foundational components, the AWS VPC CNI plugin is added by default
+- **Allows**: Kubernetes pods to use native VPC networking so that each pod receives an IP address directly from the VPC subnet
+- **Removes**: The need for overlay networks, enabling straightforward communication between pods and other AWS services via familiar routing and security groups
+- **Runs as**: A DaemonSet, each node hosts one CNI pod, ensuring every pod in the cluster can access AWS networking at native speed
+
+**2. CoreDNS**:
+- **Default add-on**: Another default add-on, CoreDNS, serves as the internal DNS server for the cluster
+- **Handles**: Name resolution for pods and services, allowing workloads to interact using service names rather than IPs
+- **EKS automatically manages**: CoreDNS, deploying two replicas by default and upgrading them alongside new Kubernetes versions
+
+**3. kube-proxy**:
+- **Default add-on**: kube-proxy is also a default add-on, which manages network routing rules on each node
+- **Acts as**: A bridge between Kubernetes Services and pods, ensuring that NodePort or LoadBalancer services correctly distribute incoming traffic
+- **Runs as**: A DaemonSet, with one pod per node for consistent routing behavior across the cluster
+
+**4. Cluster Autoscaler**:
+- **Optional add-on**: Scaling in EKS is handled by the Cluster Autoscaler, which is an optional add-on
+- **Monitors**: Unschedulable pods and automatically increases or decreases the number of EC2 instances in a node group based on demand
+- **Runs as**: A single cluster-wide deployment, it integrates tightly with EC2 Auto Scaling Groups and managed node groups
+- **With proper IAM permissions**: It can add or remove nodes autonomously, maintaining both cost efficiency and performance without manual intervention
+
+**5. AWS Load Balancer Controller**:
+- **Optional add-on**: A modern, out-of-tree replacement and an optional add-on
+- **Note**: Kubernetes on AWS, by default, includes a built-in, or "in-tree," cloud provider that can automatically provision a Classic Load Balancer (CLB) whenever a Service of type LoadBalancer is created, without having the need to install AWS Load Balancer Controller. This happens because of native EKS integration. Amazon EKS natively integrates with AWS Elastic Load Balancers (ELB). When you create a Kubernetes Service of type: LoadBalancer, EKS automatically provisions a Classic Load Balancer (CLB) by default. This built-in integration allows basic external access to workloads even without installing any additional controllers.
+- **However**: The AWS Load Balancer Controller extends this functionality by supporting Application Load Balancers (ALB) and Network Load Balancers (NLB), enabling advanced features such as Ingress management, path-based routing, SSL termination, and tighter integration with AWS networking
+- **Ingress**: A feature that manages external access to services within a cluster by providing HTTP/S routing rules. It acts as a single entry point, handling tasks like load balancing, SSL termination, and name-based virtual hosting, which simplifies how external traffic reaches different services
+- **In essence**: A Kubernetes Service of type: LoadBalancer can still provision a Classic Load Balancer (CLB) in an EKS cluster even if the AWS Load Balancer Controller is not installed, but installing it unlocks deeper AWS integration and more sophisticated traffic management options
+
+**6. Amazon EBS CSI Driver**:
+- **Optional add-on**: Persistent storage in Kubernetes is managed via the Container Storage Interface (CSI)
+- **Lets pods request**: Block storage volumes that map directly to Amazon EBS
+- **Runs**: Both controller pods that handle provisioning and node pods that attach volumes locally
+- **Enables**: On-demand creation of block storage for stateful workloads like databases or analytics pipelines
+
+**7. CloudWatch Container Insights and Fluent Bit**:
+- **Optional add-ons**: On the observability front, CloudWatch Container Insights combined with Fluent Bit agents offer built-in monitoring and logging
+- **Fluent Bit**: Runs as a DaemonSet on each node, collecting container logs and forwarding them to CloudWatch Logs
+- **Additional metrics and traces**: Are gathered through lightweight monitoring pods that feed into CloudWatch dashboards, giving teams full visibility into performance, latency, and error trends, all without having to deploy external monitoring stacks
+
+**8. Amazon ECR (Elastic Container Registry)**:
+- **Not an in-cluster add-on**: Serves as the native container image registry for AWS and integrates automatically with EKS
+- **Fully managed service**: That works out of the box
+- **When you deploy pods on EKS**: They can pull container images directly from ECR repositories with minimal latency and no extra setup (provided the worker node IAM roles allow access to ecr:GetAuthorizationToken and related permissions)
+- **Available by default**: In the AWS environment. For standard EKS clusters using managed node groups, ECR integration is automatic. You don't install or configure anything
+
+**9. Amazon EBS (Elastic Block Store)**:
+- **Beneath every EKS cluster**: The underlying compute infrastructure typically runs on EC2 instances, each of which relies on Amazon Elastic Block Store (EBS) volumes as its root storage
+- **Every worker node**: Whether part of a managed or self-managed node group, launches with an attached EBS volume that contains the operating system, Kubernetes agent binaries, and container runtime storage
+- **Root volumes**: Are automatically provisioned and deleted with the node lifecycle. This EBS integration exists by default, no additional driver is required for node operation
+- **However**: When workloads inside the cluster need persistent volumes of their own (for databases, pipelines, or any stateful workloads), Kubernetes uses the EBS Container Storage Interface (CSI) driver
+
+**10. AWS Fargate**:
+- **For clusters that use AWS Fargate**: Instead of EC2 nodes, the story changes slightly
+- **Fargate**: A serverless compute engine where AWS abstracts away the underlying infrastructure
+- **You don't see or manage**: EC2 instances or EBS volumes directly; instead, each pod runs in its own isolated runtime environment with ephemeral storage managed by AWS behind the scenes
+- **While Fargate workloads**: Can still pull images from ECR and access external AWS services, they don't have direct access to attach EBS volumes, making them suitable for stateless or short-lived applications
+
+**Summary**: EKS brings together default add-ons such as the VPC CNI, CoreDNS, and kube-proxy with optional integrations like the Cluster Autoscaler, Load Balancer Controller, etc. to deliver a truly production-ready environment. In addition, core AWS services like ECR and EBS are seamlessly integrated. Together, these managed components minimize manual setup, improve reliability, and ensure tight interoperability, transforming Kubernetes from a standalone orchestration engine into a unified, cloud operations platform.
+
+**Key Takeaways**:
+- **AWS is a comprehensive cloud platform** with over 200 services, operating as a layered platform from infrastructure to domain-specific offerings
+- **EKS is Amazon's managed Kubernetes control plane** that removes operational complexity while maintaining Kubernetes compatibility
+- **EKS architecture**: Control plane (managed by AWS) + Data plane (managed by users, EC2 or Fargate)
+- **EC2 provides the compute foundation** for EKS worker nodes, with managed node groups recommended for production
+- **EKS add-ons**: Default (VPC CNI, CoreDNS, kube-proxy) and optional (Cluster Autoscaler, Load Balancer Controller, EBS CSI, CloudWatch) integrate AWS services seamlessly
+
+**EXAM TIP:** Questions about "AWS" → think **comprehensive cloud platform** (200+ services, layered architecture, managed services). Questions about "EKS" → think **managed Kubernetes control plane** (AWS manages control plane, users manage data plane, EC2 or Fargate nodes). Questions about "EKS architecture" → think **control plane** (managed by AWS, highly available, across 3 AZs) + **data plane** (managed by users, EC2 instances or Fargate tasks). Questions about "EC2 in EKS" → think **worker nodes** (EKS-optimized AMI, managed node groups recommended, Cluster Autoscaler integration). Questions about "EKS add-ons" → think **default** (VPC CNI, CoreDNS, kube-proxy) + **optional** (Cluster Autoscaler, Load Balancer Controller, EBS CSI, CloudWatch). Questions about "EKS networking" → think **VPC CNI** (pods get VPC IPs, first-class network citizenship, no overlay networks). Questions about "EKS storage" → think **EBS** (root volumes for nodes, EBS CSI driver for persistent volumes, Fargate uses ephemeral storage).
+
 **G. Deployment as a Service (Online Inference)**:
 
 - **Common approach**: Deploy model as microservice behind API
