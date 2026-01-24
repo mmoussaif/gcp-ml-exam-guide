@@ -2813,6 +2813,217 @@ crew = Crew(
 
 **EXAM TIP:** Questions about "image analysis" or "visual content processing" → think **multimodal agents** with `multimodal=True`. Questions about "product inspection" or "quality assessment" → think **multimodal agents** for visual defect detection.
 
+#### Knowledge Sources for Agents
+
+**What are knowledge sources?**: Knowledge sources allow you to augment agents with external reference material—think of it as giving your agent a library of context they can search and use while performing a task.
+
+**Knowledge vs Tools**:
+
+| Aspect             | Tools                              | Knowledge                                           |
+| ------------------ | ---------------------------------- | --------------------------------------------------- |
+| **Primary role**   | Perform an action                  | Provide reference context for reasoning             |
+| **Invocation**     | Explicitly called by agent         | Implicitly accessed via semantic retrieval          |
+| **Examples**       | Web search, file reader, API calls | PDFs, CSVs, docs, preloaded text                    |
+| **Execution time** | Happens live during agent's run    | Preprocessed and stored prior to task execution     |
+| **Use case**       | "Go fetch this from the web"       | "Use what you already know to answer this question" |
+
+**Key distinction**:
+
+- **Tools** = "Do something" (dynamic actions)
+- **Knowledge** = "Know something" (static reference)
+
+**Supported formats**:
+
+- Plaintext (.txt)
+- PDFs
+- Markdown (.md)
+- CSV / Excel spreadsheets
+- JSON files
+- Custom APIs
+- Raw strings
+
+**Creating string knowledge source**:
+
+```python
+from crewai.knowledge import StringKnowledgeSource
+
+# Define knowledge as string
+return_policy = """
+Our return policy allows returns within 30 days...
+"""
+
+# Create knowledge source
+knowledge = StringKnowledgeSource(content=return_policy)
+
+# Attach to crew (shared) or agent (specific)
+crew = Crew(
+    agents=[support_agent],
+    tasks=[support_task],
+    knowledge_sources=[knowledge]  # Crew-level access
+)
+```
+
+**Chunking**: Break down large documents into chunks before embedding.
+
+**Why chunk?**:
+
+- Documents can be too large for embedding model input size
+- Single embedding for entire document isn't useful for retrieval
+- Chunks enable semantic search over relevant sections
+
+**Implementation**:
+
+```python
+knowledge = StringKnowledgeSource(
+    content=large_document,
+    chunk_size=1000,  # Characters per chunk
+    chunk_overlap=200  # Overlap between chunks (maintains semantic flow)
+)
+```
+
+**Knowledge access levels**:
+
+1. **Agent-level access**: Knowledge visible only to specific agent
+
+   ```python
+   agent = Agent(
+       role="Product Analyst",
+       knowledge_sources=[product_knowledge]  # Only this agent can access
+   )
+   ```
+
+2. **Crew-level access**: Knowledge shared across all agents
+   ```python
+   crew = Crew(
+       agents=[agent1, agent2],
+       tasks=[task1, task2],
+       knowledge_sources=[shared_knowledge]  # All agents can access
+   )
+   ```
+
+**Best practice**:
+
+- Agent-specific knowledge → `Agent(knowledge_sources=[...])`
+- Shared knowledge → `Crew(knowledge_sources=[...])`
+
+**Using real files as knowledge**:
+
+**Text file**:
+
+```python
+from crewai.knowledge import FileKnowledgeSource
+
+hr_policy = FileKnowledgeSource(path="./knowledge/hr_policy.txt")
+agent = Agent(
+    role="HR Assistant",
+    knowledge_sources=[hr_policy]
+)
+```
+
+**PDF file**:
+
+```python
+meeting_notes = FileKnowledgeSource(path="./knowledge/meeting_notes.pdf")
+agent = Agent(
+    role="Meeting Summarizer",
+    knowledge_sources=[meeting_notes]
+)
+```
+
+**CSV file**:
+
+```python
+feedback_data = FileKnowledgeSource(path="./knowledge/feedback.csv")
+agent = Agent(
+    role="Feedback Analyst",
+    knowledge_sources=[feedback_data]
+)
+```
+
+**JSON file**:
+
+```python
+company_data = FileKnowledgeSource(path="./knowledge/company_info.json")
+agent = Agent(
+    role="Company Info Expert",
+    knowledge_sources=[company_data]
+)
+```
+
+**Custom knowledge sources**: Extend `BaseKnowledgeSource` for APIs, databases, or internal systems.
+
+**Implementation**:
+
+```python
+from crewai.knowledge import BaseKnowledgeSource
+from pydantic import Field
+import requests
+
+class WeatherKnowledgeSource(BaseKnowledgeSource):
+    city: str = Field(..., description="City name")
+
+    def load_content(self) -> dict:
+        # Fetch from API
+        response = requests.get(f"https://api.weather.com/{self.city}")
+        weather_data = response.json()
+
+        # Convert to text
+        formatted = f"Temperature: {weather_data['temp']}°C..."
+
+        return {self.city: formatted}  # {source_id: raw_text}
+
+    def add(self):
+        # Load, chunk, and store
+        content = self.load_content()
+        chunks = self._chunk_text(content[self.city])
+        # CrewAI handles embedding automatically
+```
+
+**Embedding customization**: Use different embedding providers than your LLM.
+
+**Why customize?**:
+
+- Privacy: Use local embeddings (Ollama) for sensitive data
+- Cost: Use cheaper/faster models for embeddings
+- Domain-specific: Optimize for specific data structures
+- Offline: Run entirely on-premises
+
+**Implementation**:
+
+```python
+from crewai.knowledge import EmbeddingConfig
+
+# Define custom embedding model
+embedding_config = EmbeddingConfig(
+    provider="ollama",
+    model="nomic-embed-text"
+)
+
+# Use with knowledge source
+knowledge = StringKnowledgeSource(
+    content=onboarding_policy,
+    embedding_config=embedding_config
+)
+
+crew = Crew(
+    agents=[hr_agent],
+    tasks=[onboarding_task],
+    knowledge_sources=[knowledge]
+)
+```
+
+**Supported embedding providers**: OpenAI, Google, Cohere, HuggingFace, Azure, AWS Bedrock, Ollama, and more.
+
+**Knowledge workflow**:
+
+1. **Load content**: From file, API, or string
+2. **Chunk**: Break into manageable pieces (with overlap)
+3. **Embed**: Convert chunks to vectors (automatic or custom)
+4. **Store**: Save for semantic retrieval
+5. **Retrieve**: Agent queries knowledge during task execution
+
+**EXAM TIP:** Questions about "static reference material" or "preloaded context" → think **knowledge sources**. Questions about "dynamic actions" or "real-time operations" → think **tools**. Questions about "agent-specific vs shared knowledge" → think **agent-level** vs **crew-level** access.
+
 ---
 
 ### LangGraph — State Machine Orchestration for Agents
