@@ -88,6 +88,42 @@ In Google Cloud, **Vertex AI** is the canonical example of a platform layer: a u
   - **Workflow orchestration**: automate end-to-end workflows with **Vertex AI Pipelines**.
   - **Model monitoring**: detect performance degradation, input skew/drift, and trigger updates/retraining.
 
+#### The model layer (what it is + how Vertex AI helps)
+
+At the heart of any ML/AI system is the **model**: a sophisticated mathematical structure trained on data so it can learn patterns and produce outputs (generate, classify, predict, summarize, etc.). In the 5-layer view, models are the “brains” that agents and applications rely on.
+
+**Vertex AI as a model hub (Model Garden)**
+
+In many cases you don’t need to train a model from scratch. **Vertex AI Model Garden** helps you **discover, customize, and deploy** existing models, including:
+
+- **First-party foundation models** (Google)
+- **First-party pre-trained APIs** (task-focused APIs)
+- **Open models** (open/open‑weight options)
+- **Third-party models** (partners)
+
+**When to use Model Garden vs build your own**
+
+- Choose **Model Garden** when you want a readily available, high-performing model (optionally tuned) for common tasks (e.g., translation, summarization, assistants).
+- Choose **fully custom training** when you need deep control over architecture/training (research-grade needs, novel modeling approaches, special constraints).
+
+**Build models with Vertex AI (custom + AutoML options)**
+
+- **Custom training**: train at scale using frameworks like **PyTorch, TensorFlow, scikit-learn, XGBoost**.
+- **AutoML**: build models with less manual ML engineering (useful when you want strong baselines quickly).
+
+**AutoML objectives (high-yield table)**
+
+| Data type    | Supported objectives                                |
+| ------------ | --------------------------------------------------- |
+| Image data   | Classification, object detection                    |
+| Video data   | Action recognition, classification, object tracking |
+| Tabular data | Classification/regression, forecasting              |
+
+**Quiz-style intuition**
+
+- “Need a translation model that’s ready and solid” → **Vertex AI Model Garden**
+- “Researcher needs full control over architecture/training (e.g., protein folding)” → **Vertex AI custom model**
+
 #### Agents and GenAI-powered applications (how they relate)
 
 Think of a **GenAI-powered application** as the user-facing product (UI + workflows + policies). An **agent** is the “intelligent actor” inside that product that can reason, use tools, and take actions to achieve a goal.
