@@ -158,6 +158,12 @@
 | Context window fills up in long conversations        | Sliding window / summarization / token budget / hybrid memory strategies          |
 | Need to remember user across sessions                | Long-term memory: vector store + structured DB for facts, preferences, episodes   |
 | Resume conversation after app restart                | Checkpointer (LangGraph) or session service (ADK) with durable backend            |
+| Context window explodes in long agent runs           | Context engineering: tiered storage (session/memory/artifacts) + compiled views   |
+| Multi-agent causes context explosion                 | Scoped handoffs: agents see minimum context; use "agents as tools" or scoped transfer |
+| Agent API needs streaming for chat UX                | SSE (EventSource) for token-by-token; WebSocket for bidirectional                 |
+| Protect agent API from abuse                         | Cloud Armor WAF + rate limits per IP/session + input guardrails                   |
+| Agent CI/CD: how to test non-deterministic outputs   | Eval suite (LLM-as-judge + retrieval metrics) as quality gate; canary deploy      |
+| Agent costs spiral out of control                    | Token budgets per user/session; cost-aware routing to cheaper models              |
 
 ### Common Exam Traps
 
