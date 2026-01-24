@@ -68,6 +68,36 @@ This framing is adapted from the GenAI Leader curriculum and is meant to sound l
 - **Multimodal GenAI application**: a system that processes/combines **multiple input modalities** (e.g., text + image + audio/video) to solve one task.
   - Example: analyzing customer sentiment using **video testimonials** (visual/audio) + **survey text** (text)
 
+#### What is data (and why it matters so much)
+
+Data is **information** used as inputs to help models learn patterns and make outputs. It can show up in many forms:
+
+- **Numbers** (measurements, prices, sensor readings)
+- **Dates/timestamps** (seasonality, trends, time-to-event)
+- **Text** (descriptions, emails, tickets, transcripts)
+- **Images / audio / video** (visual/audio signals, multimodal workflows)
+
+**Intuition (from the GenAI Leader course):** ML models make predictions based on _existing data_ the way humans make educated guesses based on _experience_—but the model does it with probability, not gut feel.
+
+**Choosing the right data is crucial**
+
+- Data must be **relevant** to the task. Example: traffic patterns in London are unlikely to help predict crop yields in Kansas.
+- The model can’t learn what the data doesn’t contain. If you provide the wrong signals, you’ll get confidently wrong outputs.
+
+**Data quality: five practical dimensions**
+
+- **Accuracy**: values are correct (mislabeled data teaches the wrong patterns).
+- **Completeness**: enough data volume _and_ coverage (size + representation).
+- **Representativeness**: inclusive coverage to avoid skew/bias in outcomes.
+- **Consistency**: formats/labels are stable and standardized across sources/time.
+- **Relevance**: the data actually maps to the decision you’re trying to make.
+
+**Data accessibility (what blocks good models in real orgs)**
+
+- **Availability**: can the right people/systems access the data when needed?
+- **Cost**: is it affordable to store, move, and query at the required cadence?
+- **Format**: is it usable (schemas, file types, quality checks, documentation)?
+
 #### The four primary ways businesses use GenAI
 
 - **Create**: generate new content (text, images, audio, code).

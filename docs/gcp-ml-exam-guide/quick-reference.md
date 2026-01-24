@@ -197,6 +197,7 @@
 - AI-assisted captioning pattern: generate a time-coded draft artifact (captions/transcript) + human review/QA gate; track edits as feedback/eval data
 - Why GenAI took off (around 2022): LLM capability jump + more accessible compute/tooling → much stronger “out-of-the-box” usefulness
 - Definitions: AI ⊃ ML ⊃ GenAI (GenAI creates new content; ML learns a model from data; AI is the broader goal)
+- Data for ML/GenAI: relevance + quality (accuracy/completeness/representativeness/consistency) + accessibility (availability/cost/format) often matter more than “fancier models”
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)
