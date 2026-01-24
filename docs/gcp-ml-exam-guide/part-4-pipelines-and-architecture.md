@@ -1026,6 +1026,326 @@ online_features = store.get_online_features(
 
 **EXAM TIP:** Questions about "data pipeline reliability" → think **ingestion, storage, processing, labeling, versioning**. Questions about "training/serving inconsistency" → think **shared feature store** or **simulate online computations**.
 
+**J. Distributed Data Processing with Apache Spark**:
+
+**Why Spark**: As data volumes grow, single-machine tools (Pandas, NumPy) may start to falter. Apache Spark is a distributed computing engine widely used for big data processing. It plays a significant role in many MLOps pipelines where data is large or needs to be processed in parallel.
+
+**What is Spark**:
+
+- **Cluster computing framework** that provides an API for distributed data structures (RDDs, DataFrames) and operations on them
+- **Written in Scala** but provides bindings for Python (PySpark), Java, R, etc.
+- **Two key aspects** for ML pipelines:
+  - **DataFrame API**: Similar concept to pandas DataFrame, but distributed
+  - **Spark MLlib**: Includes its own pipeline and machine learning algorithms that can run in a distributed manner
+
+**Spark DataFrame**:
+
+- **Conceptually**: Like a table distributed across a cluster
+- **Operations**: SQL-like operations, filter, join, group, etc., automatically parallelized
+- **Under the hood**: Built on RDDs but provides optimizations through the Catalyst query optimizer
+- **Code similarity**: Looks similar to Pandas code, but Spark can run on very large dataset spread across different machines
+- **Execution**: Spark partitions the data and runs tasks on each partition in parallel. The data is not all loaded into one memory (each worker holds a chunk)
+
+**Spark for ETL in ML**:
+
+- **Heavy lifting**: A lot of data engineering pipelines use Spark to do:
+  - Reading from data lakes
+  - Joining large tables
+  - Computing features like aggregations
+- **Output**: Can output result to storage (maybe writing a Parquet file), which is then used by model training
+- **Alternative**: Can use Spark to directly train models on large data via MLlib
+
+**Spark MLlib and Pipelines**:
+
+- **MLlib**: Library of machine learning algorithms in Spark
+- **Pipeline class**: Analogous to scikit-learn's Pipeline
+- **Components**:
+  - `Imputer` (for missing values)
+  - `VectorAssembler` (to combine features into a vector)
+  - Algorithms like `LinearRegression` in a distributed form
+- **Example Spark ML Pipeline**:
+
+```python
+from pyspark.sql import SparkSession
+from pyspark.ml import Pipeline
+from pyspark.ml.feature import Imputer, VectorAssembler
+from pyspark.ml.regression import LinearRegression
+from pyspark.ml.evaluation import RegressionEvaluator
+
+# Spark session
+spark = SparkSession.builder \
+    .appName("SimpleSparkMLPipeline") \
+    .master("local[*]") \
+    .config("spark.driver.memory", "4g") \
+    .getOrCreate()
+
+# Generate synthetic data (time-indexed regression dataset)
+start_ts = F.unix_timestamp(F.lit("2024-01-01 00:00:00"))
+df = spark.range(10000) \
+    .withColumn("ts", start_ts + (col("id") * 60)) \
+    .withColumn("ds", F.from_unixtime(col("ts")).cast("timestamp")) \
+    .withColumn("feature_a", F.randn(seed=42)) \
+    .withColumn("feature_b", F.rand(seed=1337) * 10.0) \
+    .withColumn("y", 2.0*col("feature_a") + 0.3*col("feature_b") + F.randn(seed=7)*0.5) \
+    .drop("ts")
+
+# Temporal split
+train = df.filter(col("ds") < "2024-06-01")
+test = df.filter(col("ds") >= "2024-06-01")
+
+# Derive calendar feature
+train = train.withColumn("hour", F.hour(col("ds")).cast("double"))
+test = test.withColumn("hour", F.hour(col("ds")).cast("double"))
+
+# Define pipeline stages
+imputer = Imputer(
+    inputCols=["hour", "feature_a", "feature_b"],
+    outputCols=["hour_imp", "feature_a_imp", "feature_b_imp"]
+)
+
+assembler = VectorAssembler(
+    inputCols=["hour_imp", "feature_a_imp", "feature_b_imp"],
+    outputCols="features"
+)
+
+lr = LinearRegression(labelCol="y", featuresCol="features")
+
+# Create and fit pipeline
+pipeline = Pipeline(stages=[imputer, assembler, lr])
+model = pipeline.fit(train)
+
+# Evaluate
+predictions = model.transform(test)
+evaluator = RegressionEvaluator(metricName="r2")
+r2 = evaluator.evaluate(predictions)
+
+spark.stop()
+```
+
+**Key points**:
+
+- **Imputer inside pipeline**: Fit on train only (no leakage)
+- **Distributed execution**: Operations run across partitions in parallel
+- **Similar to scikit-learn**: Conceptually similar, but distributed
+
+**When to Use Spark**:
+
+| Scenario                                                                    | Tool Choice                | Reason                                                                               |
+| --------------------------------------------------------------------------- | -------------------------- | ------------------------------------------------------------------------------------ |
+| **Data fits in memory** (< few million rows, < GB)                          | **Pandas + scikit-learn**  | Best, simplest, fastest (less overhead, negligible startup delays)                   |
+| **Tens of billions of records** or naturally distributed data               | **Spark**                  | Handles datasets that don't fit in memory, distributes across cluster                |
+| **Feature warehouse**                                                       | **Spark or warehouse SQL** | Better than dumping all data to single machine                                       |
+| **Example**: 1 billion events in Parquet on HDFS, compute features per user | **Spark**                  | Pandas would fail; Spark can group by user and compute aggregates in distributed way |
+
+**Spark vs Pandas Comparison**:
+
+| Aspect                  | Pandas                                                                          | Spark                                                                              |
+| ----------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Optimization**        | In-memory, single-node workloads                                                | Distributed computing framework                                                    |
+| **Best for**            | Small to medium datasets that fit in RAM                                        | Datasets much larger than memory                                                   |
+| **Overhead**            | Very low overhead                                                               | Orchestration overhead (JVM startup, task scheduling, shuffle management)          |
+| **Execution**           | Eager (all-in-memory)                                                           | Lazy evaluation, partitioned execution                                             |
+| **Local machine**       | Usually faster for simple operations, even on tens/hundreds of millions of rows | Slower due to overhead, but doesn't crash                                          |
+| **Cluster environment** | Cannot handle                                                                   | Scales across clusters, ideal for massive aggregations, joins, pipelines           |
+| **Memory**              | Must hold full table (and intermediates) in RAM → crash risk                    | Spreads table across partitions, processes independently, spills to disk if needed |
+| **Result**              | Returns full dataset                                                            | Only returns final small answer (e.g., count())                                    |
+
+**Key Insight**:
+
+- **Pandas**: Eager, all-in-memory (easy to crash at high N)
+- **Spark**: Partitioned, lazy, spill-friendly (finishes on same machine)
+- **Why Spark succeeds**: Never tries to materialize all N rows on driver. Each partition processed independently. If RAM is tight, Spark spills partitions to disk. Result returned to Python is not the full dataset.
+
+**Example**: At N=100,000,000:
+
+- **Pandas**: Allocates entire dataset in driver's RAM at once → OOM (Out of Memory)
+- **Spark**: Partitions the work, processes independently, only returns final count → succeeds
+
+**Note**: Spark still executes the entire job across all rows and all partitions. But instead of sending the full dataset to the driver (like `collect()` would), Spark only ships the final small result (`count()`). So Spark doesn't "cheat" or "sample." It runs the complete operation exactly as specified, just returns less data to Python.
+
+**Spark Limitations**:
+
+- **Not magic**: Network and I/O can become bottlenecks
+- **Works best**: With algorithms that can be parallelized easily (most linear models, tree ensembles, etc., but not all)
+- **Debugging**: Can be harder due to distributed nature. One should be comfortable with logs to diagnose performance issues
+
+**Summary**: Apache Spark extends pipelines to big data scale, letting teams implement distributed ETL and even modeling. In an MLOps context, being comfortable with Spark means you can create pipelines that leverage the distributed nature of Spark, a typical necessity in production where data is huge.
+
+**Key takeaway**: Use it when needed—for many MLOps tasks, small data tools suffice, but when you hit the big data realm or need the power of parallel processing, Spark (or similar frameworks) becomes indispensable.
+
+**EXAM TIP:** Questions about "big data processing" → think **Apache Spark** (distributed, handles datasets larger than memory). Questions about "when to use Spark vs Pandas" → think **Pandas** (small/medium data, fits in RAM) vs **Spark** (billions of records, distributed, cluster). Questions about "Spark execution" → think **lazy evaluation**, **partitioned execution**, **spill to disk** (doesn't crash like Pandas).
+
+**K. Orchestration and Workflow Management**:
+
+**Why Orchestration**: Building a pipeline is one thing; running it reliably on schedule or in response to events is another. Workflow orchestration tools are designed to manage complex pipelines with multiple steps, dependencies, and scheduling needs.
+
+**What is a DAG**:
+
+- **DAG (Directed Acyclic Graph)**: Data structure most workflow orchestrators use to represent pipelines
+- **Nodes**: Tasks (fetching data, processing it, training a model, deploying it)
+- **Edges**: Dependencies (for example, training depends on processing, which depends on fetching)
+- **Directed**: Tasks must follow the defined order
+- **Acyclic**: No loops that would cause infinite runs
+- **Natural fit**: For pipelines where some steps run sequentially while others can run in parallel if they don't depend on each other
+
+**Pipeline Orchestration with Prefect**:
+
+**Prefect**: An orchestration tool (open source, with a Cloud/Enterprise version) designed to feel more Pythonic and flexible than older DAG-based systems like Airflow.
+
+**Key Features**:
+
+**1. Flows & Tasks**:
+
+- Turn Python functions into tasks using decorators
+- Group them inside flows
+- Dependencies are inferred from how you call them
+
+**2. Dynamic Workflows**:
+
+- Can use standard Python control flow (if, for, etc.) inside a flow
+- More flexible than static DAG definitions
+
+**3. Execution Backends**:
+
+- Prefect tasks/flows can run locally, on Dask, in Docker containers, or on Kubernetes
+- Depends on how workers are deployed
+
+**4. Agent/Worker Model**:
+
+- A worker polls a work pool for scheduled flow runs and executes them
+- Makes it easy to run flows across different environments without leaving a terminal open
+
+**Example Prefect Pipeline**:
+
+```python
+from prefect import flow, task
+from prefect.tasks import task_input_hash
+from datetime import timedelta
+
+@task(retries=3, retry_delay_seconds=5, cache_key_fn=task_input_hash, cache_expiration=timedelta(hours=1))
+def fetch_data():
+    """Fetch raw data from source"""
+    # Simulate data fetching
+    return {"data": "raw_data"}
+
+@task(retries=2)
+def process_data(raw_data):
+    """Process and clean data"""
+    # Simulate processing
+    return {"processed": "clean_data"}
+
+@task
+def train_model(processed_data):
+    """Train ML model"""
+    # Simulate training
+    return {"model": "trained_model"}
+
+@flow(name="ml_pipeline")
+def ml_pipeline():
+    """Main pipeline flow"""
+    raw_data = fetch_data()
+    processed_data = process_data(raw_data)
+    model = train_model(processed_data)
+    return model
+
+if __name__ == "__main__":
+    ml_pipeline()
+```
+
+**Key Points**:
+
+- **@task decorator**: Makes each function retriable, monitorable, and observable
+- **@flow decorator**: Groups tasks together
+- **Dependency graph**: Inferred from function calls (`process_data(raw)` depends on `fetch_data()`)
+- **Prefect builds DAG implicitly**: You just write Python
+
+**Running Prefect Flows**:
+
+**Development/Testing**:
+
+- Can simply run like a Python script: `python filename.py`
+- Executes immediately in the current process (good for local dev)
+
+**Scheduled Runs**:
+
+- Use an agent process that polls Prefect's server for scheduled flows
+- Executes them (possibly spawning new processes or containers per flow run)
+
+**Scheduling in Prefect**:
+
+**1. Cron Schedules**:
+
+- Traditional, predictable time-based runs
+- **Example**: `0 2 * * *` for 2 AM every day
+
+**2. Interval Schedules**:
+
+- Run every N seconds/minutes
+- **Example**: `interval: 30` for every 30 seconds
+
+**3. Event-Driven Triggers**:
+
+- Run when something happens (e.g., file arrives in S3, webhook fired, upstream job finishes)
+- Prefect Automations/Webhooks can launch flows directly
+
+**Monitoring and UI**:
+
+- **Prefect UI**: See flow runs, tasks, logs, etc.
+- **More modern-looking** and easier to set up than older tools
+- **Prefect Cloud**: Hosted UI
+- **Prefect Server** (open source): Run a couple of services for it
+
+**Best Practices for Scheduling** (Regardless of Tool):
+
+**1. Use Cron/Time Schedules Judiciously**:
+
+- If pipeline needs to run at regular interval (daily retraining, hourly data sync, etc.), configure a schedule that gives some buffer
+- **Example**: If you need daily data that's available by 1 AM, maybe schedule your job at 3 AM to be safe
+- **Be mindful of time zones**
+
+**2. Event-Driven Triggers**:
+
+- Some pipelines should run on events (e.g., when a new data file arrives, or when the upstream pipeline finishes)
+- **Benefits**: Don't run jobs when not needed
+- **Example**: Instead of running every hour to check for new data, use an event (like a cloud storage pub/sub notification or a webhook) to trigger the pipeline when data arrives
+- **Note**: Implementing that might require integration with external systems
+
+**3. Retries and Idempotence**:
+
+- **Always configure retries** for tasks that are prone to transient failures (network calls, database queries, etc.)
+- **Make pipeline tasks idempotent** whenever possible
+- **Idempotent**: If they run twice with the same inputs, the effect is the same (or at least not harmful)
+- **Benefit**: If a task fails midway and it partially completed something before failure, a retry won't break things
+
+**4. Production vs Development Environments**:
+
+- **Good practice**: Have separate environments for dev/test pipelines vs production
+- **For Prefect**: Might use different projects or namespaces
+- **Prevents**: Tests from colliding with real runs
+
+**5. Immutable Infrastructure for Pipelines**:
+
+- **Containerize the pipeline code** so that wherever it runs, it uses the same environment
+- **Especially important for ML**: Where you have specific library versions
+- **Can run tasks in Docker containers**: Avoids "it worked on my laptop" issues
+
+**6. Documentation**:
+
+- **Document your pipelines**: What each does, the schedule, and upstream/downstream data
+- **Orchestrators usually allow adding descriptions**: This becomes useful for the future
+
+**Using these strategies** ensures the pipeline runs reliably and issues are caught early, which is crucial in orchestrating ML systems.
+
+**GCP Orchestration Tools**:
+
+| Tool                    | Type             | Use Case                                               |
+| ----------------------- | ---------------- | ------------------------------------------------------ |
+| **Vertex AI Pipelines** | Managed Kubeflow | Multi-step ML workflow with minimal cluster management |
+| **Kubeflow Pipelines**  | Self-managed K8s | Multi-cloud, full control                              |
+| **Cloud Composer**      | Managed Airflow  | Complex DAGs, cross-system orchestration               |
+
+**EXAM TIP:** Questions about "workflow orchestration" → think **DAG** (Directed Acyclic Graph), **scheduling** (cron, interval, event-driven), **retries and idempotence**, **separate environments**. Questions about "GCP orchestration" → think **Vertex AI Pipelines** (managed Kubeflow), **Cloud Composer** (managed Airflow). Questions about "Prefect" → think **Pythonic**, **dynamic workflows**, **implicit DAGs**, **agent/worker model**.
+
 **2. Model Training and Experimentation**
 
 **Context**: Training happens offline (research or batch environment), not directly in live production system. Production training management is more rigorous than ad-hoc experiments.
