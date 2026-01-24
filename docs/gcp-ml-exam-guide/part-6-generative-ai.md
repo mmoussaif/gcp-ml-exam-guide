@@ -68,6 +68,21 @@ This framing is adapted from the GenAI Leader curriculum and is meant to sound l
 - **Multimodal GenAI application**: a system that processes/combines **multiple input modalities** (e.g., text + image + audio/video) to solve one task.
   - Example: analyzing customer sentiment using **video testimonials** (visual/audio) + **survey text** (text)
 
+#### Deep learning, generative AI, and foundation models (how they relate)
+
+- **Deep learning (DL)**: a subset of ML based on **neural networks**, useful when patterns are complex (language, vision, audio, multimodal).
+- **Generative AI**: uses deep learning to **create** new content (text, images, audio, video, code).
+- **Foundation models**: large deep-learning models trained on massive datasets (often with lots of unlabeled data) so they can be adapted to many tasks.
+
+**Semi-supervised learning (common in practice)**
+
+Neural networks can learn from a blend of:
+
+- a **small amount of labeled data** (to anchor the task), and
+- a **large amount of unlabeled data** (to learn general patterns),
+
+which can improve generalization when labels are expensive.
+
 #### What is data (and why it matters so much)
 
 Data is **information** used as inputs to help models learn patterns and make outputs. It can show up in many forms:
@@ -249,6 +264,7 @@ This framing is adapted from the GenAI Leader curriculum and is useful for exam-
 - **Gemini**: multimodal foundation model trained across text, images, code, audio, video, etc.
 - **Imagen**: image generation/editing foundation model trained primarily on images + text descriptions.
 - **Chirp**: audio/speech foundation model trained on multilingual audio (speech recognition / transcription / translation use cases).
+- **Diffusion models**: a common foundation-model family for media generation (especially images, and sometimes audio/video) that generates outputs by **iteratively denoising** (refining noise into structure).
 
 #### Prompting foundation models (how you “use” GenAI)
 

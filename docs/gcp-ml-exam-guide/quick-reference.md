@@ -197,9 +197,12 @@
 - AI-assisted captioning pattern: generate a time-coded draft artifact (captions/transcript) + human review/QA gate; track edits as feedback/eval data
 - Why GenAI took off (around 2022): LLM capability jump + more accessible compute/tooling → much stronger “out-of-the-box” usefulness
 - Definitions: AI ⊃ ML ⊃ GenAI (GenAI creates new content; ML learns a model from data; AI is the broader goal)
+- DL/foundation/GenAI: deep learning (neural nets) underpins foundation models; GenAI is an application of these models to generate new content
 - Data for ML/GenAI: relevance + quality (accuracy/completeness/representativeness/consistency) + accessibility (availability/cost/format) often matter more than “fancier models”
 - Data types: structured (tables) vs unstructured (text/images/audio/video) vs semi-structured (JSON/nested) drive what modeling approaches and tooling make sense
 - Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
+- Semi-supervised learning: combine a small labeled set with a large unlabeled set (common when labels are expensive)
+- Diffusion models: generate media by iteratively denoising noise into structured outputs (common for image generation)
 - Lifecycle mapping: ingest (Pub/Sub/GCS/SQL/Spanner) → prepare (BigQuery + Data Catalog) → train/deploy/manage (Vertex AI + Pipelines + monitoring/versioning + IAM)
 - Consistency matters: inconsistent formats/labels confuse models and hinder learning (it’s not “just a data engineering issue”)
 - ML lifecycle order (core): data ingestion+preparation → model training → model deployment → model management
