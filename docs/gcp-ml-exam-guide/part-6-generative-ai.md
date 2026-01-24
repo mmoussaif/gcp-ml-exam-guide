@@ -641,6 +641,31 @@ Before you commit to a build path, sanity-check the solution across:
 
 - “Need realistic text-to-image for marketing, short on time” → **use a pre-trained API** first (fastest path).
 
+#### Choosing and maintaining your GenAI solution (comparison + maintenance)
+
+Once you’ve assessed needs and resources, treat GenAI as an ongoing product: **choose deliberately**, then **maintain continuously**.
+
+**Comparing companies and models (how to choose)**
+
+- **Evaluate capabilities**: use benchmarks and real task evaluations (your own eval set beats generic leaderboards).
+- **Compare pricing structures**: estimate cost under your expected traffic (often token-based for LLM APIs).
+- **Factor in additional costs**: storage, retrieval/vector DB, rerankers, tool/API calls, logging/monitoring, and tuning jobs.
+- **Read the fine print**: usage limits, data retention/privacy policies, and terms of service.
+
+**Useful resources**
+
+- Provider pricing pages
+- Research papers/benchmarks
+- Community discussions (for operational/pricing gotchas)
+
+**Maintenance (what you’ll keep doing)**
+
+- **Model monitoring and retraining**: watch quality and drift; retrain/tune when performance degrades or requirements change.
+- **Data updates**: refresh knowledge sources, update corpora, re-embed when embedding models change, and maintain schemas/labels.
+- **Software updates and bug fixes**: prompts/routers/tool schemas evolve; keep dependencies current.
+- **Hardware and infrastructure**: capacity planning (cloud or edge), scaling, cost controls.
+- **Security and compliance**: patch vulnerabilities, review IAM permissions, audit logs, and update policies (SAIF/responsible AI).
+
 **Google Cloud’s ML models (via Vertex AI)**
 
 Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google’s suite:
