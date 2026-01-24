@@ -19,6 +19,7 @@ The October 2024 exam version includes Generative AI topics.
   - [6.2.3 How LLMs Function (End-to-End)](#623-how-llms-function-end-to-end)
   - [6.2.4 Hands-On: LLM Decoding and Generation Parameters](#624-hands-on-llm-decoding-and-generation-parameters)
   - [6.2.5 LLM Application Lifecycle](#625-llm-application-lifecycle)
+  - [6.2.6 Prompt Engineering Fundamentals](#626-prompt-engineering-fundamentals)
 - [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
 - [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
 - [6.5 Building agents on Google Cloud](#65-building-agents-on-google-cloud-service-mapping)
@@ -2699,12 +2700,378 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 
 **COMMON TRAP:** The “repetition loop bug” (model repeats filler) is often made worse by poor temperature/top-K/top-P settings. Fix by tuning sampling + adding stop conditions + lowering max output tokens.
 
-**COMMON TRAP:** “Fine-tune” is rarely the first answer. Start with **prompting** or **RAG/grounding** unless you truly need style/domain adaptation at scale.
+**COMMON TRAP:** "Fine-tune" is rarely the first answer. Start with **prompting** or **RAG/grounding** unless you truly need style/domain adaptation at scale.
 
 #### Structured outputs (JSON) and integration
 
 - **Why JSON**: Makes downstream systems deterministic (parsing, routing, dashboards).
 - **How**: Specify schema + examples, and validate outputs. If JSON is malformed, use repair/validation logic.
+
+#### 6.2.6 Prompt Engineering Fundamentals
+
+**Introduction**:
+
+**Large Language Models (LLMs)**: Have unlocked powerful new capabilities in software, but harnessing them in production systems (LLMOps) requires more than just plugging in an API.
+
+**Two critical disciplines**: Have emerged in recent years:
+- **Prompt engineering**: Focuses on how we design the textual inputs (prompts) to guide an LLM's behavior
+- **Context engineering**: Is about managing the entire information flow, structuring the surrounding data, tools, and environment that feed into the model
+
+**Together**: These techniques enable us to build reliable and efficient LLM-powered applications.
+
+**Note**: Prompt engineering should not be seen as unrelated to context engineering. Prompt engineering is a subset of context engineering, since prompts are one way (to a certain extent) of shaping the model's context. We mentioned prompt engineering separately because it is a large and mature discipline in its own and has been widely practiced for much longer, even before context engineering was popularized as a unified concept.
+
+**Fundamentals of Prompting**:
+
+**A prompt**: Is the input given to an LLM to draw out a response, it can be a question, instruction, or any text the model completes or responds to.
+
+**From an engineering perspective**: A prompt is not just casual text; it is a piece of logic we design to program the model's behavior (often called "soft programming").
+
+**In essence**: Prompt engineering means writing instructions that effectively leverage the knowledge already present in the model. Unlike traditional software where we write deterministic code, prompting is more of an interactive, probabilistic programming: we guide a black-box model with instructions, then observe how it behaves, and refine our approach.
+
+**Why is Prompt Engineering Needed?**
+
+**LLMs are trained**: To continue text in a plausible way, but to get the specific output we want, we must craft the input skillfully. A poorly designed prompt can lead to irrelevant, inconsistent or incorrect outputs, even from a very capable model.
+
+**On the other hand**: A well-designed prompt can make even a weaker model perform surprisingly well on a given task. Prompt engineering has therefore become "the skill of designing prompts that guide a generative AI model toward the kind of response you actually want".
+
+**The System Perspective**:
+
+**From a system standpoint**: Prompting is a first-class component of the application. We treat prompts like code: we design them methodically, test them, version-control them, and continuously improve them.
+
+**Importantly**: Prompt engineering is often the most accessible way to adapt an LLM to your needs without model retraining. It requires no updates to the model's weights, instead, you leverage the model's already present knowledge by providing instructions and context.
+
+**This makes**: Prompt engineering fast to iterate on and deploy, which is why many early LLM applications relied solely on prompting. However, it's not a silver bullet, more complex tasks often require going beyond skillful prompting to exploring a broader context pipeline, fine-tuning, or additional data.
+
+**In-Context Learning**:
+
+**Prompting is closely tied**: To the concept of in-context learning. Researchers discovered with GPT-3 that large models can learn tasks from examples given in the prompt itself, without any parameter updates.
+
+**For instance**: If you prompt the model with a few example question-answer pairs (few-shot prompting), the model can infer the pattern and apply it to a new question. If you provide no examples, expecting the model to solve the task from just instructions, that's zero-shot prompting.
+
+**Few-shot prompting** (sometimes called few-shot in-context learning): Often improves accuracy by showing the model what format or style of answer is expected. For example, adding 5 examples makes a "5-shot" prompt. GPT-3's paper "Language Models are Few-Shot Learners" highlighted this ability.
+
+**However**: There are diminishing returns with newer advanced models: experiments have shown GPT-4 sometimes doesn't gain much from few-shot examples on certain tasks compared to zero-shot. This is likely because newer models are better at following instructions out-of-the-box, so a clear zero-shot instruction often suffices for them.
+
+**But in niche domains**: A few examples can still boost performance significantly if the model's training data lacked those patterns. In practice, you should experiment to find the optimal number of examples for your task: balancing performance versus the added prompt length (which increases cost and latency).
+
+**Note**: That few-shot prompts use up context space, so you can't include too many examples given the context window is limited.
+
+**In summary**: The fundamental idea is that prompts provide both instructions and context to the model. They can include a description of the task, relevant information or data, and examples of the task being performed.
+
+**Overall**: Prompt engineering is fundamentally about constructing these elements in a way that the model reliably produces the desired behavior. We now turn to a systematic approach to developing prompts.
+
+**Systematic Prompt Development Workflow**:
+
+**Developing an effective prompt**: Is an iterative engineering process. Rather than guess-and-check ad hoc, it helps to follow a structured workflow:
+
+**1. Define the Task and Success Criteria**:
+
+**Start by clearly defining**: What you want the model to do (e.g., "extract the total price from an invoice email and output a JSON"). Identify what a correct output looks like and any constraints (formatting, tone, length, etc.).
+
+**This is analogous**: To writing a spec; it will guide your prompt design and evaluation criteria.
+
+**2. Draft an Initial Prompt**:
+
+**Create a first version**: Of the prompt. At a minimum, state the instruction clearly. Depending on the task, you might include some examples or a specific format.
+
+**3. Test Sample Inputs and Analyze**:
+
+**Run the model**: With your prompt on a variety of test queries or scenarios (via various user prompts or supporting context). Observe the outputs:
+- Do they match the expected format?
+- Are they correct, complete, and compliant with any rules?
+- Any issues? For example, the model misunderstands something or includes extra text
+
+**When the output**: Is not what you want, analyze why:
+- Did the model ignore an instruction?
+- Did it hallucinate?
+- Was it too verbose or not following format?
+
+**For each issue**: Think of how you could adjust the prompt to address it. This might mean clarifying the instruction, adding a constraint, giving an example, or rephrasing.
+
+**4. Refine the Prompt and Iterate**:
+
+**Apply the changes identified**: Be as concrete as possible in telling the model what you need. Each refinement is like debugging the prompt.
+
+**After modifications**: Iterate again on your examples (and possibly new ones). Compare the new output against the previous one to ensure your changes helped rather than hurt.
+
+**This iterative loop**: Continues until the prompt performance is satisfactory. It's common to go through multiple iterations, hence prompt engineering is often described as an experimental, empirical process.
+
+**5. Validation and Evaluation**:
+
+**Once the prompt**: Seems good on your dev tests, validate it more rigorously. This might mean using a larger evaluation set or even using automated eval tools.
+
+**We'll be diving deep**: Into evaluation in a later chapter, but essentially you want to assess that your prompt achieves the task consistently. If the app is high-stakes, consider a human review of outputs as well.
+
+**6. Tracking and Versioning**:
+
+**Throughout the process**: It is important that we continuously track and version, the various prompts (initial and refinements), associated sample outputs, testing data, reasons, feedback, metadata, etc.
+
+**This helps us**: With maintenance of our procedure and experimentation. We'll be discussing more on prompt versioning in the next chapter.
+
+**This workflow**: Resembles the traditional software development objectives, applied to prompt design. In fact, as teams scale up prompt engineering, they find that managing prompts requires discipline: without version control and systematic testing, prompt changes can break functionality unexpectedly.
+
+**Types of Prompts**:
+
+**Not all prompts**: Are alike. Depending on the role and content of the text we include, we can distinguish several prompt types that serve different purposes in an LLM-powered system:
+
+**1. System Prompts**:
+
+**A system prompt** (or system message): Is an initial instruction that sets the overall behavior of the model. It often defines the model's role, tone, or rules that persist throughout the interaction.
+
+**Think of it**: As the "persona and policy" for the AI. For example: "You are a helpful financial assistant. You will answer in concise language."
+
+**Most chat APIs**: Allow a special system message separate from user input. The system prompt usually comes first in the combined input to the model, which can influence the model to prioritize it.
+
+**A well-crafted system prompt**: Can significantly steer the model's behavior and even improve performance on a task. It's also a key tool for mitigation by explicitly instructing the model about do's and don'ts (e.g., "If the user requests disallowed content, refuse."), you establish guardrails.
+
+**In summary**: Use system prompts to set context globally they apply to all user requests in a session.
+
+**2. User Prompts**:
+
+**The user prompt**: Is the direct input from the user, e.g., their question or command. In a chat, this is what the user types each turn. From the model's perspective, the system prompt and user prompt are concatenated into one sequence. But conceptually, the user prompt is the immediate task or query the model should address, often phrased as a question or imperative. For instance: "How do I sort a list in Python?"
+
+**User prompts can be free-form**: But as developers we might pre-process or augment them (like reformatting, adding context) before passing to the model. The key is that the user prompt carries the user's intent. It may be the only prompt content (in simple API usage), or it may work in tandem with a system prompt and few-shot examples.
+
+**3. Few-Shot Example Prompts**:
+
+**These are examples**: Inserted into the prompt to demonstrate the task to the model. They typically consist of a fake user query and a desired model answer, sometimes formatted as Q&A or conversation turns.
+
+**Few-shot examples**: Essentially provide context by example, the model sees how tasks should be handled. Few-shot prompts serve as on-the-fly "training" for the model, if we can say that.
+
+**As discussed**: They can greatly improve performance especially for smaller models or niche tasks, at the cost of consuming context space.
+
+**There is an art**: To selecting good examples. They should be representative of the variety of inputs and edge cases, and ideally, they should be correct and unambiguous (since the model might mimic any mistakes in the examples).
+
+**Note**: That in few shot prompting, ordering can also matter. Sometimes models exhibit recency bias to the last example, so you might need to order by complexity or use randomization during development.
+
+**4. Instruction Prompts and Contextual Prompts**:
+
+**We often distinguish**: Between instructions (telling the model what to do) and context (supplying data to act on). In practice a prompt can include both.
+
+**For example**: An instruction prompt might say "Summarize the following article:", and then the article text is included as context. The model then uses that context to fulfill the instruction.
+
+**Many prompts**: Follow this pattern of an instruction plus some input data. This could be seen as a "two-part prompt" (instruct, then provide context).
+
+**Note**: When designing prompts, it's useful to clearly separate these parts: what is the task (instruction) and what information should be used (context). This clarity helps the model parse your intent correctly.
+
+**5. Formatting Prompts**:
+
+**These prompts emphasize**: The output format or style. They may not change the substance of the answer but how it is presented.
+
+**For instance**: You might prompt:
+- "List the following names in a numbered list."
+- "Provide the answer in JSON format with keys 'answer'."
+
+**By specifying**: A required format, you guide the model to output something that your system can easily parse or that fits user expectations. Formatting instructions can be combined with any of the above types of prompts.
+
+**Often**: They appear in system messages (e.g. "Always answer in markdown format.") or at the end of a user prompt ("… Give the answer as a JSON."). Because LLMs can sometimes ignore format instructions if not stated clearly, it's good practice to be very explicit and even show an example of the format if critical.
+
+**With this**: We have covered the major categories of prompts. One thing to note is, these categories are not mutually exclusive, a single prompt often involves a system role definition, a user query, and maybe some examples all together.
+
+**The key takeaway**: Is that prompt engineering gives us multiple levers: we can shape who the model pretends to be (system/role), what it should consider (context/examples), how to respond (format/style), and exactly what question to answer (user query).
+
+**Effective prompt development**: Means pulling the right combination of these levers for the task at hand.
+
+**Next**: We'll explore some prompting techniques that have been developed to push LLMs to better performance on complex tasks.
+
+**Prompting Techniques**:
+
+**Basic prompting**: Can be incredibly powerful, but researchers and practitioners have found techniques to push LLMs even further. We'll discuss some of these advanced prompting techniques and how they work:
+
+**1. Chain-of-Thought (CoT) Prompting**:
+
+**Chain-of-thought (CoT) prompting**: Refers to a class of prompting techniques that explicitly encourage a language model to decompose a problem into intermediate reasoning steps before producing a final answer.
+
+**From a developer's perspective**: CoT is not merely a stylistic prompt tweak; it is a mechanism for inducing structured latent computation in autoregressive models that otherwise tend to shortcut directly to answers.
+
+**In standard prompting**: An LLM is optimized to map an input directly to an output token sequence that maximizes likelihood. For tasks involving multi-step arithmetic, symbolic manipulation, or logical dependencies, this often leads to brittle behavior: the model may "jump" to an answer pattern without correctly executing intermediate steps.
+
+**CoT prompting alters**: This dynamic by reshaping the decoding trajectory so that intermediate reasoning tokens become part of the predicted sequence.
+
+**It has been empirically demonstrated**: That sufficiently large models exhibit a strong emergent ability to perform multi-step reasoning when prompted with explicit reasoning traces. Crucially, this capability may not reliably appear in smaller models, highlighting that CoT is not just a prompt trick but a scale-dependent phenomenon.
+
+**From an implementation standpoint**: CoT prompting typically takes one of two forms:
+- **Zero-shot CoT**: Where the developer adds a generic reasoning cue such as "Let's think step by step."
+- **Few-shot CoT**: Where the prompt includes one or more worked examples that explicitly show intermediate reasoning before the final answer
+
+**Few-shot CoT**: Is generally more robust, as it conditions the model on the structure of reasoning rather than relying on a single heuristic phrase. However, it also consumes more context window and must be carefully curated to avoid overfitting to specific patterns.
+
+**Note**: CoT does not expose the model's true internal reasoning. The generated reasoning tokens are themselves predictions, not introspections. CoT works because autoregressive generation forces the model to maintain consistency across steps, effectively externalizing a computation that would otherwise remain implicit.
+
+**In practice**: CoT improves performance on tasks that require:
+- Multi-step arithmetic or algebra
+- Logical deduction and constraint satisfaction
+- Commonsense reasoning with causal chains
+- Program synthesis and algorithmic reasoning
+- Planning-style problems in agentic workflows
+
+**Empirically**: Even minimal zero-shot CoT often increases accuracy, but it also increases token usage, latency, and variance. For production systems, this creates a clear trade-off: performance/quality versus cost and throughput. Hence we must explicitly decide where CoT is enabled rather than applying it indiscriminately.
+
+**A common pattern**: Is hidden or private CoT. The model is prompted to reason step-by-step internally, but only the final answer is surfaced to the user. This preserves the accuracy benefits of CoT while avoiding verbosity, UX clutter, and potential leakage of sensitive intermediate reasoning.
+
+**To illustrate**: The behavioral difference, consider a simple arithmetic word problem. Without CoT, the model may directly output an answer token. With CoT prompting, the model is far more likely to explicitly compute totals, apply transformations, and then conclude. While this example is trivial, the effect compounds dramatically for longer dependency chains.
+
+**Now that we understand**: Benefits of CoT, it is also important to understand the failure modes of CoT. Because reasoning tokens are generated autoregressively, the model can still hallucinate incorrect steps that look plausible. Longer chains increase surface-level coherence but do not guarantee correctness. This has motivated extensions such as self-consistency which we'll discuss ahead, and tool-augmented CoT, where intermediate steps invoke calculators, solvers, or retrieval systems.
+
+**Note**: From a system's design perspective, CoT should be viewed as one component in a broader reasoning stack rather than a silver bullet. It works best when combined with verification, tool use, or constrained decoding.
+
+**In summary**: Chain-of-thought prompting is best understood not as "making the model explain itself," but as a controllable way to elicit multi-step computation. When applied deliberately, it is one of the most effective tools available for improving reasoning performance in LLM-powered systems.
+
+**2. ReAct Prompting**:
+
+**ReAct (Reason + Act)**: Is a prompting and control framework that tightly couples explicit reasoning traces with environment-interacting actions.
+
+**Unlike pure chain-of-thought prompting**: Which externalizes reasoning but still assumes the model answers in a single forward pass, ReAct turns the model into a decision-making loop that can iteratively reason, act, observe results, and update its plan.
+
+**From a technical perspective**: ReAct is best understood as an LLM-driven policy over tools, where natural-language reasoning tokens guide action selection, and observations from the environment condition subsequent reasoning. The prompt format is simply the interface contract that enforces this loop.
+
+**The core insight**: Is that reasoning and acting are complementary. When a model reasons without tools, it is forced to guess or hallucinate missing information. When it invokes tools without making its reasoning explicit, the resulting behavior becomes opaque, hard to debug, and brittle. ReAct addresses this by interleaving reasoning and tool use in the same autoregressive sequence.
+
+**A typical ReAct trajectory**: Alternates through three conceptual states:
+- **Thought**: The model's explicit reasoning about what it knows, what it lacks, and what to do next
+- **Action**: A structured instruction emitted by the model that maps to a tool invocation
+- **Observation**: External state returned by the system after executing the action
+
+**Crucially**: The model does not execute actions itself. The LLM only emits text. The surrounding runtime (code) parses the action, executes it, and appends the observation back into the prompt. This makes ReAct a prompt-driven control loop, not an autonomous executor.
+
+**From an implementation standpoint**: ReAct requires three pieces of scaffolding:
+- **A strict output grammar**: The model must emit actions in a machine-parsable format. Free-form text is unacceptable here. Most implementations enforce patterns like `Action: ToolName[arguments]` to simplify parsing and prevent ambiguity
+- **An execution harness**: A loop that: sends the current prompt to the model, detects whether the model produced an action or a final answer, executes the action safely, injects the observation back into the context, repeats until termination
+- **Termination conditions**: The system must decide when to stop. This is usually done via a Finish or Answer action, max-step limits, or confidence thresholds. Without explicit stopping logic, ReAct agents can loop indefinitely
+
+**One of the most important**: Technical distinctions for developers is that ReAct reasoning tokens are not optional narration. They function as state carriers. The reasoning text helps the model maintain coherence across steps, remember past observations, and justify future actions.
+
+**That said**: ReAct reasoning is still generated, not guaranteed to be correct. This introduces a subtle but critical trade-off: ReAct improves tool grounding and factual accuracy, but it also increases the surface area for failure.
+
+**A single incorrect reasoning step**: Can cascade into repeated bad actions. For this reason, production systems often combine ReAct with guardrails such as:
+- Tool-level permissioning (like in MCP)
+- Argument validation and sanitization
+- Observation truncation or summarization
+- Secondary verification models
+
+**In practice**: ReAct excels at tasks that require information gathering or environment interaction, such as:
+- Question answering with retrieval
+- Multi-hop reasoning over documents or APIs
+- Data analysis with calculators
+
+**Note**: That ReAct performs poorly on tasks that are fully solvable in a single forward pass, where the overhead of tool calls outweighs any benefit.
+
+**An important architectural insight**: From the ReAct paper is that the framework does not require fine-tuning. The behavior emerges from prompt structure alone, assuming the model is sufficiently capable. This made ReAct especially influential, as it demonstrated that agent-like behavior can be induced purely through inference-time control.
+
+**Modern agent frameworks**: Build directly on this idea, though many abstract away the explicit labels. Under the hood, however, most still implement some variant of the same loop: reason → decide → act → observe → repeat.
+
+**From a system standpoint**: It is important to recognize that ReAct is not merely a "prompting trick." It is a programming model, where the LLM acts as a high-level planner and controller, and the host system provides deterministic execution and state updates. The prompt is effectively the agent's policy definition.
+
+**In summary**: ReAct shifts LLM usage from static input-output mapping to interactive control. It operationalizes reasoning by tying it directly to actions and observations, making it one of the foundational patterns for modern LLM agents.
+
+**When designed carefully**: It enables systems that are more grounded, more capable, and more extensible than simple prompting alone but at the cost of higher system complexity and stricter engineering discipline.
+
+**3. Self-Consistency**:
+
+**Self-consistency**: Is a technique aimed at improving the reliability of chain-of-thought reasoning. Instead of trusting a single reasoning path, we prompt the model to generate multiple independent solutions and then aggregate their results.
+
+**In practical terms**: You run the model N times for the same question (each time it might produce a different chain-of-thought due to randomness in sampling), and then you see which final answer is most common among those attempts (majority voting).
+
+**The assumption**: Is that if one answer is correct, many reasoning paths will converge to it, whereas incorrect answers will be more randomly distributed.
+
+**For example**: You could sample 5 chains-of-thought for a tricky math problem and find that 4 out of 5 conclude the answer is 42, while one says 41. By majority vote, you choose 42 as the final answer, increasing the likelihood of correctness. This is essentially an ensemble method at the prompt level.
+
+**Note**: Implementing self-consistency requires using a stochastic decoding method (like sampling with temperature) to get diverse solutions, and then either majority vote or some confidence scoring to pick the answer.
+
+**It trades**: Additional compute cost for higher reliability. In an LLMOps context, you'd use this when correctness is paramount and you can afford the extra calls. For instance, critical reasoning tasks might justify running 5 model instances in parallel and voting.
+
+**The advantage**: Is you don't have to change the model or fine-tune it; you're simply leveraging its own variability to your benefit.
+
+**Note**: One must be cautious that all the sampled outputs aren't identical (ensuring enough temperature or randomness), otherwise it's not useful. Also, if the model has a consistent bias, self-consistency won't fix it (all answers could be consistently wrong).
+
+**4. Other Techniques**:
+
+**There are numerous**: Other prompting approaches present. To name a few:
+
+- **Reflection**: Prompts the model to reflect on its answer and possibly correct itself. This could mean after getting an answer, you ask the model "Are you sure? Evaluate the answer and correct if needed." and let it produce a refined answer. This can catch mistakes by having the model critique its own output
+- **Expert/novice prompting**: Where you prompt the model to act as an expert and also produce an explanation a novice could understand, which can improve clarity
+- **Tree-of-thought**: Is an advanced method where the model explores a decision tree of reasoning paths instead of one linear chain. This can be useful for complex planning problems
+- **Automatic prompt engineering (APE)**: A process of using other AI models or algorithms to automatically create, test, and refine prompts, replacing manual trial-and-error to find the most effective instructions. In its simplest form, you can ask a model to generate a prompt for your needs
+
+**Note**: You can also ask AI models to critique and improve your prompts or generate in-context examples.
+
+**Many advanced techniques**: Combine prompting with external processes (tool use, etc.), blurring the line between "pure prompt engineering" and "algorithm design" and context analysis.
+
+**The takeaway**: Is that prompt engineering has a growing toolkit of patterns to systematically reduce errors and improve outputs: guiding the model to reason (CoT), to interact with its environment (ReAct), to generate diverse solutions (self-consistency), and so on.
+
+**We've covered**: Some core ones here, as these are widely applicable. In practice, you might mix techniques, for instance, a ReAct-based agent that uses chain-of-thought in its reasoning steps and employs self-consistency when answering critical questions.
+
+**Hands-On: Prompt Types and CoT Implementation**:
+
+**This hands-on section**: Examines system prompts, user prompts, and formatting prompts in combination with a zero-shot chain-of-thought pattern to implement a basic math word problem solver.
+
+**What our script is doing**: End-to-end, is:
+- Ask an LLM to solve a math word problem with a reasoning section
+- Strip that reasoning out before showing the user
+- Save the reasoning to a local text file, for record
+
+**It's basically**: A tiny "math-solver pipeline" with three outputs:
+- Raw model response (contains both reasoning + final solution)
+- Cleaned response (final solution only)
+- Extracted reasoning (saved to math_cot_reasoning.txt with a timestamp)
+
+**Key Components**:
+
+**System Prompt**: The "global behavior contract" for the model. We are telling it to produce TWO parts:
+- Step-by-step reasoning inside `<thought>...</thought>`
+- Final solution in a strict Markdown template
+
+**The "do not add anything else"**: Enforces a strict condition that the model should not generate anything beyond the specified two parts. Thus, overall, our system prompt is enforcing a protocol.
+
+**SOLUTION_FORMAT_SPEC**: The exact Markdown structure we want the final answer to follow:
+- `## SOLUTION_START`
+- Sections like `### PROBLEM_UNDERSTANDING`, `### APPROACH`, etc.
+- `## SOLUTION_END`
+
+**This is useful**: In scenarios where we might want downstream parsing later (for example, splitting the response into labeled parts consistently).
+
+**Helper Utilities**:
+
+**extract_and_strip_thoughts(...)**: Does two jobs:
+- Extract all reasoning blocks using regex and combine them together as thought
+- Remove the reasoning from the visible output cleaned
+
+**save_thought_to_file(...)**: Appends the reasoning to a text file with a timestamp.
+
+**Main Solver Function**:
+
+**solve_math_problem(problem: str)**: Constructs a user_prompt (template) that contains:
+- Instructions (repeat the two tasks)
+- The strict Markdown template
+- The actual problem text inside triple quotes
+
+**Then it calls**: completion(...), with temperature=0.2. This takes the model more towards deterministic side and less "creative", which is exactly what we want to ensure our defined structures are followed.
+
+**Then we extract**: The model response and do post-processing with:
+- extract_and_strip_thoughts
+- save_thought_to_file
+- return final_output
+
+**So the CoT reasoning**: Gets saved and the function returns ONLY the clean Markdown solution.
+
+**Key Observations**:
+
+**The output**: Starts at `## SOLUTION_START`, contains the filled sections (Problem understanding, approach, steps, final answer, verification), and ends at `## SOLUTION_END`. Notice how in the output, there are no `<thought>...</thought>` tags. That's because extract_and_strip_thoughts() removed them before printing.
+
+**Note**: The exact outputs and reasoning file contents will vary from those shown here; however, the overall understanding should remain consistent and unaffected.
+
+**As a follow-up self-learning exercise**: We encourage readers to experiment with different input problems (sample_problem) to develop a deeper and more concrete understanding.
+
+**Typical upgrades**: If output fails to adhere to the defined structure:
+- Enforce the schema with examples for the final output
+- Retry with a stricter system prompt when the format check fails
+- Few-shot CoT instead of zero-shot
+- Validate the presence of elements given in the format like: `## SOLUTION_START` and `## SOLUTION_END` before accepting the result
+
+**Note**: Many a times structure might also fail if you are using a different model, since every model has its own learned distributions, and depending on that you might need to make a few tweaks here-n-there.
+
+**EXAM TIP:** Questions about "prompt engineering" → think **soft programming** (design logic to program model behavior), **iterative engineering process** (define task → draft → test → refine → validate → version), **first-class component** (treat like code, version-control, test). Questions about "in-context learning" → think **zero-shot** (no examples, just instructions) → **few-shot** (examples in prompt, model infers pattern), **diminishing returns** (newer models better at zero-shot), **context space cost** (few-shot uses up context window). Questions about "prompt types" → think **system prompts** (global behavior, role/tone/rules, guardrails) → **user prompts** (direct input, user intent) → **few-shot examples** (demonstrate task, on-the-fly training) → **instruction/contextual** (what to do + data to act on) → **formatting** (output format/style, explicit + examples). Questions about "CoT prompting" → think **decompose problem into intermediate steps**, **zero-shot CoT** ("Let's think step by step") → **few-shot CoT** (worked examples with reasoning), **scale-dependent** (works better on larger models), **trade-off** (accuracy vs cost/latency), **hidden CoT** (reason internally, show only answer). Questions about "ReAct prompting" → think **Reason + Act loop** (thought → action → observation → repeat), **LLM-driven policy over tools**, **strict output grammar** (machine-parsable actions), **execution harness** (parse → execute → inject observation), **termination conditions** (Finish/Answer action, max steps), **not autonomous** (LLM emits text, runtime executes), **state carriers** (reasoning maintains coherence). Questions about "self-consistency" → think **multiple independent solutions** → **majority voting**, **ensemble method at prompt level**, **trades compute for reliability**, **requires stochastic decoding** (temperature for diversity), **won't fix consistent bias**.
 
 ### 6.3 RAG & Grounding (Retrieval Augmented Generation)
 
