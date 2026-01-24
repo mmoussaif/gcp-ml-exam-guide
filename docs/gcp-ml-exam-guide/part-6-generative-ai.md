@@ -86,6 +86,43 @@ Many real apps use multiple specialized agents (e.g., a router/supervisor + doma
 - **Customer support app**: triage agent + knowledge/RAG agent + escalation agent
 - **Personalized learning app**: tutor agent + quiz generator + progress tracking agent
 
+#### How agents work (conversational vs workflow agents + reasoning loop + tools)
+
+Most agents you’ll see in practice fall into two buckets:
+
+- **Conversational agents**: designed for dialogue (Q&A, help, troubleshooting) with optional tool use.
+  - Typical loop: user message → interpret intent → (optional) tool call → generate response → deliver response.
+- **Workflow agents**: designed to complete multi-step business processes (often triggered by forms/files/schedules).
+  - Typical loop: trigger/task definition → interpret requirements → execute a sequence of tool/API actions → produce an output artifact → deliver/update systems.
+
+**Agents are “beyond just models” because they add:**
+
+- a **reasoning loop** (iterate until done), and
+- **tools** (ways to read/write the real world: data stores, APIs, software systems, sometimes robots).
+
+**Reasoning loop (high-level)**
+
+This is the agent’s continuous cycle:
+
+1. **Observe**: gather information about the task/environment.
+2. **Interpret**: assess the situation and constraints.
+3. **Plan**: decide next steps (often multi-step).
+4. **Act**: call tools / take actions.
+
+Then repeat until a goal or stopping condition is reached.
+
+**Tool examples (what agents can do with tools)**
+
+- Update inventory / reorder supplies
+- Check calendars and schedule meetings
+- Query databases / run analytics
+- File transfers / notifications / ticket creation
+- Interact with sensors/actuators in robotics
+
+**Common agent categories (use cases)**
+
+- Customer service agents, employee productivity agents, creative agents, code agents, data agents, security agents.
+
 #### GenAI is a technology layer, not “one app”
 
 - A **chatbot app** (like the Gemini app) is one product surface.
