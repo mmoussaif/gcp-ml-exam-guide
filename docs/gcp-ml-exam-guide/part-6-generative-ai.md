@@ -39,6 +39,15 @@ This framing is adapted from the GenAI Leader curriculum and is meant to sound l
   - **Developer workflows** (code generation, test generation, debugging)
   - **Cloud operations** (automation, troubleshooting, suggestions)
 
+#### Quick definitions (from GenAI Leader quiz-style questions)
+
+- **Generative AI**: a type of AI that can **create new content** (text, images, audio/music, code), not just analyze existing data.
+- **Gemini**:
+  - a **generative AI model (family of models)** developed by Google
+  - also appears as an **assistant/app experience** in products (e.g., “Gemini in Gmail”), but the _model_ ≠ the _app_
+- **Multimodal GenAI application**: a system that processes/combines **multiple input modalities** (e.g., text + image + audio/video) to solve one task.
+  - Example: analyzing customer sentiment using **video testimonials** (visual/audio) + **survey text** (text)
+
 #### The four primary ways businesses use GenAI
 
 - **Create**: generate new content (text, images, audio, code).
