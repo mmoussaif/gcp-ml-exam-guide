@@ -69,17 +69,17 @@ Combines LLM generation with external knowledge retrieval.
 
 ```mermaid
 flowchart TD
-  A[Docs] --> B[Ingest + clean]
-  B --> C[Chunk]
-  C --> D[Embed]
-  D --> E[(Vector DB)]
-  Q[User query] --> QE[Embed query]
-  QE --> R[Retrieve top-k]
+  A["Docs"] --> B["Ingest + clean"]
+  B --> C["Chunk"]
+  C --> D["Embed"]
+  D --> E[("Vector DB")]
+  Q["User query"] --> Qe["Embed query"]
+  Qe --> R["Retrieve top-k"]
   E --> R
-  R --> X[Rerank (optional)]
-  X --> P[Prompt: instructions + retrieved context]
-  P --> L[LLM]
-  L --> O[Grounded answer]
+  R --> X["Rerank (optional)"]
+  X --> P["Prompt: instructions + retrieved context"]
+  P --> L["LLM"]
+  L --> O["Grounded answer"]
 ```
 
 #### Chunking strategies (common patterns)
