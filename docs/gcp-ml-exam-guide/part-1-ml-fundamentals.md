@@ -340,7 +340,23 @@ Linear transformation that projects data onto directions of maximum variance.
 
 **COMMON TRAP:** PCA creates new transformed features. If the question asks to keep original features while removing non-informative ones, use L1 regularization instead.
 
-**EXAM TIP:** “Reduce dimensionality of large dataset” → PCA is the classic answer (but it transforms features).
+**Pitfall: PCA for visualization**
+
+- **Problem**: PCA is designed for dimensionality reduction, not visualization
+- **Issue**: 2D PCA visualization only useful if first 2 components capture **most variance** (e.g., >80-90%)
+- **Detection**: Plot cumulative explained variance (CEV) - if first 2 components explain <70% variance, visualization is misleading
+- **Solution**: Use t-SNE or UMAP for visualization when PCA variance explained is low
+
+**Pitfall: PCA assumes linear relationships**
+
+- **Problem**: PCA finds linear subspaces; fails on non-linear data
+- **Example**: Data conforms to curved low-dimensional manifold (e.g., spiral, circle)
+- **Solution**: **KernelPCA** - uses kernel trick to project to high-dimensional space where data becomes linear, then applies PCA
+- **Tradeoff**: KernelPCA is slower (quadratic in number of data points vs cubic in dimensions for PCA)
+
+**EXAM TIP:** "Reduce dimensionality of large dataset" → PCA is the classic answer (but it transforms features).  
+**EXAM TIP:** "Visualize high-dimensional data" → Check cumulative explained variance first; if <80%, use t-SNE/UMAP instead of PCA.  
+**EXAM TIP:** "Non-linear dimensionality reduction" → **KernelPCA** (not standard PCA).
 
 #### Similarity and Recommendations
 
@@ -681,7 +697,20 @@ If multiple examples come from the same source entity (author, user, device, doc
 - **Correct**: Assign authors/users to train/test/eval (80/10/10 by _authors_, then include all their texts)
 - **Wrong**: Randomly split sentences/paragraphs across splits (leaks writing style/identity)
 
-**EXAM TIP:** NLP “political affiliation by author” → split by **author**, not by sentence/text chunk.
+**Common scenarios**:
+
+- **Image captioning**: Same image can have multiple captions → split by **image**, not by caption
+- **Medical imaging**: Multiple views of same patient → split by **patient**, not by image
+- **User behavior**: Multiple actions from same user → split by **user**, not by action
+
+**Solution: GroupShuffleSplit** (sklearn):
+
+- Groups all instances by grouping criteria (e.g., image_id, patient_id, user_id)
+- Randomly assigns entire groups to train/test sets
+- Prevents group leakage
+
+**EXAM TIP:** NLP "political affiliation by author" → split by **author**, not by sentence/text chunk.  
+**EXAM TIP:** Image captioning with multiple captions per image → use **GroupShuffleSplit** by image_id to prevent leakage.
 
 #### Test Dataset Maintenance
 
