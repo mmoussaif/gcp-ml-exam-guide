@@ -1524,6 +1524,98 @@ Query → Bi-encoder → Vector DB search → Top 100 candidates
 
 ### 6.4 AI Agents (beyond chatbots)
 
+#### Motivation for AI Agents
+
+**Three perspectives**:
+
+1. **RAG perspective**: RAG systems follow programmatic flows (developer defines steps). Agents add **autonomy** - agents can reason, plan, figure out relevant sources, extract information, take actions, and self-correct.
+
+2. **Software development perspective**: Traditional automation requires rigid pre-defined rules (`if A then X, if B then Y`). Agents:
+
+   - Don't need explicit instructions for every case
+   - Gather information dynamically
+   - Use reasoning for ambiguous problems
+   - Collaborate with other agents
+   - Leverage external tools for real-time decisions
+   - Handle flexible inputs/outputs (not fixed data types)
+
+3. **Autonomous system perspective**: Traditional LLM interactions require constant user engagement (ask → review → tweak → repeat). Agents can **autonomously complete tasks** without constant intervention:
+   - Break down complex objectives into sub-tasks
+   - Execute step-by-step
+   - Refine outputs along the way
+   - Self-correct when needed
+
+**Example: News aggregation platform**
+
+- **Traditional**: Hardcoded scrapers, filtering rules, manual verification
+- **Agent-based**: Web Scraper Agent (adapts to page changes), Topic Analysis Agent (detects trends), Fact-checking Agent (verifies credibility), Summarization Agent (generates summaries)
+- **Multi-agent framework**: Multiple specialized agents working together, each backed by optimal LLM for its task
+
+**EXAM TIP:** Questions about "autonomous task completion" or "multi-step workflows without constant user input" → think **AI Agents** (not just RAG or single LLM calls).
+
+#### Six Essential Building Blocks of AI Agents
+
+To build effective, reliable, and useful agents, six fundamental building blocks are essential:
+
+**1. Role-playing**
+
+- **What**: Define agent's role, expertise, and objective clearly
+- **Why**: Role assignment influences reasoning process, ensuring domain-specific knowledge retrieval and generation
+- **Best practice**: More specific and contextual roles → better response quality
+- **Example**: "Senior contract lawyer specializing in corporate law" vs "general AI assistant" for legal contract analysis
+- **Tip**: Keywords like "Senior", "Expert", "Head" in roles are highly effective
+
+**2. Focus/Tasks**
+
+- **What**: Keep agents specialized with narrow, well-defined scope
+- **Why**: Overloading agents with too many tasks/information causes loss of focus and degraded performance
+- **Best practice**: One agent = one specialized task. Use multiple agents instead of one "do-everything" agent
+- **Example**: Marketing copy agent focuses only on messaging/tone/audience (not pricing analysis or competitive intelligence)
+
+**3. Tools**
+
+- **What**: External capabilities agents can use (web search, APIs, databases, code execution)
+- **Why**: Agents need access to real-time information and specialized computations
+- **Best practice**: Equip agents with **only essential tools** for their tasks. More tools ≠ better results
+- **Example**: Research agent needs web search + summarization + citation manager (not speech-to-text or code execution)
+- **Common tools**: Web search, file readers, database queries, API calls, calculators, code executors
+
+**4. Cooperation**
+
+- **What**: Multi-agent collaboration and feedback exchange
+- **Why**: Specialized agents working together improve decision-making and task execution
+- **Best practice**: Design workflows where agents exchange insights and refine each other's outputs
+- **Example**: Financial analysis system with Data Collection Agent → Risk Assessment Agent → Portfolio Strategy Agent → Report Generation Agent
+
+**5. Guardrails**
+
+- **What**: Constraints and safeguards to prevent hallucinations, infinite loops, unreliable decisions
+- **Why**: Without guardrails, agents can go off-track or make dangerous decisions
+- **Best practices**:
+  - Limit tool usage (prevent API overuse)
+  - Set validation checkpoints (ensure outputs meet criteria)
+  - Establish fallback mechanisms (human review, alternative agent)
+- **Example**: Legal assistant guardrails prevent non-factual advice, jurisdiction misinterpretation, outdated citations
+
+**6. Memory**
+
+- **What**: Ability to retain context from previous interactions
+- **Why**: Without memory, agents start fresh every time, losing all context
+- **Types**:
+  - **Short-term memory**: Exists during execution (conversation history, recent steps)
+  - **Long-term memory**: Persists after execution (user preferences, learned facts)
+  - **Entity memory**: Stores information about key subjects (customer details, product info)
+- **Best practice**: Implement both short-term and long-term memory for learning, adaptation, and personalization
+
+**Design principle**: Think of yourself as a manager hiring a team:
+
+- Define the goal (specific outcome)
+- Establish the process (steps to reach goal)
+- Hire the right experts (specialized agents)
+- Give them the right tools (essential capabilities only)
+
+**EXAM TIP:** Questions about "agent effectiveness" or "improving agent quality" → think **six building blocks**: Role-playing, Focus, Tools, Cooperation, Guardrails, Memory.
+
 #### Key components of every agent (high-yield)
 
 - **Model**: LLM as reasoning/generation engine.
