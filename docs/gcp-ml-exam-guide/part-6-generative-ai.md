@@ -1185,10 +1185,72 @@ Query → Bi-encoder → Vector DB search → Top 100 candidates
 
 **Advanced technique: AugSBERT (Augmented SBERT)**
 
-- **Problem**: Bi-encoders need large labeled datasets but cross-encoders can produce high-quality labels.
-- **Solution**: Use cross-encoders to label a large set of unlabeled sentence pairs, then use this augmented dataset to fine-tune bi-encoders.
-- **Result**: Bi-encoders benefit from cross-encoder accuracy while maintaining efficiency and scalability.
-- **Use case**: When you have limited labeled data but want to improve bi-encoder performance.
+**Problem**: Bi-encoders need large labeled datasets to achieve competitive performance, but cross-encoders can produce high-quality labels with less data. How can we combine the accuracy of cross-encoders with the efficiency of bi-encoders?
+
+**Solution**: AugSBERT uses cross-encoders to label (or augment) training datasets, then trains bi-encoders on this enriched data. This allows bi-encoders to benefit from cross-encoder accuracy while maintaining their efficiency and scalability.
+
+**Three scenarios and approaches:**
+
+##### Scenario 1: Full labeled sentence pairs dataset
+
+**When**: You have a fully annotated dataset with all sentence pairs labeled.
+
+**Approach**: Data augmentation to extend training data.
+
+**Steps:**
+
+1. **Prepare gold dataset**: Compile your original labeled dataset (sentence pairs with similarity labels).
+2. **Word-level augmentation**:
+   - Use contextual word embeddings (BERT/RoBERTa) to replace words with synonyms
+   - Use lexical resources (WordNet, PPDB) for synonym substitution
+   - Use LLMs to generate paraphrased versions
+   - Creates "silver data" (automatically generated, reasonably high quality)
+3. **Merge datasets**: Combine gold + silver data into extended training set.
+4. **Train bi-encoder**: Fine-tune bi-encoder on the extended dataset.
+
+**Limitation**: Cannot aggressively substitute words—beyond a certain point, the model starts memorizing templates instead of learning representations. Gains saturate quickly.
+
+##### Scenario 2: Few annotated samples
+
+**When**: You have limited labeled data (e.g., 100-1000 sentence pairs).
+
+**Approach**: Use cross-encoder to weakly label additional data, then train bi-encoder on combined dataset.
+
+**Steps:**
+
+1. **Fine-tune cross-encoder**: Train cross-encoder on your small labeled dataset ("gold data"). Cross-encoders require less data to achieve strong performance.
+2. **Create augmented sentence pairs**:
+   - **BM25 sampling**: Retrieve top-k lexically similar sentences (keyword overlap). Fast but misses semantic similarity with low lexical overlap.
+   - **Semantic search**: Use pre-trained bi-encoder (SBERT) to retrieve top-k semantically similar sentences. Captures synonymy and semantic relationships beyond keywords.
+   - **Avoid duplicates**: Ensure new pairs aren't already in the gold dataset.
+3. **Weak labeling**: Use the fine-tuned cross-encoder to label the new sentence pairs, creating "silver data" with similarity scores.
+4. **Train bi-encoder**: Combine gold + silver datasets and train bi-encoder on the extended dataset.
+
+**Result**: Bi-encoder learns from a much larger dataset, improving its ability to map similar sentences closer in vector space, without the computational cost of using cross-encoder at inference time.
+
+##### Scenario 3: No annotated samples
+
+**When**: You have no labeled sentence pairs in your target domain.
+
+**Approach**: Transfer learning from a related source domain.
+
+**Steps:**
+
+1. **Train cross-encoder on source domain**: Find a related annotated dataset (e.g., Quora Question Pairs, STS Benchmark) and train cross-encoder on it. Pre-trained models like BERT help with generalization.
+2. **Label target domain**: Use the cross-encoder to generate pseudo-labels (weak labels) for sentence pairs in your target domain.
+3. **Optional - Active learning**: For pairs with ambiguous scores (around 0.5), get human labels to improve quality.
+4. **Fine-tune bi-encoder**: Train bi-encoder on the weakly labeled target dataset.
+
+**Challenge**: Cross-encoder may struggle with domain-specific terminology. Active learning can help identify and label ambiguous cases.
+
+**Key takeaways:**
+
+- **Cross-encoders**: Computationally expensive but provide highly accurate similarity scores. Great for generating high-quality labels for unlabeled data.
+- **Bi-encoders**: Can encode sentences independently and scale efficiently, but need much more training data.
+- **AugSBERT**: Uses cross-encoders to produce silver data, improving bi-encoder performance without losing speed advantage.
+- **Performance saturation**: More augmentation doesn't always mean better performance—gains typically saturate quickly.
+
+**EXAM TIP:** When you have limited labeled data for sentence similarity, use **AugSBERT**: train cross-encoder on small dataset → use it to label more data → train bi-encoder on combined dataset.
 
 #### Advanced RAG architectures & variants (from the AI Engineering Guidebook)
 
