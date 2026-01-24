@@ -1290,12 +1290,158 @@ Query → Bi-encoder → Vector DB search → Top 100 candidates
 
 **COMMON TRAP:** If RAG is failing, it’s often a **retrieval** problem (chunking, embeddings, reranking), not a generation problem.
 
-#### Grounding vs fine-tuning
+#### Grounding vs Fine-Tuning: When to Use Each
 
-- **Grounding**: Connect the model to **up-to-date / proprietary facts** at runtime (typically via retrieval). Improves factuality and reduces hallucinations.
-- **Fine-tuning**: Changes model behavior/weights to better match a task/style. Does **not** automatically make outputs “current”.
+**The false dichotomy**: Fine-tuning vs RAG is often presented as an either/or choice, but they serve different purposes and can be used together.
+
+**Key differences**:
+
+- **Grounding/RAG**: Connect the model to **up-to-date / proprietary facts** at runtime (typically via retrieval). Improves factuality and reduces hallucinations. **Does not modify model weights**.
+- **Fine-tuning**: Changes model behavior/weights to better match a task/style. **Does not automatically make outputs "current"** or provide access to new data.
 
 **COMMON TRAP:** Fine-tuning is not grounding. Use RAG/grounding when you need answers tied to **enterprise documents** or **fresh data**.
+
+#### Fine-Tuning vs RAG: Detailed Comparison
+
+##### What is Fine-Tuning?
+
+**Definition**: Continue training an LLM on a specific learning task using training data. Requires identifying correct input data, learning objective, and training process.
+
+**Common fine-tuning tasks**:
+
+- Translation (English-Spanish, etc.)
+- Custom support message routing
+- Specialized question-answering
+- Text sentiment analysis
+- Named entity recognition
+
+**System design components**:
+
+**Training pipeline**:
+
+- **Model registry**: Store original models and fine-tuned versions with metadata
+- **Quantization module**: Convert weights from floats to integers (4x size reduction)
+- **Feature store**: Prepare and store training data
+- **Data validation/preprocessing**: Validate and preprocess injected data
+- **LoRA/QLoRA modifications**: Efficient fine-tuning with low-rank adapters
+- **LoRA/QLoRA registry**: Track fine-tuned adapter weights and versions
+- **Model validation**: Validate on task-specific data (challenge: retaining original capabilities)
+
+**Serving pipeline**:
+
+- Pull model + LoRA/QLoRA weights from registry
+- Deployment pipeline (canary, A/B testing)
+- Model monitoring (typical ML monitoring systems)
+- Data aggregation for next training update
+
+##### What is RAG?
+
+**Definition**: Expose an LLM to new data stored in a database without modifying the model. Provide additional data context in the prompt.
+
+**How RAG works**:
+
+1. Encode data into embeddings
+2. Index embeddings in vector database
+3. Convert user query to embedding
+4. Search for similar embeddings (cosine similarity)
+5. Construct prompt with retrieved context
+6. LLM generates answer using context
+
+**System design components**:
+
+**Indexing pipeline**:
+
+- **New incoming data pipeline**: Continuously update data (data engineering pipelines)
+- **Data store**: Store and preprocess data before embedding
+- **Embedding generation service**: LLM converts text chunks to vectors
+- **Vector database**: Index vector representations
+
+**Serving pipeline**:
+
+- **Model registry**: Store embedding model + answer generation model (both typically don't need retraining)
+- **Vector database**: Central component for similarity search
+- **Chunk selection module**: Select right chunks and inject into prompt
+
+##### Using Third-Party Host vs Owning the Model
+
+**Third-party providers (OpenAI, Anthropic)**:
+
+- ✅ **Handled by provider**: Model registry, deployment, serving, monitoring
+- ✅ **RAG**: Can use APIs as-is
+- ✅ **Fine-tuning**: Still need training pipeline, but serving is handled
+- ✅ **Lower expertise requirements**: Less specialized ML engineering skills needed
+
+**Cost comparison (OpenAI GPT-3.5 Turbo)**:
+
+- **Default model**: $0.0015/1K tokens (input), $0.002/1K tokens (output)
+- **Fine-tuned model**: $0.003/1K tokens (input), $0.006/1K tokens (output)
+- **Fine-tuning cost**: $0.0080/1K tokens (training)
+
+**EXAM TIP:** Questions about "managed LLM service" → think **third-party API providers** (OpenAI, Anthropic). Questions about "full control" → think **owning the model** (higher cost, more expertise needed).
+
+##### Cost Analysis: Fine-Tuning
+
+**Training costs**:
+
+- **BERT (345M parameters)**: ~$3.4/day (5.6 GB GPU, fine-tuning is fast)
+- **Llama 2 (70B parameters)**: ~$340/day (560 GB GPU cluster)
+- **GPT-3.5 Turbo fine-tuning**: $0.0080/1K tokens (~$340 = 21M words = 350 books)
+
+**Serving costs**:
+
+- **Llama 2 (70B)**: ~$170/day per model (~$125K/year for redundant deployment)
+- **GPT-3.5 Turbo fine-tuned**: $0.004/1K tokens average (~$170/day = 42.5M words/day = 21K requests/day)
+
+**Expertise costs**:
+
+- **Owning model**: Requires ML engineering, MLOps, data science expertise
+- **Third-party**: Requires data preparation and light automation (less specialized skills)
+
+**Recurring fine-tuning costs**:
+
+- **Catastrophic forgetting**: Model forgets previous capabilities during continuous fine-tuning
+- **Fragile strategy**: Hard to ensure model retains original capabilities after fine-tuning
+- **Requires careful design**: Need strategies to prevent forgetting
+
+**EXAM TIP:** Questions about "cost-effective LLM deployment" → consider **third-party APIs** unless you have very high request volume (>21K requests/day) or need full control.
+
+##### Problems with RAG
+
+**1. Questions not semantically similar to answers**:
+
+- **Problem**: Question embeddings may not match answer document embeddings (same words, different context).
+- **Solution**: Use **HyDE (Hypothetical Document Embeddings)** - generate hypothetical answer, embed it, use for search.
+
+**2. Semantic similarity can be diluted**:
+
+- **Problem**: Large text chunks contain multiple unrelated concepts, diluting search relevance.
+- **Solution**: Break data into smaller chunks (few paragraphs max) to ensure concept uniqueness.
+
+**3. Cannot ask aggregation questions**:
+
+- **Problem**: RAG can't answer questions requiring scanning all documents (e.g., "What is the earliest document?").
+- **Limitation**: Similarity search only finds local information, not global aggregations.
+
+**4. Document order matters**:
+
+- **Problem**: LLMs may dismiss documents in the middle of retrieved list.
+- **Solution**: Reorder documents by placing most relevant at top **and bottom**, least relevant in middle.
+
+**EXAM TIP:** Questions about "RAG limitations" → think **chunking strategy**, **HyDE for query-answer mismatch**, **document ordering**, and **aggregation queries**.
+
+##### When to Use Fine-Tuning vs RAG
+
+| Scenario                             | Recommended Approach | Reason                                             |
+| ------------------------------------ | -------------------- | -------------------------------------------------- |
+| Need up-to-date/enterprise knowledge | **RAG/Grounding**    | Provides access to current data without retraining |
+| Need specific style/domain language  | **Fine-tuning**      | Changes model behavior to match style/terminology  |
+| Need both style + current data       | **Both**             | Fine-tune for style, RAG for knowledge             |
+| Limited training data                | **RAG**              | No training data needed, just documents            |
+| Need consistent task behavior        | **Fine-tuning**      | Model learns task-specific patterns                |
+| Frequently changing data             | **RAG**              | Easier to update index than retrain model          |
+| Stable domain knowledge              | **Fine-tuning**      | Can encode knowledge into model weights            |
+
+**EXAM TIP:** Questions about "enterprise knowledge" or "current data" → **RAG**. Questions about "style adaptation" or "task specialization" → **Fine-tuning**. Questions about "both" → use **both together**.
 
 #### Google Cloud “managed RAG” building blocks (from Google Cloud Skills Boost PDFs)
 
