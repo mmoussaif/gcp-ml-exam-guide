@@ -207,6 +207,7 @@
 - Gemini vs Gemma: Gemini = multimodal model family; Gemma = lightweight open models for local/specialized deployments
 - Imagen vs Veo: Imagen = text-to-image diffusion; Veo = text/image-to-video generation
 - Foundation model limitations: hallucinations + knowledge cutoff + bias/fairness + edge cases + data dependency; grounding/RAG ties answers to trusted sources
+- Grounding purpose (quiz-style): improve accuracy/reliability by connecting outputs to verifiable sources (enterprise docs, KBs, databases)
 - Lifecycle mapping: ingest (Pub/Sub/GCS/SQL/Spanner) → prepare (BigQuery + Data Catalog) → train/deploy/manage (Vertex AI + Pipelines + monitoring/versioning + IAM)
 - Consistency matters: inconsistent formats/labels confuse models and hinder learning (it’s not “just a data engineering issue”)
 - ML lifecycle order (core): data ingestion+preparation → model training → model deployment → model management

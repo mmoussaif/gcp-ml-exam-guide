@@ -524,6 +524,22 @@ Foundation models are powerful, but they have predictable limitations. Grounding
 - Need to manage bias/fairness → measure and improve **representation**, run fairness evals, and monitor outcomes over time.
 - Need reliability on edge cases → build eval sets with long-tail examples and add monitoring/alerts for failures.
 
+#### Techniques to overcome limitations (prompting vs RAG vs fine-tuning vs HITL)
+
+In practice, you’ll combine a few techniques depending on what’s failing.
+
+- **Prompt engineering**: the fastest lever—use instructions, examples (few-shot), and output schemas to guide behavior and enforce formats.
+- **Grounding / RAG**: connect outputs to **verifiable sources** (enterprise docs, KBs, databases) to reduce hallucinations and handle knowledge cutoffs.
+- **Fine-tuning (tuning/customization)**: train a foundation model further on task/domain examples when prompting isn’t enough and you need consistent behavior (style, domain language, strict formats).
+- **Humans-in-the-loop (HITL)**: add pre- or post-generation review for decisions requiring judgment, context, or risk control (moderation, sensitive domains, high-risk actions).
+
+**Quick “which tool when?”**
+
+- Wrong facts / needs company-specific truth → **RAG/grounding** + citations
+- Output format not stable → **prompting + structured output**, then consider **tuning**
+- Needs a specific style/domain across many requests → **tuning** (after you have eval data)
+- High-risk, safety-critical, or incomplete info → **HITL** + guardrails + monitoring
+
 1. Document Ingestion - collect and preprocess documents
 2. Chunking - split documents into 256-1024 token pieces
 3. Embedding - convert chunks to vectors
