@@ -110,6 +110,35 @@ From the GenAI Leader curriculum perspective:
   - The assistant provides step-by-step troubleshooting (not just a static answer)
 - **Business outcomes** (typical): reduced support costs (fewer calls), faster resolution, improved accessibility and customer satisfaction.
 
+### Foundations of GenAI: foundation models (and where LLMs fit)
+
+This framing is adapted from the GenAI Leader curriculum and is useful for exam-style “definition” questions.
+
+- **AI (artificial intelligence)**: computers doing tasks that normally require human intelligence (understanding language, making decisions).
+- **ML (machine learning)**: a major way we build AI systems—models learn patterns from data to solve tasks.
+- **Traditional ML models**: often trained for one specific task on a narrower dataset (e.g., a spam classifier).
+- **Foundation models**: large, general-purpose models trained on massive, diverse datasets so they can be adapted to many downstream tasks.
+- **LLMs**: a specialized type of foundation model focused on language. (So: LLM ⊂ foundation model.)
+
+#### Key features of foundation models (why they’re different)
+
+- **Trained on diverse data**: learn general patterns/relationships that transfer across tasks.
+- **Flexible**: one model can support many use cases.
+- **Adaptable**: can be specialized for domains/use cases via additional targeted training (tuning/fine-tuning).
+
+#### Examples (Google model families)
+
+- **Gemini**: multimodal foundation model trained across text, images, code, audio, video, etc.
+- **Imagen**: image generation/editing foundation model trained primarily on images + text descriptions.
+- **Chirp**: audio/speech foundation model trained on multilingual audio (speech recognition / transcription / translation use cases).
+
+```mermaid
+flowchart TD
+  A[AI] --> B[Machine Learning]
+  B --> C[Foundation models]
+  C --> D[LLMs (language-focused)]
+```
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.

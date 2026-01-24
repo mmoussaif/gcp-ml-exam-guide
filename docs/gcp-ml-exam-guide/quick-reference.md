@@ -191,6 +191,7 @@
 - Token limit does NOT make output “more concise” — it only truncates; you still need explicit prompt constraints
 - Gemini is the MODEL family; “Gemini app” / “Gemini in Gmail/BigQuery/Looker” are product surfaces using the model
 - Multimodal GenAI = uses multiple modalities together (e.g., video/audio + text), not “any GenAI that outputs images”
+- LLMs are a specialized type of foundation model (LLM ⊂ foundation model); not all foundation models are LLMs
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)
