@@ -1098,10 +1098,97 @@ flowchart TD
 
 #### Retrieval improvement: reranking (bi-encoder → cross-encoder)
 
-- **First-stage retrieval**: fast dense retrieval (bi-encoder) to get top-K candidates.
-- **Reranking**: a more accurate (but slower) model (often a **cross-encoder**) scores query+document pairs to reorder the top-K.
+**Why BERT isn't effective for sentence similarity:**
 
-**EXAM TIP:** When you need “better relevance” without re-indexing everything, add a **reranker**.
+- BERT produces **token-level embeddings**, not sentence-level embeddings. To get sentence embeddings, you must pool (mean/max) token embeddings, which loses nuanced information.
+- BERT wasn't trained to produce sentence-level embeddings via pooling. Its pre-training (MLM + NSP) focuses on token-level relationships, not mapping semantically similar sentences closer in vector space.
+- **Result**: Two sentences with the same meaning but different phrasing may have dissimilar embeddings, while unrelated sentences may have similar embeddings by chance.
+
+**Solution: Fine-tune models specifically for sentence similarity using two approaches:**
+
+##### Bi-encoders (First-stage retrieval)
+
+**How they work:**
+
+1. **Independent encoding**: Each sentence (query or document) is processed separately by the same BERT model.
+2. **Sentence embedding**: Token embeddings are pooled (typically mean pooling) to create a fixed-size sentence vector.
+3. **Similarity scoring**: Cosine similarity or dot product between query and document embeddings.
+4. **Training**: Model is fine-tuned on sentence-pair labels to learn that semantically similar sentences should have similar embeddings.
+
+**Advantages:**
+
+- ✅ **Can cache embeddings**: Documents can be pre-embedded and stored in a vector database (fast retrieval).
+- ✅ **Scalable**: Compare one query against millions of documents efficiently (just compute query embedding once).
+- ✅ **Fast inference**: Single forward pass per sentence.
+
+**Limitations:**
+
+- ❌ **Lower accuracy**: Processes sentences independently, missing fine-grained interactions between query and document.
+- ❌ **Requires more training data**: Needs larger labeled datasets to learn sentence-level patterns effectively.
+
+**Common models**: Sentence-BERT (SBERT), SentenceTransformers (distilbert-base-nli-mean-tokens, all-MiniLM-L6-v2, etc.)
+
+##### Cross-encoders (Reranking)
+
+**How they work:**
+
+1. **Concatenated input**: Query and document are concatenated with `[SEP]` separator: `[CLS] query [SEP] document [SEP]`
+2. **Joint processing**: The entire pair is processed together in a single forward pass.
+3. **Attention mechanism**: Self-attention allows the model to learn intricate interactions between query and document tokens.
+4. **Similarity score**: The `[CLS]` token embedding is passed through a classification layer to output a similarity score.
+
+**Advantages:**
+
+- ✅ **Higher accuracy**: Models fine-grained interactions between query and document simultaneously.
+- ✅ **Better for similarity scoring**: Explicitly trained for pairwise sentence scoring tasks.
+
+**Limitations:**
+
+- ❌ **Cannot cache embeddings**: Must recompute for every query-document pair (no independent representations).
+- ❌ **Slower**: Requires processing each pair separately, making it impractical for large-scale retrieval.
+- ❌ **Not suitable for indexing**: Cannot produce meaningful embeddings for a single sentence in isolation.
+
+**Common models**: Cross-encoder models fine-tuned on sentence-pair datasets (e.g., cross-encoder/ms-marco-MiniLM-L-6-v2)
+
+##### Two-stage retrieval pattern (bi-encoder → cross-encoder)
+
+**Production RAG systems typically use both:**
+
+1. **First-stage retrieval (bi-encoder)**:
+
+   - Fast dense retrieval to get top-K candidates (e.g., top 100-200 documents)
+   - Documents are pre-embedded and stored in a vector database
+   - Query is embedded once and compared against all document embeddings
+
+2. **Reranking (cross-encoder)**:
+   - More accurate (but slower) model scores query+document pairs
+   - Reorders the top-K candidates from the first stage
+   - Typically reranks top 10-50 candidates to get the final top results
+
+**Why this works:**
+
+- **Best of both worlds**: Combines the speed/scalability of bi-encoders with the accuracy of cross-encoders
+- **Cost-effective**: Only runs expensive cross-encoder on a small subset of candidates
+- **Production-ready**: Balances latency, accuracy, and cost
+
+**Example flow:**
+
+```
+Query → Bi-encoder → Vector DB search → Top 100 candidates
+         ↓
+    Cross-encoder reranks top 100 → Top 10 final results
+```
+
+**EXAM TIP:** When you need "better relevance" without re-indexing everything, add a **reranker** (cross-encoder) after bi-encoder retrieval.
+
+**EXAM TIP:** Questions about "fast retrieval at scale" → **bi-encoder**. Questions about "highest accuracy for similarity" → **cross-encoder**. Questions about "production RAG" → **bi-encoder + cross-encoder reranking**.
+
+**Advanced technique: AugSBERT (Augmented SBERT)**
+
+- **Problem**: Bi-encoders need large labeled datasets but cross-encoders can produce high-quality labels.
+- **Solution**: Use cross-encoders to label a large set of unlabeled sentence pairs, then use this augmented dataset to fine-tune bi-encoders.
+- **Result**: Bi-encoders benefit from cross-encoder accuracy while maintaining efficiency and scalability.
+- **Use case**: When you have limited labeled data but want to improve bi-encoder performance.
 
 #### Advanced RAG architectures & variants (from the AI Engineering Guidebook)
 
