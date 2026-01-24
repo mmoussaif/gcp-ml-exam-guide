@@ -1558,6 +1558,7 @@ The guidebook highlights these recurring serving ideas (many appear in vLLM-like
 **How LoRA works**:
 
 1. **Low-rank decomposition**: During fine-tuning, the weight update matrix `ΔW` is decomposed into two smaller matrices:
+
    - `ΔW = BA` where:
      - `A` has dimensions `d × r` (random Gaussian initialization)
      - `B` has dimensions `r × k` (zero initialization)
@@ -1607,6 +1608,7 @@ The guidebook highlights these recurring serving ideas (many appear in vLLM-like
 **How QLoRA works**:
 
 1. **Quantize base model**: Convert weights from 32-bit (float32) to lower precision:
+
    - 16-bit (float16): 50% memory reduction
    - 8-bit (int8): 75% memory reduction
    - 4-bit (int4): 87.5% memory reduction
@@ -1630,6 +1632,7 @@ The guidebook highlights these recurring serving ideas (many appear in vLLM-like
 **Workflow**:
 
 1. **Define PEFT config**: Create `LoraConfig` with:
+
    - `task_type`: SEQ_CLS, CAUSAL_LM, SEQ_2_SEQ_LM, etc.
    - `r`: rank hyperparameter
    - `lora_alpha`: scaling factor
@@ -1651,15 +1654,123 @@ The guidebook highlights these recurring serving ideas (many appear in vLLM-like
 
 #### When to Use Each Customization Method
 
-| Method | When to Use | Limitations |
-|--------|-------------|-------------|
-| **Prompt Engineering** | Quick iteration, no training data | Limited control, may not be sufficient |
-| **RAG/Grounding** | Need up-to-date/enterprise knowledge | Requires document indexing |
-| **Full Fine-tuning** | Small models, need maximum control | Expensive for LLMs, requires large datasets |
-| **LoRA** | LLM fine-tuning, resource constraints | Still requires some training data |
-| **QLoRA** | Memory-constrained environments | Some precision loss from quantization |
+| Method                 | When to Use                           | Limitations                                 |
+| ---------------------- | ------------------------------------- | ------------------------------------------- |
+| **Prompt Engineering** | Quick iteration, no training data     | Limited control, may not be sufficient      |
+| **RAG/Grounding**      | Need up-to-date/enterprise knowledge  | Requires document indexing                  |
+| **Full Fine-tuning**   | Small models, need maximum control    | Expensive for LLMs, requires large datasets |
+| **LoRA**               | LLM fine-tuning, resource constraints | Still requires some training data           |
+| **QLoRA**              | Memory-constrained environments       | Some precision loss from quantization       |
 
 **EXAM TIP:** Questions about "efficient LLM fine-tuning" → **LoRA** or **QLoRA**. Questions about "fine-tuning on consumer hardware" → **QLoRA**.
+
+#### LoRA Variants and Improvements
+
+Since LoRA's introduction, several variants have been proposed to address specific challenges and improve upon the foundational technique:
+
+##### LoRA-FA (Frozen-A)
+
+**Key innovation**: Freezes matrix `A` and only trains matrix `B`.
+
+**How it works**:
+- In standard LoRA, both `A` and `B` are trained.
+- LoRA-FA freezes `A` (random initialization) and only updates `B`.
+- "FA" stands for "Frozen-A".
+
+**Benefits**:
+- ✅ **Reduced memory**: Less activation memory required (no gradients for `A`).
+- ✅ **Fewer trainable parameters**: ~50% reduction compared to LoRA.
+- ✅ **Similar or better performance**: Often matches or exceeds LoRA accuracy.
+
+**Use case**: Memory-constrained environments where you want to reduce trainable parameters further.
+
+##### VeRA (Vector-based Random Matrix Adaptation)
+
+**Key innovation**: Shares frozen random matrices `A` and `B` across all layers, learns only small layer-specific scaling vectors.
+
+**How it works**:
+- `A` and `B` are **frozen, random, and shared** across all model layers.
+- Only trains small, layer-specific scaling vectors `b` and `d` (not shared).
+- `A`: random Gaussian initialization (shared).
+- `B`: random Gaussian initialization (shared, not zero like LoRA).
+- `d`: initialized with ones (trainable, layer-specific).
+- `b`: initialized with zeros (trainable, layer-specific).
+
+**Benefits**:
+- ✅ **Massive parameter reduction**: 100x fewer trainable parameters than LoRA.
+- ✅ **Lower memory**: Significantly reduced memory requirements.
+- ✅ **Similar performance**: Matches LoRA accuracy in most cases.
+
+**Use case**: Extreme parameter efficiency when you need minimal trainable parameters.
+
+##### Delta-LoRA
+
+**Key innovation**: Updates the base weight matrix `W` using delta between consecutive training steps.
+
+**How it works**:
+- Standard LoRA never updates `W` (only `A` and `B`).
+- Delta-LoRA updates `W` by computing the scaled difference between `AB` at consecutive steps.
+- Update rule: `ΔW = c × (A_{t+1}B_{t+1} - A_tB_t)` where `c` is a constant.
+
+**Benefits**:
+- ✅ **Better performance**: Often outperforms LoRA and full fine-tuning.
+- ✅ **Updates base weights**: Captures fine-grained details better than LoRA alone.
+
+**Limitation**:
+- ❌ **Not suitable for multi-tenant scenarios**: Cannot share base model `W` across users since it's updated per customer.
+- ❌ **Storage overhead**: Each fine-tuned model needs its own `W`, defeating LoRA's storage advantage.
+
+**Use case**: Single-tenant scenarios where maximum performance is needed and storage isn't a concern.
+
+**EXAM TIP:** **Delta-LoRA** improves accuracy but breaks the multi-tenant advantage of LoRA (can't share base model). Use when you need maximum performance for a single customer, not for LLM providers serving many customers.
+
+##### LoRA+
+
+**Key innovation**: Uses different learning rates for matrices `A` and `B`.
+
+**How it works**:
+- Standard LoRA uses the same learning rate for both `A` and `B`.
+- LoRA+ uses a **higher learning rate for `B`** than `A`.
+- Rationale: `B` starts at zero (needs larger updates), `A` starts random (needs smaller refinements).
+
+**Benefits**:
+- ✅ **1-2% performance improvement** over standard LoRA.
+- ✅ **2x faster training** at the same computational cost.
+- ✅ **Simple modification**: Easy to implement (just adjust learning rates).
+
+**Use case**: When you want a simple improvement over LoRA with better convergence.
+
+##### LoRA-drop
+
+**Key innovation**: Selectively applies LoRA to only the most important layers.
+
+**How it works**:
+1. Start by adding LoRA to all layers.
+2. Train for a few epochs on a sample dataset.
+3. Compute activations from LoRA matrices (`A·B·X`) for each layer.
+4. **Keep LoRA** in layers with large activations (significant contribution).
+5. **Remove LoRA** from layers with small activations (minimal contribution).
+6. Train final model with selected layers only.
+
+**Benefits**:
+- ✅ **Faster training**: Fewer LoRA matrices to train.
+- ✅ **Reduced memory**: Only train adapters where they matter.
+- ✅ **Similar accuracy**: Performance maintained by keeping important adapters.
+
+**Use case**: When you want to speed up training by focusing on layers that benefit most from adaptation.
+
+#### LoRA Variants Comparison
+
+| Variant      | Key Innovation                          | Parameter Reduction | Best For                                    |
+| ------------ | --------------------------------------- | ------------------- | ------------------------------------------- |
+| **LoRA**     | Low-rank decomposition                  | 98%+                | General-purpose efficient fine-tuning      |
+| **LoRA-FA**  | Freeze `A`, train only `B`              | 99%+                | Memory-constrained environments             |
+| **VeRA**     | Shared frozen matrices, learn vectors   | 99.9%+              | Extreme parameter efficiency               |
+| **Delta-LoRA** | Updates base `W` via delta            | 98%+                | Single-tenant, maximum performance          |
+| **LoRA+**    | Different learning rates for `A`/`B`   | 98%+                | Simple improvement over LoRA                |
+| **LoRA-drop** | Selective layer adaptation             | Variable            | Faster training, layer importance analysis |
+
+**EXAM TIP:** For **multi-tenant LLM providers** (like OpenAI), use **LoRA** or **LoRA-FA** (not Delta-LoRA, which breaks model sharing). For **single-tenant maximum performance**, consider **Delta-LoRA** or **LoRA+**.
 
 ### 6.10 Skill Boost PDF reading lists (useful references)
 
