@@ -506,6 +506,24 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 
 Combines LLM generation with external knowledge retrieval.
 
+#### Why grounding matters (foundation model limitations)
+
+Foundation models are powerful, but they have predictable limitations. Grounding is the “reality check” that ties outputs back to trusted sources.
+
+- **Hallucinations**: the model can produce fluent but incorrect statements.
+- **Knowledge cutoff**: the model may not know recent events, policy changes, or newly updated docs.
+- **Data dependency**: output quality depends heavily on the data/context you provide (garbage in, garbage out).
+- **Bias & fairness issues**: training data can encode societal/representation bias and produce unequal outcomes.
+- **Edge cases**: rare scenarios can fail in surprising ways (distribution shift, unusual inputs, long-tail queries).
+
+**Practical mitigations (what to reach for first)**
+
+- Need answers tied to enterprise truth → **grounding/RAG** (retrieve and cite the right docs; add a reranker if relevance is weak).
+- Need consistent task behavior/style at scale → **prompting** first, then **tuning** if needed.
+- Need safer outputs → **guardrails** (policy filters, safety scoring, allowlists/denylists) + **human review** for high-risk actions.
+- Need to manage bias/fairness → measure and improve **representation**, run fairness evals, and monitor outcomes over time.
+- Need reliability on edge cases → build eval sets with long-tail examples and add monitoring/alerts for failures.
+
 1. Document Ingestion - collect and preprocess documents
 2. Chunking - split documents into 256-1024 token pieces
 3. Embedding - convert chunks to vectors
