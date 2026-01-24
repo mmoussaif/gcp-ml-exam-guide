@@ -326,12 +326,9 @@ The guidebook highlights these recurring serving ideas (many appear in vLLM-like
 
 ### 6.10 Skill Boost PDF reading lists (useful references)
 
-From:
+These links were originally captured from Google Cloud Skills Boost PDF reading lists (the PDF/text extracts are intentionally **not** included in the public repo).
 
-- `docs/gcp-ml-exam-guide/pdfs_txt/G-LLM-I-m0-l2-en-file-2.en.txt`
-- `docs/gcp-ml-exam-guide/pdfs_txt/G-GENAI-I-m1-l2-en-file-2.en.txt`
-
-Selected links (as included in those PDFs):
+Selected links:
 
 - LLM intro: `https://developers.google.com/machine-learning/resources/intro-llms`
 - Prompt engineering: `https://developers.google.com/machine-learning/resources/prompt-eng`
