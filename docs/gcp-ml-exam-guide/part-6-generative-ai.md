@@ -124,6 +124,42 @@ In many cases you don’t need to train a model from scratch. **Vertex AI Model 
 - “Need a translation model that’s ready and solid” → **Vertex AI Model Garden**
 - “Researcher needs full control over architecture/training (e.g., protein folding)” → **Vertex AI custom model**
 
+#### Case study (GenAI Leader): Generative AI for manufacturing CAD insights (Cymbal Aerospace)
+
+This pattern shows how Vertex AI can combine **specialized extraction** with **LLM summarization** to turn complex artifacts into decision-ready insights.
+
+**Problem**
+
+- Engineers had a large library of **3D CAD models**, but extracting details (materials, dimensions, tolerances, stress points) was manual, slow, and error-prone.
+
+**Two-layer approach on Vertex AI**
+
+1. **AutoML (specialized model)**: train a model to extract key **structured metadata** from CAD files.
+2. **Gemini (LLM)**: turn extracted metadata into **natural-language summaries** and Q&A responses.
+3. **MLOps glue**: orchestrate the workflow using **Vertex AI Pipelines** (and deploy/scale via Vertex AI).
+
+```mermaid
+flowchart TD
+  CAD[3D CAD files] --> Ingest[Ingest/store]
+  Ingest --> A[AutoML\nExtract metadata]
+  A --> Meta[Structured metadata\n(materials, dimensions, tolerances)]
+  Meta --> G[Gemini\nSummarize + answer questions]
+  G --> UI[Engineer UI/API\nQ&A + summaries]
+  subgraph Ops[Vertex AI Ops]
+    P[Vertex AI Pipelines\norchestration]
+  end
+  P --> A
+  P --> G
+```
+
+**Reported outcomes (treat as directional until you validate)**
+
+- Faster product development cycles and design reviews; fewer planning bottlenecks.
+
+**Design takeaway**
+
+- Use a **specialist model** to reliably extract structure from domain artifacts, then use an **LLM** to translate that structure into human-readable summaries and answers.
+
 #### Agents and GenAI-powered applications (how they relate)
 
 Think of a **GenAI-powered application** as the user-facing product (UI + workflows + policies). An **agent** is the “intelligent actor” inside that product that can reason, use tools, and take actions to achieve a goal.

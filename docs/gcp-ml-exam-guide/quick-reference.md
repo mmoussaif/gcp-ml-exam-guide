@@ -203,6 +203,7 @@
 - Vertex AI MLOps: model registry + evaluation + pipelines (orchestration) + monitoring (skew/drift/perf degradation)
 - Model layer (Vertex AI): Model Garden for ready models (Google/partners/open) + tuning; choose custom training when you need full control
 - AutoML objectives: image (classification/OD), video (action recognition/classification/tracking), tabular (classification/regression/forecasting)
+- Pattern: AutoML (specialist extractor → structured metadata) + Gemini (LLM → summaries/Q&A) + Vertex AI Pipelines (orchestration) for domain artifacts like CAD
 - Agents vs apps: the app is the user-facing product/framework; the agent is the “actor” inside it that reasons + uses tools + takes actions (often multi-agent)
 - Agents beyond models: reasoning loop (observe → interpret → plan → act) + tools (APIs/data/actions) enable multi-step work; conversational vs workflow agents are common patterns
 - Quiz recall: infrastructure = compute/storage foundation; agents layer defines the “actions/tasks” inside an app (filter/summarize/recommend); applications layer = user-facing UI/experience
