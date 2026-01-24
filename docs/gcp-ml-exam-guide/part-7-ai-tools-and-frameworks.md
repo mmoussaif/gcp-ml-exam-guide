@@ -962,6 +962,441 @@ approval_app = approval_graph.compile(
 
 ---
 
+## 7.5.4 Context Management, Memory & Session State for Agents
+
+Agents need **memory** to maintain coherent conversations, learn from interactions, and handle multi-turn tasks. This section covers the key concepts and implementation patterns.
+
+### Why Context Management Matters
+
+| Without Memory               | With Memory                          |
+| ---------------------------- | ------------------------------------ |
+| Agent forgets previous turns | Agent remembers conversation history |
+| User must repeat context     | Agent builds on prior context        |
+| No personalization           | Agent learns user preferences        |
+| Each request is isolated     | Multi-step tasks work correctly      |
+| No state across sessions     | User can resume conversations        |
+
+### Types of Agent Memory
+
+| Memory Type                | What It Stores                | Lifespan        | Use Case                           |
+| -------------------------- | ----------------------------- | --------------- | ---------------------------------- |
+| **Short-term (Working)**   | Current conversation turns    | Single session  | Multi-turn chat, task context      |
+| **Long-term (Persistent)** | Facts, preferences, summaries | Across sessions | User profiles, learned preferences |
+| **Episodic**               | Specific past interactions    | Across sessions | "Remember when we discussed X?"    |
+| **Semantic**               | General knowledge, facts      | Permanent       | Domain knowledge, company info     |
+| **Procedural**             | Learned workflows, patterns   | Permanent       | Task-specific learned behaviors    |
+
+### Context Window Management
+
+LLMs have finite context windows. As conversations grow, you must decide what to keep and what to drop.
+
+#### Strategies for managing context
+
+| Strategy               | How It Works                       | Pros                | Cons                  |
+| ---------------------- | ---------------------------------- | ------------------- | --------------------- |
+| **Sliding window**     | Keep last N messages               | Simple, predictable | Loses early context   |
+| **Summarization**      | Periodically summarize older turns | Compresses history  | Loses details         |
+| **Token budget**       | Keep messages until token limit    | Maximizes context   | Sudden drops          |
+| **Importance scoring** | Keep "important" messages longer   | Preserves key info  | Complexity            |
+| **Hybrid**             | Recent + summary + key facts       | Best of both        | Implementation effort |
+
+#### Token-aware context management (Python example)
+
+```python
+from transformers import AutoTokenizer
+
+class ContextManager:
+    def __init__(self, model_name: str, max_tokens: int = 8000, reserve_for_response: int = 1000):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        self.max_context_tokens = max_tokens - reserve_for_response
+        self.messages = []
+        self.summary = ""
+
+    def count_tokens(self, text: str) -> int:
+        return len(self.tokenizer.encode(text))
+
+    def add_message(self, role: str, content: str):
+        self.messages.append({"role": role, "content": content})
+        self._trim_if_needed()
+
+    def _trim_if_needed(self):
+        """Trim oldest messages if over token budget."""
+        while self._total_tokens() > self.max_context_tokens and len(self.messages) > 2:
+            # Keep system message (index 0) and most recent
+            removed = self.messages.pop(1)
+            # Optionally: add to summary instead of discarding
+            self._update_summary(removed)
+
+    def _total_tokens(self) -> int:
+        total = self.count_tokens(self.summary) if self.summary else 0
+        for msg in self.messages:
+            total += self.count_tokens(msg["content"])
+        return total
+
+    def _update_summary(self, removed_message: dict):
+        """Update running summary with removed content."""
+        # In production: use LLM to summarize
+        if self.summary:
+            self.summary += f"\n- {removed_message['role']}: {removed_message['content'][:100]}..."
+        else:
+            self.summary = f"Earlier context:\n- {removed_message['role']}: {removed_message['content'][:100]}..."
+
+    def get_messages_for_llm(self) -> list[dict]:
+        """Return messages formatted for LLM, including summary if present."""
+        result = []
+        if self.summary:
+            result.append({"role": "system", "content": f"Summary of earlier conversation:\n{self.summary}"})
+        result.extend(self.messages)
+        return result
+```
+
+### Session Management Patterns
+
+**Session** = a logical conversation boundary (may span multiple requests, may persist across time).
+
+#### Session lifecycle
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        SESSION LIFECYCLE                        │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  CREATE          UPDATE           PERSIST         RESUME        │
+│  ───────         ──────           ───────         ──────        │
+│  New session     Add messages     Save to DB      Load from DB  │
+│  Generate ID     Update state     Serialize       Deserialize   │
+│  Init context    Track metadata   Checkpoint      Restore state │
+│                                                                 │
+│                        EXPIRE / DELETE                          │
+│                        ──────────────                           │
+│                        TTL-based cleanup                        │
+│                        User-requested deletion                  │
+│                        GDPR/compliance                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Session state schema (typical structure)
+
+```python
+from dataclasses import dataclass, field
+from datetime import datetime
+from typing import Any
+
+@dataclass
+class SessionState:
+    # Identity
+    session_id: str
+    user_id: str | None = None
+
+    # Timestamps
+    created_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=datetime.utcnow)
+    expires_at: datetime | None = None
+
+    # Conversation history
+    messages: list[dict] = field(default_factory=list)
+    summary: str = ""
+
+    # Agent state
+    current_task: str | None = None
+    pending_actions: list[dict] = field(default_factory=list)
+    tool_results: list[dict] = field(default_factory=list)
+
+    # Memory / learned context
+    user_preferences: dict = field(default_factory=dict)
+    facts: list[str] = field(default_factory=list)
+
+    # Metadata
+    metadata: dict[str, Any] = field(default_factory=dict)
+```
+
+### Implementation: Session Management with ADK
+
+```python
+from google.adk import Agent
+from google.adk.sessions import Session, SessionService
+from google.adk.memory import InMemoryStore, FirestoreStore
+
+# Option 1: In-memory (development/testing)
+memory_store = InMemoryStore()
+
+# Option 2: Persistent (production) — Firestore
+memory_store = FirestoreStore(
+    project_id="your-project",
+    collection="agent_sessions"
+)
+
+# Create session service
+session_service = SessionService(store=memory_store)
+
+# Create or resume session
+session = session_service.get_or_create(
+    session_id="user-123-session-456",
+    user_id="user-123",
+    ttl_hours=24  # Auto-expire after 24 hours
+)
+
+# Agent with session
+agent = Agent(
+    name="assistant",
+    model="gemini-2.0-flash",
+    instruction="You are a helpful assistant. Use conversation history for context.",
+)
+
+# Run with session (history is automatically managed)
+from google.adk.runners import LocalRunner
+
+runner = LocalRunner(agent, session_service=session_service)
+
+# First turn
+response1 = runner.run(
+    "My name is Alice and I work on ML pipelines",
+    session_id="user-123-session-456"
+)
+
+# Second turn (agent remembers context)
+response2 = runner.run(
+    "What did I say my job was?",  # Agent should remember "ML pipelines"
+    session_id="user-123-session-456"
+)
+
+# Save session explicitly (or auto-saved on each turn)
+session_service.save(session)
+```
+
+### Implementation: Session Management with LangGraph
+
+LangGraph uses **checkpointers** for state persistence.
+
+```python
+from typing import TypedDict, Annotated
+from langgraph.graph import StateGraph, END
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
+import operator
+
+# State includes conversation history
+class ConversationState(TypedDict):
+    messages: Annotated[list, operator.add]
+    user_id: str
+    session_metadata: dict
+
+# Option 1: In-memory checkpointer (development)
+checkpointer = MemorySaver()
+
+# Option 2: SQLite (lightweight persistence)
+checkpointer = SqliteSaver.from_conn_string("sessions.db")
+
+# Option 3: PostgreSQL (production)
+checkpointer = PostgresSaver.from_conn_string(
+    "postgresql://user:pass@localhost/sessions"
+)
+
+# Build graph (simplified)
+def chat_node(state: ConversationState) -> ConversationState:
+    # Access full history via state["messages"]
+    history = state["messages"]
+    # ... process with LLM ...
+    return {"messages": [response]}
+
+graph = StateGraph(ConversationState)
+graph.add_node("chat", chat_node)
+graph.set_entry_point("chat")
+graph.add_edge("chat", END)
+
+# Compile with checkpointer
+app = graph.compile(checkpointer=checkpointer)
+
+# Run with thread_id (= session_id)
+config = {"configurable": {"thread_id": "session-abc-123"}}
+
+# Turn 1
+result1 = app.invoke(
+    {"messages": [HumanMessage("I'm working on a RAG system")], "user_id": "alice", "session_metadata": {}},
+    config
+)
+
+# Turn 2 (automatically has history from checkpointer)
+result2 = app.invoke(
+    {"messages": [HumanMessage("What architecture should I use?")]},
+    config
+)
+
+# Get full state at any point
+state_snapshot = app.get_state(config)
+print(state_snapshot.values["messages"])  # Full history
+
+# Time-travel: get state at a specific checkpoint
+history = list(app.get_state_history(config))
+past_state = history[2]  # Third checkpoint
+```
+
+### Implementation: Memory with LangChain
+
+```python
+from langchain.memory import (
+    ConversationBufferMemory,
+    ConversationSummaryMemory,
+    ConversationBufferWindowMemory,
+    VectorStoreRetrieverMemory
+)
+from langchain_google_genai import ChatGoogleGenerativeAI
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+
+# Option 1: Buffer memory (keep all messages)
+buffer_memory = ConversationBufferMemory(
+    memory_key="chat_history",
+    return_messages=True
+)
+
+# Option 2: Window memory (keep last K turns)
+window_memory = ConversationBufferWindowMemory(
+    k=10,  # Keep last 10 exchanges
+    memory_key="chat_history",
+    return_messages=True
+)
+
+# Option 3: Summary memory (compress older turns)
+summary_memory = ConversationSummaryMemory(
+    llm=llm,
+    memory_key="chat_history",
+    return_messages=True
+)
+
+# Option 4: Vector store memory (semantic retrieval of past turns)
+from langchain_community.vectorstores import Chroma
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+vectorstore = Chroma(embedding_function=embeddings, persist_directory="./memory_db")
+
+vector_memory = VectorStoreRetrieverMemory(
+    retriever=vectorstore.as_retriever(search_kwargs={"k": 5}),
+    memory_key="relevant_history"
+)
+
+# Use with chain
+from langchain.chains import ConversationChain
+
+chain = ConversationChain(
+    llm=llm,
+    memory=summary_memory,  # Or any memory type
+    verbose=True
+)
+
+# Conversation with automatic memory
+response1 = chain.predict(input="My team is building a customer support bot")
+response2 = chain.predict(input="What frameworks would you recommend?")  # Has context
+```
+
+### Long-Term Memory Patterns
+
+For agents that need to remember across sessions (user preferences, facts, past interactions):
+
+```python
+from dataclasses import dataclass
+from datetime import datetime
+
+@dataclass
+class LongTermMemory:
+    """Persistent memory that survives across sessions."""
+
+    user_id: str
+
+    # User profile (learned over time)
+    preferences: dict  # {"response_style": "concise", "expertise_level": "expert"}
+
+    # Factual memory (things the user told us)
+    facts: list[dict]  # [{"fact": "Works at Acme Corp", "confidence": 0.95, "source": "user_statement"}]
+
+    # Episodic memory (past significant interactions)
+    episodes: list[dict]  # [{"summary": "Helped debug RAG pipeline", "date": "2024-01-15", "outcome": "resolved"}]
+
+    # Procedural memory (learned workflows for this user)
+    procedures: list[dict]  # [{"task": "code_review", "steps": [...], "preferences": {...}}]
+
+
+class LongTermMemoryStore:
+    """Store and retrieve long-term memories."""
+
+    def __init__(self, vectorstore, db_client):
+        self.vectorstore = vectorstore  # For semantic search
+        self.db = db_client  # For structured storage
+
+    def add_fact(self, user_id: str, fact: str, source: str = "conversation"):
+        """Store a learned fact about the user."""
+        # Embed and store for semantic retrieval
+        self.vectorstore.add_texts(
+            texts=[fact],
+            metadatas=[{"user_id": user_id, "type": "fact", "source": source}]
+        )
+        # Also store structured
+        self.db.facts.insert({"user_id": user_id, "fact": fact, "source": source, "timestamp": datetime.utcnow()})
+
+    def recall_relevant(self, user_id: str, query: str, k: int = 5) -> list[str]:
+        """Retrieve memories relevant to current query."""
+        results = self.vectorstore.similarity_search(
+            query,
+            k=k,
+            filter={"user_id": user_id}
+        )
+        return [doc.page_content for doc in results]
+
+    def get_user_profile(self, user_id: str) -> dict:
+        """Get structured user preferences."""
+        return self.db.profiles.find_one({"user_id": user_id}) or {}
+```
+
+### Production Session Management Checklist
+
+| Concern              | Solution                                                              |
+| -------------------- | --------------------------------------------------------------------- |
+| **Persistence**      | Use durable storage (Firestore, PostgreSQL, Redis) not just in-memory |
+| **Scalability**      | Stateless app servers + external session store                        |
+| **TTL / Expiration** | Auto-expire old sessions (24h–7d typical)                             |
+| **Privacy / GDPR**   | Allow users to delete their data; don't log PII unnecessarily         |
+| **Security**         | Encrypt session data at rest; validate session ownership              |
+| **Concurrency**      | Handle multiple requests to same session (locking or last-write-wins) |
+| **Recovery**         | Checkpointing enables resume after crashes                            |
+| **Observability**    | Log session lifecycle events; track memory usage                      |
+
+### Vertex AI Agent Engine Session Management
+
+When using Vertex AI Agent Engine, session management is handled by the platform:
+
+```python
+from google.cloud import aiplatform
+from vertexai.preview.reasoning_engines import ReasoningEngine
+
+# Agent Engine handles sessions automatically
+# Each conversation gets a session_id
+
+# Option 1: Let platform generate session ID
+response = reasoning_engine.query(
+    query="Hello, I'm starting a new project"
+)
+session_id = response.session_id  # Platform-generated
+
+# Option 2: Provide your own session ID (for user-specific sessions)
+response = reasoning_engine.query(
+    query="What did we discuss earlier?",
+    session_id="user-alice-project-xyz"  # Your ID
+)
+
+# Session state is automatically:
+# - Persisted across turns
+# - Associated with the session_id
+# - Managed for TTL/cleanup
+# - Available for replay/debugging in Cloud Console
+```
+
+**EXAM TIP:** When questions mention "conversation history", "multi-turn", "remember previous context", or "resume conversation" → think **session management + memory patterns**.
+
+---
+
 ### 7.6 Vector stores & retrieval infrastructure (RAG substrate)
 
 Common options (managed or self-hosted):

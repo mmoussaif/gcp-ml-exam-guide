@@ -154,6 +154,10 @@
 | Need explicit state machine control for agents       | LangGraph (StateGraph + conditional edges + checkpointer)                         |
 | Traditional RAG misses context / needs refinement    | Agentic RAG: agent decides when to retrieve, multi-hop + query rewriting          |
 | Complex workflow needs specialist delegation         | Supervisor pattern (manager agent + specialist agents)                            |
+| Agent forgets previous turns / loses context         | Session management: persist messages + checkpointing (LangGraph, ADK sessions)    |
+| Context window fills up in long conversations        | Sliding window / summarization / token budget / hybrid memory strategies          |
+| Need to remember user across sessions                | Long-term memory: vector store + structured DB for facts, preferences, episodes   |
+| Resume conversation after app restart                | Checkpointer (LangGraph) or session service (ADK) with durable backend            |
 
 ### Common Exam Traps
 
