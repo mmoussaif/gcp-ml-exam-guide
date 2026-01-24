@@ -25,6 +25,61 @@ This is **not official exam scope**; it’s included to make the guide feel less
 - **Make it personal**: apply GenAI to individual workflows (where adoption often starts).
 - **Make it durable**: move toward custom tools/agents that fit the organization (with guardrails, evaluation, and governance).
 
+### The business impact of GenAI (beyond the chatbot)
+
+This framing is adapted from the GenAI Leader curriculum and is meant to sound like how leaders talk about adoption (concise, practical, not hype).
+
+#### GenAI is a technology layer, not “one app”
+
+- A **chatbot app** (like the Gemini app) is one product surface.
+- The **model** (Gemini) is a building block engineers can embed across many applications and workflows.
+- In practice, you’ll see GenAI embedded into tools like:
+  - **Workplace apps** (email/docs/meetings/presentations)
+  - **Analytics** (helping summarize insights, generate explanations)
+  - **Developer workflows** (code generation, test generation, debugging)
+  - **Cloud operations** (automation, troubleshooting, suggestions)
+
+#### The four primary ways businesses use GenAI
+
+- **Create**: generate new content (text, images, audio, code).
+- **Summarize**: condense large information into decision-ready summaries.
+- **Discover**: find the right information at the right time (search + Q&A over content).
+- **Automate**: automate tasks that used to require manual human work (with appropriate review/guardrails).
+
+#### Practical examples you’ll recognize (Google ecosystem examples)
+
+- **Create**
+  - Draft emails or content (tone/translation help)
+  - Generate images for slides (e.g., Imagen/Gemini-integrated creation workflows)
+  - Generate code/unit tests (e.g., Gemini Code Assist–style workflows)
+- **Summarize**
+  - Summarize long docs/reports and extract key takeaways
+  - Summarize meetings into action items
+  - Summarize customer feedback for sentiment and themes
+- **Discover**
+  - Search for a file and ask questions about its contents (Drive-style “ask about this doc”)
+  - Enterprise Q&A over internal knowledge (search + reasoning + enterprise data)
+- **Automate**
+  - Convert content formats (speech ↔ text, translation)
+  - Automate documentation and information extraction (code docs, contract review/extraction)
+  - Automate ticket creation/notifications from customer feedback signals
+
+#### Multimodal GenAI (why it changes workflows)
+
+Multimodal models can work across **text, images, video, audio, and PDFs**—either separately or combined in one task. This is why “GenAI” shows up in places like marketing content, document understanding, analytics dashboards, and support operations (not just chat).
+
+#### “Beyond chat”: common enterprise use cases (business → system mapping)
+
+- **Uncover patterns and insights in data**
+  - Forecasting demand and optimizing inventory (Vertex AI forecasting / ML pipelines)
+  - Personalized recommendations to increase engagement and reduce churn (search/retrieval + ranking; Vertex AI Search / retrieval patterns)
+  - Scientific discovery workflows (fine-tuning and evaluation on domain data)
+- **Search and question-answering over enterprise resources**
+  - “Find a file and ask questions about it” (enterprise search + content Q&A patterns)
+  - “Unlock enterprise expertise” (agents that combine reasoning + search + enterprise data)
+- **Monitor real-time events**
+  - Anomaly detection for fraud/ops signals (streaming ingestion + detection + alerting)
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
