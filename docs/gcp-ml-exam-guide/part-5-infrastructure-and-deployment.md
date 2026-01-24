@@ -1,5 +1,19 @@
 ## PART V: INFRASTRUCTURE & DEPLOYMENT
 
+### Official docs (high-signal starting points)
+
+- **Cloud Storage**: `https://cloud.google.com/storage/docs`
+- Storage Classes: `https://cloud.google.com/storage/docs/storage-classes`
+- **Cloud KMS** (encryption keys): `https://cloud.google.com/kms/docs`
+- **IAM**: `https://cloud.google.com/iam/docs`
+- **Cloud Audit Logs**: `https://cloud.google.com/logging/docs/audit`
+- **GPU/TPU on Compute Engine**: `https://cloud.google.com/compute/docs/gpus`
+- **TPU**: `https://cloud.google.com/tpu/docs`
+- **Deep Learning VM Images**: `https://cloud.google.com/deep-learning-vm/docs`
+- **Preemptible VMs**: `https://cloud.google.com/compute/docs/instances/preemptible`
+- **TensorFlow Serving**: `https://www.tensorflow.org/tfx/guide/serving`
+- **Triton Inference Server on GKE**: `https://cloud.google.com/kubernetes-engine/docs/tutorials/serve-tensorflow-model`
+
 ### 5.0 STORAGE + SECURITY BASICS (often tested)
 
 #### Storage classes (Cloud Storage)

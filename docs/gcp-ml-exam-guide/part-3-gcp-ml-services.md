@@ -1,5 +1,26 @@
 ## PART III: GCP ML SERVICES
 
+### Official docs (high-signal starting points)
+
+- **Vertex AI**: `https://cloud.google.com/vertex-ai/docs`
+- Vertex AI Training: `https://cloud.google.com/vertex-ai/docs/training/overview`
+- Vertex AI Prediction: `https://cloud.google.com/vertex-ai/docs/predictions/overview`
+- Vertex AI Model Monitoring: `https://cloud.google.com/vertex-ai/docs/model-monitoring/overview`
+- Vertex AI Feature Store: `https://cloud.google.com/vertex-ai/docs/featurestore/overview`
+- Vertex AI Explainable AI: `https://cloud.google.com/vertex-ai/docs/explainable-ai/overview`
+- **BigQuery ML**: `https://cloud.google.com/bigquery/docs/bqml-introduction`
+- BQML Model Types: `https://cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create`
+- **AutoML**: `https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide`
+- AutoML Vision: `https://cloud.google.com/vertex-ai/docs/image-data/classification/train-model`
+- AutoML Natural Language: `https://cloud.google.com/vertex-ai/docs/text-data/classification/prepare-data`
+- **Pre-trained APIs**:
+  - Vision API: `https://cloud.google.com/vision/docs`
+  - Video Intelligence API: `https://cloud.google.com/video-intelligence/docs`
+  - Natural Language API: `https://cloud.google.com/natural-language/docs`
+  - Speech-to-Text: `https://cloud.google.com/speech-to-text/docs`
+- **Cloud DLP**: `https://cloud.google.com/dlp/docs`
+- **Data Catalog**: `https://cloud.google.com/data-catalog/docs`
+
 ### 3.1 BIGQUERY ML
 
 Train and deploy ML models using SQL syntax directly in BigQuery.

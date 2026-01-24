@@ -1,5 +1,20 @@
 ## PART IV: PIPELINES & ARCHITECTURE
 
+### Official docs (high-signal starting points)
+
+- **Vertex AI Pipelines**: `https://cloud.google.com/vertex-ai/docs/pipelines/introduction`
+- Kubeflow Pipelines SDK: `https://www.kubeflow.org/docs/components/pipelines/`
+- **Cloud Composer** (managed Airflow): `https://cloud.google.com/composer/docs`
+- **Dataflow**: `https://cloud.google.com/dataflow/docs`
+- **Dataproc**: `https://cloud.google.com/dataproc/docs`
+- **Cloud Data Fusion**: `https://cloud.google.com/data-fusion/docs`
+- **Pub/Sub**: `https://cloud.google.com/pubsub/docs`
+- **Cloud Functions**: `https://cloud.google.com/functions/docs`
+- **Cloud Monitoring**: `https://cloud.google.com/monitoring/docs`
+- **Cloud Logging**: `https://cloud.google.com/logging/docs`
+- **Cloud Build** (CI/CD): `https://cloud.google.com/build/docs`
+- MLOps Best Practices: `https://cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning`
+
 ### 4.0 WHY PIPELINES (AUTOMATION) MATTER
 
 Automating ingestion, preprocessing, training, evaluation, and deployment reduces manual effort and improves reliability.
