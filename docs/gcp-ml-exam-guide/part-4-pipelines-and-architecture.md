@@ -107,16 +107,113 @@ Automating ingestion, preprocessing, training, evaluation, and deployment reduce
 
 **Why data pipelines matter**: In ML, the quality and management of your data are often more important than the specific modeling algorithm. Production ML systems need robust data pipelines to reliably feed data into model training and inference.
 
+**Key insight**: "In enterprise MLOps, models are commodities, but data pipelines are assets." The cleverest model architecture is worthless if fed unreliable data. Choices made for data have profound downstream consequences on performance, scalability, and reliability of entire ML system.
+
 **Key aspects**:
 
-**A. Data Ingestion**:
+**A. Data Sources**:
+
+Production ML systems interact with data from several origins:
+
+**1. User Input Data**:
+
+- Data explicitly provided by users (text in search bar, uploaded images, form submissions)
+- **Notoriously unreliable**: Users are lazy; if possible to input unformatted/raw data, they will
+- **Requires**: Heavy-duty validation and robust error handling
+- **Example**: Search queries, image uploads, form submissions
+
+**2. System-Generated Data (Logs)**:
+
+- Applications and infrastructure generate massive volume of logs
+- **Records**: Significant events, system states (memory usage), service calls, model predictions
+- **Characteristics**: Often noisy, but invaluable for debugging, monitoring system health, ML system visibility
+- **Processing**: Can be processed in batches (daily/weekly) or real-time for monitoring/alerting
+- **Example**: Application logs, infrastructure metrics, model prediction logs
+
+**3. Internal Databases**:
+
+- Where enterprises typically derive most value
+- **Sources**: Inventory, CRM, user accounts, financial transactions
+- **Characteristics**: Highly structured, follows relational model
+- **Use case**: Feature engineering, ensuring recommendations match inventory
+- **Example**: Customer database, product catalog, transaction history
+
+**4. Third-Party Data**:
+
+- Data acquired from external vendors
+- **Types**: Demographic information, social media activity, purchasing habits
+- **Power**: Can bootstrap models like recommender systems
+- **Challenge**: Availability increasingly constrained by privacy regulations
+- **Example**: Demographic data, social media feeds, market research data
+
+**B. Data Formats**:
+
+The format you choose for storage is a critical architectural decision impacting storage costs, access speed, and ease of use.
+
+**1. Text vs Binary**:
+
+| Aspect          | Text Formats (JSON, CSV)                   | Binary Formats (Parquet)                             |
+| --------------- | ------------------------------------------ | ---------------------------------------------------- |
+| **Readability** | Human-readable (can open in text editor)   | Not human-readable (requires schema)                 |
+| **Storage**     | Verbose, consumes more space               | Compact, efficient (e.g., 14 MB CSV → 6 MB Parquet)  |
+| **Use case**    | Debugging, configuration, data interchange | Large-scale analytical workloads (industry standard) |
+| **Example**     | JSON: 7 bytes for "1000000"                | Binary: 4 bytes for integer 1000000                  |
+
+**Text formats**:
+
+- **JSON**: Ubiquitous due to simplicity and flexibility, represents structured and unstructured data
+- **CSV**: Simple, human-readable, easy to debug
+- **Cost**: Verbose, significantly more storage space
+
+**Binary formats**:
+
+- **Parquet**: Designed for machine consumption, far more compact and efficient
+- **Requirement**: Program must know exact schema and layout to interpret bytes
+- **Space savings**: Dramatic (e.g., 14 MB CSV → 6 MB Parquet)
+- **Industry standard**: For large-scale analytical workloads
+
+**2. Row-Major vs Column-Major**:
+
+This distinction is critical for ML engineers—directly relates to how we access data for training and analysis.
+
+| Aspect             | Row-Major (CSV)                                    | Column-Major (Parquet)                                  |
+| ------------------ | -------------------------------------------------- | ------------------------------------------------------- |
+| **Layout**         | Consecutive elements of row stored together        | Consecutive elements of column stored together          |
+| **Optimized for**  | Write-heavy workloads, adding complete records     | Analytical queries (calculating mean of single feature) |
+| **Access pattern** | Retrieving entire samples (all data for user ID)   | Reading single column as contiguous block               |
+| **Performance**    | Slower for analytical queries (jump around memory) | Faster for analytical queries (cache-friendly)          |
+
+**Row-major format**:
+
+- **Layout**: Consecutive elements of row stored next to each other (reading table line by line)
+- **Optimized for**: Write-heavy workloads, frequently adding new complete records
+- **Efficient for**: Retrieving entire samples at once (all data for specific user ID)
+
+**Column-major format**:
+
+- **Layout**: Consecutive elements of column stored next to each other
+- **Optimized for**: Analytical queries common in ML
+- **Example**: Calculating mean of single feature across millions of samples
+  - Column-major: Read one column as single contiguous block (extremely efficient, cache-friendly)
+  - Row-major: Jump around memory, reading small piece from each row (significantly slower)
+- **Performance**: Orders of magnitude faster for columnar operations
+
+**Pandas DataFrame example**:
+
+- **Built around column-major DataFrame**
+- **Iterating by column**: ~2 microseconds (fast, contiguous memory)
+- **Iterating by row**: ~38 microseconds (~20x slower, non-contiguous memory)
+- **Reason**: Processors more efficient with contiguous blocks of memory
+- **Not a flaw**: Direct consequence of column-major data model
+
+**D. Data Ingestion**:
 
 - Getting raw data from various sources into your system/development environment
 - **Batch ingestion**: Periodically importing a dump or running a daily job
 - **Streaming ingestion**: Real-time processing of incoming events
 - **GCP tools**: Cloud Storage (batch), Pub/Sub (streaming), Dataflow (processing)
 
-**B. Data Storage**:
+**E. Data Storage**:
 
 - Once ingested, data needs to be stored (often in both raw form and processed form)
 - **Data lakes**: Low-cost storage for raw, unstructured/semi-structured data (Cloud Storage, AWS S3, on-prem HDFS)
@@ -125,22 +222,114 @@ Automating ingestion, preprocessing, training, evaluation, and deployment reduce
   - Ensures consistency between offline training data and online serving data
   - Examples: Vertex AI Feature Store, Feast, Tecton
 
-**C. Data Processing (ETL)**:
+**C. Data Processing (ETL/ELT)**:
 
-- Raw data often needs heavy processing to become useful for modeling
-- Includes: joining multiple data sources, cleaning, normalizing features, encoding categorical variables, creating new features
-- **ETL pipeline**: Extract-Transform-Load pipeline
-- **Tools**: Apache Spark, Dataflow, Dataproc, plain Python scripts with Pandas (depending on scale)
-- **Output**: Curated dataset ready for model training
+**ETL in ML Workflows**:
 
-**D. Data Labeling and Annotation**:
+ETL stands for **Extract, Transform, Load**. It describes the pipeline of getting data from sources, processing it into usable form, and loading it into storage/system for use. ETL is often the first stage of preparing data for model training or inference.
+
+**1. Extract**:
+
+- **Pull data** from various sources (databases, APIs, files, etc.)
+- **ML sources**: Application databases, logs, third-party datasets, user-provided data
+- **Validation**: Check for malformed records during extraction
+- **Early rejection**: Reject or quarantine data that doesn't meet expectations as early as possible
+- **Example**: Filter out records with missing required fields, log/notify about bad data
+- **Benefit**: Early validation prevents propagating errors downstream
+
+**2. Transform**:
+
+- **Core processing step**: Data cleaned and converted into desired format
+- **Operations**:
+  - Merging multiple sources
+  - Handling missing values
+  - Standardizing formats (categorical labels consistent across sources)
+  - Deduplicating records
+  - Aggregating or summarizing data
+  - Deriving new features
+- **ML-specific**: Feature engineering (turning raw data into features models can consume)
+  - **Examples**: Raw timestamps → day-of-week, time-since-last-event
+  - Encoding categorical variables as one-hot vectors
+  - Normalizing numeric fields
+- **Hefty part**: Most data wrangling happens here
+
+**3. Load**:
+
+- **Load transformed data** into target destination
+- **Targets**: Data warehouse, relational database, distributed storage, cloud storage, analytical database
+- **ML pipelines**: Could mean:
+  - Writing cleaned dataset for training (CSV/Parquet file, data warehouse table)
+  - Loading features into feature store
+  - Loading into production databases for serving
+- **Considerations**:
+  - **Frequency**: How often to load (batch schedule or streaming)
+  - **Format**: What format to use
+  - **Example**: Load aggregated features daily into warehouse table that training job will read
+
+**ETL vs ELT**:
+
+**ELT (Extract, Load, Transform)** is a variant where raw data is first loaded into storage (often data lake) before transformation.
+
+| Aspect              | ETL                                       | ELT                                                          |
+| ------------------- | ----------------------------------------- | ------------------------------------------------------------ |
+| **Order**           | Extract → Transform → Load                | Extract → Load → Transform                                   |
+| **Processing**      | Transform before loading                  | Load raw data, transform later                               |
+| **Storage**         | Transformed data in warehouse             | Raw data in data lake                                        |
+| **Flexibility**     | Less flexible (transform defined upfront) | More flexible (redefine transformations later)               |
+| **Ingestion speed** | Slower (processing upfront)               | Faster (minimal processing upfront)                          |
+| **Downside**        | Less flexible                             | Data swamp (sifting through massive lake can be inefficient) |
+
+**ELT popularity**: Rise of inexpensive storage and scalable compute. Organizations dump all raw data into data lake (S3, HDFS) immediately, transform later when needed.
+
+**Advantages of ELT**:
+
+- Quick ingestion (minimal processing upfront)
+- Flexibility to redefine transformations later
+
+**Disadvantages of ELT**:
+
+- If store everything raw, face cost/complexity of sifting through "data swamp"
+- As data volume grows, scanning massive lake for each query can be inefficient
+
+**Hybrid approach**: Balance fast data acquisition (ELT style) with upfront processing (ETL style) to keep data usable.
+
+**Common ML pattern**:
+
+- Do some light cleaning upon extraction (avoid garbage data accumulation)
+- Load into lake/warehouse
+- Do heavier feature engineering transformations in later pipeline stages before model training
+
+**Example: ETL for ML**:
+
+E-commerce recommendation model:
+
+- **Extract**: Production databases (orders, user info, product catalog)
+- **Transform**: Join tables, clean inactive users/test orders, aggregate purchase history per user, encode product categories
+- **Load**: Transformed feature set (user features and labels) into data warehouse table or saved as file
+- **Training**: ML training job reads prepared data
+
+**If ELT instead**: Dump all raw logs/databases into data lake, ML pipeline transforms raw data on-the-fly each time (more flexible, but possibly slower).
+
+**Hybrid**: Some ETL to create intermediate features, then ELT of those into warehouse and further transformations.
+
+**Note on Streaming**:
+
+- **ETL traditionally**: Batch processing (periodic loads)
+- **Streaming data**: Real-time feeding into online model
+- **Similar principles**: "get data → process → use data" remains, just with low latency
+- **Tools**: Kafka for extraction, real-time transforms, etc.
+- **Coverage**: Will touch on streaming in context of feature stores and orchestration in future chapters
+
+**EXAM TIP:** Questions about "ETL vs ELT" → think **ETL** (transform before load, less flexible but cleaner) vs **ELT** (load raw first, transform later, more flexible but can create data swamp). Questions about "data format choice" → think **text formats** (human-readable, debugging) vs **binary formats** (compact, efficient, industry standard for analytics). Questions about "row vs column storage" → think **row-major** (write-heavy, retrieve entire samples) vs **column-major** (analytical queries, calculate mean of feature, much faster).
+
+**G. Data Labeling and Annotation**:
 
 - For supervised ML problems requiring labels (ground truth)
 - **Process**: Obtain labels for data (naturally collected or human annotation)
 - **Production systems**: Include labeling pipeline using internal teams or crowd-sourcing
 - **Continuous labeling**: Label new data on ongoing basis
 
-**E. Data Versioning and Metadata**:
+**H. Data Versioning and Metadata**:
 
 - **Critical**: Track which data was used to train which model
 - Data changes over time (new records appended, corrections applied)
@@ -148,7 +337,7 @@ Automating ingestion, preprocessing, training, evaluation, and deployment reduce
 - **Metadata logging**: Timestamps of data extraction, checksums of files, number of records
 - **Tools**: DVC (Data Version Control), MLflow, custom solutions
 
-**F. Offline vs Online Pipelines**:
+**I. Offline vs Online Pipelines**:
 
 | Aspect          | Offline Pipelines (Training) | Online Pipelines (Serving)               |
 | --------------- | ---------------------------- | ---------------------------------------- |
