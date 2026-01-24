@@ -481,6 +481,517 @@ X_valid_processed = preprocessor.transform(X_valid)
 
 **EXAM TIP:** Questions about "ETL vs ELT" → think **ETL** (transform before load, less flexible but cleaner) vs **ELT** (load raw first, transform later, more flexible but can create data swamp). Questions about "data format choice" → think **text formats** (human-readable, debugging) vs **binary formats** (compact, efficient, industry standard for analytics). Questions about "row vs column storage" → think **row-major** (write-heavy, retrieve entire samples) vs **column-major** (analytical queries, calculate mean of feature, much faster). Questions about "data pipeline structure" → think **Extract → Validate → Transform → Load** (ETL) or **Extract → Load → Transform** (ELT).
 
+**G. Sampling Strategies**:
+
+**Why sampling matters**: In many cases, we cannot or do not use all available data. Perhaps data is too large (training on trillions of records isn't feasible), or obtaining labels is costly, so we label a subset, or we intentionally down-sample for quicker experimentation. Good sampling can make model development efficient and ensure the model generalizes, while poor sampling can mislead your results.
+
+**Sampling occurs in many stages**:
+
+- Choosing what real-world data to collect for building your dataset
+- Selecting a subset of available data for labeling or training (especially when you have more data than you can feasibly use)
+- Splitting data into training/validation/testing sets
+- Sampling data during training for each batch (in stochastic gradient descent, for example)
+- Sampling in monitoring (e.g., logging only a fraction of predictions for analysis)
+
+**Types of Sampling**:
+
+**1. Non-Probability Sampling**:
+
+Not strictly based on random chance but uses some subjective or practical criteria to pick data.
+
+**A. Convenience Sampling**:
+
+- Selecting data that is easiest to obtain
+- **Example**: Using the first 10,000 records from a log because they're readily at hand, or using a dataset collected from one accessible source (like one city or one user group)
+- **Implications**: High risk of bias since the sample may not represent the overall population
+- **Use case**: Popular because it's convenient, but can skew results (e.g., model trained on data from single city may not generalize to other regions)
+
+**B. Snowball Sampling**:
+
+- Using existing sample data to recruit further data
+- **Example**: Social networks or graphs—you have data on some users, then include their friends, then friends-of-friends, and so on
+- **Implications**: Can be helpful to gather relevant data when you don't have direct access, but can over-represent tightly connected communities and miss out on isolated samples
+
+**C. Judgment (Purposive) Sampling**:
+
+- Relying on experts to hand-pick what data to include
+- **Example**: Domain expert might select "important" cases to train on
+- **Implications**: Can incorporate valuable domain knowledge, but it's subjective and can reflect the expert's biases
+
+**D. Quota Sampling**:
+
+- Ensures certain predefined quantities or a fraction of different sub-groups
+- **Example**: Include exactly 100 samples of each class in a classification problem, or maintain a specific count or certain ratio of categories
+- **Implications**: Guarantees representation of all groups, but the selection within each group might still be non-random (usually convenience-based within each quota)
+- **Risk**: Can introduce bias if the population within each quota is not homogeneous
+
+**Non-probability sampling**: Often a starting point (especially in early prototyping or when data access is limited). However, models built on non-random samples may not be reliable. If you use these methods, be aware of the biases.
+
+**2. Probability (Random) Sampling Methods**:
+
+Probabilistic sampling methods are less prone to bias than non-probabilistic methods, owing to the inherent randomness in their selection strategy.
+
+**A. Simple Random Sampling**:
+
+- Each data point has an equal chance of being selected
+- **Example**: Shuffling your dataset and picking a subset
+- **Works well**: If your data is homogeneous or you truly have no prior knowledge of important groupings
+- **Problem**: Can be problematic if there are rare but important subgroups; you might, by chance, pick too few of them
+- **Example issue**: Dataset of transactions with 2% fraud. A simple random sample of 1,000 might contain around 20 fraud cases. If you happen to get 5 or 50 by random fluctuation, your sample's fraud rate would skew
+
+**B. Weighted Sampling**:
+
+- A form of random sampling where each sample is given a weight (probability) for selection
+- **Allows**: Oversampling certain cases or undersampling others in a controlled way
+- **Example**: Weight rare classes higher so they appear more in the sample
+- **Tools**: `random.choices` in Python allows weighted sampling
+- **Use cases**: Combat class imbalance (oversampling minority class), emphasize recent data more than older data
+- **Note**: Concept of sample weights during model training is related but distinct—weighted sampling picks more of some data to include, whereas sample weights let you include all data but give some examples more importance in the loss function
+
+**C. Stratified Sampling**:
+
+- Divide the population into strata (groups) and sample from each group separately to ensure representation
+- **Example**: For an imbalanced classification, stratify by class label so that your sample has the same class proportions as the full dataset (or ensure each class gets enough representation)
+- **Benefits**: Greatly reduces variance between subgroup representation
+- **Recommendation**: Generally recommended for creating train/test splits when class distributions are important
+- **Drawback**: Need to know the important grouping variables upfront, and if some groups are very small or hard to stratify (e.g., continuous variables), it might not be applicable
+
+**D. Reservoir Sampling**:
+
+- Algorithm for sampling from streaming data of unknown size, ensuring each item has an equal probability of being included
+- **Use case**: Continuous stream (say, user clicks) and you want to maintain a random sample of fixed size (like the last 1,000 clicks, but in a random sense, not just the latest)
+- **Benefit**: Allows you to sample from a stream without storing it all, which is crucial in production streaming pipelines
+
+**E. Importance Sampling**:
+
+- More advanced technique often used in statistical estimation and reinforcement learning
+- **Concept**: You want to evaluate or train on a distribution that is different from where your data came from by re-weighting samples
+- **Use case**: In ML pipelines, can be used to bias the sampling towards informative cases while still correcting for that bias during estimation
+- **Example**: In reinforcement learning, you might sample episodes from a behavior policy but want to evaluate a target policy. Importance sampling provides a way to correct for the difference
+
+**Practical Implications of Sampling Choices**:
+
+- **Always ask**: "Does my sample reflect the real-world distribution relevant to the model's deployment?"
+- **Use stratification**: When splitting datasets by class, time, or other key criteria. Most ML libraries (scikit-learn's `train_test_split` for example) have stratified split options for classification problems
+- **Sampling bias**: Can creep in from many sources. Even an ostensibly random sample can be biased if your data source is incomplete
+- **Downsampling for experiments**: When downsampling for quicker experiments (common practice), do it carefully. It's fine to take, say, 10% of data to prototype, but keep it random or stratified. Always test the final model on the full distribution if possible
+- **Big data tip**: If you have an extremely large dataset, instead of training on all of it, you might take a well-stratified sample to train initial models (for speed) and then possibly gradually increase data size. Sometimes a model saturates performance with far less than the total available data
+
+**Key principle**: Sampling is both a necessity and a potential pitfall. It's integral to how we create manageable training sets and evaluation splits. The guiding principle is to ensure your sampling strategy is aligned with the problem's needs and does not inadvertently introduce bias.
+
+**H. Data Design: Class Imbalance**:
+
+**Class imbalance is the norm in production ML**: Most interesting problems involve detecting rare events—fraudulent transactions, customer churn, equipment failure, or disease diagnosis. The vast majority of your data will belong to the "normal" or negative class.
+
+**Challenges for model training**:
+
+**1. Insufficient signal**: With very few examples of the minority class, the model does not usually have enough information to learn its distinguishing patterns.
+
+**2. Degenerate solutions**: It's easy for a model to achieve high accuracy by adopting a simple heuristic: always predict the majority class. In a dataset where only 0.1% of cases are fraudulent, this strategy yields 99.9% accuracy, a local minimum that can be difficult for optimization algorithms to escape.
+
+**👉 For this reason, accuracy alone is not a reliable metric for datasets with class imbalance. Metrics such as recall and F1 score provide a more informative evaluation in such cases.**
+
+**3. Asymmetric error costs**: The business impact of a misclassification is rarely symmetrical. A false negative (missing a fraudulent transaction) is often far more costly than a false positive (flagging a legitimate transaction for review). Standard loss functions treat all errors equally, leading to models that are not optimized for the business problem.
+
+**Techniques to Address Class Imbalance**:
+
+**1. Data-Level Methods (Resampling)**:
+
+These methods modify the data distribution itself.
+
+**A. Undersampling**:
+
+- **Removing samples** from the majority class
+- **Simple approach**: Random removal
+- **Sophisticated techniques**: Tomek links remove the majority-class samples that are close to minority-class samples, helping to clarify the decision boundary
+- **Risk**: Discarding potentially useful information
+
+**B. Oversampling**:
+
+- **Adding more samples** to the minority class
+- **Simple method**: Random duplication (but can lead to overfitting)
+- **Advanced technique**: SMOTE (Synthetic Minority Oversampling Technique), which creates new synthetic samples by interpolating between existing minority class samples
+- **Effectiveness**: Generally most effective on low-dimensional, tabular data
+- **Note**: There has been some criticism towards SMOTE
+
+**2. Algorithm-Level Methods (Cost-Sensitive Learning)**:
+
+These methods modify the learning algorithm to be more robust to imbalance, keeping the original data distribution intact. This is often the preferred approach for modern deep learning models.
+
+**A. Class Weights**:
+
+- **Most common approach**: Assign a weight to each class in the loss function that is inversely proportional to its frequency
+- **Effect**: Forces the model to "pay more attention" to getting the rare examples correct
+- **Implementation**: `class_weight="balanced"` in scikit-learn, or manual weights
+
+**B. Focal Loss**:
+
+- **More advanced modification** of the standard cross-entropy loss
+- **Concept**: Dynamically down-weights the loss for well-classified examples, allowing the model to focus its efforts on hard-to-classify examples, which often belong to the minority class
+- **Formula**: `FL(p_t) = -α_t(1 - p_t)^γ log(p_t)`
+  - `α_t`: Inverse of class frequency (handles class imbalance)
+  - `γ` (gamma): Focusing parameter (down-weights easy examples)
+  - `p_t`: Predicted probability for the true class
+- **Benefits**:
+  - Reduces contribution of confident predictions
+  - Higher γ → more downweighing of easy examples
+  - Addresses both class imbalance and hard example focus
+- **Use case**: Particularly effective for imbalanced datasets where rare classes matter most
+
+**EXAM TIP:** Questions about "class imbalance" → think **accuracy is misleading** (use recall, F1, ROC-AUC instead), **data-level methods** (undersampling, oversampling, SMOTE) vs **algorithm-level methods** (class weights, focal loss). Questions about "sampling strategies" → think **probability sampling** (random, stratified, weighted) vs **non-probability sampling** (convenience, snowball, judgment, quota). Always use **stratified splits** for imbalanced classification problems.
+
+**I. Data Leakage**:
+
+**Definition**: Data leakage occurs when information from outside the training data (often from the future or from the test set) leaks into the features used to train a model. In simpler terms, it's when your model accidentally gets a sneak peek at data it shouldn't have during training, leading to overly optimistic performance and likely catastrophic failure in production.
+
+**Why data leakage is dangerous**:
+
+- **A leaked feature** can make a model seem extremely accurate during training/validation, because it's indirectly using the answer!
+- **When deployed**, that information isn't available (or is ill-gotten), so the model fails unexpectedly
+- **Leakage can be subtle** and is often discovered only after deployment, when the model behaves too well on historical data but poorly on new data
+
+**Common Causes of Data Leakage**:
+
+**1. Train/Test Contamination**:
+
+- **Most straightforward leakage**: Somehow, data from the test set gets into the training set
+- **Causes**: Dataset split isn't truly random or independent
+- **Example**: If the data are time-dependent and you randomly shuffle, some future info might end up in training. Or if there are duplicates, the same entity might appear in the train and test
+- **Prevention**:
+  - Always perform rigorous deduplication before splitting your data
+  - Perform the split before applying any preprocessing steps (scaling, encoding, feature engineering)
+  - Ensure that there is no overlap between the splits
+  - For time-series data, respect the temporal order: models should only be trained on past data and evaluated on future data
+  - For datasets with non-independent observations (e.g., multiple entries per user), split by unique entities so that all records of an individual belong exclusively to one set
+
+**2. Leaking Through Preprocessing**:
+
+- **Subtle form**: If you normalize or impute data using the combined statistics of train+test
+- **Example**: Scaling features to 0-1 using the min and max of the entire dataset (including test) leaks knowledge of the test distribution into the train
+- **Another example**: If you do PCA on the entire dataset before splitting, the PCA components are influenced by test data variance
+- **Prevention**:
+  - Always fit preprocessing only on the training set, then apply it to validation/test
+  - This is exactly why scikit-learn's `Pipeline` (and similar constructs) are valuable—they ensure that any fitted transforms (like scalers) are fit on training data only
+  - Perform operations like scaling, encoding, feature selection inside the training pipeline
+  - Do not use global stats. For instance, use the training mean/STD for normalization of test data, not the global mean
+
+**3. Using Target-Derived Features**:
+
+- **Common mistake** in feature engineering
+- **Example**: Predicting whether a user will churn next month, and you accidentally include a feature like "number of logins in next month" which obviously includes the outcome
+- **Less obvious**: You include a summary that was computed including the target period
+- **Prevention**: Think carefully. Any feature that wouldn't be available at prediction time (or that uses information from the future relative to prediction) is a leakage risk. In pipelines, ensure that features are computed only from past data for the prediction timestamp. Feature stores often help here by doing point-in-time correct joins
+
+**4. Time-Series Leakage**:
+
+- **When data is time-dependent**, leakage can occur if future information is used
+- **Common cause**: Not respecting chronological order
+- **Example**: If predicting stock prices, you must not randomly shuffle the data during cross-validation, or you'll train on data from 2021 to predict 2020
+- **Another scenario**: Features that accumulate over time can leak if not careful. Imagine a feature "total sales to date": if you compute it for each record up to the current date, that's fine. But if you accidentally compute it using the full dataset, the later entries will have totals including future sales
+- **Prevention**:
+  - Use temporal splits (train on past, validate on later periods)
+  - If you compute cumulative features, ensure you cut off at the right timestamp for each training instance
+
+**5. Leakage Through Data Collection/Labeling Process**:
+
+- **Sometimes, the way data is collected** can introduce leakage
+- **Famous example**: Medical ML model predicting disease from X-ray images that seemed extremely accurate, but later found out that many "disease" images had a certain marker or scanner type that only the patients with that disease used; the model was picking up on the marker, not the disease itself
+- **Another case**: COVID-19 prediction model leaked because positive cases often came from certain hospitals (the model learned hospital origin, not actual patient data)
+- **Prevention**:
+  - Scrutinize how labels are generated
+  - Ensure that nothing in the features is inadvertently a proxy for the label
+  - If necessary, do data cleaning to remove or randomize such identifiers
+  - When splitting, stratify in a way that avoids easy proxies (like ensuring both train and test have data from all sources, if possible)
+
+**6. Human Leakage in Feature Engineering**:
+
+- **When a domain expert**, in constructing features, uses knowledge of the target
+- **Example**: Building a credit risk model, an engineer might think to include whether the customer eventually defaulted as a feature, which is obviously the target itself, but perhaps encoded differently
+- **Prevention**: It sounds silly, but it can happen in less blatant ways (like "account status at end of quarter" as a feature while trying to predict default in that quarter)
+
+**Data leakage can happen at any stage**: Data gathering, sampling, splitting, preprocessing, and feature engineering. Therefore, monitoring and testing for leakage are crucial throughout the ML lifecycle.
+
+**Detecting and Preventing Leakage**:
+
+**1. Holdout Validation**:
+
+- Always evaluate your model on data that was held out from any stage of training or feature creation
+- If performance drops drastically from training to holdout, suspect possible leakage or overfitting
+- Consistent methodology (like proper cross-validation) will surface if something is too good to be true
+
+**2. Feature Importance Analysis**:
+
+- Compute feature importances (for tree models) or use permutation importance on the validation set
+- If a particular feature is overwhelmingly important, inspect it; could it be leaking info?
+- Sometimes, a leaked feature is like a "cheat code" the model uses. For instance, if a feature accidentally leaks, the model will latch onto it with, say, 10x or more importance than other features
+- Domain knowledge helps here—check if any feature wouldn't realistically be available at prediction time
+
+**3. Null Models and Sanity Checks**:
+
+- Intentionally shuffle labels or use a time-shifted validation (e.g., predict last year from the previous year's model)
+- If your pipeline has leakage, a model might oddly still perform well even when it shouldn't, because it's using the leaked structure rather than the true signal
+- **Example**: Train on 2020 data, then test on 2019 (effectively backward in time, which should be nonsensical). Ideally, the performance should drop to random; if it doesn't, some time-leakage might be present
+
+**4. Ablation Studies**:
+
+- Systematically remove suspicious features or groups of features from your model and observe the impact on performance
+- If removing a feature like `scan_machine_id` causes performance to plummet from, say, 99% to 60%, you have likely found a leak
+
+**Quick Checklist**:
+
+- ✅ Perform train/val/test split early and never peek at test in any way (don't tune on it, don't fit on it)
+- ✅ When scaling or encoding, fit on train only
+- ✅ If oversampling (for imbalance), do it after splitting, not before (to avoid having oversampled points leak into the test)
+- ✅ For time series, use a time-based split; do not randomly shuffle across time
+- ✅ Label encoding of categorical data should be fitted only on the training set—especially for encodings based on statistics, like target encoding
+- ✅ If using cross-validation, ensure the folds are split on entire groups if needed (e.g., group K-fold by user to avoid the same user in multiple folds)
+
+**A Simple, Ideal and Leakage-Safe ML Pipeline**:
+
+**Key rule**: "Scale and normalize your data after splitting to avoid data leakage. Use statistics from only the train split, instead of the entire data, to scale your features and handle missing values."
+
+**In MLOps**: Automated checks for leakage are valuable. Some feature store frameworks ensure point-in-time correctness (i.e., when creating training data, they join features in a way that a given training example's features are only from prior timestamps). You can also build pipeline tests: for instance, train a model on what should be "impossible" scenarios (like predicting the past from the future) to see if it performs oddly well, indicating leakage.
+
+**Key takeaway**: Always imagine yourself at the moment of making a live prediction: only use data that would be available at that moment. Any data that comes later or from outside the training scope is off-limits for training. If in doubt, leave it out, or consult a teammate: "Is this feature leaking the target?". It's better to have a slightly less informed model than one that cheats and then fails in production.
+
+**EXAM TIP:** Questions about "data leakage" → think **train/test contamination**, **preprocessing leakage** (fit on train only), **target-derived features**, **time-series leakage** (temporal order), **data collection artifacts**. Questions about "preventing leakage" → think **split early**, **fit preprocessing on train only**, **point-in-time correctness**, **feature importance analysis**, **ablation studies**.
+
+**J. Feature Stores at Scale (Feast)**:
+
+**What is a Feature Store**: A feature store is a centralized data store and management system for ML features. Feast is a popular open source feature store.
+
+**Why Feature Stores**:
+
+In a production ML system, you might have many models using overlapping features. If each pipeline computes features independently, you get duplication, inconsistency, and maintenance headaches.
+
+**A feature store creates**:
+
+- **Single source of truth**: Compute feature X once and use it everywhere
+- **Online lookup**: Your serving code can query features by key with low latency
+- **Consistency**: Ensures the model in production uses the exact same logic and values as were used in training (avoiding training-serving skew)
+- **Point-in-time correctness**: Mechanisms to ensure no leakage from future data in feature computation
+
+**Benefits**:
+
+- Avoids recomputing features on the fly in production requests (which could be too slow or inconsistent)
+- Provides storage for feature values in two forms:
+  - **Offline store**: For training (historical feature data)
+  - **Online store**: For real-time lookup of the latest feature values for serving predictions
+
+**Feast Architecture (Brief)**:
+
+Feast decouples feature computation and storage. We define features in a feature repository.
+
+**Key Concepts**:
+
+**1. Entity**:
+
+- The primary key of a feature
+- Entities have value types
+- **Example**: `customer_id` is an entity
+
+**2. Feature View**:
+
+- A definition of a group of features (with a certain schema and entity) and how to get their data
+- Includes the data source for computing the feature
+- **Example**: `customer_stats` FeatureView contains features like `total_purchases`, `avg_order_value`, etc., all tied to the `customer_id` entity
+
+**3. Offline Store**:
+
+- Where historical feature data is stored
+- **Feast supports**: BigQuery, Redshift, file system, etc., as an offline store
+- Used for generating training datasets
+
+**4. Online Store**:
+
+- A fast key-value store for serving features to models
+- **Feast supports**: Redis, DynamoDB, etc., as online stores
+- Used for real-time feature lookups during inference
+
+**5. Feature Service**:
+
+- Groupings of features for convenience in retrieval
+- Allows you to bundle multiple FeatureViews together
+
+**How Feast Works**:
+
+- **Define features in code**: Features are defined in a feature repository (YAML + Python)
+- **Materialize to stores**: Feast allows you to materialize features to both offline and online stores
+- **Point-in-time correctness**: When you do a training dataset generation, Feast does a point-in-time join—if you give it entity primary keys and timestamps and labels, it will fetch feature values as of that timestamp (so it doesn't use data from after the prediction time)
+- **Consistency**: Feature definitions (transformations, sources) are in one place. If you update how a feature is computed, you update it in Feast and recompute. Both offline and online will reflect that
+
+**Hands-On: Feast-Backed ML Data Pipeline**:
+
+**Objective**: Simulate a compact end-to-end feature pipeline using Pandas, NumPy, Scikit-learn, and Feast.
+
+**Key Steps**:
+
+**1. Repository & Configuration Bootstrap**:
+
+- Create a Feast repo (`feast_telco_repo`)
+- Configure Feast with:
+  - **Offline store**: `type: file` (Feast reads Parquet/CSV from disk)
+  - **Online store**: SQLite DB for quick demo serving
+  - **Registry file**: To track applied objects
+
+**2. Data Sources & Feature Definitions**:
+
+- Fetch dataset (e.g., Telco customer churn dataset)
+- Perform basic cleaning operations
+- Define features of interest (numerical and categorical)
+- Simulate timestamps:
+  - `feature_ts`: When features were available
+  - `label_ts`: `feature_ts + 30 days` (prediction horizon)
+  - `created_at`: `feature_ts + 5 minutes` (ingestion lag)
+- **Principle**: Separation of feature time and label time is the foundation for point-in-time correctness
+
+**3. Label Encoding for Feast**:
+
+- Feast's Int64 fields can't store raw strings, so create an encoded copy for storage
+- Keep the original strings for model training later
+- **Important**: This encoding is not used by the model. The model uses sklearn's OneHotEncoder after splitting. Hence, no leakage.
+
+**4. Persist Feature & Label Tables**:
+
+- Create two artifacts:
+  - `telco_features.parquet` → Input features for Feast's offline store
+  - `entity_labels.parquet` → Labels + timestamps for ML training
+- Enables Feast to do its time-travel join (`get_historical_features()`), ensuring:
+  - Training data uses only past features
+  - No data leakage from the future
+
+**5. Define Feast Objects**:
+
+```python
+# Entity: Primary key
+customer = Entity(
+    name="customer_id",
+    join_keys=["customer_id"],
+    value_type=ValueType.STRING
+)
+
+# FileSource: Where to find raw feature data
+source = FileSource(
+    path="data/telco_features.parquet",
+    timestamp_field="event_timestamp",
+    created_timestamp_column="created_at"
+)
+
+# Schema: Feature fields and their data types
+schema = Schema([
+    Field(name="total_charges", dtype=Float32),
+    Field(name="monthly_charges", dtype=Float32),
+    # ... more features
+])
+
+# FeatureView: Logical grouping of features
+customer_stats = FeatureView(
+    name="customer_stats",
+    entities=[customer],
+    ttl=timedelta(days=365),
+    schema=schema,
+    source=source,
+    online=True
+)
+
+# FeatureStore: Manage interaction with Feast repo
+store = FeatureStore(repo_path="feast_telco_repo")
+store.apply([customer, customer_stats])
+```
+
+**6. Retrieve Point-in-Time Features and Temporal Splitting**:
+
+```python
+# entity_df: Table with (customer_id, event_timestamp, label)
+entity_df = pd.DataFrame({
+    "customer_id": df["customer_id"],
+    "event_timestamp": df["label_ts"],
+    "label": df["churn"]
+})
+
+# get_historical_features(): Point-in-time join
+training_df = store.get_historical_features(
+    entity_df=entity_df,
+    features=["customer_stats:total_charges", "customer_stats:monthly_charges", ...]
+).to_df()
+
+# Temporal split (not random!)
+timestamps = training_df["event_timestamp"].sort_values()
+split_idx_70 = int(len(timestamps) * 0.7)
+split_idx_85 = int(len(timestamps) * 0.85)
+
+train_df = training_df[training_df["event_timestamp"] <= timestamps.iloc[split_idx_70]]
+valid_df = training_df[(training_df["event_timestamp"] > timestamps.iloc[split_idx_70]) &
+                       (training_df["event_timestamp"] <= timestamps.iloc[split_idx_85])]
+test_df = training_df[training_df["event_timestamp"] > timestamps.iloc[split_idx_85]]
+```
+
+**7. Preprocessing + Model Pipeline**:
+
+```python
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+from sklearn.linear_model import LogisticRegression
+
+# Numeric pipeline
+numeric_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="mean")),
+    ("scaler", StandardScaler())
+])
+
+# Categorical pipeline
+categorical_pipeline = Pipeline([
+    ("imputer", SimpleImputer(strategy="most_frequent")),
+    ("onehot", OneHotEncoder(handle_unknown="ignore"))
+])
+
+# ColumnTransformer
+preprocessor = ColumnTransformer([
+    ("numeric", numeric_pipeline, numeric_cols),
+    ("categorical", categorical_pipeline, categorical_cols)
+])
+
+# Full pipeline
+pipeline = Pipeline([
+    ("preprocessor", preprocessor),
+    ("classifier", LogisticRegression(class_weight="balanced"))
+])
+
+# Fit on training only (no leakage)
+pipeline.fit(X_train, y_train)
+```
+
+**8. Materialize to Online & Feature Lookup**:
+
+```python
+# Materialization: Load feature data from offline source into online store
+store.materialize_incremental(end_date=datetime.now())
+
+# Feature Service: Group features for convenience
+bundle = FeatureService(
+    name="customer_bundle",
+    features=[customer_stats]
+)
+
+# Online lookup (serving-style query)
+online_features = store.get_online_features(
+    entity_rows=[{"customer_id": "123"}, {"customer_id": "456"}],
+    features=bundle
+).to_dict()
+```
+
+**Key Takeaways from Feast Demo**:
+
+- **Point-in-time correctness**: Feast ensures features available at training time are the same as those that would have been available in production
+- **Temporal splits**: Use chronological splits (not random) to mimic the real world
+- **Leakage prevention**: Strict separation of feature time and label time
+- **Training-serving consistency**: Online lookups use the same FeatureView/Service as offline training
+- **Single source of truth**: Feature definitions in one place, used everywhere
+
+**EXAM TIP:** Questions about "feature stores" → think **single source of truth**, **offline store** (training) vs **online store** (serving), **point-in-time correctness**, **training-serving consistency**. Questions about "Feast" → think **Entity** (primary key), **FeatureView** (group of features), **get_historical_features()** (point-in-time join), **materialize** (load to online store).
+
 **G. Data Labeling and Annotation**:
 
 - For supervised ML problems requiring labels (ground truth)
