@@ -5203,6 +5203,259 @@ approval_app = approval_graph.compile(
 )
 ```
 
+#### LangGraph: Memory Optimization Fundamentals
+
+**Why memory optimization matters**: Memory management is crucial for production AI agents. While context windows are increasing (100K, 200K, 1M tokens), simply throwing everything into a prompt breaks down in production due to cost, latency, and reliability issues.
+
+**The context problem in production**:
+
+1. **Cost**: Every token sent to LLM costs money. Sending massive 200K-token conversation history on every turn is financially unsustainable
+2. **Latency**: Injecting enormous contexts leads to high inference latency (10-15 seconds), failing production requirements
+3. **Reliability**: Including everything doesn't mean the agent will use it. "Needle in a Haystack" research shows information buried deep in massive context is often ignored
+4. **Recency decay**: LLMs suffer from recency decay—crucial recent instructions can be forgotten if surrounded by verbose history
+
+**Memory vs Knowledge vs Tools**:
+
+| Aspect          | Memory                                             | Knowledge                                     | Tools                        |
+| --------------- | -------------------------------------------------- | --------------------------------------------- | ---------------------------- |
+| **Nature**      | Dynamic, contextual                                | Static, global                                | On-demand actions            |
+| **Content**     | Conversation history, user preferences, task state | Knowledge base, documentation, training facts | Web search, calculator, APIs |
+| **Persistence** | Changes based on interactions                      | Doesn't change based on interactions          | No inherent memory           |
+| **Example**     | "User likes pizza without capsicum"                | Employee handbook PDF                         | Web search API               |
+
+**Key insight**: Memory is not a property of the model itself—it's a system design problem. Memory is an active process of strategic placement, not passive storage.
+
+**LangGraph memory architecture**:
+
+LangGraph provides a two-layer memory system:
+
+1. **Short-term memory (Thread-level)**: Continuity within a single conversation session
+2. **Long-term memory (Cross-thread)**: Persistence across sessions, user profiles, preferences
+
+**Core building blocks**:
+
+- **State**: Data that flows through the graph (TypedDict)
+- **Nodes**: Functions that read and update state
+- **Edges**: Control flow between nodes (can be conditional)
+- **Threads**: Containers for conversation history (identified by `thread_id`)
+- **Checkpoints**: Snapshots of graph state at specific moments
+- **Stores**: Persistent storage for long-term memory (namespaced)
+
+**Baseline Agent (No Memory)**:
+
+```python
+from langgraph.graph import StateGraph, START, END
+from typing_extensions import TypedDict
+from langchain_openai import ChatOpenAI
+
+class AgentState(TypedDict):
+    user_input: str
+    response: str
+
+llm = ChatOpenAI(model="gpt-4o")
+
+def llm_node(state: AgentState) -> dict:
+    messages = [
+        {"role": "system", "content": "You are a helpful assistant."},
+        {"role": "user", "content": state["user_input"]}
+    ]
+    reply = llm.invoke(messages)
+    return {"response": reply.content}
+
+# Build graph
+graph = StateGraph(AgentState)
+graph.add_node("llm", llm_node)
+graph.add_edge(START, "llm")
+graph.add_edge("llm", END)
+
+app = graph.compile()
+
+# Invoke (stateless)
+result = app.invoke({"user_input": "What is AI?"})
+# Next call has no memory of previous interaction
+```
+
+**Problems with stateless agent**:
+
+- Every request is independent
+- No conversation history
+- Cannot handle follow-up questions
+- Users must repeat themselves constantly
+- No personalization
+
+**Agent with Memory**:
+
+**1. Threads**: Container for conversation history
+
+```python
+# All calls with same thread_id belong to same conversation
+config = {"configurable": {"thread_id": "user-123"}}
+result1 = app.invoke({"user_input": "What is AI?"}, config)
+result2 = app.invoke({"user_input": "Tell me more"}, config)  # Remembers previous
+```
+
+**2. Checkpoints**: Snapshots of state at each step
+
+```python
+from langgraph.checkpoint.memory import MemorySaver
+
+# Enable checkpointing
+app = graph.compile(checkpointer=MemorySaver())
+
+# Checkpoints automatically created after each node execution
+# Each checkpoint contains:
+# - values: current state channels
+# - config: thread_id, checkpoint_id
+# - next: which nodes should run next
+# - metadata: which node wrote what state
+# - tasks: pending tasks or interruptions
+```
+
+**3. Short-term memory layer**:
+
+```python
+from typing import Annotated
+from langchain_core.messages import HumanMessage, AIMessage
+import operator
+
+class MessagesState(TypedDict):
+    messages: Annotated[list, operator.add]  # Append, don't replace
+
+def chat_llm(state: MessagesState) -> dict:
+    # Build prompt with full conversation history
+    system_msg = {"role": "system", "content": "You are a helpful assistant."}
+    all_messages = [system_msg] + state["messages"]
+
+    reply = llm.invoke(all_messages)
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Compile with checkpointer for persistence
+app = StateGraph(MessagesState)
+app.add_node("chat", chat_llm)
+app.add_edge(START, "chat")
+app.add_edge("chat", END)
+
+app = app.compile(checkpointer=MemorySaver())
+
+# Multi-turn conversation
+config = {"configurable": {"thread_id": "user-123"}}
+
+# Turn 1
+app.invoke({"messages": [HumanMessage(content="What is AI?")]}, config)
+
+# Turn 2 (automatically loads previous checkpoint)
+app.invoke({"messages": [HumanMessage(content="Tell me more")]}, config)
+```
+
+**How short-term memory works**:
+
+1. **First call**: LangGraph stores checkpoint with user message + AI reply
+2. **Second call**: LangGraph loads latest checkpoint, merges new message into existing list
+3. **LLM sees**: Full conversation history from both turns
+4. **Checkpointer handles**: All state management automatically
+
+**Inspecting memory**:
+
+```python
+# Get latest state snapshot
+state = app.get_state(config)
+print(state.values)  # Current state
+print(state.metadata)  # Token usage, latency info
+
+# Get full checkpoint history
+history = app.get_state_history(config)
+for checkpoint in history:
+    print(f"Step {checkpoint.metadata['step']}: {checkpoint.values}")
+```
+
+**4. Long-term memory (Stores)**:
+
+```python
+from langgraph.checkpoint.memory import MemorySaver
+from langgraph.graph.store import InMemoryStore
+
+# Create store for long-term memory
+store = InMemoryStore()
+
+# Define namespace (like folders)
+namespace = ("user-123", "memories")
+
+# Write memory
+store.put(
+    namespace=namespace,
+    id="preference-1",
+    value={"type": "food_preference", "content": "User likes pizza without capsicum"}
+)
+
+# Retrieve memories
+memories = store.search(namespace=namespace)
+latest_memory = memories[0].value  # Newest first
+```
+
+**Long-term memory characteristics**:
+
+- **Persistent**: Survives thread end, unlike short-term memory
+- **Namespaced**: Organized by user_id, project, or custom structure
+- **Searchable**: Can perform vector-based semantic search
+- **Cross-session**: Available to new threads/sessions
+
+**Combining short-term and long-term memory**:
+
+```python
+# Pattern: Use both layers together
+class AgentState(TypedDict):
+    messages: Annotated[list, operator.add]  # Short-term
+    retrieved_memories: list  # Long-term memories loaded for this turn
+
+def retrieve_memories_node(state: AgentState) -> dict:
+    # Query long-term store
+    namespace = ("user-123", "memories")
+    memories = store.search(namespace=namespace)
+
+    # Inject into state
+    return {"retrieved_memories": [m.value for m in memories]}
+
+def chat_node(state: AgentState) -> dict:
+    # Build prompt with:
+    # 1. Short-term: conversation history (from messages)
+    # 2. Long-term: retrieved memories (from store)
+    context = f"User preferences: {state['retrieved_memories']}"
+    messages = [{"role": "system", "content": context}] + state["messages"]
+
+    reply = llm.invoke(messages)
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Graph flow
+graph = StateGraph(AgentState)
+graph.add_node("retrieve", retrieve_memories_node)
+graph.add_node("chat", chat_node)
+graph.add_edge(START, "retrieve")
+graph.add_edge("retrieve", "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(
+    checkpointer=MemorySaver(),  # Short-term memory
+    # Store passed separately for long-term memory
+)
+```
+
+**Memory architecture summary**:
+
+- **Short-term memory**: State in checkpoints, keyed by `thread_id`
+- **Long-term memory**: Data in Store, namespaced by user/project
+- **Checkpoints**: Timeline of how memory evolves
+- **Config layer**: `thread_id` routes to correct checkpoint/thread
+
+**Key takeaways**:
+
+- Memory is a system design problem, not a model property
+- Short-term memory = state carried forward across steps/invocations
+- Long-term memory = information persisted in store, retrieved later
+- Checkpoints provide full timeline for inspection and debugging
+- Production requires optimization (not covered here, see Part B)
+
+**EXAM TIP:** Questions about "conversation continuity" or "multi-turn interactions" → think **threads** and **checkpoints**. Questions about "cross-session memory" or "user preferences" → think **long-term memory** with **Stores**. Questions about "memory optimization" → think **cost, latency, reliability** challenges in production.
+
 ---
 
 ### Framework Comparison: When to Use What
