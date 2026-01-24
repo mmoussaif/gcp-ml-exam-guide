@@ -850,7 +850,316 @@ mlflow.sklearn.save_model(
 - **Model loading**: Load registered models by name and version
 - **Lineage**: Track which run produced which model
 
-**EXAM TIP:** Questions about "reproducibility" → think **random seeds + version control + environment management**. Questions about "data versioning" → think **DVC** (doesn't store data in Git, stores hashes/references). Questions about "experiment tracking" → think **MLflow** or **Weights & Biases** (log parameters, metrics, models, code version, data version). Questions about "model registry" → think **versioned models with metadata and lineage**.
+**4. Weights & Biases (W&B) for Reproducible ML**:
+
+**W&B Philosophy**: "The developer-first MLOps platform" - cloud-based, focused on experiment tracking, dataset/model versioning, and collaboration. Central thesis: highest-leverage activity in ML is the cycle of training → tracking → comparing → deciding what to try next.
+
+**MLflow vs W&B Comparison**:
+
+| Feature / Aspect        | MLflow                                     | Weights & Biases (W&B)                                            |
+| ----------------------- | ------------------------------------------ | ----------------------------------------------------------------- |
+| **Nature**              | Open-source, self-hosted (local or server) | Cloud-first, hosted (free & paid tiers)                           |
+| **Experiment Tracking** | Logs parameters, metrics, artifacts        | Similar but with richer visualizations                            |
+| **UI**                  | Basic web UI, simple plots                 | Advanced dashboard with interactive charts                        |
+| **Collaboration**       | Limited                                    | Strong: team dashboards, reporting                                |
+| **Artifacts Storage**   | Local (default)                            | Hosted (or external bucket with integration)                      |
+| **Ease of Use**         | Simple Python API, more manual config      | User-friendly, lots of integrations (PyTorch, Keras, HuggingFace) |
+| **Offline Use**         | Fully possible (local logging + UI)        | Offline possible, but main strength is online                     |
+| **Best For**            | Local/enterprise setups, custom infra      | Fast setup, collaboration, visualization-heavy workflows          |
+
+**Why W&B if you know MLflow?**:
+
+- **Managed vs self-hosted**: W&B offers fully managed SaaS; MLflow usually needs tracking server
+- **Richer visualizations**: W&B offers better dashboards and collaboration out of the box
+- **Seamless integration**: Artifact storage and model registry integrated seamlessly
+- **Team-oriented**: Easy sharing and reporting
+
+**Core takeaway**: W&B cuts infra overhead and boosts collaboration/visualization, while MLflow is leaner but self-managed. Choice depends on use case.
+
+**W&B Key Concepts**:
+
+- **Project**: Groups runs together (similar to MLflow "Experiment")
+- **Run**: Single execution of ML workflow within project
+- **Artifacts**: Versioned, cloud-backed folders for datasets, models, etc.
+- **Registry**: Centralized, curated space for candidate artifacts (production/staging)
+- **Lineage**: Visual graph showing data → preprocessing → training → model flow
+
+**A. Dataset Versioning with W&B Artifacts**:
+
+```python
+import wandb
+import pandas as pd
+from sklearn.datasets import fetch_california_housing
+
+# Initialize run
+run = wandb.init(
+    project="house-price-prediction",
+    job_type="upload-dataset"
+)
+
+# Fetch and save data
+housing = fetch_california_housing()
+df = pd.DataFrame(housing.data, columns=housing.feature_names)
+df['target'] = housing.target
+df.to_csv('california_housing.csv', index=False)
+
+# Create artifact
+artifact = wandb.Artifact(
+    name='california-housing-raw',
+    type='dataset',
+    description='Raw California housing dataset'
+)
+artifact.add_file('california_housing.csv')
+
+# Log artifact (creates version v0, aliased as 'latest')
+run.log_artifact(artifact)
+run.finish()
+```
+
+**B. Experiment Tracking with scikit-learn Integration**:
+
+```python
+import wandb
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error, r2_score
+
+# Initialize run with config
+run = wandb.init(
+    project="house-price-prediction",
+    job_type="train",
+    config={
+        "n_estimators": 100,
+        "max_depth": 10,
+        "random_state": 42
+    },
+    tags=["random-forest", "regression"]
+)
+
+# Use dataset artifact (declares dependency, downloads data)
+artifact = run.use_artifact('california-housing-raw:latest')
+artifact_dir = artifact.download()
+df = pd.read_csv(f'{artifact_dir}/california_housing.csv')
+
+# Prepare data
+X = df.drop('target', axis=1)
+y = df['target']
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+# Train model
+model = RandomForestRegressor(**wandb.config)
+model.fit(X_train, y_train)
+
+# Evaluate and log metrics
+y_pred = model.predict(X_test)
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+
+wandb.log({
+    "mse": mse,
+    "r2": r2
+})
+
+# Auto-log sklearn visualizations
+wandb.sklearn.plot_regressor(
+    model, X_train, X_test, y_train, y_test,
+    model_name="RandomForest"
+)
+
+# Save and version model
+import joblib
+joblib.dump(model, 'model.joblib')
+
+model_artifact = wandb.Artifact(
+    name='house-price-rf-regressor',
+    type='model',
+    metadata={'mse': mse, 'r2': r2}
+)
+model_artifact.add_file('model.joblib')
+run.log_artifact(model_artifact)
+
+run.finish()
+```
+
+**C. Multi-Stage Data Pipeline with Artifacts**:
+
+```python
+# Stage 1: Data Ingestion
+run1 = wandb.init(project="sales-forecasting", job_type="ingest-data")
+# Fetch raw data, save to CSV
+raw_artifact = wandb.Artifact('raw-sales-data', type='dataset')
+raw_artifact.add_file('raw_sales.csv')
+run1.log_artifact(raw_artifact)
+run1.finish()
+
+# Stage 2: Data Preprocessing
+run2 = wandb.init(project="sales-forecasting", job_type="preprocess-data")
+# Use raw artifact
+raw_artifact = run2.use_artifact('raw-sales-data:latest')
+artifact_dir = raw_artifact.download()
+df = pd.read_csv(f'{artifact_dir}/raw_sales.csv')
+
+# Preprocess (clean, aggregate, split)
+# ... preprocessing code ...
+train_df.to_csv('train.csv', index=False)
+val_df.to_csv('validation.csv', index=False)
+
+# Log processed artifact
+processed_artifact = wandb.Artifact('processed-sales-data', type='processed_dataset')
+processed_artifact.add_file('train.csv')
+processed_artifact.add_file('validation.csv')
+run2.log_artifact(processed_artifact)
+run2.finish()
+```
+
+**Lineage Graph**: W&B automatically creates visual graph showing `raw-sales-data` → `preprocess-data` run → `processed-sales-data`. Provides audit trail: "How was this model created?"
+
+**D. PyTorch Integration with Gradient Tracking**:
+
+```python
+import torch
+import torch.nn as nn
+import wandb
+
+# Define LSTM model
+class LSTMModel(nn.Module):
+    def __init__(self, input_size, hidden_size, num_layers):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True)
+        self.fc = nn.Linear(hidden_size, 1)
+
+    def forward(self, x):
+        lstm_out, _ = self.lstm(x)
+        return self.fc(lstm_out[:, -1, :])
+
+# Initialize run
+run = wandb.init(
+    project="sales-forecasting",
+    job_type="train",
+    config={
+        "learning_rate": 0.001,
+        "epochs": 50,
+        "hidden_size": 64,
+        "num_layers": 2
+    }
+)
+
+# Use processed data artifact
+artifact = run.use_artifact('processed-sales-data:latest')
+artifact_dir = artifact.download()
+train_df = pd.read_csv(f'{artifact_dir}/train.csv')
+val_df = pd.read_csv(f'{artifact_dir}/validation.csv')
+
+# Create model, loss, optimizer
+model = LSTMModel(1, wandb.config.hidden_size, wandb.config.num_layers)
+criterion = nn.MSELoss()
+optimizer = torch.optim.Adam(model.parameters(), lr=wandb.config.learning_rate)
+
+# Watch model (automatically tracks gradients and parameters)
+wandb.watch(model, log_freq=100)
+
+# Training loop
+best_loss = float('inf')
+for epoch in range(wandb.config.epochs):
+    # Training phase
+    model.train()
+    train_losses = []
+    for batch in train_loader:
+        optimizer.zero_grad()
+        # Reinitialize LSTM hidden state
+        hidden = None
+        pred = model(batch['sequence'].unsqueeze(-1))
+        loss = criterion(pred, batch['target'])
+        loss.backward()
+        optimizer.step()
+        train_losses.append(loss.item())
+
+    avg_train_loss = np.mean(train_losses)
+
+    # Validation phase
+    model.eval()
+    val_losses = []
+    with torch.no_grad():
+        for batch in val_loader:
+            hidden = None
+            pred = model(batch['sequence'].unsqueeze(-1))
+            loss = criterion(pred, batch['target'])
+            val_losses.append(loss.item())
+
+    avg_val_loss = np.mean(val_losses)
+
+    # Log metrics
+    wandb.log({
+        "epoch": epoch,
+        "train_loss": avg_train_loss,
+        "val_loss": avg_val_loss
+    })
+
+    # Save best model checkpoint
+    if avg_val_loss < best_loss:
+        best_loss = avg_val_loss
+        checkpoint = {
+            'model_state_dict': model.state_dict(),
+            'scaler': scaler,  # If using StandardScaler
+            'config': wandb.config
+        }
+        torch.save(checkpoint, 'best_model_bundle.pth')
+
+        # Version model artifact
+        model_artifact = wandb.Artifact(
+            name='sales-forecasting-lstm',
+            type='model',
+            metadata={'epoch': epoch, 'val_loss': avg_val_loss}
+        )
+        model_artifact.add_file('best_model_bundle.pth')
+        run.log_artifact(model_artifact, aliases=['best', f'epoch_{epoch}'])
+
+run.finish()
+```
+
+**Key W&B PyTorch Features**:
+
+- **wandb.watch()**: Automatically logs gradients and parameters (histograms), model topology
+- **Gradient monitoring**: Detect vanishing/exploding gradients, identify unstable training
+- **Checkpoint versioning**: Save model checkpoints as artifacts with aliases (`best`, `epoch_N`)
+- **Lineage tracking**: See if new data version introduced in run
+
+**E. Model Registry**:
+
+**Purpose**: Centralized, curated space for candidate artifacts (only few models are candidates for production/staging, not all artifacts).
+
+**Workflow**:
+
+1. **Create registry** in W&B UI (Registry option in sidebar)
+2. **Link model to registry**: On artifact page, click "Link to Registry"
+3. **Assign aliases**: `staging`, `production`, `latest` (pointers for deployment scripts)
+4. **Programmatic access**: `wandb.use_artifact('registry-name/model-name:staging')`
+
+**Benefits**:
+
+- Decouple production/staging systems from rapid experimentation iteration
+- Deployment scripts pull by alias, not hardcoded version numbers
+- Clear promotion path: experiment → staging → production
+
+**F. Complete Workflow Summary**:
+
+1. **Version dataset**: Create artifact, log to W&B
+2. **Track training**: Use dataset artifact, log parameters/metrics, version model
+3. **Lineage graph**: Visual audit trail (data → preprocessing → training → model)
+4. **Register model**: Link best model to registry with aliases
+5. **Deploy**: Pull model from registry by alias
+
+**Key Advantages of W&B**:
+
+- **Interactive UI**: Rich dashboards, visualizations, comparison tools
+- **Automatic lineage**: Visual graph created automatically from artifact usage
+- **Deep learning focus**: Gradient tracking, parameter histograms, model topology
+- **Collaboration**: Team dashboards, reporting, easy sharing
+- **Managed service**: No infrastructure overhead (vs self-hosted MLflow)
+
+**EXAM TIP:** Questions about "reproducibility" → think **random seeds + version control + environment management**. Questions about "data versioning" → think **DVC** (doesn't store data in Git, stores hashes/references) or **W&B Artifacts** (versioned cloud-backed folders). Questions about "experiment tracking" → think **MLflow** (self-hosted, flexible) or **Weights & Biases** (cloud-first, rich visualizations, collaboration). Questions about "model registry" → think **versioned models with metadata and lineage**. Questions about "gradient tracking in deep learning" → think **wandb.watch()** for automatic gradient/parameter logging.
 
 ```mermaid
 flowchart LR
