@@ -540,87 +540,7 @@ The approach depends on whether the missingness itself carries information:
 
 **EXAM TIP:** Categorical feature A has predictive power but is sometimes missing → Add missing class + binary indicator.
 
-**EXAM TIP:** Important numeric feature is missing and you can’t drop rows → consider **model-based imputation** (e.g., regression to estimate missing values) rather than filling with zero.
-
-### 1.9 EXPLORATORY DATA ANALYSIS (EDA) BASICS (often tested)
-
-EDA is for quickly understanding data quality and relationships before modeling.
-
-- **Correlation matrix**: summarizes linear relationships between variables
-- **Scatter plot**: visual check of relationship + anomalies/outliers
-- **Box plot**: distribution + outlier detection
-
-**EXAM TIP:** Need quick visuals + correlation stats on GCP → use **Vertex AI Workbench notebooks** (pandas/seaborn).  
-**EXAM TIP:** Need a shareable, filterable stakeholder dashboard on BigQuery → **Looker Studio** (not TensorBoard).
-
-#### Data quality dimensions (common definitions)
-
-- **Accuracy**: correctness of values (are they right?)
-- **Completeness**: missingness rate (% missing)
-- **Consistency**: do values follow expected formats/rules across sources/time?
-- **Duplication**: repeated records that bias training/evaluation
-
-**EXAM TIP:** “Completeness metric” → missing data percentage.
-
-#### Descriptive statistics (central tendency + spread + shape)
-
-- **Central tendency**: mean / median / mode
-- **Spread**: variance / standard deviation / IQR
-- **Shape**: skewness (skewness coefficient), kurtosis
-
-**EXAM TIP:** “Spread of a dataset” → variance (or standard deviation).  
-**EXAM TIP:** “Skewness in distribution” → skewness coefficient.
-
-#### Central Limit Theorem (CLT)
-
-Even if the underlying distribution is not normal, the distribution of the sample mean tends toward normal as sample size grows.
-
-**EXAM TIP:** CLT is a probability/distribution concept; it explains why normal approximations often work for large samples.
-
-#### Hypothesis testing (what it is)
-
-Used to assess whether an observed effect is statistically significant (e.g., A/B test outcomes).
-
-**EXAM TIP:** Hypothesis tests evaluate significance; they do not “tune” models directly.
-
-#### Normalization Techniques
-
-| Technique                 | Method                   | When to Use                            |
-| ------------------------- | ------------------------ | -------------------------------------- |
-| Min-Max Scaling           | Scale to [0,1] or [-1,1] | Bounded data, neural networks          |
-| Z-Score (Standardization) | (x - μ) / σ              | Unbounded data, assumes roughly normal |
-| Log Scaling               | log(x)                   | Highly skewed distributions            |
-| Feature Clipping          | Cap values at min/max    | Remove outliers                        |
-
-**COMMON TRAP:** z-test is a statistical TEST, not a normalization technique. z-score IS normalization.
-
-#### One-hot encoding across train/test
-
-One-hot encoding must be fit on the training categories and applied consistently:
-
-- If a category is **absent in test**, that column is just all zeros (this is fine)
-- If an **unseen category appears in serving**, use an “unknown” bucket / hashing / embeddings
-
-**EXAM TIP:** One-hot encode train and test consistently (don’t reshuffle the split just because a category is missing in one subset).
-
-#### Feature Engineering Techniques
-
-- **Feature Cross**: Combine categorical features (e.g., [country × language]). Creates interaction features. For TABULAR data, not CNN.
-- **Bucketization**: Convert continuous variable into categorical bins (e.g., age → age_group)
-- **BigQuery ML**: QUANTILE_BUCKETIZE function creates equal-frequency buckets
-
-**COMMON TRAP:** Feature Cross is for TABULAR data feature engineering, NOT for CNN. CNN uses convolution kernels.
-
-##### Location-Based Feature Engineering
-
-For models predicting outcomes based on geographic location:
-
-- **Best Practice**: Feature cross of latitude × longitude, followed by BINNING
-- **Why binning**: Raw lat/long coordinates are too granular; binning creates meaningful geographic regions
-- **Output**: Use the direct target (e.g., profit) rather than intermediate values (revenue, expenses)
-
-**EXAM TIP:** Predict profit by location → Feature cross lat×long + binning as features, profit as single output.  
-**COMMON TRAP:** Don't use revenue AND expenses as separate outputs when profit is the actual target.
+**EXAM TIP:** Important numeric feature is missing and you can't drop rows → consider **model-based imputation** (e.g., regression to estimate missing values) rather than filling with zero.
 
 ### 1.8 DATA SPLITTING
 
@@ -665,3 +585,5 @@ When your product evolves, your test set should evolve too:
 - **NOT**: Replace test set entirely (lose ability to compare with historical performance)
 
 **EXAM TIP:** New products added → Extend test dataset with new examples.
+
+### 1.9 EXPLORATORY DATA ANALYSIS (EDA) BASICS (often tested)

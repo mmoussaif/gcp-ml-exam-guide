@@ -43,6 +43,24 @@ flowchart LR
   K -->|Drift/alerts| B
 ```
 
+### 4.0.1 Data preparation & processing system basics (exam-level)
+
+These show up as "data systems design" questions:
+
+- **Data ingestion**: Collect/acquire data from sources into your platform
+- **Data transformation**: Convert/clean data into analysis-ready formats (ETL/ELT)
+- **Data warehousing**: Central store for analytics (in GCP this is typically **BigQuery**)
+- **Data governance**: Policies/standards for how data is managed/used (security, access, compliance)
+
+**EXAM TIP:** "Data warehousing" → storing/managing data for analytics (BigQuery in GCP).
+
+#### Data lake vs data warehouse
+
+- **Data lake**: low-cost storage for raw, unstructured/semi-structured data (GCP: **Cloud Storage**)
+- **Data warehouse**: optimized for analytical queries (GCP: **BigQuery**)
+
+**EXAM TIP:** "Data lake advantage" → low storage cost for raw data (not optimized for transactions).
+
 ### 4.0.2 OPERATING DATA PIPELINES IN PRODUCTION (Test-style)
 
 #### Reliability of pipeline changes
@@ -68,25 +86,7 @@ flowchart LR
 - **Cloud Scheduler**: cron-style scheduling for pipeline tasks
 - **Cloud Tasks**: asynchronous task queue (retries/backoff for jobs)
 
-**EXAM TIP:** “Run pipeline tasks on a schedule” → **Cloud Scheduler**.
-
-### 4.0.1 Data preparation & processing system basics (exam-level)
-
-These show up as “data systems design” questions:
-
-- **Data ingestion**: Collect/acquire data from sources into your platform
-- **Data transformation**: Convert/clean data into analysis-ready formats (ETL/ELT)
-- **Data warehousing**: Central store for analytics (in GCP this is typically **BigQuery**)
-- **Data governance**: Policies/standards for how data is managed/used (security, access, compliance)
-
-**EXAM TIP:** “Data warehousing” → storing/managing data for analytics (BigQuery in GCP).
-
-#### Data lake vs data warehouse
-
-- **Data lake**: low-cost storage for raw, unstructured/semi-structured data (GCP: **Cloud Storage**)
-- **Data warehouse**: optimized for analytical queries (GCP: **BigQuery**)
-
-**EXAM TIP:** “Data lake advantage” → low storage cost for raw data (not optimized for transactions).
+**EXAM TIP:** "Run pipeline tasks on a schedule" → **Cloud Scheduler**.
 
 ### 4.1 EVENT-DRIVEN TRAINING
 
@@ -277,44 +277,6 @@ Consider business requirements. If you need to minimize cost and have clear succ
 
 **EXAM TIP:** Monitor model performance, minimize cost → Weekly BigQuery query (not Vertex AI Monitoring).
 
-### 4.11 CONTINUOUS TRAINING (CT) PATTERN
-
-Automatically retrain when new ground truth arrives, but only promote the model if it meets a quality gate.
-
-**EXAM TIP:** “Retrain automatically on new verified labels and only deploy if thresholds are met” → **Continuous Training (CT)** with evaluation gate.
-
-#### Cost-aware labeling and retraining cadence
-
-If labels are expensive and you don’t want to label at a fixed cadence:
-
-- **Step 1**: Detect **skew/drift** first (training vs serving feature distribution)
-- **Step 2**: Only when skew is detected, **sample** recent serving data for labeling/evaluation
-- **Step 3**: Retrain when performance drops or drift is confirmed
-
-**EXAM TIP:** Minimize labeling cost → run skew/drift checks frequently, label **only when skew is detected** (not “label every N weeks”).
-
-### 4.10 PRODUCTION READINESS CHECKS (MLOps)
-
-When features/data, model code, and infra are “done”, a key remaining readiness check is operational:
-
-- **Monitoring**: Track live model performance + data drift/skew and alerting
-
-**EXAM TIP:** “Additional readiness check” after model + infra are tested → **ensure model performance is monitored**.
-
-#### Model Monitoring Job Configuration
-
-When setting up model monitoring to detect prediction drift:
-
-| Configuration                | Recommended? | Reason                              |
-| ---------------------------- | ------------ | ----------------------------------- |
-| 10% sampling, every 24 hours | YES          | Balanced coverage and cost          |
-| 90% sampling, every 24 hours | NO           | Too expensive, unnecessary coverage |
-| 10% sampling, every hour     | NO           | Too frequent for most use cases     |
-| Continuous retraining daily  | NO           | Addresses symptom, not detection    |
-
-**EXAM TIP:** Prevent prediction drift → Model monitoring job with 10% sampling every 24 hours.  
-**COMMON TRAP:** Don't use 90% sampling - it's wasteful.
-
 ### 4.8 RESOURCE ORGANIZATION
 
 #### Large Teams (50+ Data Scientists)
@@ -345,3 +307,41 @@ Automatically run unit tests when code is pushed to a repository:
 - **Use Case**: Benchmark new architectures automatically when code changes
 
 **EXAM TIP:** Version control + auto-retrain on code change → Cloud Build + Cloud Source Repositories.
+
+### 4.10 PRODUCTION READINESS CHECKS (MLOps)
+
+When features/data, model code, and infra are "done", a key remaining readiness check is operational:
+
+- **Monitoring**: Track live model performance + data drift/skew and alerting
+
+**EXAM TIP:** "Additional readiness check" after model + infra are tested → **ensure model performance is monitored**.
+
+#### Model Monitoring Job Configuration
+
+When setting up model monitoring to detect prediction drift:
+
+| Configuration                | Recommended? | Reason                              |
+| ---------------------------- | ------------ | ----------------------------------- |
+| 10% sampling, every 24 hours | YES          | Balanced coverage and cost          |
+| 90% sampling, every 24 hours | NO           | Too expensive, unnecessary coverage |
+| 10% sampling, every hour     | NO           | Too frequent for most use cases     |
+| Continuous retraining daily  | NO           | Addresses symptom, not detection    |
+
+**EXAM TIP:** Prevent prediction drift → Model monitoring job with 10% sampling every 24 hours.  
+**COMMON TRAP:** Don't use 90% sampling - it's wasteful.
+
+### 4.11 CONTINUOUS TRAINING (CT) PATTERN
+
+Automatically retrain when new ground truth arrives, but only promote the model if it meets a quality gate.
+
+**EXAM TIP:** “Retrain automatically on new verified labels and only deploy if thresholds are met” → **Continuous Training (CT)** with evaluation gate.
+
+#### Cost-aware labeling and retraining cadence
+
+If labels are expensive and you don’t want to label at a fixed cadence:
+
+- **Step 1**: Detect **skew/drift** first (training vs serving feature distribution)
+- **Step 2**: Only when skew is detected, **sample** recent serving data for labeling/evaluation
+- **Step 3**: Retrain when performance drops or drift is confirmed
+
+**EXAM TIP:** Minimize labeling cost → run skew/drift checks frequently, label **only when skew is detected** (not "label every N weeks").
