@@ -498,9 +498,9 @@ Foundation models, like other AI models, take **inputs** (“prompts”) and pro
 
 ```mermaid
 flowchart TD
-  A[AI] --> B[Machine Learning]
-  B --> C[Foundation models]
-  C --> D[LLMs (language-focused)]
+  A["AI"] --> B["Machine Learning"]
+  B --> C["Foundation models"]
+  C --> D["LLMs (language-focused)"]
 ```
 
 ### Building a successful GenAI strategy (top-down + bottom-up)
