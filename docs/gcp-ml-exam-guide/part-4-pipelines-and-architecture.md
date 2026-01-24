@@ -1980,11 +1980,23 @@ While our focus has been on general HPO (previous section) and model weights (fi
 **Four Major Compression Techniques**:
 
 1. **Pruning** (covered in detail below)
-2. **Knowledge Distillation** (next chapter)
-3. **Low-Rank Factorization** (next chapter)
-4. **Quantization** (next chapter)
+2. **Knowledge Distillation** (covered below)
+3. **Low-Rank Factorization** (covered below)
+4. **Quantization** (covered below)
 
 **These approaches can be used standalone or in combination**. Often, you might apply multiple: e.g., prune a model and then quantize it for maximum gain. The goal is to strike a good balance between model size/speed and accuracy.
+
+**General Compression Pipeline**:
+
+1. Train baseline model (often large)
+2. Apply the compression method
+3. Fine-tune if needed:
+   - For pruning: definitely fine-tune
+   - For distillation: the student training itself is the fine-tuning
+   - For SVD factorization: might fine-tune after replacing layers
+   - For quantization: might be needed depending on the scenario
+4. Measure the accuracy drop vs. baseline
+5. Finally, you get a model that is optimized for real-world tasks
 
 **H. Pruning**:
 
@@ -2136,7 +2148,566 @@ model.fc3 = nn.Linear(90, 10)   # Adjusted for new fc2 output
 
 **Summary**: Pruning can be of several types (unstructured vs structured), and to achieve true compression, we need to perform several more operations, like layer compaction and shape adjustment, post-pruning. Layer compaction and model architecture surgery implementations can vary greatly depending on the layers modified by structured pruning.
 
-**EXAM TIP:** Questions about "fine-tuning" → think **transfer learning first** (freeze base, train head), then **fine-tuning** (unfreeze gradually, smaller learning rate). Questions about "model compression" → think **pruning** (unstructured vs structured), **knowledge distillation**, **quantization**, **low-rank factorization**. Questions about "pruning" → think **magnitude-based**, **iterative prune-and-fine-tune**, **layer compaction** (for structured), **sparse storage** (for unstructured).
+**I. Knowledge Distillation**:
+
+**What is Knowledge Distillation**: Knowledge Distillation (KD) is a technique where a large, complex model (teacher) transfers its knowledge to a smaller model (student).
+
+**The Concept**: A small model can be trained not just on the original data labels, but on the soft predictions of the large model, thereby learning to mimic the large model's function.
+
+**Why This Works**:
+
+- **Teacher model's output probabilities** often contain richer information than the one-hot labels
+- **Example**: If class A is 10 times more likely than class B according to the teacher, that gives the student a hint about class B being the second-best option
+- **"Dark knowledge"**: This helps the student learn the teacher's decision boundaries more faithfully than it would just from ground truth one-hot labels
+
+**Benefits**:
+
+- **Student can be much smaller** yet achieve performance close to that of the teacher
+- **Can distill an ensemble** of models into one student (the teacher can be a group of models whose outputs are averaged, and the student learns from that)
+- **Distillation sometimes even improves accuracy** on the student compared to training it normally on the dataset (the teacher acts as a smoother, providing a better training signal)
+
+**Trade-offs**:
+
+- **Upfront cost**: You have to train the large teacher model first. In some cases, training the teacher is expensive, but you might already have one (e.g., use an existing public model as a teacher)
+- **Student usually cannot exceed teacher's accuracy**: There are some cases in which it might, if the teacher's knowledge helps generalization, but generally, the teacher is typically the upper bound
+- **Resource constraints**: In a resource-constrained environment, it may not be feasible to train a large teacher model in the first place
+
+**Response-Based Knowledge Distillation** (most common technique):
+
+**Workflow Pipeline**:
+
+1. **Train the teacher model** on your training data (standard training)
+2. **Freeze the teacher** (or keep it fixed) and train the student model
+3. **Student's training objective** is a combination of:
+   - **Standard loss** against the true labels (e.g., cross-entropy with ground truth). This ensures the student still learns the actual task
+   - **Distillation loss** that makes the student's output distribution match the teacher's output distribution. Typically, this is done with the Kullback-Leibler divergence (KL divergence) between the softmax outputs of teacher and student
+4. **Temperature in distillation**: Often, the teacher's softmax outputs are taken at a higher "temperature". The idea is to soften the probability distribution (the teacher might be very confident in one class, which gives almost 0/1 probabilities; by using a temperature > 1 in softmax, we get a softer distribution that retains the rank of confidences but not as peaked). The student also uses the same temperature in its softmax for the loss calculation
+
+**KL Divergence**:
+
+- **Formula**: `KL(P||Q) = Σ P(x) * log(P(x) / Q(x))`
+- **Measures**: How much information is lost when using distribution Q to approximate distribution P
+- **If P and Q identical**: KL divergence = 0 (zero loss of information)
+- **The more dissimilar**: The greater the KL divergence
+
+**Example: Knowledge Distillation with PyTorch**:
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+# Define models
+class TeacherNet(nn.Module):
+    # Simple CNN (larger model)
+    def __init__(self):
+        super().__init__()
+        self.conv1 = nn.Conv2d(1, 32, 3, 1)
+        self.conv2 = nn.Conv2d(32, 64, 3, 1)
+        self.fc1 = nn.Linear(9216, 128)
+        self.fc2 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = F.relu(self.conv1(x))
+        x = F.relu(self.conv2(x))
+        x = x.view(-1, 9216)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
+
+class StudentNet(nn.Module):
+    # Tiny MLP (smaller model)
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(784, 64)
+        self.fc2 = nn.Linear(64, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 784)
+        x = F.relu(self.fc1(x))
+        return self.fc2(x)
+
+# Train teacher (omitted for brevity)
+teacher = TeacherNet()
+# ... training code ...
+
+# Freeze teacher
+teacher.eval()
+for param in teacher.parameters():
+    param.requires_grad = False
+
+# KD student setup
+student = StudentNet()
+optimizer = torch.optim.Adam(student.parameters(), lr=1e-3)
+
+# KD hyperparameters
+T = 5.0  # Temperature (softens teacher's outputs)
+ALPHA = 0.5  # Mixing weight (between teacher guidance and true labels)
+epochs = 3
+
+# Train student with KD
+student.train()
+for epoch in range(epochs):
+    for batch_idx, (data, target) in enumerate(train_loader):
+        optimizer.zero_grad()
+
+        # Get teacher's predictions (soft targets)
+        with torch.no_grad():
+            teacher_logits = teacher(data)
+            teacher_probs = F.softmax(teacher_logits / T, dim=1)
+
+        # Student predictions
+        student_logits = student(data)
+        student_probs = F.softmax(student_logits / T, dim=1)
+
+        # Hard loss (cross-entropy with true labels)
+        hard_loss = F.cross_entropy(student_logits, target)
+
+        # KD loss (KL divergence between softened distributions)
+        kd_loss = F.kl_div(
+            F.log_softmax(student_logits / T, dim=1),
+            teacher_probs,
+            reduction='batchmean'
+        ) * (T ** 2)  # T^2 factor to restore gradient strength
+
+        # Combined loss
+        loss = ALPHA * hard_loss + (1 - ALPHA) * kd_loss
+
+        loss.backward()
+        optimizer.step()
+```
+
+**Key Notes on KD Choices**:
+
+- **Temperature T**: Softens teacher distributions; larger T exposes "dark knowledge" (relative class similarities)
+- **Mix ALPHA**: Balances ground-truth supervision (stability) vs distillation (teacher guidance)
+- **T² factor**: Standard, so the overall KD gradient magnitude doesn't shrink when dividing logits by T
+  - **Intuition**: Divide the logits by T to get useful soft targets. But that weakens gradients. Multiply by T² to restore gradient strength. Net result: soft labels with the right learning signal strength
+
+**J. Low-Rank Factorization**:
+
+**What is Low-Rank Factorization**: Many weight matrices in a neural network (especially in fully connected layers or embedding layers) are highly redundant. Their rank can be much lower than their dimension.
+
+**The Concept**: Low-rank factorization exploits this by approximating weight matrices with products of smaller matrices (which implies lower effective rank).
+
+**Quick Note**: In linear algebra, the "rank" of a matrix refers to the maximum number of linearly independent rows (or columns) in that matrix.
+
+**How It Works**:
+
+- **Example**: If you have a weight matrix W of size m × n that is low rank, you can find matrices A (m × r) and B (r × n) such that W ≈ A \* B and r << min(m, n)
+- **Compression**: This factorization compresses the storage and time complexity from m*n to r*(m+n), which for small r is big savings, and it multiplies faster
+
+**SVD (Singular Value Decomposition)**:
+
+- **Classic way**: To find the best low-rank approximation of a matrix
+- **Gives**: Singular values, and you can truncate small ones to get a rank-k approximation
+- **Common approach**:
+  1. Take a trained model's weight matrix
+  2. Do SVD
+  3. Keep top k singular values/vectors
+  4. Reconstruct to get a smaller matrix product
+
+**SVD Decomposition**:
+
+- **Decompose matrix** into three simpler matrices: U, S, and V, such that the original matrix can be reconstructed as the product of these three matrices
+- **k denotes the rank**: Typically kept smaller than the original dimensionality (d) of the data
+- **Trade-off**: The choice of rank k directly linked to the trade-off between dimensionality reduction and preservation of information. The higher the rank (k), more the information preserved
+
+**Algebraic Example**:
+
+**Step 1: Perform SVD**:
+
+Suppose we have a fully connected layer with a weight matrix W ∈ R^(1000×1000). If we suspect that W is approximately low-rank (say, rank ≈ 100), we can use SVD:
+
+W = U S V^T
+
+where:
+
+- U ∈ R^(1000×1000) is orthogonal
+- S ∈ R^(1000×1000) is diagonal (singular values)
+- V ∈ R^(1000×1000) is orthogonal
+
+**Step 2: Truncate to rank-k approximation**:
+
+Keep only the top k = 100 singular values and vectors:
+
+- U₁ = U[:, :100]
+- S₁ = diag(σ₁, ..., σ₁₀₀)
+- V₁ = V[:, :100]
+
+Then: W ≈ U₁ S₁ V₁^T
+
+**Step 3: Reparameterize**:
+
+Instead of keeping S₁ explicitly, we can "split" it between U₁ and V₁:
+
+- A = U₁ S₁^(1/2) ∈ R^(1000×100)
+- B = S₁^(1/2) V₁^T ∈ R^(100×1000)
+
+Thus: W ≈ A B
+
+**Step 4: Replace with Two Layers**:
+
+The original layer was a single linear map: x ↦ Wx, W ∈ R^(1000×1000), x ∈ R^1000
+
+We now replace it with two consecutive linear layers:
+
+- **Layer 1**: x ↦ Bx, shape 1000 → 100
+- **Layer 2**: h ↦ Ah, shape 100 → 1000
+
+So the transformation is: x ↦ (AB)x ≈ Wx
+
+**Benefits**:
+
+**Storage reduction**:
+
+- **Original**: 1000 × 1000 = 1,000,000 parameters
+- **After factorization**: 1000 × 100 + 100 × 1000 = 200,000 parameters
+- **That's a 5x reduction** in parameters while approximately preserving the function of the original layer
+
+**Fine-tuning**: You would likely then fine-tune the model a bit after such a replacement to recover any lost accuracy due to approximation.
+
+**When It Works Best**:
+
+- **Low-rank or close to low-rank matrices**: Many neural networks have some layers that are low-rank
+- **Redundancy or over-parameterization**: Especially if there's a lot of redundancy or the network was over-parameterized
+- **Word embedding matrices**: Used in NLP often have a lot of redundancy, maybe only a few hundred dimensions of the 1000 are really significant
+- **Intermediate layers**: Might not use all their capacity
+
+**Example: Low-Rank Factorization with PyTorch**:
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+
+class LowRankLinear(nn.Module):
+    """Replaces one Linear(out, in) with two layers in → k then k → out"""
+    def __init__(self, original_layer, rank_k):
+        super().__init__()
+        out, in_dim = original_layer.weight.shape
+        k = min(rank_k, out, in_dim)  # Clamp rank
+
+        # Get original weights and bias
+        W = original_layer.weight.clone()
+        b = original_layer.bias.clone() if original_layer.bias is not None else None
+
+        # Compute truncated SVD
+        U, S, Vh = torch.linalg.svd(W, full_matrices=False)
+
+        # Keep top-k components
+        Uk = U[:, :k]
+        Sk = S[:k]
+        Vhk = Vh[:k, :]
+
+        # Build factors A and B
+        sqrt_Sk = torch.sqrt(Sk)
+        A = Uk @ torch.diag(sqrt_Sk)  # (out, k)
+        B = torch.diag(sqrt_Sk) @ Vhk  # (k, in)
+
+        # Create factorized layers
+        self.l1 = nn.Linear(in_dim, k, bias=False)
+        self.l2 = nn.Linear(k, out, bias=(b is not None))
+
+        # Initialize
+        self.l1.weight.data = B
+        if b is not None:
+            self.l2.bias.data = b
+        self.l2.weight.data = A
+
+    def forward(self, x):
+        return self.l2(self.l1(x))
+
+# Usage: Replace fc2 with low-rank version
+model = MyModel()  # Original model
+model.fc2 = LowRankLinear(model.fc2, rank_k=50)  # Replace with rank-50 approximation
+```
+
+**Key Notes**:
+
+- **Bias handling**: Only one bias (at the end layer), not both layers. This is because:
+  - Original: y = Wx + b
+  - Factorized: y = A(Bx) + b = (AB)x + b
+  - If we added bias to both: y = A(Bx + b₁) + b₂ = (AB)x + (Ab₁ + b₂), which doesn't match unless specially adjusted
+- **Rank selection**: The challenge is choosing the rank r: too low and you hurt accuracy; too high and you don't compress much
+- **Energy threshold method**: Pick k such that the top-k singular values explain, say, 90–95% of the total energy:
+  - Σᵢ₌₁ᵏ σᵢ² / Σᵢ₌₁ʳ σᵢ² ≥ 0.90
+  - where σᵢ = singular values from SVD of W, r = min(out, in) = maximum possible rank
+- **Effectiveness**: Particularly effective if you know a layer is a bottleneck and it does not need full rank. But might be less effective if the layer is inherently high-rank (like final layers that separate many classes might need full rank)
+
+**K. Quantization**:
+
+**What is Quantization**: Quantization reduces the precision of the numbers used to represent the model's parameters (and sometimes activations). Most deep learning models are trained in 32-bit floating point (FP32).
+
+**Quantization converts them to**:
+
+- 16-bit floats (FP16)
+- 8-bit integers (INT8)
+- Or even lower (like 4-bit or 1-bit for extreme cases)
+
+**Primary Benefits**:
+
+- **Memory reduction**: An 8-bit number is 4x smaller than a 32-bit number. So model size roughly quarters if you go from FP32 to INT8. Memory bandwidth and storage requirements drop similarly
+- **Faster computation**: Operations on smaller data types can be done in parallel or with specialized hardware (many CPUs and GPUs have instructions for fast INT8 or mixed precision ops)
+- **Energy consumption**: Using INT8 can also reduce energy consumption—important for on-device inference
+
+**Trade-off**: Quantization can introduce error, since you're approximating continuous (or high-precision) values with coarse discrete values. The trick is to do it in a way that minimally impacts accuracy.
+
+**Post-Training Quantization** (most common way):
+
+**Workflow**:
+
+1. **Train the model** as we typically would
+2. **Change the data type** of model parameters
+3. **Evaluate** the model's weights and activations on a representative dataset and determine the most suitable precision to represent them
+
+**Example: Post-Training Quantization with PyTorch**:
+
+```python
+import torch
+import torch.nn as nn
+import torch.quantization
+
+# Define model (simple MLP)
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(784, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 784)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return self.fc3(x)
+
+# FP32 baseline
+model_fp32 = MLP()
+model_fp32.eval()
+
+# Dynamic post-training quantization (PTQ)
+# Only nn.Linear layers are quantized
+# Weights stored as INT8
+# Activations dynamically quantized/dequantized at runtime (per-batch)
+quantized_model = torch.quantization.quantize_dynamic(
+    model_fp32,
+    {nn.Linear},  # Only quantize Linear layers
+    dtype=torch.qint8
+)
+
+# Test input
+test_input = torch.randn(1, 784)
+
+# Compare FP32 vs INT8 outputs
+with torch.no_grad():
+    fp32_output = model_fp32(test_input)
+    int8_output = quantized_model(test_input)
+
+    mse = torch.mean((fp32_output.float() - int8_output.float()) ** 2)
+    max_abs = torch.max(torch.abs(fp32_output.float() - int8_output.float()))
+
+    print(f"MSE: {mse:.6f}")
+    print(f"Max absolute difference: {max_abs:.6f}")
+
+# Save and compare file sizes
+torch.save(model_fp32.state_dict(), "model_fp32.pth")
+torch.save(quantized_model.state_dict(), "model_int8.pth")
+# INT8 model will be significantly smaller
+```
+
+**Key Points**:
+
+- **Dynamic quantization**: Activations are dynamically quantized/dequantized at runtime (per-batch), hence "dynamic"
+- **Weights**: Stored as INT8
+- **Quantized model is modified**: `model_fp32` remains unchanged
+- **Quality check**: Expect small but non-zero differences between FP32 and INT8 outputs
+
+**When Quantization is Beneficial**:
+
+- **Especially beneficial on CPU and edge devices**: On GPU, 16-bit (FP16) is used for faster training, but for inference, INT8 on GPU is also possible (tensor cores support it on newer GPUs)
+- **Mobile (ARM CPUs, etc.)**: INT8 is usually much faster than float
+- **Last step in optimization**: Often is the last or second last step in optimizing a model for deployment: after you've done everything else, just quantize, then fine-tune (may/may not be needed), and deploy
+
+**L. Open Neural Network Exchange (ONNX)**:
+
+**What is ONNX**: ONNX (Open Neural Network Exchange) provides a framework-agnostic intermediate representation (IR) for neural networks so that models trained in one framework (say PyTorch or TensorFlow) can be consumed, optimized, and executed in another environment or runtime.
+
+**Goal**: Reduce friction between experimentation, optimization, and deployment across frameworks and heterogeneous hardware.
+
+**ONNX as an Intermediate Representation (IR)**:
+
+**Think of ONNX as a common language** for neural network models. Each framework (PyTorch, TensorFlow, etc.) has its own way of describing models internally, but ONNX provides a neutral "translator" format so that models can move across frameworks and hardware.
+
+**Model Format**:
+
+An ONNX model is basically a saved computation graph. The graph has:
+
+- **Nodes**: Operations like Conv, MatMul, ReLU
+- **Edges**: How data flows between operations
+- **Initializers**: Stored constants like weights and biases
+- **Value info**: Metadata about tensor shapes and data types
+
+**Example**: If PyTorch says "this layer is a convolution with 64 filters, stride 2", ONNX records it in a framework-independent and standardized way.
+
+**Operator Standardization**:
+
+- **ONNX defines a standard set of operators**: Conv, BatchNorm, Add, etc.
+- **Framework exporters** map their native ops to these standard ones
+- **If a framework has something unusual**: Exporters either replace it with a sequence of known ops, or insert a custom op as a placeholder
+- **Result**: Most models can be represented in ONNX without losing meaning
+
+**Shape Inference & Checking**:
+
+- **When you export**: Sometimes shape info is missing (like batch size = "dynamic")
+- **ONNX can infer missing shapes** by tracing how tensors flow through the graph
+- **Helps with**:
+  - Validating model consistency (e.g., dimensions match)
+  - Preparing the graph for optimizations and kernel selection
+
+**Graph-Level Optimizations**:
+
+Before running the model, ONNX applies graph clean-up and fusions to make execution faster. Examples:
+
+- **Constant folding**: Pre-compute values that never change (e.g., if a layer multiplies by a fixed tensor, do it once ahead of time)
+- **Operator fusion**: Merge operators that can be run as one kernel (Conv + BatchNorm is often fused into a single optimized kernel)
+- **Dead node elimination**: Remove unused parts of the graph
+- **Layout transformations**: Reorder data for hardware efficiency
+- **Dropout/identity removal**: Strip no-op layers (common in inference)
+
+**In ONNX Runtime, these optimizations are categorized as**:
+
+- **Basic**: Constant folding, dead node removal
+- **Extended**: Operator fusions, shape simplifications
+- **Layout**: Optimizations related to data format for GPUs/CPUs
+
+**Goal**: Less overhead, fewer memory copies, faster execution.
+
+**ONNX Runtime: Execution Engine & Execution Providers**:
+
+**High-Level Flow**:
+
+1. **Load the ONNX model** into an in-memory graph representation
+2. **Apply graph optimizations** (as above) to produce an "optimized" graph
+3. **Partition the graph** into subgraphs based on supported hardware capabilities: assign nodes to different execution providers (EPs) in a greedy or prioritized manner
+4. **Dispatch each subgraph** to its EP for execution (with memory allocations, kernel binding, etc.)
+5. **Memory management, thread scheduling, I/O binding, and synchronization** occur across subgraphs and between EPs
+
+**Note**: This flow happens under the hood automatically once you load a model into ONNX Runtime with chosen EPs. You don't have to manually partition the graph or bind kernels unless you're doing advanced customization.
+
+**This architecture lets you mix**: e.g., a GPU execution provider for heavy convolution layers, and fall back to CPU for unsupported ops.
+
+**Execution Providers (EPs)**:
+
+An EP is a plugin or module that knows how to run a subset of ONNX operators on a specific device or backend. EPs provide:
+
+- **Kernel implementations**
+- **Memory allocators and buffer management**
+- **A "capability" interface** to query which nodes or subgraphs this EP can handle
+- **Logic to partition the graph** (i.e., which nodes to assign to this EP)
+
+**Some Key EPs**:
+
+- **CPUExecutionProvider** (default): The fallback EP for everything not handled by others, often leveraging optimized CPU libraries
+- **CUDAExecutionProvider**: GPU execution via CUDA kernels
+- **TensorRTExecutionProvider**: Passes subgraphs to NVIDIA's TensorRT engine for optimized inference (better kernel selection, low-level scheduling)
+- **nGraphExecutionProvider, OpenVINO, XNNPACK, etc.**: For specialized hardware or focus cases
+
+**EP Features**: A good EP may also support mixed precision (FP16, INT8), graph caching, plugin ops, or fallback behaviors. For example, the TensorRT EP is often used with configuration options (workspace size, enabling FP16) and caching to speed initialization.
+
+**EP Assignment**: ONNX Runtime assigns nodes to EPs in a greedy, prioritized fashion: EPs are ranked in a priority list, and ONNX Runtime tries to assign the largest possible contiguous subgraphs to the highest-priority EP first, falling back to lower-priority ones.
+
+**Trade-offs and Risks**:
+
+**Working with ONNX/ORT is powerful, but not entirely frictionless**:
+
+- **Not all framework ops map cleanly**: Converters may substitute "fallback" patterns, sometimes less efficient or semantically approximated
+- **Greedy EP assignment is heuristic**: Sometimes the partitioning may split operations suboptimally, causing extra data copying or context switches
+- **EPs differ in coverage**: Some operations may only run on CPU, forcing fallback even though GPU would be faster if a custom kernel existed
+- **Startup time**: The graph optimization steps and EP initialization (especially engines like TensorRT) incur non-trivial startup time
+- **Numeric drift**: Using FP16 or INT8 precision helps performance but may cause small numeric drift. You need calibration and possibly a fallback for sensitive operations
+- **Data type support**: Not all EPs support all data types; combining mixed-precision and fallback may introduce inconsistencies
+- **Custom operations**: If your model uses custom operations not in ONNX, you'll need to register custom ops or fallback to other mechanisms (e.g., plugging in custom EP support). This adds engineering burden
+- **Upgrading ONNX Runtime**: May break custom operator implementations unless they are maintained carefully
+
+**Example: ONNX Export and Inference**:
+
+```python
+import torch
+import onnx
+import onnxruntime as ort
+import numpy as np
+
+def export_pytorch_to_onnx(model, dummy_input, output_path, dynamic_batch=True):
+    """Convert PyTorch model to ONNX format"""
+    model.eval()  # Switch to evaluation mode
+
+    # Export
+    dynamic_axes = {'input': {0: 'batch_size'}} if dynamic_batch else None
+    torch.onnx.export(
+        model,
+        dummy_input,
+        output_path,
+        input_names=['input'],
+        output_names=['output'],
+        dynamic_axes=dynamic_axes,
+        opset_version=11
+    )
+
+    # Load and validate ONNX model
+    onnx_model = onnx.load(output_path)
+    onnx.checker.check_model(onnx_model)
+
+    # Run shape inference
+    onnx_model = onnx.shape_inference.infer_shapes(onnx_model)
+    onnx.save(onnx_model, output_path)
+
+def run_onnx_inference(onnx_path, input_data, providers=['CPUExecutionProvider']):
+    """Run inference with ONNX Runtime"""
+    # Create session options
+    sess_options = ort.SessionOptions()
+
+    # Load model with execution providers
+    session = ort.InferenceSession(onnx_path, sess_options, providers=providers)
+
+    # Print providers being used
+    print(f"Execution providers: {session.get_providers()}")
+
+    # Get input name
+    input_name = session.get_inputs()[0].name
+
+    # Run inference
+    outputs = session.run(None, {input_name: input_data})
+    return outputs
+
+# Main execution
+# Create dummy input (single RGB image: batch=1, channels=3, height=256, width=256)
+dummy_input = torch.randn(1, 3, 256, 256)
+
+# Load PyTorch model
+model = torch.load("Demo_model.pth")
+model.eval()
+
+# Export to ONNX
+export_pytorch_to_onnx(model, dummy_input, "demo.onnx", dynamic_batch=True)
+
+# Create random NumPy input for inference
+input_data = np.random.randn(1, 3, 256, 256).astype(np.float32)
+
+# Run inference with ONNX Runtime
+outputs = run_onnx_inference("demo.onnx", input_data, providers=['CPUExecutionProvider'])
+
+print(f"Output shape: {outputs[0].shape}")
+```
+
+**Summary**: ONNX + ONNX Runtime provides a powerful bridge between training-friendly frameworks and runtimes, enabling portability, optimization, and hardware abstraction.
+
+**Very High-Level Flow**:
+
+1. Train model in PyTorch / TensorFlow
+2. Export to ONNX
+3. Utilize via ONNX Runtime
+
+**EXAM TIP:** Questions about "fine-tuning" → think **transfer learning first** (freeze base, train head), then **fine-tuning** (unfreeze gradually, smaller learning rate). Questions about "model compression" → think **pruning** (unstructured vs structured), **knowledge distillation** (teacher-student, soft targets, temperature), **quantization** (FP32 → INT8, post-training), **low-rank factorization** (SVD, replace layer with two smaller layers). Questions about "ONNX" → think **framework-agnostic IR**, **graph optimizations** (constant folding, operator fusion), **execution providers** (CPU, CUDA, TensorRT), **portability** (PyTorch → ONNX → ONNX Runtime).
 
 **F. Collaboration and Reproducibility**:
 
