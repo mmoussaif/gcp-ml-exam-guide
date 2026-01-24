@@ -63,6 +63,26 @@ flowchart TB
   A --> App[Applications\nchat/apps/workflows]
 ```
 
+#### The platform layer (Vertex AI as the “glue”)
+
+The platform layer is what makes complex ML/GenAI systems practical to build and operate. It brings the pieces together—**infrastructure, models, data access, deployment, security, and operations**—behind consistent APIs and workflows.
+
+In Google Cloud, **Vertex AI** is the canonical example of a platform layer: a unified ML platform that streamlines building, deploying, and managing ML + GenAI solutions.
+
+**Key platform benefits (what you get “by using a platform”)**
+
+- **Open and flexible**: work with Google models, third-party models, and open models (where supported) without rebuilding everything.
+- **Powerful infrastructure**: managed compute for training/serving, including distributed training and hyperparameter optimization.
+- **Pre-trained models**: fast start via model catalogs (e.g., Model Garden-style discovery).
+- **Comprehensive tooling**: training jobs, evaluation, deployment, monitoring, logging/metrics integration.
+- **Customization**: prompting + grounding/RAG + tuning/fine-tuning options depending on the problem.
+- **Easy integration**: APIs/SDKs to plug models into applications and workflows.
+
+**MLOps capabilities (why platform matters in production)**
+
+- Orchestrate workflows (**pipelines**), track experiments and iterations, manage ML metadata, and monitor/evaluate model quality over time.
+- **Feature store** (where used): share/serve/reuse features to keep training-serving consistent.
+
 #### Agents and GenAI-powered applications (how they relate)
 
 Think of a **GenAI-powered application** as the user-facing product (UI + workflows + policies). An **agent** is the “intelligent actor” inside that product that can reason, use tools, and take actions to achieve a goal.
