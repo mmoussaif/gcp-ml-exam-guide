@@ -275,6 +275,335 @@ Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-p
 
 This whitepaper provides a comprehensive guide to the **operational lifecycle of AI agents**, focusing on deployment, scaling, and productionizing.
 
+**Practical Implementation**: Throughout this whitepaper, examples reference the **Google Cloud Platform Agent Starter Pack**—a Python package providing production-ready Generative AI agent templates for Google Cloud. It includes pre-built agents, automated CI/CD setup, Terraform deployment, Vertex AI evaluation integration, and built-in Google Cloud observability. See: `https://github.com/GoogleCloudPlatform/agent-starter-pack`
+
+#### People and Process: The Team Behind Production Agents
+
+**Why focus on people and process?** The best technology is ineffective without the right team to build, manage, and govern it.
+
+**Traditional MLOps Teams**:
+
+| Team                        | Responsibilities                                                                                    |
+| --------------------------- | --------------------------------------------------------------------------------------------------- |
+| **Cloud Platform Team**     | Cloud architects, administrators, security specialists; manage infrastructure, security, access control; grant least-privilege roles |
+| **Data Engineering Team**   | Data engineers and data owners; build/maintain data pipelines, handle ingestion, preparation, quality standards |
+| **Data Science/MLOps Team** | Data scientists (experiment/train models), ML engineers (automate ML pipelines), MLOps Engineers (build/maintain pipeline infrastructure) |
+| **ML Governance**           | Product owners, auditors; oversee ML lifecycle, ensure compliance, transparency, accountability |
+
+**Generative AI introduces new specialized roles**:
+
+| Role                  | Responsibilities                                                                                    |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| **Prompt Engineers**  | Blend technical skill in crafting prompts with deep domain expertise; define right questions and expected answers (may be done by AI Engineers or domain experts) |
+| **AI Engineers**      | Scale GenAI solutions to production; build robust backend systems with evaluation at scale, guardrails, RAG/tool integration |
+| **DevOps/App Developers** | Build front-end components and user-friendly interfaces that integrate with GenAI backend |
+
+**EXAM TIP:** Questions about "who builds agents" or "team structure" → think **AI Engineers** (backend) + **Prompt Engineers** (prompts) + **DevOps** (frontend) + **Cloud Platform Team** (infrastructure).
+
+#### Evaluation-Gated Deployment: The Core Principle
+
+**Core principle**: **No agent version should reach users without first passing a comprehensive evaluation** that proves its quality and safety.
+
+**Two implementation methods**:
+
+1. **Manual "Pre-PR" Evaluation**:
+   - AI Engineer/Prompt Engineer runs evaluation suite locally before PR
+   - Performance report (comparing new agent vs production baseline) linked in PR description
+   - Reviewer (AI Engineer or ML Governor) assesses code + behavioral changes
+   - **Use case**: Teams seeking flexibility or beginning their evaluation journey
+
+2. **Automated In-Pipeline Gate**:
+   - Evaluation harness integrated directly into CI/CD pipeline
+   - Failing evaluation automatically blocks deployment
+   - Programmatic enforcement of quality standards
+   - **Use case**: Mature teams prioritizing consistency over flexibility
+
+**EXAM TIP:** Questions about "quality gates" or "pre-production validation" → think **Evaluation-Gated Deployment** (manual pre-PR or automated CI/CD gate).
+
+#### Three-Phase CI/CD Pipeline
+
+A robust pipeline is designed as a **funnel**—catching errors as early and cheaply as possible ("shifting left").
+
+**Phase 1: Pre-Merge Integration (CI)**
+- **Purpose**: Rapid feedback to developer who opened PR
+- **Checks**: Unit tests, code linting, dependency scanning, **agent quality evaluation suite**
+- **Benefit**: Prevents polluting main branch; catches performance degradation before merge
+- **Example**: Cloud Build PR checks template from Agent Starter Pack
+
+**Phase 2: Post-Merge Validation in Staging (CD)**
+- **Purpose**: Operational readiness of integrated system
+- **Process**: Package agent → deploy to staging (high-fidelity replica of production)
+- **Tests**: Load testing, integration tests against remote services, **internal user testing ("dogfooding")**
+- **Benefit**: Validates agent as integrated system under production-like conditions
+- **Example**: Staging deployment template from Agent Starter Pack
+
+**Phase 3: Gated Deployment to Production**
+- **Purpose**: Final deployment to production
+- **Process**: Product Owner gives final sign-off (human-in-the-loop) → exact artifact from staging promoted to production
+- **Benefit**: Ensures production deployment matches tested staging artifact
+- **Example**: Production deployment template from Agent Starter Pack
+
+**Key technologies**:
+- **Infrastructure as Code (IaC)**: Terraform defines environments programmatically (identical, repeatable, version-controlled)
+- **Automated Testing Frameworks**: Pytest executes tests/evaluations at each stage
+- **Secret Management**: Secret Manager for API keys (injected at runtime, not hardcoded)
+
+**EXAM TIP:** Questions about "CI/CD for agents" → think **three-phase pipeline**: Pre-merge (CI) → Staging (CD) → Production (gated).
+
+#### Safe Rollout Strategies
+
+**Four proven patterns** for gradual rollouts:
+
+| Strategy        | Description                                                                  | Use Case                                    |
+| --------------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
+| **Canary**      | Start with 1% of users; monitor for prompt injections, unexpected tool usage; scale up gradually or roll back instantly | Low-risk initial rollout                    |
+| **Blue-Green**  | Run two identical production environments; route traffic to "blue" while deploying to "green"; switch instantly; zero downtime, instant recovery | Zero-downtime deployments                   |
+| **A/B Testing** | Compare agent versions on real business metrics for data-driven decisions (internal or external users) | Comparing agent versions                    |
+| **Feature Flags** | Deploy code but control release dynamically; test new capabilities with select users first | Gradual feature rollout                     |
+
+**Foundation**: **Rigorous versioning**—every component (code, prompts, model endpoints, tool schemas, memory structures, evaluation datasets) must be versioned. Enables instant rollback to known-good state.
+
+**Deployment options**: Agent Engine or Cloud Run, with Cloud Load Balancing for traffic management.
+
+**EXAM TIP:** Questions about "safe deployment" or "gradual rollout" → think **Canary** (1% → scale up) or **Blue-Green** (zero downtime).
+
+#### Building Security from the Start
+
+**Unique agent risks**:
+- **Prompt Injection & Rogue Actions**: Malicious users trick agents into unintended actions
+- **Data Leakage**: Agents expose sensitive information through responses or tool usage
+- **Memory Poisoning**: False information stored in agent's memory corrupts future interactions
+
+**Three layers of defense** (Google's Secure AI Framework - SAIF):
+
+1. **Policy Definition and System Instructions** (The Agent's Constitution):
+   - Define policies for desired/undesired behavior
+   - Engineer into System Instructions (SIs)
+
+2. **Guardrails, Safeguards, and Filtering** (The Enforcement Layer):
+   - **Input Filtering**: Classifiers (e.g., Perspective API) analyze prompts, block malicious inputs
+   - **Output Filtering**: Vertex AI's built-in safety filters check for harmful content, PII, policy violations
+   - **Human-in-the-Loop (HITL) Escalation**: Pause and escalate high-risk/ambiguous actions for human review
+
+3. **Continuous Assurance and Testing**:
+   - **Rigorous Evaluation**: Any change triggers full re-run of evaluation pipeline (Vertex AI Evaluation)
+   - **Dedicated RAI Testing**: Test for specific risks (NPOV evaluations, Parity evaluations)
+   - **Proactive Red Teaming**: Actively try to break safety systems through creative manual testing and AI-driven simulation
+
+**EXAM TIP:** Questions about "agent security" → think **three-layer defense**: System Instructions + Guardrails/Filtering + Continuous Assurance.
+
+#### Operations in Production: Observe → Act → Evolve Loop
+
+**Core discipline**: Instead of static monitoring, adopt a continuous loop:
+
+1. **Observe**: Understand agent's behavior in real-time
+2. **Act**: Real-time intervention to maintain performance, cost, safety
+3. **Evolve**: Long-term strategic improvement based on production learnings
+
+**Observe: Your Agent's Sensory System**
+
+**Three pillars of observability**:
+
+| Pillar    | Description                                                          | Example                                    |
+| --------- | -------------------------------------------------------------------- | ------------------------------------------ |
+| **Logs**  | Granular, factual diary of what happened (every tool call, error, decision) | Cloud Logging                              |
+| **Traces** | Narrative connecting individual logs (reveals causal path of why agent took action) | Cloud Trace (unique ID links Vertex AI Agent Engine invocation, model calls, tool executions) |
+| **Metrics** | Aggregated report card (performance, cost, operational health at scale) | Cloud Monitoring dashboards (alert when latency thresholds exceeded) |
+
+**ADK Integration**: Agent Development Kit provides built-in Cloud Trace integration for automatic instrumentation.
+
+**Act: The Levers of Operational Control**
+
+**Two categories of operational levers**:
+
+1. **Managing System Health: Performance, Cost, and Scale**
+
+   **Designing for Scale**:
+   - **Horizontal Scaling**: Design agent as stateless, containerized service; external state enables any instance to handle any request (Cloud Run, Vertex AI Agent Engine Runtime)
+   - **Asynchronous Processing**: Offload long-running tasks using event-driven patterns (Pub/Sub → Cloud Run)
+   - **Externalized State Management**: Persist memory externally (Vertex AI Agent Engine built-in Session/memory service, or Cloud Run + AlloyDB/Cloud SQL)
+
+   **Balancing Competing Goals**:
+   - **Speed (Latency)**: Parallel processing, aggressive caching, smaller efficient models for routine tasks
+   - **Reliability**: Automatic retries with exponential backoff; design idempotent tools (safe-to-retry)
+   - **Cost**: Shorten prompts, use cheaper models for easier tasks, batch requests
+
+2. **Managing Risk: The Security Response Playbook**
+
+   **Sequence**: **Contain → Triage → Resolve**
+
+   - **Contain**: Immediate containment via "circuit breaker" (feature flag to disable affected tool)
+   - **Triage**: Route suspicious requests to HITL review queue; investigate exploit scope/impact
+   - **Resolve**: Develop patch (updated input filter, system prompt); deploy via automated CI/CD pipeline
+
+**Evolve: Learning from Production**
+
+**The Evolution Workflow**:
+
+1. **Analyze Production Data**: Identify trends in user behavior, task success rates, security incidents
+2. **Update Evaluation Datasets**: Transform production failures into test cases (augment golden dataset)
+3. **Refine and Deploy**: Commit improvements → trigger automated pipeline (refine prompts, add tools, update guardrails)
+
+**Example**: Retail agent logs show 15% of users receive error when asking for 'similar products' → Create failing test case → Engineer refines prompt + adds robust similarity search tool → Commits change → Passes updated evaluation suite → Safely rolled out via canary deployment → Resolved in under 48 hours.
+
+**Evolving Security**: Production feedback loop for security:
+- **Observe**: Monitoring detects new threat vector (novel prompt injection, unexpected data leak)
+- **Act**: Security response team contains threat
+- **Evolve**: Feed insight back into development lifecycle:
+  - Update evaluation datasets (add attack as permanent test case)
+  - Refine guardrails (update system prompt, input filters, tool-use policies)
+  - Automate and deploy (commit change → CI/CD validates → deploy)
+
+**EXAM TIP:** Questions about "production operations" or "continuous improvement" → think **Observe → Act → Evolve loop**.
+
+#### A2A Implementation: Agent Cards and Code Examples
+
+**Agent Card**: Standardized JSON specification acting as "business card" for each agent.
+
+**Agent Card structure**:
+```json
+{
+  "name": "check_prime_agent",
+  "version": "1.0.0",
+  "description": "An agent specialized in checking whether numbers are prime",
+  "capabilities": {},
+  "securitySchemes": {
+    "agent_oauth_2_0": {
+      "type": "oauth2"
+    }
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "prime_checking",
+      "name": "Prime Number Checking",
+      "description": "Check if numbers are prime using efficient algorithms",
+      "tags": ["mathematical", "computation", "prime"]
+    }
+  ],
+  "url": "http://localhost:8001/a2a/check_prime_agent"
+}
+```
+
+**Making an agent A2A-compatible (ADK)**:
+```python
+from google.adk.a2a.utils.agent_to_a2a import to_a2a
+
+# Your existing agent
+root_agent = Agent(
+    name='hello_world_agent',
+    # ... your agent code ...
+)
+
+# Make it A2A-compatible
+a2a_app = to_a2a(root_agent, port=8001)
+# Serve with uvicorn or Agent Engine
+```
+
+**Consuming a remote agent via A2A (ADK)**:
+```python
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+
+prime_agent = RemoteA2aAgent(
+    name="prime_agent",
+    description="Agent that handles checking if numbers are prime.",
+    agent_card="http://localhost:8001/a2a/check_prime_agent/.well-known/agent-card.json"
+)
+```
+
+**Hierarchical agent composition**:
+```python
+# Local sub-agent for dice rolling
+roll_agent = Agent(
+    name="roll_agent",
+    instruction="You are an expert at rolling dice."
+)
+
+# Remote A2A agent for prime checking
+prime_agent = RemoteA2aAgent(
+    name="prime_agent",
+    agent_card="http://localhost:8001/.well-known/agent-card.json"
+)
+
+# Root orchestrator combining both
+root_agent = Agent(
+    name="root_agent",
+    instruction="Delegate rolling dice to roll_agent, prime checking to prime_agent.",
+    sub_agents=[roll_agent, prime_agent]
+)
+```
+
+**Non-negotiable technical requirements**:
+- **Distributed tracing**: Every request carries unique trace ID (essential for debugging, audit trail)
+- **Robust state management**: A2A interactions are stateful; require sophisticated persistence layer
+
+**When to use A2A vs local sub-agents**:
+- **A2A**: Formal, cross-team integrations requiring durable service contract
+- **Local sub-agents**: Tightly coupled tasks within single application (more efficient)
+
+**EXAM TIP:** Questions about "agent discovery" or "agent-to-agent communication" → think **Agent Cards** (JSON specification) + **A2A protocol**.
+
+#### How A2A and MCP Work Together
+
+**They are complementary, not competing**:
+
+| Protocol | Domain                          | Use Case Example                                    |
+| -------- | ------------------------------- | --------------------------------------------------- |
+| **MCP**  | Tools and resources (primitives) | Calculator, database API, weather API               |
+| **A2A**  | Other agents (autonomous systems) | "Analyze last quarter's customer churn and recommend three intervention strategies" |
+
+**Layered architecture**: Use **A2A** for high-level agent collaboration; each agent internally uses **MCP** to interact with its specific tools.
+
+**Example workflow** (auto repair shop):
+1. **User-to-Agent (A2A)**: Customer communicates with "Shop Manager" agent
+2. **Agent-to-Agent (A2A)**: Shop Manager delegates to specialized "Mechanic" agent
+3. **Agent-to-Tool (MCP)**: Mechanic agent uses MCP to call tools (`scan_vehicle_for_error_codes()`, `get_repair_procedure()`, `raise_platform()`)
+4. **Agent-to-Agent (A2A)**: Mechanic communicates with external "Parts Supplier" agent
+
+**EXAM TIP:** Questions about "MCP vs A2A" → **MCP** for tools/resources, **A2A** for agent-to-agent collaboration.
+
+#### Registry Architectures: When and How to Build Them
+
+**Decision framework**: Build registries when scale/complexity demands centralized management.
+
+**Tool Registry** (using MCP):
+- **Purpose**: Catalog all assets (functions, APIs)
+- **Patterns**:
+  - **Generalist agents**: Access full catalog (trades speed/accuracy for scope)
+  - **Specialist agents**: Use predefined subsets (higher performance)
+  - **Dynamic agents**: Query registry at runtime (adapt to new tools)
+- **Benefits**: Human discovery (developers search before building duplicates), security auditing, capability understanding
+- **Build when**: Tool discovery becomes bottleneck OR security requires centralized auditing
+
+**Agent Registry** (using A2A AgentCards):
+- **Purpose**: Catalog agents for discovery and reuse
+- **Benefits**: Teams discover/reuse existing agents, reduce redundant work, enable automated agent-to-agent delegation
+- **Build when**: Multiple teams need to discover/reuse specialized agents without tight coupling
+
+**Trade-off**: Registries offer discovery and governance at the cost of maintenance. **Start without one**; build when ecosystem scale demands centralized management.
+
+**EXAM TIP:** Questions about "tool/agent discovery" or "centralized management" → think **Tool Registry** (MCP) or **Agent Registry** (A2A AgentCards) when scale/complexity demands it.
+
+#### AgentOps Lifecycle: Complete Reference Architecture
+
+**The lifecycle**:
+
+1. **Developer's Inner Loop**: Rapid local testing and prototyping to shape agent's core logic
+2. **Pre-Production Engine**: Automated evaluation gates validate quality and safety against golden dataset
+3. **Safe Rollouts**: Release to production with gradual rollout strategies
+4. **Production Observability**: Comprehensive observability captures real-world data
+5. **Evolution Loop**: Turn every insight into the next improvement
+
+**Key capabilities**:
+- **Evaluation**: Golden datasets, LLM-as-judge, trajectory evaluation
+- **CI/CD**: Three-phase pipeline (Pre-merge → Staging → Production)
+- **Observability**: Logs, traces, metrics (Cloud Logging, Cloud Trace, Cloud Monitoring)
+- **Security**: Three-layer defense (System Instructions + Guardrails + Continuous Assurance)
+- **Interoperability**: A2A protocol, MCP protocol, registries
+
+**EXAM TIP:** Questions about "agent operations" or "production lifecycle" → think **AgentOps**: Evaluation-gated deployment → Safe rollouts → Observe → Act → Evolve loop.
+
 #### Key Challenges in Production
 
 | Challenge            | Description                                                            | Mitigation Strategy                                                |
