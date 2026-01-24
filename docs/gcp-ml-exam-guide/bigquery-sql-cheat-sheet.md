@@ -19,6 +19,13 @@ This is a practical SQL reference for the workflows that show up constantly in M
   - use **clustering**
   - avoid exploding data unintentionally (UNNEST mistakes)
 
+#### How BigQuery executes queries (why some patterns are expensive)
+
+- BigQuery is a **distributed columnar** warehouse: you pay primarily for **bytes scanned**.
+- `WHERE` filters on the **partition column** enable **partition pruning** (big cost saver).
+- `SELECT *` on wide tables can scan and return unnecessary columns.
+- Joins and UNNEST can multiply rows; always sanity-check row counts after joins.
+
 ---
 
 ### 1) Core query patterns (SELECT / WHERE / GROUP BY)
@@ -64,6 +71,30 @@ USING (user_id);
 - **Many-to-many joins** silently multiply rows → always validate row counts.
 - **Future leakage** in time-series joins → ensure feature windows end _before_ label timestamp.
 
+#### Join types: when to use which
+
+- **INNER JOIN**: keep only rows that match in both tables (good for “must have feature” cases).
+- **LEFT JOIN**: keep all labels/base rows even if features are missing (common for training tables).
+- **CROSS JOIN**: cartesian product (almost always accidental unless you mean “expand”).
+
+#### A “time-safe” feature join pattern (anti-leakage)
+
+```sql
+-- For each label event, aggregate features using only prior events.
+-- (Pattern: join on user_id AND event_ts <= label_ts, then aggregate.)
+SELECT
+  l.user_id,
+  l.label_ts,
+  l.label,
+  COUNTIF(e.event_name = 'purchase') AS purchases_before_label
+FROM `project.dataset.labels` l
+LEFT JOIN `project.dataset.events` e
+  ON e.user_id = l.user_id
+ AND e.event_ts <= l.label_ts
+ AND e.event_ts >= TIMESTAMP_SUB(l.label_ts, INTERVAL 30 DAY)
+GROUP BY l.user_id, l.label_ts, l.label;
+```
+
 ---
 
 ### 3) Window functions (ranking, rolling stats, dedup)
@@ -98,6 +129,11 @@ Key window functions:
 - `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`
 - `LAG()`, `LEAD()`
 - `SUM() OVER (...)`, `AVG() OVER (...)`, `COUNT() OVER (...)`
+
+#### Window frames: ROWS vs RANGE (quick intuition)
+
+- **ROWS**: “N physical rows before/after” (depends on row ordering, not time gaps).
+- **RANGE**: “value-based window” (e.g., timestamps within a range). Use with care.
 
 ---
 
@@ -162,6 +198,18 @@ GROUP BY user_id;
 
 - `FROM t, UNNEST(arr)` is a cross join → row explosion if you don’t mean it.
 - If `arr` can be NULL, consider `UNNEST(IFNULL(arr, []))`.
+
+#### Aggregating back after UNNEST (common feature pattern)
+
+```sql
+-- Example: total order value from nested items
+SELECT
+  order_id,
+  SUM(item.price * item.qty) AS order_value
+FROM `project.dataset.orders` o,
+UNNEST(IFNULL(o.items, [])) AS item
+GROUP BY order_id;
+```
 
 ---
 
@@ -235,6 +283,23 @@ agg AS (
 SELECT * FROM agg;
 ```
 
+```sql
+-- PIVOT: turn rows into columns (handy for feature wide tables)
+SELECT *
+FROM (
+  SELECT user_id, event_name, 1 AS cnt
+  FROM `project.dataset.events`
+)
+PIVOT (SUM(cnt) FOR event_name IN ('view', 'add_to_cart', 'purchase'));
+```
+
+```sql
+-- UNPIVOT: turn wide columns back into rows (useful for analysis/debug)
+SELECT user_id, feature_name, feature_value
+FROM `project.dataset.user_features_wide`
+UNPIVOT(feature_value FOR feature_name IN (f1, f2, f3));
+```
+
 ### 8) Text manipulation + regex (common cleaning)
 
 ```sql
@@ -281,6 +346,21 @@ Common performance tips from the official guidance:
 - Avoid **cross joins** unless intended (including accidental `UNNEST` explosions).
 - Prefer **approximate** aggregation functions where exactness isn’t required.
 
+#### Partition pruning example (the pattern you want)
+
+```sql
+-- Good: partition filter (example assumes a DATE partition column named event_date)
+SELECT COUNT(*)
+FROM `project.dataset.events_partitioned`
+WHERE event_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE();
+```
+
+#### Cost/debug tools (practical)
+
+- Use `EXPLAIN` to understand stages.
+- Consider running queries with limits and narrowed partitions first to validate logic.
+- Prefer pre-aggregating expensive transforms into feature tables if reused.
+
 ---
 
 ### 11) BigQuery ML (BQML) SQL quick hits
@@ -305,6 +385,33 @@ FROM ML.PREDICT(MODEL `project.dataset.my_model`, (
   SELECT * FROM `project.dataset.eval_table`
 ));
 ```
+
+### 11.1) MERGE (upserts) for feature tables
+
+Useful when you maintain a “latest features” table:
+
+```sql
+MERGE `project.dataset.user_features` T
+USING `project.dataset.user_features_new` S
+ON T.user_id = S.user_id
+WHEN MATCHED THEN
+  UPDATE SET
+    last_30d_purchases = S.last_30d_purchases,
+    updated_at = CURRENT_TIMESTAMP()
+WHEN NOT MATCHED THEN
+  INSERT (user_id, last_30d_purchases, updated_at)
+  VALUES (S.user_id, S.last_30d_purchases, CURRENT_TIMESTAMP());
+```
+
+### 11.2) Views vs materialized views (when to use)
+
+- **View**: saved query; recomputed each time (cheap to create; cost depends on underlying query).
+- **Materialized view**: precomputed results maintained by BigQuery; good for repeated aggregations (subject to constraints).
+
+Use cases:
+
+- **View**: feature logic you want centralized and always “latest”.
+- **Materialized view**: frequently queried aggregates that are expensive to recompute.
 
 ---
 
