@@ -171,7 +171,7 @@ Source: [Generative AI Agents Whitepaper](https://www.kaggle.com/whitepaper-agen
 
 Source: [Context Engineering, Sessions and Memory Whitepaper](https://www.kaggle.com/whitepaper-context-engineering-sessions-and-memory)
 
-This whitepaper aligns with ADK's context engineering approach (covered in § 7.5.5). Key concepts:
+This whitepaper aligns with ADK's context engineering approach (covered in [§ 7.15: Context Engineering: The Scaling Bottleneck](#context-engineering-the-scaling-bottleneck)). Key concepts:
 
 #### The Context Problem
 
