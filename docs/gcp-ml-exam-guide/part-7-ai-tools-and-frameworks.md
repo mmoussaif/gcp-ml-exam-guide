@@ -3153,6 +3153,360 @@ crew = Crew(
 - **Short-term memory**: Session-specific, query-based, recent interactions
 - **Long-term memory**: Cross-session, task description-based, structured learnings
 - **Entity memory**: Entity-specific, query-based, named relationships and facts
+- **Contextual memory**: Intelligent retrieval layer combining all memory types
+- **User memory**: User-specific personalization, isolated per user ID
+
+**Detailed Memory Types**:
+
+##### 1. Short-Term Memory (STM)
+
+**Purpose**: Agent's "working memory" for the current session or task sequence. Stores recent interactions and outcomes so the agent can recall information relevant to the ongoing context.
+
+**How it works**:
+- Uses **RAG (Retrieval-Augmented Generation)** approach
+- Embeds text of recent prompts and results into a vector store
+- Default: OpenAI embeddings + local Chroma vector database
+- Retrieves relevant pieces as context for new queries
+- Enables fetching most relevant bits from earlier in session without exceeding context window
+
+**When active**: Whenever `memory=True` for a crew, short-term memory is active for that crew's agents. Especially useful in multi-turn interactions or multi-step task sequences within a single run (session).
+
+**Usage**: No separate API call needed—CrewAI automatically captures each agent's input/output and significant intermediate results into the short-term memory store.
+
+**Internal mechanism**:
+1. **Embedding**: After each task, prompt/response text is embedded using embedding model (default: OpenAI)
+2. **Storage**: Vectors stored in ChromaDB via RAGStorage interface
+3. **Similarity search**: On new task, CrewAI retrieves top-K relevant memory chunks using cosine similarity
+4. **Context injection**: Retrieved chunks passed as part of system prompt to agent's LLM
+
+**Example**:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.memory import ShortTermMemory, RAGStorage
+
+# Create short-term memory storage
+storage = RAGStorage(type="chroma", path="./short_term_memory.db")
+short_memory = ShortTermMemory(storage=storage)
+
+# Define agent and crew with memory
+agent = Agent(
+    role="Personal Assistant",
+    goal="Help the user with their tasks",
+    backstory="You are a helpful assistant."
+)
+
+task1 = Task(
+    description="Remember: My favorite color is #46778F",
+    agent=agent
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task1],
+    memory=True,
+    short_term_memory=short_memory
+)
+
+# First execution: Store fact
+crew.kickoff()
+
+# Second execution: Retrieve fact
+task2 = Task(
+    description="What is my favorite color?",
+    agent=agent
+)
+crew.tasks = [task2]
+crew.kickoff()  # Agent retrieves color from short-term memory
+```
+
+**Key characteristics**:
+- **Transient**: Per session only
+- **Query-based**: Uses current query for similarity search
+- **Automatic**: No manual management needed
+- **RAG-based**: Vector embeddings + similarity search
+
+##### 2. Long-Term Memory (LTM)
+
+**Purpose**: Persistence across sessions. Retrieves high-level information related to the task. Used for broader information rather than specific details (like short-term memory).
+
+**How it works**:
+- Uses **lightweight database (SQLite3)** to store task results persistently on disk
+- Stores structured outcomes, reflections, feedback, insights
+- Task description-based retrieval (not query-based like STM)
+- Automatically writes outputs or summaries to long-term store when memory is enabled
+
+**When active**: Automatically enabled with `memory=True`. Works across separate crew runs/sessions.
+
+**Memory entry structure**:
+
+```python
+{
+    "metadata": {
+        "reflections": "What was learned from this task",
+        "feedback": "User feedback or system feedback",
+        "insights": "Key insights or takeaways"
+    },
+    "datetime": "2025-04-06T10:00:00",  # Timestamp
+    "score": 0.85,  # Relevance score (how well memory matched query)
+    "context": "Actual stored memory content..."
+}
+```
+
+**Example**:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.memory import LongTermMemory
+
+# Create shared long-term memory storage
+long_memory = LongTermMemory(storage_path="./agent_memory.db")
+
+# Session 1: Learn fact
+agent = Agent(role="Assistant", goal="Help user", backstory="Helpful")
+task1 = Task(description="Remember: My favorite color is #46778F", agent=agent)
+crew1 = Crew(
+    agents=[agent],
+    tasks=[task1],
+    memory=True,
+    long_term_memory=long_memory
+)
+crew1.kickoff()  # Stores fact in long-term memory
+
+# Session 2: Retrieve fact (new crew, same memory storage)
+task2 = Task(description="What is my favorite color?", agent=agent)
+crew2 = Crew(
+    agents=[agent],
+    tasks=[task2],
+    memory=True,
+    long_term_memory=long_memory  # Same storage
+)
+crew2.kickoff()  # Retrieves fact from long-term memory
+```
+
+**Key characteristics**:
+- **Persistent**: Across sessions (cumulative)
+- **Task description-based**: Uses task description for retrieval
+- **Structured**: Stores metadata, reflections, feedback
+- **SQLite-backed**: Lightweight database storage
+
+**Use cases**:
+- Gradually building up knowledge
+- Research findings accumulation
+- Learning from past mistakes
+- Improving future decisions
+
+##### 3. Entity Memory
+
+**Purpose**: Captures and organizes information about specific entities (people, organizations, products, concepts). Creates a profile or knowledge card for each entity.
+
+**How it works**:
+- Uses **vector store (RAG)** like short-term memory
+- Indexes information by or alongside entity name
+- Stores facts or statements per entity
+- Retrieves entity-specific facts when entity is relevant
+
+**When active**: Automatically enabled with `memory=True`. System may detect entities in text and store relevant statements about them.
+
+**Memory entry structure**:
+
+```python
+{
+    "id": "unique_entity_id",
+    "metadata": {
+        "associated_with": "personal preference",
+        "represents": "specific color",
+        "referenced_as": "user's favorite color"
+    },
+    "context": "favorite color(Color): A color that is preferred by someone.",
+    "score": 0.92  # Vector similarity score
+}
+```
+
+**Example**:
+
+```python
+from crewai import Agent, Task, Crew
+from crewai.memory import EntityMemory, RAGStorage
+
+# Create entity memory storage
+storage = RAGStorage(type="chroma", path="./agent1_entity_memory.db")
+entity_memory = EntityMemory(storage=storage)
+
+# Define agent and crew
+agent = Agent(
+    role="Research Assistant",
+    goal="Remember facts about entities",
+    backstory="You track information about people and organizations."
+)
+
+task1 = Task(
+    description="Alice works at Acme Corp. Her favorite color is blue.",
+    agent=agent
+)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task1],
+    memory=True,
+    entity_memory=entity_memory
+)
+crew.kickoff()  # Stores facts about Alice and Acme Corp
+
+# Later: Query entity memory
+task2 = Task(
+    description="What is Alice's favorite color?",
+    agent=agent
+)
+crew.tasks = [task2]
+crew.kickoff()  # Retrieves Alice's color from entity memory
+```
+
+**How it works internally**:
+1. **Entity extraction**: CrewAI extracts entities from statements (e.g., "Alice", "Acme Corp")
+2. **Chunking and embedding**: Chunks and embeds statements using LLM's embedding model
+3. **Storage**: Stores using RAGStorage with entity associations
+4. **Similarity search**: On query, runs similarity search across memory for that entity
+5. **Ranking**: Ranks by relevance score, selects top 3-5 chunks
+6. **Context injection**: Injects relevant details into context window
+
+**Key characteristics**:
+- **Entity-specific**: Tracks facts per entity separately
+- **Query-based**: Uses current query for similarity search
+- **RAG-based**: Vector embeddings + similarity search
+- **Structured**: Named relationships and facts
+
+**Use cases**:
+- Research assistant tracking multiple companies
+- Customer support handling multiple customers
+- Story-writing agent maintaining character consistency
+- Sales agent tracking product specs
+
+##### 4. Contextual Memory
+
+**Purpose**: Intelligent retrieval layer that blends short-term, long-term, and entity memory types to present the most relevant information to the agent at any given point.
+
+**How it works**:
+- Automatically merges relevant pieces from:
+  - Short-term memory (recent task interactions)
+  - Long-term memory (persisted insights from past sessions)
+  - Entity memory (facts associated with specific entities)
+- Combined context injected into prompt window, prioritized by relevance
+- Agent receives most useful and contextually aligned information regardless of where/when fact was introduced
+
+**Implementation**: In `execute_task` method, all memory objects are combined into a single `contextual_memory` object, which is then used by `build_context_for_task` to find relevant context.
+
+**Key characteristics**:
+- **Automatic**: No separate configuration needed
+- **Intelligent**: Prioritizes by relevance
+- **Comprehensive**: Combines all memory types
+- **Seamless**: Works behind the scenes
+
+##### 5. User Memory
+
+**Purpose**: Personalization—stores user-specific information and preferences to enhance user experience. Allows agent to distinguish and remember individual users' data separately.
+
+**How it works**:
+- Associates `user_id` with agent's memory system
+- Integrates with external memory services (e.g., Mem0) for user-specific storage
+- Isolates memories between users
+- Each user gets their own long-term and short-term memory space
+
+**Example**:
+
+```python
+from crewai import Agent, Task, Crew
+
+# Configure user memory
+memory_config = {
+    "provider": "mem0",
+    "user_id": "alice"
+}
+
+agent = Agent(role="Personal Assistant", goal="Help user", backstory="Helpful")
+task = Task(description="Remember: I love sports news", agent=agent)
+
+crew = Crew(
+    agents=[agent],
+    tasks=[task],
+    memory=True,
+    memory_config=memory_config  # User-specific memory
+)
+crew.kickoff()
+
+# Different user: Separate memory
+memory_config_bob = {
+    "provider": "mem0",
+    "user_id": "bob"
+}
+crew_bob = Crew(
+    agents=[agent],
+    tasks=[task],
+    memory=True,
+    memory_config=memory_config_bob  # Bob's separate memory
+)
+```
+
+**Key characteristics**:
+- **User-scoped**: Isolated per user ID
+- **Personalization**: Tailors interactions per user
+- **Privacy**: Data isolation between users
+- **External integration**: Can use Mem0 or custom storage
+
+**Use cases**:
+- Multi-user applications
+- Personalization requirements
+- Privacy-sensitive scenarios
+- User preference tracking
+
+**Alternative implementation**: If not using external service like Mem0, maintain separate long-term memory databases per user (e.g., `user123.db`) and choose path dynamically based on logged-in user.
+
+**Reset Memory**:
+
+As agents accumulate memories, you may want to reset or clear them (e.g., for testing, deleting sensitive data, starting fresh).
+
+**Methods**:
+
+```python
+# Reset short-term memory only
+crew.reset_memories(command_type='short')
+
+# Reset long-term memory only
+crew.reset_memories(command_type='long')
+
+# Reset entity memory only
+crew.reset_memories(command_type='entities')
+
+# Reset latest kickoff output
+crew.reset_memories(command_type='kickoff_outputs')
+
+# Reset all memory types
+crew.reset_memories(command_type='all')
+```
+
+**When to reset**:
+- **Development/testing**: Rerun scenarios from scratch
+- **Incorrect information**: Clear outdated/incorrect long-term memory
+- **Context switching**: Reset when switching between distinct projects/domains
+- **Privacy**: Delete sensitive data
+
+**Example**:
+
+```python
+# Agent learns fact
+crew.kickoff(inputs={"user_task": "My favorite color is blue"})
+
+# Agent recalls fact
+crew.kickoff(inputs={"user_task": "What is my favorite color?"})
+# Output: "Your favorite color is blue"
+
+# Reset memory
+crew.reset_memories(command_type='all')
+
+# Agent no longer recalls fact
+crew.kickoff(inputs={"user_task": "What is my favorite color?"})
+# Output: "I don't have information about your favorite color"
+```
 
 **Best practices**:
 
@@ -3160,9 +3514,23 @@ crew = Crew(
 - **Use short-term memory** for within-session context
 - **Use long-term memory** for cross-session learning and reflections
 - **Use entity memory** for tracking facts about specific people, objects, or concepts
+- **Use contextual memory** (automatic) for intelligent retrieval combining all types
+- **Use user memory** for multi-user applications requiring personalization
 - **Memory is automatic**: Once enabled, agents automatically store and retrieve relevant context
+- **Choose storage**: Customize storage paths for isolation between projects/users
+- **Reset carefully**: Use reset functionality judiciously—cleared memories are gone unless saved elsewhere
 
-**EXAM TIP:** Questions about "remembering past interactions" or "user preferences" → think **memory** (`memory=True`). Questions about "context retention" → think **short-term memory**. Questions about "cross-session learning" → think **long-term memory**. Questions about "tracking facts about entities" → think **entity memory**.
+**Decision guide**:
+
+| Use Case | Memory Type(s) |
+|----------|----------------|
+| Multi-turn conversation | Short-term + Contextual |
+| Cross-session learning | Long-term + Contextual |
+| Entity tracking | Entity + Contextual |
+| User personalization | User memory |
+| Complex workflows | All types (default with `memory=True`) |
+
+**EXAM TIP:** Questions about "remembering past interactions" or "user preferences" → think **memory** (`memory=True`). Questions about "context retention within session" → think **short-term memory**. Questions about "cross-session learning" → think **long-term memory**. Questions about "tracking facts about entities" → think **entity memory**. Questions about "user-specific personalization" → think **user memory**. Questions about "intelligent retrieval combining all types" → think **contextual memory**.
 
 ---
 
