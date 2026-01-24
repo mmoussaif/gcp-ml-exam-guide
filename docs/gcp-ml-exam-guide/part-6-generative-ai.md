@@ -80,6 +80,27 @@ Multimodal models can work across **text, images, video, audio, and PDFs**—eit
 - **Monitor real-time events**
   - Anomaly detection for fraud/ops signals (streaming ingestion + detection + alerting)
 
+#### Vertex AI and multimodal GenAI (Vertex AI in action)
+
+From the GenAI Leader curriculum perspective:
+
+- **Vertex AI** is Google Cloud’s unified ML platform to build/train/deploy models and AI applications.
+- For **multimodal GenAI** (text, code, images, speech), Vertex AI provides access to models through **Model Garden**, plus managed building blocks for tuning and deployment.
+- In “search + GenAI assistant” use cases, a common pairing is:
+  - **Gemini** (understand the request, reason, converse, and generate responses)
+  - **Vertex AI Search** (retrieve the most relevant answers from a large multimodal knowledge base)
+
+**Case study pattern (automotive virtual assistant)**
+
+- **User problem**: a driver sees a dashboard warning light and needs help now (not after hunting through a manual).
+- **Multimodal input**: the user can describe the issue in text and even show an image/video (e.g., phone camera).
+- **Knowledge base** (examples): owner’s manuals, FAQs, help-center articles, videos, step-by-step guides.
+- **Flow**:
+  - Gemini interprets the question and can ask clarifying questions
+  - Vertex AI Search retrieves the best matching guidance from the knowledge base
+  - The assistant provides step-by-step troubleshooting (not just a static answer)
+- **Business outcomes** (typical): reduced support costs (fewer calls), faster resolution, improved accessibility and customer satisfaction.
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
