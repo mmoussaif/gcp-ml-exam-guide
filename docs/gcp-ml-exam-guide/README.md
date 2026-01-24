@@ -16,3 +16,8 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 ### Web verification note (current blocker)
 
 I attempted to use automated web search to validate technical claims, but the tool output is currently **not returning real web results** (it echoes conversation text instead). Until that is fixed, this repo includes a short checklist of the highest-impact claims to verify manually, with official doc starting points in `quick-reference.md`.
+
+### Disclaimer + contributions
+
+- **Disclaimer**: This guide is compiled from reading and many different resources. **Always double-check facts** against official documentation.
+- **Contributing**: If something is missing, incorrect, or you have an improvement suggestion, please **open a Pull Request**.
