@@ -5,6 +5,7 @@ The October 2024 exam version includes Generative AI topics.
 ### Table of Contents
 
 - [6.0 LLMs & Agentic Systems](#60-llms--agentic-systems-what-the-exam-is-really-testing)
+- [6.0.1 Foundations of AI Engineering and LLMOps](#601-foundations-of-ai-engineering-and-llmops)
 - [6.1 TRANSFORMER ARCHITECTURE](#61-transformer-architecture)
   - [6.1.1 Tokenization](#611-tokenization-how-text-becomes-numbers-for-llms)
 - [6.2 Prompting & Inference Controls](#62-prompting--inference-controls-fastest-customization)
@@ -52,9 +53,392 @@ Together, these shifts made GenAI feel like a step-change in what teams could do
 **What you should be able to explain (foundational concepts checklist)**
 
 - **AI vs ML vs GenAI**: where each fits and why GenAI is different from traditional task-specific models
-- **Data types + requirements**: how modality (text, image, audio, video) and data quality shape what’s possible
+- **Data types + requirements**: how modality (text, image, audio, video) and data quality shape what's possible
 - **Strategies to address foundation-model limitations**: prompting, grounding/RAG, tuning, evaluation, and guardrails (pick the lightest that works)
 - **Responsible + secure AI in orgs**: privacy, safety, policy, and operational controls (before scaling)
+
+### 6.0.1 Foundations of AI Engineering and LLMOps
+
+**Introduction**:
+
+**While learning MLOps**: We explored traditional machine learning models and systems, learning how to take them from experimentation to production using the principles of MLOps.
+
+**Now, a new question emerges**: What happens when the "model" is no longer a custom-trained classifier, but a massive foundation model like Llama, GPT, or Claude? Are the same principles enough?
+
+**Not quite**: Modern AI applications are increasingly powered by large language models (LLMs), which are systems that can generate text, reason over documents, call tools, write code, analyze data, and even act as autonomous agents.
+
+**These models introduce**: An entirely new set of engineering challenges that traditional MLOps does not fully address.
+
+**This is where**: AI engineering and LLMOps come in.
+
+**AI engineering, and specifically LLMOps (Large Language Model Operations)**: Are the specialized practices for managing and maintaining LLMs and LLM-based applications in production, ensuring they remain reliable, accurate, secure, and cost-effective.
+
+**LLMOps aims**: To manage language models and the applications built on them by drawing inspiration from MLOps. It applies reliable software engineering and DevOps practices to LLM-based systems, ensuring that all components work together seamlessly to deliver value.
+
+**Note on terminology**: In this series, we might use AI engineering and LLMOps somewhat interchangeably at places, but there's a slight distinction: AI engineering is the broader discipline of building real-world AI applications, while LLMOps is the operational subset of it focused on optimizing, deploying, and maintaining LLM-powered systems in production.
+
+**Fundamentals of AI Engineering & LLMs**:
+
+**Large language models (LLMs) and foundation models**: In general, are reshaping the way modern AI systems are built.
+
+**Out of this**: AI engineering has emerged as a distinct discipline, one that focuses on building practical applications powered by AI models (especially large pre-trained models).
+
+**It evolved**: Out of traditional machine learning engineering as companies moved from training bespoke ML models to harnessing powerful foundation models developed by others.
+
+**Foundation models**: Are massive, pre-trained AI systems that learn broad patterns from huge datasets, serving as versatile "base models" adaptable to many specific tasks. It is worth noting that LLMs are a specific type of foundation model, specialized mainly for language tasks.
+
+**In essence**: AI engineering blends software engineering, data engineering, and ML to develop, deploy, and maintain AI-driven systems that are reliable and scalable in real-world conditions.
+
+**At first glance**: An "AI Engineer" might sound like a rebranding of an ML engineer, and indeed, there is significant overlap, but there are important distinctions.
+
+**AI engineering emphasizes**: Using and adapting existing models (like open-source LLMs or API models) to solve problems, whereas classical ML engineering often centers on training models from scratch on curated data.
+
+**AI engineering also deals**: With the engineering challenges of integrating AI into products: handling data pipelines, model serving infrastructure, continuous evaluation, and iteration based on user feedback.
+
+**The role sits**: At the intersection of software development and machine learning, requiring knowledge of both deploying software systems and understanding AI model behavior.
+
+**The AI Application Stack**:
+
+**AI engineering can be thought of**: In terms of a layered stack of responsibilities, much like traditional software systems. At a high level, any AI-driven application involves three layers:
+
+- **The application itself** (user interface and logic integrating AI)
+- **The model or model development layer**
+- **The infrastructure layer** that supports serving and operations
+
+**1. Application Development (Top Layer)**:
+
+**At this layer**: Engineers build the features and interfaces that end-users interact with, powered by AI under the hood.
+
+**With powerful models**: Readily available via libraries or APIs, much of the work here involves prompting the model effectively and supplying any additional context the model needs.
+
+**Because the model's outputs**: Directly affect user experience, rigorous evaluation is crucial at this layer. AI engineers must also design intuitive interfaces and handle product considerations (for example, how users provide input to the LLM and how the AI responses are presented).
+
+**This layer has seen**: Explosive growth in the last couple of years, as it's easier than ever to plug an existing model into an app or workflow.
+
+**2. Model Development (Middle Layer)**:
+
+**This layer is traditionally**: The domain of ML engineers and researchers. It includes choosing model architectures, training models on data, fine-tuning pre-trained models, and optimizing models for efficiency.
+
+**When working with foundation models**: Model development typically involves adapting an existing pretrained model rather than training one from scratch. It can involve tasks like fine-tuning an LLM on domain-specific data and performing optimization (e.g., quantizing or compressing).
+
+**Data is a central piece**: Here: preparing datasets for fine-tuning or evaluating models, which might include labeling data or filtering and augmenting existing corpora.
+
+**Hence, even though**: Foundation models are used as a starting point, understanding how models learn (e.g., knowledge of training algorithms, loss functions, etc.) remains valuable in troubleshooting and improving them as per the desired use case.
+
+**3. Infrastructure (Bottom Layer)**:
+
+**At the base**: AI engineering relies on robust infrastructure to deploy and operate models.
+
+**This includes**: The serving stack (how you host the model and expose it), managing computational resources (typically means provisioning GPUs or other accelerators), and monitoring the system's health and performance.
+
+**It also spans**: Data storage and pipelines (for example, a vector database to store embeddings for retrieval), as well as observability tooling to track usage and detect issues like downtime or degraded output quality.
+
+**Based on the three layers**: And whatever we've learned so far, one key point is that many fundamentals of Ops have not changed even as we transition to using LLMs. Similar to any Ops lifecycle, we still need to solve real business problems, define success and performance metrics, monitor, iterate with feedback, and optimize for performance and cost.
+
+**However**: On top of those fundamentals, AI engineering introduces new techniques and challenges unique to working with powerful pre-trained models.
+
+**LLM Basics**:
+
+**Large language models (LLMs)**: Are a type of AI model designed to understand and generate human-like text. They are essentially advanced predictors: given some input text (a "prompt"), an LLM produces a continuation of that text.
+
+**Under the hood**: Most state-of-the-art LLMs are built on the transformer architecture, a neural network design introduced in 2017 ("Attention Is All You Need") that enables scaling to very high parameter counts and effective learning from sequential data like text.
+
+**Several characteristics and terminology related to LLMs**:
+
+**1. Scale (the "large" in LLM)**:
+
+**LLMs have**: A huge number of parameters (weight values in the neural network). This number can range from hundreds of billions to trillions.
+
+**There isn't a strict threshold**: For what counts as "large", but generally, it implies models with at least several billion parameters.
+
+**The term is relative**: And keeps evolving (each year's "large" might be "medium" a couple of years later), but it contrasts these models with earlier "small" language models (like older RNN-based models or word embedding models with millions of parameters).
+
+**2. Training on Massive Text Corpora**:
+
+**LLMs are trained**: In an unsupervised manner on very large text datasets, essentially everything from books, articles, websites (Common Crawl data), Wikipedia, forums, etc., up until a certain cut-off date.
+
+**The training objective**: Is often to predict the next word in a sentence (more formally, next token, since text is tokenized into sub-word units). By learning to predict next tokens, these models learn grammar, facts, reasoning patterns, and even some world knowledge encoded in text.
+
+**The training process**: Involves reading billions of sentences and adjusting weights to minimize prediction error. Through this, LLMs develop a statistical model of language that can be surprisingly adept at many tasks.
+
+**3. Generative and Autoregressive**:
+
+**Most LLMs** (like the GPT series): Are autoregressive transformers, meaning they generate text one token at a time, each time considering the previous tokens (the prompt plus what they've generated so far) to predict the next.
+
+**This allows them**: To generate free-form text of arbitrary length. They can also be directed to produce specific formats (JSON, code, lists) via appropriate prompting. LLMs fall under the Generative AI category as well, since they create new content rather than just predicting a label or category.
+
+**Another kind of LMs**: Is masked language models.
+
+**A masked language model**: Predicts missing tokens anywhere in a sequence, using the context from both before and after the missing tokens. In essence, a masked language model is trained to be able to fill in the blank. A well-known example of a masked language model is bidirectional encoder representations from transformers, or BERT.
+
+**Masked language models**: Are commonly used for non-generative tasks such as sentiment analysis. They are also useful for tasks requiring an understanding of the overall context, like code debugging, where a model needs to understand both the preceding and following code to identify errors.
+
+**Note**: In this series, unless explicitly stated, language model (or large language model) will refer to an autoregressive model.
+
+**4. Emergent Abilities**:
+
+**One intriguing aspect discovered**: Is that as LMs get larger and are trained on more data, they start exhibiting emergent behavior, i.e., capabilities that smaller models did not have, seemingly appearing at a certain scale.
+
+**For example**: The ability to do multi-step arithmetic, logical reasoning in chain-of-thought, or follow certain complex instructions often only becomes reliable in the larger models.
+
+**These emergent abilities**: Are a major reason why LLMs took the world by storm. At a certain size and training breadth, the model is not just a mimic of text, but can perform non-trivial reasoning and problem-solving. It's still a statistical machine, but it effectively learned algorithms from data.
+
+**5. Few-Shot and Zero-Shot Learning**:
+
+**Before LLMs**: If you wanted a model to do something like summarization, you'd train it specifically for that. LLMs introduced the ability to do tasks zero-shot (no examples, just an instruction in plain language) or few-shot (provide a few examples in the prompt).
+
+**For instance**: You can paste an article and say "TL;DR:" and the LLM will attempt a summary, even if it was never explicitly trained to summarize, because it has seen enough text to infer what "TL;DR" means and how summaries look.
+
+**This was a revolutionary shift**: In how we interact with models: we don't always need a dedicated model per task; one sufficiently large model can handle myriad tasks given the right prompt.
+
+**This is why**: Prompt engineering became important; the model already has the capability, we just have to prompt it correctly to activate that capability.
+
+**6. Transformers and Attention**:
+
+**For a bit of the technical underpinnings**: Transformers use a mechanism called self-attention, which allows the model to weigh the relevance of different words in the input relative to each other when producing an output.
+
+**This means**: The model can capture long-range dependencies in language (e.g., understanding a pronoun reference that was several sentences back, or the theme of a paragraph).
+
+**Transformers also lend themselves**: To parallel computation, which made it feasible to train extremely large models using modern computing (GPUs/TPUs). This architecture replaced older recurrent neural network approaches that couldn't scale as well.
+
+**7. Limitations**:
+
+**It's important to remember**: LLMs don't truly "understand" in a human sense. They predict text based on patterns, i.e., basically, they are probabilistic. This means they can be right for the wrong reasons and wrong with high confidence.
+
+**For example**: An LLM might generate a very coherent-sounding but completely made-up answer to a factual question (hallucination). They have no inherent truth-checking mechanism; that's why providing context or integrating tools is often needed for high-stakes applications.
+
+**It's also worth noting**: That making a model larger yields diminishing returns at some point. The jump from 100M to 10B parameters yields a bigger improvement than the jump from 10B to 50B, for example.
+
+**So just because**: An LLM is extremely large doesn't always mean it's the best choice. There might be sweet spots in the size vs performance vs cost trade-off. Engineers often choose the smallest model that achieves the needed performance to keep latency/cost down.
+
+**For instance**: If a 7B model can do a task with 95% success and a 70B model can do it with 97%, one might stick with 7B for production due to the huge difference in resource requirements, unless that extra 2% is mission-critical.
+
+**In summary**: An LLM is like an extremely knowledgeable but somewhat alien being: it has read a lot and can produce answers on almost anything, often writing more fluently than a human, but it might not always be reliable or know its own gaps. It's our job to coax the best out of it with instructions and context, and curtail its weaknesses with evaluations.
+
+**The Shift from Traditional ML Models to Foundation Model Engineering**:
+
+**Traditionally**: Deploying an AI solution usually means developing a bespoke ML model for the task: gathering a labeled dataset, training a model, and integrating it into an application.
+
+**This "classical" ML engineering**: Was very model-centric; you'd often start from scratch or from a small pre-trained base, forming the data → model → product flow.
+
+**With the advent**: Of large pre-trained models (a.k.a. foundation models), the flow is shifting to product → data → model. You start with a powerful general model, quickly build a product around it, and only later gather data or adjust the model if needed.
+
+**Key changes from traditional ML to foundation-model-driven AI engineering**:
+
+**1. Less Model Training, More Adaptation**:
+
+**Without foundation models**: Creating an ML application meant you needed to train your own models (or at least heavily fine-tune existing smaller models).
+
+**For example**: Building a speech recognizer or a chatbot would require training or using a specialized model for that exact task. In the new paradigm, you begin with a model that someone else has already trained on massive data, e.g. an open-source LLM or a model from an API, and your job is to adapt it to your use case.
+
+**Model adaptation**: May be performed through lightweight techniques such as prompt and context engineering, which require no changes to internal weights. When greater specialization is needed, fine-tuning with supplemental data can be applied.
+
+**2. Bigger Models with Bigger Compute Demands**:
+
+**Foundation models**: Especially LLMs, are orders of magnitude larger than the models many ML engineers used to work with. A typical scikit-learn or TensorFlow model might have been tens of thousands or millions of parameters; by contrast, foundation models have billions of parameters, and some approach trillions.
+
+**These models consume**: Far more compute and memory. In practice, that means AI engineers must grapple with GPU/TPU clusters, high memory hardware, and optimization techniques to make inference feasible.
+
+**There's a new urgency**: Around efficiency: techniques like model quantization (reducing precision to 8-bit or 4-bit) and model distillation (creating smaller models that approximate the large model's behavior) have become important engineering skills.
+
+**Despite these challenges**: The flip side is positive: with big models, you often need less task-specific data than before. A foundation model already "knows" a lot from its training; sometimes you can get excellent results with zero additional training, just by prompt tweaking.
+
+**This can dramatically shorten**: Development cycles. AI engineering thus has a faster iterative loop at the prototype stage, but potentially a more complex deployment stage due to model size (if the model is not via a vendor API).
+
+**3. Open-Ended Outputs and New Evaluation Challenges**:
+
+**Traditional ML models**: Often produced structured or bounded outputs, e.g. a class label from a fixed set, a number from a distribution, or a yes/no prediction. Evaluating these models was straightforward: we had metrics like accuracy, F1, mean error, etc., computed against a labeled ground truth.
+
+**LLMs, by contrast**: Generate open-ended text (or other content). Their outputs are flexible and can solve many tasks, but that flexibility makes it harder to measure performance objectively.
+
+**How do you automatically evaluate**: If a long AI-generated answer is "good"? Quality can be subjective or context-dependent.
+
+**AI engineers, therefore**: Face a much bigger evaluation problem. Often need to define custom criteria for success. Human feedback becomes important (hence the rise of techniques like RLHF: Reinforcement Learning from Human Feedback to fine-tune models).
+
+**Another evaluation challenge**: Is that these models can fail in unexpected ways, for example, they can hallucinate or produce inappropriate content if prompted maliciously.
+
+**Ensuring reliability and safety**: Is part of the evaluation loop. AI engineers must incorporate guardrails and monitors, for example, filters for disallowed content or fallbacks.
+
+**In short**: Foundation model engineering differs from classic ML engineering in that it's less about creating new models and more about adapting and governing powerful models.
+
+**You will spend**: More time crafting prompts or retrieval pipelines than tweaking neural network architectures, and you'll need to evaluate not just if the model's predictions are correct, but how and why they might fail.
+
+**To navigate this new landscape**: It helps to have a mental framework for the "knobs" you can turn when building with foundation models.
+
+**That's where**: The 3 levers of AI engineering come in: instructions, context, and the model. These are the primary dimensions along which we can improve or adapt an AI system's behavior.
+
+**Levers of AI Engineering**:
+
+**When using LLMs or other foundation models**: Think of yourself as having three main levers to pull in order to get the outcome you want:
+
+- **Instructions**: What instructions or prompts you give the model (and how you give them)?
+- **Context**: What additional information or data do you provide to the model along with your prompt?
+- **The Model**: Which model you choose and how you might modify its parameters or fine-tune it.
+
+**This framework is extremely useful**: If your current AI system isn't performing to requirements, you can consider:
+
+- Do I change how I'm prompting it?
+- Do I provide more/better context?
+- Do I need a different or improved model?
+
+**Lever 1: Instructions**:
+
+**Instructions refer to**: The input prompt or query we give to the model, essentially, how we ask our question or define the task. Prompt engineering is the art and science of crafting these instructions to guide the model's behavior.
+
+**It's often**: The fastest and cheapest way to improve a model's output without any model retraining. By simply rephrasing or restructuring a prompt, we can get significantly different results from an LLM.
+
+**Key points about the instructions lever**:
+
+**A. Clarity and Specificity**:
+
+**Ambiguous or under-specified prompts**: Yield unpredictable outputs. Being explicit about requirements and tasks helps get instant better responses.
+
+**B. Role and Tone Instructions**:
+
+**Modern chat-oriented LLMs**: Support a system message or similar mechanism where you can set the context or persona of the AI. This is a powerful form of instruction.
+
+**For instance**: Telling the model "You are an expert financial advisor" at the start can make its answers sound more formal and knowledgeable in that domain. Similarly, instructing style ("respond in a friendly tone" or "provide the answer in Old English") can usually be achieved through a prompt.
+
+**C. Examples in Prompts (Few-Shot Learning)**:
+
+**It is the technique**: Of giving examples of the desired output within the prompt. For example, if you want an LLM to transform sentences into questions, you might show a couple of input → output pairs in the prompt and then add a new input for it to transform.
+
+**The model will infer**: The pattern from the examples. Few-shot examples act as implicit instructions; they set a precedent or context that the model uses to shape its response. This method can massively improve performance on tasks where the model otherwise isn't sure what format or depth you need.
+
+**D. Iterative Prompt Refinement**:
+
+**Treat prompts**: Like code that you debug. If the output isn't what you hoped, analyze it: Did the model misunderstand your request? Did it include extraneous info?
+
+**Then go ahead**: And refine the prompt.
+
+**E. Limits of Prompting**:
+
+**Prompt engineering alone**: Might not be enough if the model fundamentally lacks some knowledge or skill (no matter how you ask, it might not know the answer if it wasn't trained on relevant data, and you don't supply it).
+
+**Also**: Prompts can become lengthy and unwieldy for very specific behavior, whereas at some point, it might be easier to just fine-tune the model (baking the desired behavior into the model weights, so you don't need huge prompts every time). We'll discuss this under the model lever.
+
+**But as a rule of thumb**: Start with prompt tweaks before considering costly approaches like fine-tuning, you'd be surprised how much you can get out of a model with clever instruction design.
+
+**Lever 2: Context**:
+
+**The second lever**: Is providing context to the model, i.e., supplemental information that the model can use to formulate its response.
+
+**Even the largest LLMs**: Have a cutoff to their training data (and inherent limitations in memorization), so they won't know about anything beyond what they were trained on.
+
+**Context engineering, broadly**: Is about giving the model knowledge it can draw from, or setting the stage so it better understands the query.
+
+**There are two main forms**: Of context we can provide:
+
+- **Information relevant to the query**: Like documents, facts, or data
+- **Interaction context**: Like the conversation history or previous user inputs, in a chat setting
+
+**A. Retrieval-Augmented Generation (RAG)**:
+
+**A powerful pattern**: For providing information context is RAG.
+
+**In a simple retrieval-augmented setup**: When a user asks a question, the system first retrieves relevant documents or data from an external source (such as a database, a knowledge base, or the web), and then feeds those documents into the prompt along with the question.
+
+**The LLM uses**: Both the question and the retrieved context to generate its answer. This effectively extends the model's knowledge to whatever you have in your company docs. or latest news, etc.
+
+**For example**: If a user asks "What's the growth rate of our user base this quarter?", the system might fetch the latest analytics report and include a snippet like "According to the Q3 report: user base grew 5% month-over-month." in the prompt. The model then has the data to answer accurately, even if such specifics were never in its training data.
+
+**B. Long Contexts and Knowledge Embedding**:
+
+**Another aspect of context**: Is that modern models support fairly long input lengths. This means you can feed quite a lot of information in one go, but still, there's a limit to it.
+
+**Hence**: There's an emerging practice of context management, where you decide what information to include or exclude from the prompt for optimal performance, somewhat analogous to feature engineering in classical ML. This is what the industry particularly refers to as "context engineering".
+
+**The challenge**: Is that input length is finite and adding more text can introduce noise or increase cost, so you want to include just the relevant context.
+
+**C. Techniques for Augmenting Context**:
+
+**We mentioned**: Retrieval via search or vector databases as one technique. Others include structured knowledge lookups (like calling an API or database query and inserting the result), or providing tool outputs.
+
+**In advanced AI agent scenarios**: The LLM can be designed to invoke tools and then incorporate the results into context. For instance, an LLM might be prompted to first do a web search and then given the search snippet to continue the conversation. All of these revolve around supplying information that the model didn't inherently know when the query came in.
+
+**In summary**: Context is your lever for supplying the model with data it didn't originally have, thereby extending its capabilities and keeping it grounded. Proper use of context can often solve problems that instructions alone cannot, especially for factual or up-to-date queries.
+
+**Lever 3: Model**:
+
+**The third lever**: Is the model itself. This involves choices about which model you use and whether you need to modify the model's parameters through techniques like fine-tuning.
+
+**While the first two levers**: (instructions and context) allow you to adapt a model without changing its internal weights, this lever is about actually changing or choosing the model to better fit your task.
+
+**Important aspects of the model lever**:
+
+**A. Model Selection**:
+
+**Not all LLMs are equal**: They differ in size, knowledge cutoff, training data, architecture, and fine-tuning. A critical decision is which base model to start from.
+
+**Choosing the right model**: For the job can make or break your application: it's a trade-off between performance, cost, latency, and practical constraints like deployment environment or licensing.
+
+**Often**: A larger model will perform better, but a smaller model fine-tuned on your domain might outperform a larger general model on that specific domain, so you have to test.
+
+**Model selection is thus a lever**: You can switch to a different model if one isn't working well (e.g. try Anthropic Claude vs GPT vs an open model and compare outputs on your task).
+
+**B. Fine-Tuning and Training**:
+
+**If instructions and context**: Aren't enough to reach the desired performance, you might need to fine-tune the model. Fine-tuning means continuing to train the model on additional data so it adapts to your task.
+
+**Unlike prompt or retrieval augmentation**: Fine-tuning actually changes the model's weights. For instance, if you have a thousand example customer inquiries and high-quality representative answers, you could fine-tune an LLM on this Q&A pair set so that it better handles your customer support domain.
+
+**Instruction fine-tuning**: Is a specific type of LLM fine-tuning.
+
+**Fine-tuning can significantly improve**: Output quality, tone, and consistency, and can also reduce the need for very large prompts (because instructions get baked into the model's behavior). There are different types and scales of fine-tuning, which we'll be discussing in subsequent chapters.
+
+**C. Fine-Tune vs Prompting**:
+
+**This is a crucial decision**: Fine-tuning can make a model much better for your specific task, especially if the task has a narrow focus or a distinct style that the model hasn't seen enough.
+
+**It can also reduce inference cost**: For example, instead of using a 130B parameter general model with a huge prompt to get the output you want, you might fine-tune a 7B model that consistently produces that output style, which will be cheaper and faster to run.
+
+**However**: Fine-tuning requires effort: you need training data, training infrastructure, and it carries risk (the model might overfit or its behavior on other tasks might change in unwanted ways).
+
+**As a rule of thumb**: Exhaust prompt and context approaches first, and fine-tune only if those don't meet your requirements or if you need to optimize for performance/latency.
+
+**D. Customization and Model Improvements**:
+
+**Beyond fine-tuning**: The model lever could include things like model compression and optimization (pruning unnecessary neurons, distilling the model into a smaller one, or other architectural tweaks).
+
+**Also**: If you're working with open-source models, you might decide to train a smaller model from scratch for certain cases (e.g., train a 500M parameter model that's edge-deployable for a simple task, instead of using a huge model via API). These are all part of the "model" lever, essentially altering the AI's brain rather than just its inputs.
+
+**In summary**: The 3 levers: instructions, context, and model are the core toolkit of engineering with LLMs. A principled approach is: use the highest lever only as needed.
+
+**Start by optimizing**: Your prompts. If that's not enough, add supporting context or retrieval mechanisms to give the model what it needs. Only if those avenues still fall short (or if you have the resources and data to significantly boost performance) should you turn to altering the model via fine-tuning or other model optimization strategies.
+
+**By structuring your problem-solving**: This way, you ensure you're not taking on more complexity than necessary.
+
+**To conclude this section**: Understanding the three levers of AI engineering: instructions, context, and the model, gives you a structured way to diagnose and improve system performance.
+
+**Instead of treating**: Model behavior as a black box, you now have a practical framework for intervention: start by refining how you ask, then adjust what information you provide, and only lastly consider modifying the model itself.
+
+**This hierarchy**: Keeps your solutions simple, cost-effective, and grounded. Most problems can be solved through better prompting or smarter context management; only a minority require full model customization.
+
+**By approaching LLM development**: Through this layered lens, it is ensured that every improvement is deliberate, efficient, and aligned with the system's real needs.
+
+**MLOps vs. LLMOps Key Differences**:
+
+**Although at various places**: This chapter has explored the differences between LLMOps and MLOps, the following concise bullet points provide a quick summary of the key distinctions:
+
+- **Iteration focus**: MLOps iterates on model and data; LLMOps often iterates on prompts and retrieved context (model is fixed until fine-tune decision)
+- **Data needs**: MLOps typically requires labeled data for training; LLMOps leverages unlabeled data via the foundation model and might not require much labeled data initially, focusing more on collecting feedback data
+- **Deployment unit**: MLOps deployment = a model binary or inference pipelines; LLMOps deployment = a pipeline of prompt templates + model (which might be an API) + context stores
+- **Monitoring metrics**: MLOps monitors numeric performance metrics; LLMOps monitors qualitative outputs, in addition to certain specialized numeric metrics and user satisfaction signals
+
+**It is important to note**: Here, the differences certainly don't mean we abandon MLOps knowledge, rather we extend it. A lot of MLOps wisdom is still very much true and valuable in LLMOps. It's just that the content of what we monitor or how we change the system has new dimensions.
+
+**Key Takeaways**:
+
+- **AI engineering and LLMOps**: Are specialized practices for managing LLMs and LLM-based applications in production
+- **AI engineering blends**: Software engineering, data engineering, and ML to develop, deploy, and maintain AI-driven systems
+- **The AI application stack**: Consists of three layers: application development (top), model development (middle), infrastructure (bottom)
+- **LLM basics**: Scale (billions/trillions of parameters), training on massive text corpora, generative/autoregressive, emergent abilities, few-shot/zero-shot learning, transformers/attention, limitations (hallucination, diminishing returns)
+- **Shift from traditional ML**: Less model training/more adaptation, bigger models/bigger compute demands, open-ended outputs/new evaluation challenges
+- **3 Levers of AI Engineering**: Instructions (prompt engineering), Context (RAG, context management), Model (selection, fine-tuning, customization)
+- **Principled approach**: Use highest lever only as needed (start with prompts, then context, then model)
+- **MLOps vs LLMOps**: Different iteration focus, data needs, deployment units, monitoring metrics
+
+**EXAM TIP:** Questions about "AI engineering vs ML engineering" → think **AI engineering** (uses/adapts existing models, prompt/context engineering, faster iterative loop) vs **ML engineering** (trains models from scratch, model-centric, data → model → product). Questions about "LLM basics" → think **scale** (billions/trillions parameters) → **training** (massive text corpora, unsupervised, next token prediction) → **generative/autoregressive** (one token at a time, free-form text) → **emergent abilities** (capabilities appearing at scale) → **few-shot/zero-shot** (no training needed, just prompt) → **transformers/attention** (long-range dependencies, parallel computation) → **limitations** (hallucination, probabilistic, no truth-checking). Questions about "3 levers of AI engineering" → think **Instructions** (prompt engineering, clarity/specificity, role/tone, few-shot examples, iterative refinement) → **Context** (RAG, long contexts, context management, knowledge embedding, tool outputs) → **Model** (model selection, fine-tuning, customization, compression). Questions about "lever priority" → think **start with instructions** (fastest/cheapest) → **then context** (extend knowledge) → **only then model** (fine-tuning/customization, most expensive). Questions about "MLOps vs LLMOps" → think **iteration focus** (MLOps: model/data, LLMOps: prompts/context) → **data needs** (MLOps: labeled data, LLMOps: unlabeled/feedback) → **deployment unit** (MLOps: model binary, LLMOps: prompt templates + model + context stores) → **monitoring** (MLOps: numeric metrics, LLMOps: qualitative + numeric + user satisfaction).
 
 ### The business impact of GenAI (beyond the chatbot)
 
