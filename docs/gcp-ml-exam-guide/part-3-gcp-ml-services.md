@@ -2,24 +2,24 @@
 
 ### Official docs (high-signal starting points)
 
-- **Vertex AI**: `https://cloud.google.com/vertex-ai/docs`
-- Vertex AI Training: `https://cloud.google.com/vertex-ai/docs/training/overview`
-- Vertex AI Prediction: `https://cloud.google.com/vertex-ai/docs/predictions/overview`
-- Vertex AI Model Monitoring: `https://cloud.google.com/vertex-ai/docs/model-monitoring/overview`
-- Vertex AI Feature Store: `https://cloud.google.com/vertex-ai/docs/featurestore/overview`
-- Vertex AI Explainable AI: `https://cloud.google.com/vertex-ai/docs/explainable-ai/overview`
-- **BigQuery ML**: `https://cloud.google.com/bigquery/docs/bqml-introduction`
-- BQML Model Types: `https://cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create`
-- **AutoML**: `https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide`
-- AutoML Vision: `https://cloud.google.com/vertex-ai/docs/image-data/classification/train-model`
-- AutoML Natural Language: `https://cloud.google.com/vertex-ai/docs/text-data/classification/prepare-data`
+- **Vertex AI**: [cloud.google.com/vertex-ai/docs](https://cloud.google.com/vertex-ai/docs)
+- Vertex AI Training: [Training Overview](https://cloud.google.com/vertex-ai/docs/training/overview)
+- Vertex AI Prediction: [Predictions Overview](https://cloud.google.com/vertex-ai/docs/predictions/overview)
+- Vertex AI Model Monitoring: [Model Monitoring Overview](https://cloud.google.com/vertex-ai/docs/model-monitoring/overview)
+- Vertex AI Feature Store: [Feature Store Overview](https://cloud.google.com/vertex-ai/docs/featurestore/overview)
+- Vertex AI Explainable AI: [Explainable AI Overview](https://cloud.google.com/vertex-ai/docs/explainable-ai/overview)
+- **BigQuery ML**: [BigQuery ML Introduction](https://cloud.google.com/bigquery/docs/bqml-introduction)
+- BQML Model Types: [BQML CREATE MODEL Syntax](https://cloud.google.com/bigquery/docs/reference/standard-sql/bigqueryml-syntax-create)
+- **AutoML**: [Vertex AI Beginners Guide](https://cloud.google.com/vertex-ai/docs/beginner/beginners-guide)
+- AutoML Vision: [AutoML Vision Training](https://cloud.google.com/vertex-ai/docs/image-data/classification/train-model)
+- AutoML Natural Language: [AutoML Natural Language Training](https://cloud.google.com/vertex-ai/docs/text-data/classification/prepare-data)
 - **Pre-trained APIs**:
-  - Vision API: `https://cloud.google.com/vision/docs`
-  - Video Intelligence API: `https://cloud.google.com/video-intelligence/docs`
-  - Natural Language API: `https://cloud.google.com/natural-language/docs`
-  - Speech-to-Text: `https://cloud.google.com/speech-to-text/docs`
-- **Cloud DLP**: `https://cloud.google.com/dlp/docs`
-- **Data Catalog**: `https://cloud.google.com/data-catalog/docs`
+  - Vision API: [cloud.google.com/vision/docs](https://cloud.google.com/vision/docs)
+  - Video Intelligence API: [cloud.google.com/video-intelligence/docs](https://cloud.google.com/video-intelligence/docs)
+  - Natural Language API: [cloud.google.com/natural-language/docs](https://cloud.google.com/natural-language/docs)
+  - Speech-to-Text: [cloud.google.com/speech-to-text/docs](https://cloud.google.com/speech-to-text/docs)
+- **Cloud DLP**: [cloud.google.com/dlp/docs](https://cloud.google.com/dlp/docs)
+- **Data Catalog**: [cloud.google.com/data-catalog/docs](https://cloud.google.com/data-catalog/docs)
 
 ### 3.1 BIGQUERY ML
 

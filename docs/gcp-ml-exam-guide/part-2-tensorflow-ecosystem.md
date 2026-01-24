@@ -2,16 +2,16 @@
 
 ### Official docs (high-signal starting points)
 
-- TensorFlow Guide: `https://www.tensorflow.org/guide`
-- tf.data API: `https://www.tensorflow.org/guide/data`
-- TFRecord & tf.train.Example: `https://www.tensorflow.org/tutorials/load_data/tfrecord`
-- Distributed Training: `https://www.tensorflow.org/guide/distributed_training`
-- TensorFlow Hub: `https://www.tensorflow.org/hub`
-- TFX (TensorFlow Extended): `https://www.tensorflow.org/tfx`
-- TensorFlow Data Validation (TFDV): `https://www.tensorflow.org/tfx/data_validation/get_started`
-- TensorFlow Transform (TFT): `https://www.tensorflow.org/tfx/transform/get_started`
-- TensorFlow Model Analysis (TFMA): `https://www.tensorflow.org/tfx/model_analysis/get_started`
-- Model Optimization Toolkit: `https://www.tensorflow.org/model_optimization`
+- TensorFlow Guide: [tensorflow.org/guide](https://www.tensorflow.org/guide)
+- tf.data API: [tensorflow.org/guide/data](https://www.tensorflow.org/guide/data)
+- TFRecord & tf.train.Example: [TFRecord Tutorial](https://www.tensorflow.org/tutorials/load_data/tfrecord)
+- Distributed Training: [tensorflow.org/guide/distributed_training](https://www.tensorflow.org/guide/distributed_training)
+- TensorFlow Hub: [tensorflow.org/hub](https://www.tensorflow.org/hub)
+- TFX (TensorFlow Extended): [tensorflow.org/tfx](https://www.tensorflow.org/tfx)
+- TensorFlow Data Validation (TFDV): [TFDV Getting Started](https://www.tensorflow.org/tfx/data_validation/get_started)
+- TensorFlow Transform (TFT): [TFT Getting Started](https://www.tensorflow.org/tfx/transform/get_started)
+- TensorFlow Model Analysis (TFMA): [TFMA Getting Started](https://www.tensorflow.org/tfx/model_analysis/get_started)
+- Model Optimization Toolkit: [tensorflow.org/model_optimization](https://www.tensorflow.org/model_optimization)
 
 ### 2.1 DATA HANDLING
 
