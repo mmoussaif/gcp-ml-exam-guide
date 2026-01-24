@@ -995,7 +995,9 @@ Agents introduce a **third category of principal** (beyond users and service acc
 
 ---
 
-## 7.11.1 Agent Interoperability: A2A, AP2, and x402 (Extended)
+## 7.11.1 Agent Interoperability: A2A, AP2, and x402 (Extended Protocols)
+
+**Note**: This section extends [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet) with additional protocols (AP2, x402) and advanced A2A concepts. For A2A implementation details (Agent Cards, code examples), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
 
 Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
 
