@@ -320,7 +320,166 @@ E-commerce recommendation model:
 - **Tools**: Kafka for extraction, real-time transforms, etc.
 - **Coverage**: Will touch on streaming in context of feature stores and orchestration in future chapters
 
-**EXAM TIP:** Questions about "ETL vs ELT" → think **ETL** (transform before load, less flexible but cleaner) vs **ELT** (load raw first, transform later, more flexible but can create data swamp). Questions about "data format choice" → think **text formats** (human-readable, debugging) vs **binary formats** (compact, efficient, industry standard for analytics). Questions about "row vs column storage" → think **row-major** (write-heavy, retrieve entire samples) vs **column-major** (analytical queries, calculate mean of feature, much faster).
+**Hands-On: Building Data Pipelines (Hybrid ETL/ELT Example)**:
+
+**Objective**: Simulate a basic ML data pipeline demonstrating hybrid ETL/ELT approach with data generation, validation, feature engineering, and storage in multiple formats.
+
+**Pipeline Structure**:
+
+**Stage 1: ETL Sub-Pipeline (E → T → L)**:
+
+**1. Extract Phase I**:
+
+- Pull data from heterogeneous sources:
+  - **Internal databases**: SQLite `customers.db` (customer master data)
+  - **Finance systems**: `sales.csv` (transactional sales data)
+  - **Activity tracking**: `events.json` (behavioral event data)
+- Functions: `extract_sales_csv()`, `extract_events_json()`, `extract_customers_sqlite()`
+- Bring heterogeneous data into common format (pandas DataFrames)
+
+**2. Validation Phase**:
+
+- **validate_sales()**:
+  - Column checks, type casting (IDs → int, amounts → numeric, timestamps → datetime)
+  - Drop invalid rows (missing key fields)
+  - Sanitize amounts (negative/zero → NaN, cap extreme outliers)
+  - Fill missing amounts (customer-level median, then global median)
+  - Deduplication (keep latest timestamp per sale_id)
+- **validate_events()**:
+  - Column checks, type casting
+  - Drop invalid rows, deduplication
+- **validate_customers()**:
+  - Column checks, type casting
+  - Drop invalid rows, deduplication
+
+**3. Transform Phase I**:
+
+- **Feature engineering for churn prediction**:
+  - **Time windows**: Observation window (e.g., 200 days) and label window (e.g., 60 days)
+  - **RFM features**:
+    - **Recency**: Days since last purchase (cutoff - last_purchase_date)
+    - **Frequency**: Count of purchases in observation window
+    - **Monetary**: Sum of amounts, average amount, max amount
+  - **Inter-purchase gap**: Mean days between consecutive purchases
+  - **Tenure**: Days since customer signup
+  - **Demographics**: Country, city
+  - **Label**: Churn (1 if no future purchase in label window, 0 otherwise)
+- **Leakage safety**: All features computed from observation window (before cutoff), label from label window (after cutoff)
+- **Output**: Feature table (row per customer) with engineered features and labels
+
+**4. Load Phase I**:
+
+- **Save transformed data** in multiple formats:
+  - CSV (human-readable, debugging)
+  - Parquet (compact, efficient, analytical queries)
+  - JSON (interchange, API responses)
+- **Documentation**:
+  - Data dictionary (explaining each feature column)
+  - Run metadata (timestamp, random seed, parameters, row counts)
+  - QA report (unique customers, churn rate, date ranges)
+
+**Stage 2: ELT Sub-Pipeline (E → L → T)**:
+
+**5. Extract Phase II**:
+
+- **Fetch intermediate dataset** from storage (simulating ML team fetching from data team's storage)
+- Can use any format (CSV, Parquet, JSON) depending on needs
+- **Purpose**: Handle missing values (NaNs from customers with no purchases)
+
+**6. Load Phase II**:
+
+- **Save fetched data** before transformation (ELT pattern: load raw first)
+- Ensures data available for future use without re-extraction
+
+**7. Transform Phase II**:
+
+- **scikit-learn Pipeline** for preprocessing:
+  - **Split data**: Train/validation split (80/20) with stratification
+  - **Detect column types**: Numeric vs categorical (from training data only)
+  - **Numeric pipeline**:
+    - Impute missing values with column mean
+    - Standardize features (mean 0, variance 1)
+  - **Categorical pipeline**:
+    - Impute missing categories with most frequent
+    - One-hot encode categories
+  - **ColumnTransformer**: Apply appropriate pipeline to each column type
+  - **Leakage safety**: Fit preprocessor on training only, transform validation
+- **Output**: Processed train/validation DataFrames ready for modeling
+
+**Key Implementation Patterns**:
+
+```python
+# Extract from multiple sources
+def extract_sales_csv():
+    df = pd.read_csv('sales.csv')
+    return df
+
+def extract_customers_sqlite():
+    conn = sqlite3.connect('customers.db')
+    df = pd.read_sql('SELECT * FROM customers', conn)
+    conn.close()
+    return df
+
+# Validate and clean
+def validate_sales(df):
+    # Type casting, sanitization, imputation, deduplication
+    return cleaned_df
+
+# Transform (feature engineering)
+def transform_features(sales, customers, cutoff, obs_days, label_days):
+    # RFM features, time-based features, leakage-safe labels
+    return features_df, daily_obs, sales_obs
+
+# Load (save in multiple formats)
+def dump_outputs(feats, sales_obs, daily_obs, cutoff, obs_days, label_days):
+    feats.to_csv('features.csv')
+    feats.to_parquet('features.parquet')
+    feats.to_json('features.json', orient='records', indent=2)
+    # Save metadata, data dictionary, QA report
+
+# ELT: Extract → Load → Transform
+# Extract intermediate data
+df = pd.read_parquet('features.parquet')
+
+# Load (save copy)
+df_copy = df.copy()
+df_copy.to_parquet('features_copy.parquet')
+
+# Transform (scikit-learn pipeline)
+from sklearn.pipeline import Pipeline
+from sklearn.compose import ColumnTransformer
+from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.impute import SimpleImputer
+
+numeric_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='mean')),
+    ('scaler', StandardScaler())
+])
+
+categorical_pipeline = Pipeline([
+    ('imputer', SimpleImputer(strategy='most_frequent')),
+    ('onehot', OneHotEncoder(sparse_output=False, handle_unknown='ignore'))
+])
+
+preprocessor = ColumnTransformer([
+    ('numeric', numeric_pipeline, numeric_cols),
+    ('categorical', categorical_pipeline, categorical_cols)
+])
+
+X_train_processed = preprocessor.fit_transform(X_train)
+X_valid_processed = preprocessor.transform(X_valid)
+```
+
+**Key Takeaways**:
+
+- **Hybrid approach**: ETL for initial processing, ELT for flexible downstream transformations
+- **Multiple formats**: Save in CSV (debugging), Parquet (efficiency), JSON (interchange)
+- **Leakage prevention**: Strict separation of observation and label windows, fit preprocessor on training only
+- **Validation**: Early validation prevents propagating errors downstream
+- **Documentation**: Data dictionary, metadata, QA reports for traceability
+- **Reproducibility**: Random seeds, timestamps, parameter logging
+
+**EXAM TIP:** Questions about "ETL vs ELT" → think **ETL** (transform before load, less flexible but cleaner) vs **ELT** (load raw first, transform later, more flexible but can create data swamp). Questions about "data format choice" → think **text formats** (human-readable, debugging) vs **binary formats** (compact, efficient, industry standard for analytics). Questions about "row vs column storage" → think **row-major** (write-heavy, retrieve entire samples) vs **column-major** (analytical queries, calculate mean of feature, much faster). Questions about "data pipeline structure" → think **Extract → Validate → Transform → Load** (ETL) or **Extract → Load → Transform** (ELT).
 
 **G. Data Labeling and Annotation**:
 
