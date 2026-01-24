@@ -57,7 +57,11 @@ This framing is adapted from the GenAI Leader curriculum and is meant to sound l
 
 #### Quick definitions (from GenAI Leader quiz-style questions)
 
+- **Artificial Intelligence (AI)**: the broad field of building machines that can do tasks that normally require human intelligence (learning, problem-solving, decision-making).
+- **Machine Learning (ML)**: a subset of AI where systems learn patterns from data to perform specific tasks.
+  - Intuition: the “learning” ends up as a **model** — think of it as **math** (often many equations/parameters). You put inputs in, you get outputs out.
 - **Generative AI**: a type of AI that can **create new content** (text, images, audio/music, code), not just analyze existing data.
+  - Simple analogy: traditional ML can learn to **judge** whether something matches a category (e.g., “spam or not spam”); GenAI learns patterns well enough to **create** a new version (like learning from many paintings, then making a new painting).
 - **Gemini**:
   - a **generative AI model (family of models)** developed by Google
   - also appears as an **assistant/app experience** in products (e.g., “Gemini in Gmail”), but the _model_ ≠ the _app_
