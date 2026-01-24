@@ -1,5 +1,17 @@
 ## PART III: GCP ML SERVICES
 
+### Table of Contents
+
+- [3.1 BIGQUERY ML](#31-bigquery-ml)
+- [3.2 VERTEX AI / AI PLATFORM](#32-vertex-ai--ai-platform)
+- [3.3 AUTOML](#33-automl)
+- [3.4 PRE-TRAINED APIs](#34-pre-trained-apis)
+- [3.5 CLOUD DLP (Data Loss Prevention)](#35-cloud-dlp-data-loss-prevention)
+- [3.6 PRIVACY-PRESERVING ML](#36-privacy-preserving-ml)
+- [3.7 REGULATED INDUSTRIES](#37-regulated-industries)
+- [3.8 DATA CATALOG](#38-data-catalog)
+- [3.9 FIREBASE CLOUD MESSAGING](#39-firebase-cloud-messaging)
+
 ### Official docs (high-signal starting points)
 
 - **Vertex AI**: [cloud.google.com/vertex-ai/docs](https://cloud.google.com/vertex-ai/docs)

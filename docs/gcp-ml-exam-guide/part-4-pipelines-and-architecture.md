@@ -1,5 +1,23 @@
 ## PART IV: PIPELINES & ARCHITECTURE
 
+### Table of Contents
+
+- [4.0 WHY PIPELINES (AUTOMATION) MATTER](#40-why-pipelines-automation-matter)
+  - [4.0.1 Data preparation & processing system basics](#401-data-preparation--processing-system-basics-exam-level)
+  - [4.0.2 OPERATING DATA PIPELINES IN PRODUCTION](#402-operating-data-pipelines-in-production-test-style)
+- [4.1 EVENT-DRIVEN TRAINING](#41-event-driven-training)
+- [4.2 PREPROCESSING AT PREDICTION TIME](#42-preprocessing-at-prediction-time)
+- [4.3 ARCHITECTURE PATTERNS](#43-architecture-patterns)
+- [4.4 KUBEFLOW PIPELINES](#44-kubeflow-pipelines)
+- [4.5 PIPELINE ORCHESTRATION OPTIONS](#45-pipeline-orchestration-options)
+  - [4.5.1 PROMOTING A MODEL ARTIFACT TO PRODUCTION](#451-promoting-a-model-artifact-to-production-staging-first)
+- [4.6 DATA PIPELINES](#46-data-pipelines)
+- [4.7 MODEL MONITORING](#47-model-monitoring)
+- [4.8 RESOURCE ORGANIZATION](#48-resource-organization)
+- [4.9 CI/CD FOR ML](#49-cicd-for-ml)
+- [4.10 PRODUCTION READINESS CHECKS (MLOps)](#410-production-readiness-checks-mlops)
+- [4.11 CONTINUOUS TRAINING (CT) PATTERN](#411-continuous-training-ct-pattern)
+
 ### Official docs (high-signal starting points)
 
 - **Vertex AI Pipelines**: [Vertex AI Pipelines Introduction](https://cloud.google.com/vertex-ai/docs/pipelines/introduction)

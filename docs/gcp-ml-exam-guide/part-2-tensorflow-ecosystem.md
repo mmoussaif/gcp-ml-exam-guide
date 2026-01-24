@@ -1,5 +1,17 @@
 ## PART II: TENSORFLOW ECOSYSTEM
 
+### Table of Contents
+
+- [2.1 DATA HANDLING](#21-data-handling)
+- [2.2 TENSORFLOW TOOLS](#22-tensorflow-tools)
+- [2.3 TENSORFLOW LIBRARIES](#23-tensorflow-libraries)
+- [2.4 EAGER VS GRAPH MODE](#24-eager-vs-graph-mode)
+- [2.5 DISTRIBUTED TRAINING STRATEGIES](#25-distributed-training-strategies)
+- [2.6 TENSORFLOW ESTIMATORS](#26-tensorflow-estimators)
+- [2.7 MODEL OPTIMIZATION FOR INFERENCE](#27-model-optimization-for-inference)
+- [2.8 TFX (TensorFlow Extended)](#28-tfx-tensorflow-extended)
+- [2.9 TENSORFLOW DATA VALIDATION (TFDV)](#29-tensorflow-data-validation-tfdv)
+
 ### Official docs (high-signal starting points)
 
 - TensorFlow Guide: [tensorflow.org/guide](https://www.tensorflow.org/guide)

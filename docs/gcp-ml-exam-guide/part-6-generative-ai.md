@@ -2,6 +2,21 @@
 
 The October 2024 exam version includes Generative AI topics.
 
+### Table of Contents
+
+- [6.0 LLMs & Agentic Systems](#60-llms--agentic-systems-what-the-exam-is-really-testing)
+- [6.1 TRANSFORMER ARCHITECTURE](#61-transformer-architecture)
+  - [6.1.1 Tokenization](#611-tokenization-how-text-becomes-numbers-for-llms)
+- [6.2 Prompting & Inference Controls](#62-prompting--inference-controls-fastest-customization)
+- [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
+- [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
+- [6.5 Building agents on Google Cloud](#65-building-agents-on-google-cloud-service-mapping)
+- [6.6 AgentOps](#66-agentops-reliability-safety-and-operating-in-production)
+- [6.7 GenAI evaluation](#67-genai-evaluation-beyond-is-it-correct)
+- [6.8 Inference performance & cost/latency tradeoffs](#68-inference-performance--costlatency-tradeoffs)
+- [6.9 MODEL CUSTOMIZATION](#69-model-customization)
+- [6.10 Skill Boost PDF reading lists](#610-skill-boost-pdf-reading-lists-useful-references)
+
 ### Executive lens (why leaders care, and what can go wrong)
 
 This section is intentionally short and more “human”: it reflects how GenAI leaders describe the space in practice.

@@ -1,5 +1,14 @@
 ## PART V: INFRASTRUCTURE & DEPLOYMENT
 
+### Table of Contents
+
+- [5.0 STORAGE + SECURITY BASICS](#50-storage--security-basics-often-tested)
+- [5.1 HARDWARE SELECTION](#51-hardware-selection)
+- [5.2 COMMON ERRORS](#52-common-errors)
+- [5.3 COST OPTIMIZATION](#53-cost-optimization)
+- [5.4 TENSORFLOW SERVING OPTIMIZATION](#54-tensorflow-serving-optimization)
+- [5.5 LLM SERVING (GenAI production patterns)](#55-llm-serving-genai-production-patterns)
+
 ### Official docs (high-signal starting points)
 
 - **Cloud Storage**: [cloud.google.com/storage/docs](https://cloud.google.com/storage/docs)

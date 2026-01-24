@@ -2,6 +2,19 @@
 
 This section covers core ML concepts that form the foundation of the exam. Understanding these fundamentals is critical for answering both direct conceptual questions and scenario-based questions.
 
+### Table of Contents
+
+- [1.0 ML PROJECT LIFECYCLE + PROBLEM FRAMING](#10-ml-project-lifecycle--problem-framing-high-yield)
+- [1.1 ALGORITHM CLASSIFICATION](#11-algorithm-classification)
+- [1.2 SUPERVISED LEARNING](#12-supervised-learning)
+- [1.3 UNSUPERVISED LEARNING](#13-unsupervised-learning)
+- [1.4 NEURAL NETWORKS](#14-neural-networks)
+- [1.5 MODEL PROBLEMS AND DIAGNOSTICS](#15-model-problems-and-diagnostics)
+- [1.6 EVALUATION METRICS](#16-evaluation-metrics)
+- [1.7 FEATURE ENGINEERING](#17-feature-engineering)
+- [1.8 DATA SPLITTING](#18-data-splitting)
+- [1.9 EXPLORATORY DATA ANALYSIS (EDA) BASICS](#19-exploratory-data-analysis-eda-basics-often-tested)
+
 ### Official docs (high-signal starting points)
 
 - **Google ML Crash Course**: <a href="https://developers.google.com/machine-learning/crash-course">https://developers.google.com/machine-learning/crash-course</a>
