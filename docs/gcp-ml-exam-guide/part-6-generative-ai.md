@@ -63,6 +63,29 @@ flowchart TB
   A --> App[Applications\nchat/apps/workflows]
 ```
 
+#### Agents and GenAI-powered applications (how they relate)
+
+Think of a **GenAI-powered application** as the user-facing product (UI + workflows + policies). An **agent** is the “intelligent actor” inside that product that can reason, use tools, and take actions to achieve a goal.
+
+**What agents can do (common capabilities)**
+
+- **Understand and respond to natural language**
+- **Automate complex tasks** (multi-step plans + tool use, not just one-shot generation)
+- **Personalize** responses and actions based on context (user profile, history, preferences, enterprise data)
+
+**Agent inside an application**
+
+- The **application** defines the user experience, constraints, and the business goal.
+- The **agent** executes tasks within that framework using available tools (APIs, search, databases, actions).
+
+**Multi-agent systems (when one agent isn’t enough)**
+
+Many real apps use multiple specialized agents (e.g., a router/supervisor + domain specialists). Examples:
+
+- **Travel booking app**: itinerary planner + pricing/search agent + policy/constraints agent
+- **Customer support app**: triage agent + knowledge/RAG agent + escalation agent
+- **Personalized learning app**: tutor agent + quiz generator + progress tracking agent
+
 #### GenAI is a technology layer, not “one app”
 
 - A **chatbot app** (like the Gemini app) is one product surface.
