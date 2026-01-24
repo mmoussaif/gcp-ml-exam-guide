@@ -80,6 +80,7 @@ LIMIT 100;
 **What it does:** Counts total events and purchases per user, then ranks users by purchase count.
 
 **Key functions:**
+
 - `COUNTIF(condition)` - Count rows matching a condition
 - `ANY_VALUE(col)` - Get "some value" when grouping (useful when all values are the same)
 - `APPROX_COUNT_DISTINCT(col)` - Faster approximate distinct count
@@ -159,11 +160,11 @@ USING (user_id);
 
 ### Join Types: When to Use Which
 
-| Join Type | Use Case |
-|-----------|----------|
-| **INNER JOIN** | Keep only rows that match in both tables (good for "must have feature" cases) |
-| **LEFT JOIN** | Keep all labels/base rows even if features are missing (common for training tables) |
-| **CROSS JOIN** | Cartesian product (almost always accidental unless you mean "expand") |
+| Join Type      | Use Case                                                                            |
+| -------------- | ----------------------------------------------------------------------------------- |
+| **INNER JOIN** | Keep only rows that match in both tables (good for "must have feature" cases)       |
+| **LEFT JOIN**  | Keep all labels/base rows even if features are missing (common for training tables) |
+| **CROSS JOIN** | Cartesian product (almost always accidental unless you mean "expand")               |
 
 **⚠️ Common Pitfalls:**
 
@@ -230,14 +231,14 @@ FROM `project.dataset.events`;
 
 ### Key Window Functions
 
-| Function | Purpose |
-|----------|---------|
-| `ROW_NUMBER()` | Sequential numbering (1, 2, 3...) |
-| `RANK()` | Ranking with gaps (1, 2, 2, 4...) |
-| `DENSE_RANK()` | Ranking without gaps (1, 2, 2, 3...) |
-| `LAG(col, n)` | Value from n rows before |
-| `LEAD(col, n)` | Value from n rows ahead |
-| `SUM() OVER (...)`, `AVG() OVER (...)`, `COUNT() OVER (...)` | Aggregations over window |
+| Function                                                     | Purpose                              |
+| ------------------------------------------------------------ | ------------------------------------ |
+| `ROW_NUMBER()`                                               | Sequential numbering (1, 2, 3...)    |
+| `RANK()`                                                     | Ranking with gaps (1, 2, 2, 4...)    |
+| `DENSE_RANK()`                                               | Ranking without gaps (1, 2, 2, 3...) |
+| `LAG(col, n)`                                                | Value from n rows before             |
+| `LEAD(col, n)`                                               | Value from n rows ahead              |
+| `SUM() OVER (...)`, `AVG() OVER (...)`, `COUNT() OVER (...)` | Aggregations over window             |
 
 ### Window Frames: ROWS vs RANGE
 
@@ -415,7 +416,7 @@ QUALIFY rn = 1;
 
 **What it does:** Filters to the latest row per user using a window function in a single query. Much cleaner than nested queries!
 
-### SELECT * EXCEPT / REPLACE
+### SELECT \* EXCEPT / REPLACE
 
 ```sql
 -- Keep all columns but normalize one field
@@ -615,9 +616,9 @@ WHEN NOT MATCHED THEN
 
 ### Views vs Materialized Views
 
-| Type | Use Case |
-|------|----------|
-| **View** | Saved query; recomputed each time (cheap to create; cost depends on underlying query) |
+| Type                  | Use Case                                                                                            |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| **View**              | Saved query; recomputed each time (cheap to create; cost depends on underlying query)               |
 | **Materialized View** | Precomputed results maintained by BigQuery; good for repeated aggregations (subject to constraints) |
 
 **When to use:**

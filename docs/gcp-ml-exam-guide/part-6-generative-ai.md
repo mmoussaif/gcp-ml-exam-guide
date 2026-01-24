@@ -2714,6 +2714,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Large Language Models (LLMs)**: Have unlocked powerful new capabilities in software, but harnessing them in production systems (LLMOps) requires more than just plugging in an API.
 
 **Two critical disciplines**: Have emerged in recent years:
+
 - **Prompt engineering**: Focuses on how we design the textual inputs (prompts) to guide an LLM's behavior
 - **Context engineering**: Is about managing the entire information flow, structuring the surrounding data, tools, and environment that feed into the model
 
@@ -2778,11 +2779,13 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **3. Test Sample Inputs and Analyze**:
 
 **Run the model**: With your prompt on a variety of test queries or scenarios (via various user prompts or supporting context). Observe the outputs:
+
 - Do they match the expected format?
 - Are they correct, complete, and compliant with any rules?
 - Any issues? For example, the model misunderstands something or includes extra text
 
 **When the output**: Is not what you want, analyze why:
+
 - Did the model ignore an instruction?
 - Did it hallucinate?
 - Was it too verbose or not following format?
@@ -2860,6 +2863,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **These prompts emphasize**: The output format or style. They may not change the substance of the answer but how it is presented.
 
 **For instance**: You might prompt:
+
 - "List the following names in a numbered list."
 - "Provide the answer in JSON format with keys 'answer'."
 
@@ -2892,6 +2896,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **It has been empirically demonstrated**: That sufficiently large models exhibit a strong emergent ability to perform multi-step reasoning when prompted with explicit reasoning traces. Crucially, this capability may not reliably appear in smaller models, highlighting that CoT is not just a prompt trick but a scale-dependent phenomenon.
 
 **From an implementation standpoint**: CoT prompting typically takes one of two forms:
+
 - **Zero-shot CoT**: Where the developer adds a generic reasoning cue such as "Let's think step by step."
 - **Few-shot CoT**: Where the prompt includes one or more worked examples that explicitly show intermediate reasoning before the final answer
 
@@ -2900,6 +2905,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Note**: CoT does not expose the model's true internal reasoning. The generated reasoning tokens are themselves predictions, not introspections. CoT works because autoregressive generation forces the model to maintain consistency across steps, effectively externalizing a computation that would otherwise remain implicit.
 
 **In practice**: CoT improves performance on tasks that require:
+
 - Multi-step arithmetic or algebra
 - Logical deduction and constraint satisfaction
 - Commonsense reasoning with causal chains
@@ -2929,6 +2935,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **The core insight**: Is that reasoning and acting are complementary. When a model reasons without tools, it is forced to guess or hallucinate missing information. When it invokes tools without making its reasoning explicit, the resulting behavior becomes opaque, hard to debug, and brittle. ReAct addresses this by interleaving reasoning and tool use in the same autoregressive sequence.
 
 **A typical ReAct trajectory**: Alternates through three conceptual states:
+
 - **Thought**: The model's explicit reasoning about what it knows, what it lacks, and what to do next
 - **Action**: A structured instruction emitted by the model that maps to a tool invocation
 - **Observation**: External state returned by the system after executing the action
@@ -2936,6 +2943,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Crucially**: The model does not execute actions itself. The LLM only emits text. The surrounding runtime (code) parses the action, executes it, and appends the observation back into the prompt. This makes ReAct a prompt-driven control loop, not an autonomous executor.
 
 **From an implementation standpoint**: ReAct requires three pieces of scaffolding:
+
 - **A strict output grammar**: The model must emit actions in a machine-parsable format. Free-form text is unacceptable here. Most implementations enforce patterns like `Action: ToolName[arguments]` to simplify parsing and prevent ambiguity
 - **An execution harness**: A loop that: sends the current prompt to the model, detects whether the model produced an action or a final answer, executes the action safely, injects the observation back into the context, repeats until termination
 - **Termination conditions**: The system must decide when to stop. This is usually done via a Finish or Answer action, max-step limits, or confidence thresholds. Without explicit stopping logic, ReAct agents can loop indefinitely
@@ -2945,12 +2953,14 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **That said**: ReAct reasoning is still generated, not guaranteed to be correct. This introduces a subtle but critical trade-off: ReAct improves tool grounding and factual accuracy, but it also increases the surface area for failure.
 
 **A single incorrect reasoning step**: Can cascade into repeated bad actions. For this reason, production systems often combine ReAct with guardrails such as:
+
 - Tool-level permissioning (like in MCP)
 - Argument validation and sanitization
 - Observation truncation or summarization
 - Secondary verification models
 
 **In practice**: ReAct excels at tasks that require information gathering or environment interaction, such as:
+
 - Question answering with retrieval
 - Multi-hop reasoning over documents or APIs
 - Data analysis with calculators
@@ -3007,11 +3017,13 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **This hands-on section**: Examines system prompts, user prompts, and formatting prompts in combination with a zero-shot chain-of-thought pattern to implement a basic math word problem solver.
 
 **What our script is doing**: End-to-end, is:
+
 - Ask an LLM to solve a math word problem with a reasoning section
 - Strip that reasoning out before showing the user
 - Save the reasoning to a local text file, for record
 
 **It's basically**: A tiny "math-solver pipeline" with three outputs:
+
 - Raw model response (contains both reasoning + final solution)
 - Cleaned response (final solution only)
 - Extracted reasoning (saved to math_cot_reasoning.txt with a timestamp)
@@ -3019,12 +3031,14 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Key Components**:
 
 **System Prompt**: The "global behavior contract" for the model. We are telling it to produce TWO parts:
+
 - Step-by-step reasoning inside `<thought>...</thought>`
 - Final solution in a strict Markdown template
 
 **The "do not add anything else"**: Enforces a strict condition that the model should not generate anything beyond the specified two parts. Thus, overall, our system prompt is enforcing a protocol.
 
 **SOLUTION_FORMAT_SPEC**: The exact Markdown structure we want the final answer to follow:
+
 - `## SOLUTION_START`
 - Sections like `### PROBLEM_UNDERSTANDING`, `### APPROACH`, etc.
 - `## SOLUTION_END`
@@ -3034,6 +3048,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Helper Utilities**:
 
 **extract_and_strip_thoughts(...)**: Does two jobs:
+
 - Extract all reasoning blocks using regex and combine them together as thought
 - Remove the reasoning from the visible output cleaned
 
@@ -3042,6 +3057,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Main Solver Function**:
 
 **solve_math_problem(problem: str)**: Constructs a user_prompt (template) that contains:
+
 - Instructions (repeat the two tasks)
 - The strict Markdown template
 - The actual problem text inside triple quotes
@@ -3049,6 +3065,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **Then it calls**: completion(...), with temperature=0.2. This takes the model more towards deterministic side and less "creative", which is exactly what we want to ensure our defined structures are followed.
 
 **Then we extract**: The model response and do post-processing with:
+
 - extract_and_strip_thoughts
 - save_thought_to_file
 - return final_output
@@ -3064,6 +3081,7 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 **As a follow-up self-learning exercise**: We encourage readers to experiment with different input problems (sample_problem) to develop a deeper and more concrete understanding.
 
 **Typical upgrades**: If output fails to adhere to the defined structure:
+
 - Enforce the schema with examples for the final output
 - Retry with a stricter system prompt when the format check fails
 - Few-shot CoT instead of zero-shot
