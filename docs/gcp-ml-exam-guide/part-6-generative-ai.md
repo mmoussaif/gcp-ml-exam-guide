@@ -142,6 +142,23 @@ How you use data depends on the learning approach. Three common approaches are *
 - **Anomaly detection (unsupervised)**: find unusual transactions that deviate from historical patterns (BigQuery ML).
 - **Recommendations (reinforcement learning)**: optimize recommendations over time to maximize engagement/sales (Vertex AI).
 
+#### Turning data into learning on Google Cloud (end-to-end lifecycle)
+
+For enterprise ML/GenAI work, the hard part is often the **journey from scattered data to reliable predictions**. A useful mental model is a simple lifecycle:
+
+- **Gather (ingest)**: collect raw data based on the outcome you want.
+  - Typical tools: **Pub/Sub** (streaming ingestion), **Cloud Storage** (unstructured storage), **Cloud SQL / Cloud Spanner** (structured operational data).
+- **Prepare**: clean, transform, label, and make data discoverable.
+  - Typical tools: **BigQuery** (analysis + transformation), **Data Catalog** (dataset discovery/governance).
+- **Train**: create and evaluate models in a managed environment with the right compute.
+  - Typical tools: **Vertex AI training** (prebuilt containers, custom training jobs, evaluation).
+- **Deploy & predict**: make the model available for batch/online predictions and scale to demand.
+  - Typical tools: **Vertex AI** deployment/serving (managed scaling).
+- **Manage**: operate the model over time (versions, metrics, drift, automation).
+  - Typical tools: **model versioning/registry**, monitoring & drift checks, **Vertex AI Pipelines** (automation), feature management (e.g., Feature Store where used).
+
+**Security note (from the course framing):** in enterprise settings, ensure data access is controlled end-to-end with **IAM** (least privilege) across ingestion, storage, training, and serving.
+
 #### The four primary ways businesses use GenAI
 
 - **Create**: generate new content (text, images, audio, code).
