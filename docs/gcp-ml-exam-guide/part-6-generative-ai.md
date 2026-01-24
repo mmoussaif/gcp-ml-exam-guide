@@ -1813,6 +1813,7 @@ Since LoRA's introduction, several variants have been proposed to address specif
 | Variant        | Key Innovation                        | Parameter Reduction | Best For                                   |
 | -------------- | ------------------------------------- | ------------------- | ------------------------------------------ |
 | **LoRA**       | Low-rank decomposition                | 98%+                | General-purpose efficient fine-tuning      |
+| **DoRA**       | Magnitude/direction decomposition     | 98%+                | Better performance than LoRA               |
 | **LoRA-FA**    | Freeze `A`, train only `B`            | 99%+                | Memory-constrained environments            |
 | **VeRA**       | Shared frozen matrices, learn vectors | 99.9%+              | Extreme parameter efficiency               |
 | **Delta-LoRA** | Updates base `W` via delta            | 98%+                | Single-tenant, maximum performance         |
