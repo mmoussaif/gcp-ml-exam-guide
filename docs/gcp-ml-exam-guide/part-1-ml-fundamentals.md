@@ -17,6 +17,18 @@ Many exam questions are really about the **workflow** and **framing**, not the m
 - **Deployment**: Make the model available for production use
 - **Monitoring + maintenance**: Detect drift/performance issues; retrain and iterate
 
+```mermaid
+flowchart TD
+  A[Problem formulation\nObjective + constraints + metric] --> B[Data collection/ingestion]
+  B --> C[Data prep + feature engineering]
+  C --> D[Model development]
+  D --> E[Hyperparameter tuning]
+  E --> F[Evaluation]
+  F --> G[Deployment]
+  G --> H[Monitoring + maintenance]
+  H -->|Drift/regression| A
+```
+
 **EXAM TIP:** The “primary goal” of ML is **making predictions / classifications** (not data collection).  
 **EXAM TIP:** The “first step” is almost always **problem formulation + data collection** (you can’t tune/train without data).  
 **EXAM TIP:** The “final step” for real systems is **monitoring and maintenance** (not just evaluation).

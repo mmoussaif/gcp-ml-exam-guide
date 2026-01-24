@@ -237,6 +237,22 @@ Simple illustration:
 
 You may also see references to lighter-weight “agent workflow” specs (sometimes described as REST-style patterns) when MCP/A2A are considered too heavy for a given integration.
 
+```mermaid
+flowchart LR
+  subgraph MCP["MCP (agent/host ↔ tools/data)"]
+    Host[Host\nIDE / chat app / agent runtime] --> Client[MCP client]
+    Client --> S1[MCP server: Jira]
+    Client --> S2[MCP server: GitHub]
+    Client --> S3[MCP server: Snowflake]
+  end
+
+  subgraph A2A["A2A (agent ↔ agent)"]
+    A[Ops agent] <--> B[FinOps agent]
+    A <--> C[Support agent]
+    B <--> D[Scheduler agent]
+  end
+```
+
 **How to choose quickly**
 
 - **You need deterministic control + testability**: graph/state-machine orchestration (LangGraph-style).

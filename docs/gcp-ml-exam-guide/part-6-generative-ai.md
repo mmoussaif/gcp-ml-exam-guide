@@ -67,6 +67,21 @@ Combines LLM generation with external knowledge retrieval.
 6. Augmentation - construct prompt with retrieved context
 7. Generation - LLM generates grounded response
 
+```mermaid
+flowchart TD
+  A[Docs] --> B[Ingest + clean]
+  B --> C[Chunk]
+  C --> D[Embed]
+  D --> E[(Vector DB)]
+  Q[User query] --> QE[Embed query]
+  QE --> R[Retrieve top-k]
+  E --> R
+  R --> X[Rerank (optional)]
+  X --> P[Prompt: instructions + retrieved context]
+  P --> L[LLM]
+  L --> O[Grounded answer]
+```
+
 #### Chunking strategies (common patterns)
 
 - **Fixed-size chunking**: split by tokens/chars (fast, simple; can break sentences/ideas).

@@ -11,6 +11,23 @@ Automating ingestion, preprocessing, training, evaluation, and deployment reduce
 
 **EXAM TIP:** Pipeline automation/orchestration is about streamlining the **end-to-end workflow**, not making data “random” or changing model accuracy.
 
+```mermaid
+flowchart LR
+  subgraph Triggers
+    A[Schedule / Event] --> B[Pipeline run]
+  end
+  B --> C[Ingest]
+  C --> D[Validate]
+  D --> E[Transform]
+  E --> F[Train]
+  F --> G[Evaluate]
+  G --> H{Meets quality gate?}
+  H -- Yes --> I[Register + Deploy]
+  H -- No --> J[Stop + investigate]
+  I --> K[Monitor]
+  K -->|Drift/alerts| B
+```
+
 ### 4.0.2 OPERATING DATA PIPELINES IN PRODUCTION (Test-style)
 
 #### Reliability of pipeline changes
