@@ -690,9 +690,11 @@ root_agent = Agent(
 | **Security**         | Agents have expanded attack surface (prompt injection, tool misuse)    | Input/output guardrails, tool-level validation, IAM, audit logging |
 | **Interoperability** | Agents need to communicate with each other and external systems        | A2A protocol, MCP, standardized APIs, event-driven architecture    |
 
-#### CI/CD for Agents
+#### CI/CD for Agents: Comparison Table and Pipeline Diagram
 
-**Traditional CI/CD** → **Agent CI/CD**:
+**Note**: For detailed explanation of the three-phase pipeline (Pre-Merge → Staging → Production), see [§ 7.18: Three-Phase CI/CD Pipeline](#three-phase-cicd-pipeline) above.
+
+**Traditional CI/CD** → **Agent CI/CD** comparison:
 
 | Stage       | Traditional                     | Agent-Specific                                                          |
 | ----------- | ------------------------------- | ----------------------------------------------------------------------- |
@@ -754,28 +756,7 @@ root_agent = Agent(
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### Agent2Agent (A2A) Interoperability
-
-Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-prototype-to-production)
-
-**Note**: For foundational concepts on A2A vs MCP, see [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet). This section focuses on **production implementation** details.
-
-**A2A** enables agents to communicate with each other regardless of programming language or runtime.
-
-**A2A Benefits**:
-
-- **Language-agnostic**: Python agent can call TypeScript agent
-- **Runtime-agnostic**: Cloud Run agent can call GKE agent
-- **Standardized protocol**: Consistent communication patterns
-- **Security**: Built-in authentication and authorization
-
-**A2A Use Cases**:
-
-- **Multi-agent workflows**: Specialized agents collaborate on complex tasks
-- **Agent composition**: Build complex systems from simpler agents
-- **Cross-platform integration**: Connect agents across different environments
-
-**EXAM TIP:** Questions about "agent communication" or "multi-agent systems" → consider **A2A protocol** for production interoperability.
+**Note**: For A2A implementation details (Agent Cards, code examples, hierarchical composition), see [§ 7.18: A2A Implementation](#a2a-implementation-agent-cards-and-code-examples) above. For foundational concepts on A2A vs MCP, see [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet).
 
 ---
 
