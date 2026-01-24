@@ -2799,13 +2799,426 @@ print(f"Output shape: {outputs[0].shape}")
 
 **Best practice**: Store versioned model artifact in Model Registry. **Model Registry**: Database of models with versions and metadata (not every logged model, only models of interest)
 
-**B. Deployment as a Service (Online Inference)**:
+**B. Containerization with Docker**:
+
+**Why Containerization**: Once the model is serialized, how do we actually deploy it on a server? In modern MLOps, the answer is almost always containers.
+
+**Containerization** (e.g., using Docker) allows you to package the model and its code, along with all required libraries and dependencies, into a self-contained unit that can run anywhere (on your laptop, on a cloud VM, in a Kubernetes cluster, etc.).
+
+**Benefits**:
+
+- **Solves "it works on my machine" problem**: Ensures the environment is consistent
+- **Encapsulates**: Python version, libraries (pandas, numpy, scikit-learn, etc.), and even the model file itself inside an image
+- **Standard interface**: As long as a server can run Docker (or you have Kubernetes, etc.), it can run your model container
+- **Cloud-agnostic**: You can run the same container on AWS, GCP, Azure, or on-premise
+- **Consistency**: Ensures consistency between dev, staging, and prod
+
+**In Practice**:
+
+- **Write a Dockerfile** that starts from a base image (e.g., a Python base image), copies your model and code, installs dependencies, and sets the command to launch your model service
+- **Container orchestration** (discussed later) relies on this uniform deployable unit
+- **Industry best practice**: Most production ML services are containerized, whether you manage it yourself or use a cloud service under the hood
+
+**Example Dockerfile**:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY server.py model.pkl prediction.proto requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN python -m grpc_tools.protoc --python_out=. --grpc_python_out=. prediction.proto
+
+EXPOSE 5000
+
+CMD ["python", "-u", "server.py"]
+```
+
+**C. Serving Models via FastAPI**:
+
+**Why APIs**: With the model packaged and containerized, the next step is to expose it via an API so that other systems (or users) can request predictions. A common pattern is to wrap the model inference in a web service.
+
+**FastAPI** (a modern, high-performance web framework for Python) is popular for ML deployment.
+
+**Why FastAPI**:
+
+**1. High Performance**:
+
+- Built on top of Starlette (for the web parts) and Pydantic (for the data parts)
+- One of the fastest Python frameworks available, comparable to NodeJS and Go
+- **Asynchronous support**: Allows it to handle concurrent requests efficiently, which is crucial for a scalable prediction service
+
+**2. Automatic Data Validation**:
+
+- Uses standard Python type hints and the Pydantic library to define data schemas
+- Automatically validates incoming request data against these schemas, rejecting invalid requests with clear error messages
+- **Eliminates boilerplate**: Protects the ML model from receiving malformed input
+
+**3. Automatic Interactive Documentation**:
+
+- Out of the box, FastAPI generates interactive API documentation based on the OpenAPI (formerly Swagger) standard
+- **Accessible at `/docs`**: Provides a user-friendly interface where developers can explore endpoints, see expected request and response formats, and even test the API directly from their browser
+- **Dramatically simplifies**: API integration and debugging
+
+**Overall**: Makes it straightforward to go from a `model.predict()` function to a web API. In fact, deploying a simple model can be done in a few lines. The challenge is what comes next: ensuring this service can handle scale, reliability, and updates.
+
+**D. API Communication: REST vs. gRPC**:
+
+When building an API for model inference, two common communication protocols are:
+
+- **REST** (usually over HTTP/1.1 with JSON)
+- **gRPC** (a high-performance RPC framework using HTTP/2 and Protocol Buffers)
+
+**REST**:
+
+**Definition**: REST is an architectural style based on standard HTTP/1.1 methods (like GET, POST, PUT, DELETE) operating on resources identified by URLs. It typically uses human-readable, text-based data formats like JSON.
+
+**Characteristics**:
+
+- **Stateless**: Each request contains all the information needed to process it, making it highly scalable and loosely coupled
+
+**Advantages**:
+
+- Very simple to implement and integrate
+- JSON is human-readable
+- Works natively with web infrastructure (browsers, gateways, etc.)
+
+**Drawbacks**:
+
+- **JSON is text-based and verbose**: Can be inefficient for large payloads
+- **HTTP/1.1 is half-duplex**: One request, one response, so it can't stream easily
+- **Half-duplex**: A communication method where devices can both send and receive data, but not at the same time. Data can flow in both directions, but only one direction at any given moment
+
+**Overall**: For many ML use cases, where payloads might be small, like a few features, REST is perfectly fine and very convenient.
+
+**gRPC**:
+
+**Definition**: gRPC is a more recent high-performance alternative, originally developed by Google. Instead of operating on resources, a gRPC client directly invokes methods on a server application as if it were a local object.
+
+**Characteristics**:
+
+- **Leverages HTTP/2**: Allows for multiplexing, i.e., sending multiple requests and responses over a single, long-lived TCP connection, eliminating connection setup overhead and head-of-line blocking
+- **Data serialization**: Using Protocol Buffers (Protobufs), a highly efficient, language-neutral binary format
+- **Full-duplex streaming**: A communication system that allows for simultaneous transmission and reception of data between two devices, much like a two-way street or a telephone conversation
+
+**Advantages**:
+
+- **Low latency, high throughput**: Studies show gRPC can be several times faster than REST for the same data, due to binary encoding and lower overhead
+- **Built-in code generation**: You define a `.proto` file and gRPC generates client/server stubs
+  - **Stub**: A piece of code that translates parameters sent between the client and server during a remote procedure call
+- **Streaming capabilities**: A client or server can send a stream of messages rather than a one-shot request/response
+- **Well-suited for**: Internal microservice communication or high-performance needs. For instance, a model serving thousands of predictions per second behind the scenes might use gRPC to communicate between services
+
+**Drawbacks**:
+
+- **Not human-readable**: Protobuf binary can't be easily inspected or manually crafted
+- **Requires client support**: Though many languages have gRPC libraries
+- **Not directly callable from a web browser**: Since browsers don't natively speak gRPC without a proxy
+
+**When to Use Which**:
+
+- **For external-facing services or quick integrations**: REST is usually the default because of its simplicity and ubiquity
+  - **Example**: A fraud detection model, if the service is called directly by a front-end or mobile app, REST/JSON is an easy choice
+- **For microservice architecture where performance is critical**: gRPC might be chosen for its efficiency
+  - **Example**: Hundreds of microservices in a banking system calling each other; a fraud detection model might be one service called by a transaction processing service; using gRPC could reduce the latency added by the call and allow streaming multiple transaction checks in one connection if needed
+
+**Comparison Summary**:
+
+| Feature               | REST (FastAPI)                                          | gRPC                                                             |
+| --------------------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
+| **Protocol**          | HTTP/1.1, widely supported                              | HTTP/2, enables multiplexing and efficiency                      |
+| **Data Format**       | JSON (text-based, human-readable)                       | Protocol Buffers (compact binary)                                |
+| **Performance**       | Good, but higher latency due to JSON parsing            | High; lower latency and better throughput                        |
+| **Streaming Support** | Limited to unary request–response                       | Supports unary, server, client, and bidirectional streaming      |
+| **Coupling**          | Loosely coupled; independent client and server          | Tightly coupled; requires shared .proto file                     |
+| **Ease of Debugging** | Easy; JSON can be tested with curl, Postman, or browser | Harder; binary requires grpcurl or special tools                 |
+| **Common Use Cases**  | Public APIs, Web/mobile backends, Broad compatibility   | Internal microservices, Real-time streaming, Low-latency systems |
+
+**E. Batch vs. Real-Time Inference**:
+
+**Critical Architectural Decision**: This choice is not merely a technical detail but a core product and business strategy decision.
+
+**Real-Time (Online/Synchronous) Inference**:
+
+- **Definition**: The model is deployed as a live service, receiving individual requests (often via a REST or gRPC API) and returning predictions immediately (in milliseconds)
+- **Prioritizes**: Low latency and high availability
+- **Requirements**: The system must always be operational, and typically auto-scales to handle varying request volumes
+- **Deployment**: Deployed to a serving infrastructure (web servers, Kubernetes, etc.)
+
+**Batch Inference (Offline/Asynchronous Inference)**:
+
+- **Definition**: Running the model on a large collection of data all at once, usually on a schedule or triggered by some event
+- **Prioritizes**: Throughput and efficiency (latency per prediction is less critical)
+- **Characteristics**:
+  - Not user-facing in real time
+  - Can leverage heavy compute for a short period
+  - Results are stored for later use rather than returned instantly to a user
+- **Deployment**: Often run on a separate infrastructure (e.g., a Cloud function triggered on a schedule, etc.)
+- **Benefits**: Can scale up resources (like using 100 CPU cores for 10 minutes) then shut down, which can be cost-efficient
+- **Deployment**: Containerized but deployed to a job scheduler or pipeline (like Airflow/Prefect, Kubeflow Pipelines, cloud Data Pipeline services, etc.)
+
+**Decision**: Often comes down to the use case requirements. If a prediction is needed immediately in a user flow, you must do online serving. If predictions can be pre-computed, a batch might simplify the problem.
+
+**F. Hands-On: gRPC API Implementation**:
+
+**Objective**: Expose a trained ML model as a gRPC API, allowing clients to call it remotely. This exercise simulates the journey of turning a data science prototype into a microservice.
+
+**Steps**:
+
+**1. Train and Serialize the Model**:
+
+- Train the model in a notebook or Python script
+- Save the trained model to disk so it can be loaded later by the server
+
+**2. Define the gRPC Interface (.proto file)**:
+
+- Write a `.proto` file that describes the service
+- Specify the request and response message formats and the RPC method(s) (e.g., Predict)
+- This acts as a contract between the server and clients
+
+**3. Implement the Server and Client**:
+
+- Generate Python code from the `.proto` file using `grpcio-tools`
+- Implement the server that loads the serialized model and serves predictions via gRPC
+- Implement a simple client that connects to the server, sends requests, and displays responses
+
+**4. Containerize the Server**:
+
+- Write a Dockerfile to package the server, model, and dependencies
+- This ensures reproducibility and portability
+- In a real-world scenario, this container can be deployed on a platform (Kubernetes, cloud services, etc.)
+
+**Example: Train and Save the Model**:
+
+```python
+from sklearn.linear_model import LinearRegression
+import joblib
+import numpy as np
+
+# Create training data (y = 2x)
+X = np.array([[1], [2], [3], [4], [5]])
+y = np.array([2, 4, 6, 8, 10])
+
+# Train model
+model = LinearRegression()
+model.fit(X, y)
+
+# Save model
+joblib.dump(model, 'model.pkl')
+print("Model saved to model.pkl")
+```
+
+**Example: Define gRPC Interface (.proto file)**:
+
+```protobuf
+syntax = "proto3";
+
+service MLModel {
+    rpc Predict(PredictRequest) returns (PredictResponse);
+}
+
+message PredictRequest {
+    repeated float features = 1;
+}
+
+message PredictResponse {
+    float prediction = 1;
+    string model_version = 2;
+}
+```
+
+**Key Points**:
+
+- **syntax = "proto3"**: Specifies the version of Protocol Buffers
+- **service MLModel**: Defines a gRPC service named MLModel
+- **rpc Predict**: Defines an RPC method called Predict
+- **message PredictRequest**: Request message structure (`repeated float features` means list of floats)
+- **message PredictResponse**: Response message structure (prediction and model_version)
+- **Field tags** (= 1, = 2): Required in Protobuf for binary serialization
+
+**Generate Python Code**:
+
+```bash
+python -m grpc_tools.protoc --python_out=. --grpc_python_out=. prediction.proto
+```
+
+**This generates**:
+
+- `prediction_pb2.py`: Protocol buffer message classes
+- `prediction_pb2_grpc.py`: gRPC service classes (client stub and server base class)
+
+**Example: Server Implementation**:
+
+```python
+import grpc
+from concurrent import futures
+import joblib
+import numpy as np
+import prediction_pb2
+import prediction_pb2_grpc
+
+class MLModelService(prediction_pb2_grpc.MLModelServicer):
+    def __init__(self):
+        # Load model once when service starts
+        self.model = joblib.load('model.pkl')
+        self.model_version = "1.0.0"
+        print(f"Model loaded. Version: {self.model_version}")
+
+    def Predict(self, request, context):
+        try:
+            # Convert features to numpy array
+            features = np.array(request.features).reshape(1, -1)
+
+            # Generate prediction
+            prediction = self.model.predict(features)[0]
+
+            print(f"Received features: {request.features}, Prediction: {prediction}")
+
+            # Return response
+            return prediction_pb2.PredictResponse(
+                prediction=float(prediction),
+                model_version=self.model_version
+            )
+        except Exception as e:
+            context.set_code(grpc.StatusCode.INTERNAL)
+            context.set_details(str(e))
+            return prediction_pb2.PredictResponse()
+
+def serve():
+    # Create gRPC server with thread pool
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+
+    # Register service
+    prediction_pb2_grpc.add_MLModelServicer_to_server(
+        MLModelService(), server
+    )
+
+    # Bind to port
+    server.add_insecure_port('[::]:5000')
+
+    # Start server
+    server.start()
+    print("gRPC server started on port 5000")
+
+    # Keep running
+    server.wait_for_termination()
+
+if __name__ == '__main__':
+    serve()
+```
+
+**Key Points**:
+
+- **MLModelService**: Inherits from generated `MLModelServicer` base class
+- ****init****: Loads model once when service starts
+- **Predict method**: Implements the RPC method, converts features, generates prediction, returns response
+- **Error handling**: Sets gRPC error status if prediction fails
+- **grpc.server**: Creates server with thread pool (max_workers=10) for concurrent requests
+- **add_insecure_port**: Binds to port 5000 (insecure for development; use secure port in production)
+
+**Example: Client Implementation**:
+
+```python
+import grpc
+import prediction_pb2
+import prediction_pb2_grpc
+
+def predict(stub, features):
+    """Helper function to call Predict RPC"""
+    request = prediction_pb2.PredictRequest(features=features)
+    response = stub.Predict(request)
+    return response
+
+def main():
+    # Test cases
+    test_cases = [
+        [1.0],
+        [2.0],
+        [3.0],
+        [10.0]
+    ]
+
+    # Create channel and stub
+    channel = grpc.insecure_channel('localhost:500')
+    stub = prediction_pb2_grpc.MLModelStub(channel)
+
+    # Send requests
+    for features in test_cases:
+        try:
+            response = predict(stub, features)
+            print(f"Input: {features[0]}, Prediction: {response.prediction}, Version: {response.model_version}")
+        except grpc.RpcError as e:
+            print(f"Error: {e.code()}: {e.details()}")
+
+    channel.close()
+
+if __name__ == '__main__':
+    main()
+```
+
+**Key Points**:
+
+- **grpc.insecure_channel**: Creates channel to server (insecure for development)
+- **MLModelStub**: Client stub that exposes service methods
+- **predict()**: Helper function builds request and calls remote Predict method
+- **Error handling**: Catches `grpc.RpcError` exceptions
+
+**Security Note**:
+
+**Insecure Channel/Port**:
+
+- **"insecure" means**: No encryption (TLS/SSL) and no authentication
+- **Communication**: Sent as plain text
+- **Fine for development**: Like localhost, because everything stays inside your machine
+- **Risky in production**: Anyone on the network could intercept the traffic, data not protected
+
+**Secure Alternative**:
+
+- **Client**: Use `grpc.secure_channel(...)` with TLS certificates
+- **Server**: Use `add_secure_port` with proper certificates
+- **For local demos**: Insecure mode is fine, but actual production deployments should always use secure channels
+
+**Example: Dockerfile**:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Copy application files
+COPY server.py model.pkl prediction.proto requirements.txt ./
+
+# Install dependencies
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Generate gRPC code
+RUN python -m grpc_tools.protoc --python_out=. --grpc_python_out=. prediction.proto
+
+EXPOSE 5000
+
+CMD ["python", "-u", "server.py"]
+```
+
+**Key Points**:
+
+- **Base image**: Python 3.12 slim (smaller image size)
+- **WORKDIR**: Sets working directory to /app
+- **COPY**: Copies application files (server code, model, proto file, requirements)
+- **RUN pip install**: Installs dependencies
+- **RUN protoc**: Generates gRPC Python files inside container
+- **EXPOSE**: Documents that container listens on port 5000
+- **CMD**: Default command when container starts (runs server with unbuffered output)
+
+**Summary**: This demo demonstrates the journey from training a model to deploying it as a gRPC API, containerized with Docker, ready for production deployment.
+
+**G. Deployment as a Service (Online Inference)**:
 
 - **Common approach**: Deploy model as microservice behind API
 - **Implementation**: Flask or FastAPI application that loads model on startup, exposes `/predict` endpoint
 - **Input/Output**: Receives feature inputs (JSON), returns predictions (classification label or score) in real-time
-- **Containerization**: Docker for consistency, run on server or Kubernetes cluster
-- **Protocols**: RESTful APIs or gRPC
 - **Scalability**: Multiple replicas, load balancer
 - **Cloud platforms**: Amazon SageMaker, Azure ML, Vertex AI (automate endpoint creation)
 - **Key metrics**: Latency and throughput (optimize with appropriate hardware, quantization if needed)
