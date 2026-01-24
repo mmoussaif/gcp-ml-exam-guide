@@ -208,6 +208,7 @@
 - Imagen vs Veo: Imagen = text-to-image diffusion; Veo = text/image-to-video generation
 - Foundation model limitations: hallucinations + knowledge cutoff + bias/fairness + edge cases + data dependency; grounding/RAG ties answers to trusted sources
 - Grounding purpose (quiz-style): improve accuracy/reliability by connecting outputs to verifiable sources (enterprise docs, KBs, databases)
+- Secure AI (SAIF mindset): defend across the lifecycle (data→train→deploy→operate); key risks include data poisoning, model theft, adversarial/prompt-injection attacks; use IAM least privilege + encryption + logging/monitoring + Security Command Center
 - Lifecycle mapping: ingest (Pub/Sub/GCS/SQL/Spanner) → prepare (BigQuery + Data Catalog) → train/deploy/manage (Vertex AI + Pipelines + monitoring/versioning + IAM)
 - Consistency matters: inconsistent formats/labels confuse models and hinder learning (it’s not “just a data engineering issue”)
 - ML lifecycle order (core): data ingestion+preparation → model training → model deployment → model management

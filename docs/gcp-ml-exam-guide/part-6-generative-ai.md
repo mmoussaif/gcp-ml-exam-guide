@@ -725,6 +725,34 @@ Agents are non-deterministic; production readiness needs deliberate ops:
 - **Secrets hygiene**: never put credentials/secrets in prompts; use secret managers and scoped service accounts.
 - **Auditability**: keep an audit trail (logs/metrics) for compliance and incident response.
 
+#### Secure AI (SAIF-style thinking across the ML lifecycle)
+
+Secure AI is about preventing **intentional harm** and misuse (not just “bugs”). Think in terms of the full lifecycle: **gather → prepare → train → deploy → manage**.
+
+- **Gather your data**
+  - **Access control**: restrict who can read and who can _write_ (to prevent **data poisoning**).
+  - **Integrity**: validate sources and log ingestion paths.
+- **Prepare your data**
+  - **Sensitive data handling**: anonymize where feasible; minimize what’s exposed to training and prompts.
+  - **Validation**: integrity checks + anomaly detection to catch poisoning/manipulation.
+  - **Encryption + monitoring**: encrypt at rest/in transit; log and monitor pipeline activity.
+- **Train your model**
+  - Protect training datasets + model artifacts from unauthorized access/modification.
+  - **Model theft risk**: treat checkpoints/weights as sensitive IP; use least privilege and auditing.
+- **Deploy and predict**
+  - Control who can call the model and what inputs are allowed; sanitize/validate inputs to reduce **adversarial attacks** and **prompt injection**.
+  - If using third-party/prebuilt models: verify provenance and track vulnerabilities/updates.
+- **Manage your model**
+  - Continuous monitoring for anomalies/tampering; keep dependencies patched.
+  - Regularly review IAM permissions and rotate credentials/keys where applicable.
+
+**Google Cloud security building blocks (common exam phrasing)**
+
+- **IAM** for least-privilege access controls
+- **Encryption** in transit and at rest (platform-default + CMEK where required)
+- **Security Command Center** for centralized security posture visibility
+- **Logging + Monitoring** for audit trails, alerts, and incident response
+
 **EXAM TIP:** If the question hints at “secure, compliant, production-ready agent” → the right direction is **AgentOps + SAIF mindset** (defense-in-depth + evals + monitoring + least privilege), not only “improve prompts”.
 
 #### Agent evaluation (5-stage checklist from the “Operationalizing GenAI on Vertex AI” PDF)
