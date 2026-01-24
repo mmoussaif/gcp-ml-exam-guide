@@ -5825,9 +5825,422 @@ graph.add_node("compress", compress_memory_node)
 | **Summarization**  | Stabilizes    | Flattens  | Compressed  | Long conversations, preserve context |
 | **Compression**    | Optimized     | Flattens  | Selective   | Production systems, importance-aware |
 
-**Next steps**: Part C covers retrieval-based memory, hierarchical memory, and OS-like memory management.
+**5. Retrieval-Based Memory**
 
-**EXAM TIP:** Questions about "memory optimization" → understand trade-offs: **Sequential** (perfect recall, expensive) → **Sliding Window** (bounded cost, loses old info) → **Summarization** (preserves context, compresses) → **Compression** (importance-aware, optimized). Questions about "production memory" → think **cost, latency, reliability** trade-offs, not just "more memory".
+**What it is**: Instead of keeping everything inside a thread, store durable memory items in a long-term store, retrieve only relevant ones for current query, and stitch them into context alongside current conversation.
+
+**Why it matters**: Previous techniques (sequential, sliding window, summarization) are all short-term—they live inside a single thread. Once thread ends, memory is gone. For production systems, you need:
+- Remember user preferences across conversations
+- Recall past issues for same user/account
+- Reuse knowledge learned last week in new session
+
+**Memory Store in LangGraph**:
+
+- **Checkpointers**: Give continuity inside thread (short-term)
+- **Stores**: External database for durable memory (long-term)
+- **Namespaces**: Like folders, represented as tuples `(user_id, "memories")`
+- **Keys**: Like filenames within namespace
+- **Semantic search**: Convert text to embeddings, store in index, find closest using similarity
+
+**Implementation**:
+
+```python
+from langgraph.graph.store import InMemoryStore
+from langchain_openai import OpenAIEmbeddings
+
+# Configure store with embeddings
+embed = OpenAIEmbeddings()
+store = InMemoryStore(
+    embed=embed,
+    dims=1536,  # Embedding dimension
+    fields=["$"]  # Embed entire value
+)
+
+# Namespace for user memories
+user_namespace = ("user-x", "memories")
+
+# Save memory
+store.put(
+    namespace=user_namespace,
+    key="plan-info",
+    value={"text": "User is on Enterprise plan", "type": "plan"}
+)
+
+# Semantic search
+memories = store.search(
+    namespace=user_namespace,
+    query="What plan is the user on?",
+    limit=3
+)
+```
+
+**Retrieval-based agent**:
+
+```python
+class RetrievalState(TypedDict):
+    messages: Annotated[list, operator.add]  # Short-term conversation
+    retrieved_memories: str  # Long-term context
+
+def retrieve_memories_node(state: RetrievalState) -> dict:
+    """Fetch relevant memories from store."""
+    latest_user_msg = state["messages"][-1].content
+    
+    # Semantic search
+    memories = store.search(
+        namespace=user_namespace,
+        query=latest_user_msg,
+        limit=5
+    )
+    
+    # Concatenate into context string
+    context = "\n".join([m.value["text"] for m in memories])
+    return {"retrieved_memories": context}
+
+def chat_llm_node(state: RetrievalState) -> dict:
+    """Generate response using retrieved memories + conversation."""
+    retrieved = state.get("retrieved_memories", "")
+    messages = state["messages"]
+    
+    system_prompt = f"""You are a helpful support agent.
+
+Long-term context about this user:
+{retrieved}
+
+Use this context to provide personalized responses."""
+    
+    reply = llm.invoke([
+        {"role": "system", "content": system_prompt},
+        *[{"role": msg.role, "content": msg.content} for msg in messages]
+    ])
+    
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Graph
+graph = StateGraph(RetrievalState)
+graph.add_node("retrieve", retrieve_memories_node)
+graph.add_node("chat", chat_llm_node)
+graph.add_edge(START, "retrieve")
+graph.add_edge("retrieve", "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+**Cross-thread memory**: Different `thread_id` but same `user_id` → long-term memories still retrieved. Short-term state not shared, but long-term memory persists per user via store.
+
+**Key design decisions**:
+
+- **Schema design**: What gets stored as memory, in what shape?
+- **Write strategy**: Writing every turn bloats store; writing too selectively misses important events
+- **Retrieval strategy**: How many memories to pull? Relevance scoring?
+- **Context engineering**: Can't dump 50 memory items; curate small, focused set
+
+**When to use**: Production systems needing cross-session or global memory. Works well for user preferences, account history, learned facts.
+
+**Limitations**: Requires good schema design, write/retrieval strategy, and context engineering. Still need short-term context management (sliding windows, summarization).
+
+**6. Hierarchical Memory**
+
+**What it is**: Layered setup combining short-term working memory (sliding window) with long-term store (retrieval), plus promotion logic that decides what's worth keeping long-term.
+
+**How it works**:
+
+1. Capture user message into working short-term memory
+2. Check if information is important enough to promote to long-term memory
+3. Store promoted content in retrieval memory for future use
+4. On new queries, search long-term memory for relevant context
+5. Inject relevant memories into conversation context
+
+**Implementation**:
+
+```python
+class HierarchicalState(TypedDict):
+    messages: Annotated[list, operator.add]  # Working memory
+    retrieved_memories: str  # Long-term context
+    promotion_decision: str  # Inspection field
+
+MAX_MESSAGES = 6  # Sliding window size
+
+def working_memory_node(state: HierarchicalState) -> dict:
+    """Trim working memory to sliding window."""
+    messages = state["messages"]
+    
+    if len(messages) <= MAX_MESSAGES:
+        return {}
+    
+    # Keep only last MAX_MESSAGES
+    return {"messages": messages[-MAX_MESSAGES:]}
+
+def retrieve_memories_node(state: HierarchicalState) -> dict:
+    """Retrieve long-term memories."""
+    latest_user_msg = state["messages"][-1].content
+    
+    memories = store.search(
+        namespace=user_namespace,
+        query=latest_user_msg,
+        limit=5
+    )
+    
+    context = "\n".join([m.value["text"] for m in memories])
+    return {"retrieved_memories": context}
+
+def promotion_node(state: HierarchicalState) -> dict:
+    """Decide if current turn should be promoted to long-term."""
+    latest_turn = state["messages"][-2:]  # User + AI pair
+    
+    promotion_prompt = f"""Decide if this conversation turn contains information worth remembering long-term:
+
+{chr(10).join([msg.content for msg in latest_turn])}
+
+Examples of promotable content:
+- User preferences ("I always want reports by email")
+- Account details ("I'm on Enterprise plan")
+- Recurring issues ("This happens every Monday")
+
+Respond with 'promote: <reason>' if worth storing, or 'skip' if not."""
+    
+    decision = llm.invoke([{"role": "user", "content": promotion_prompt}]).content
+    
+    if decision.startswith("promote:"):
+        # Extract memory text
+        memory_text = "\n".join([msg.content for msg in latest_turn])
+        
+        # Store in long-term memory
+        store.put(
+            namespace=user_namespace,
+            key=f"memory-{int(time.time())}",
+            value={"text": memory_text, "type": "conversation"}
+        )
+        
+        return {"promotion_decision": decision}
+    
+    return {"promotion_decision": "skipped"}
+
+def chat_llm_hierarchical_node(state: HierarchicalState) -> dict:
+    """Generate response using both layers."""
+    retrieved = state.get("retrieved_memories", "")
+    messages = state["messages"]
+    
+    system_prompt = f"""You are a helpful support agent.
+
+Long-term context: {retrieved}
+
+Use both long-term context and recent conversation to respond."""
+    
+    reply = llm.invoke([
+        {"role": "system", "content": system_prompt},
+        *[{"role": msg.role, "content": msg.content} for msg in messages]
+    ])
+    
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# Hierarchical graph
+graph = StateGraph(HierarchicalState)
+graph.add_node("working_memory", working_memory_node)
+graph.add_node("retrieve", retrieve_memories_node)
+graph.add_node("chat", chat_llm_hierarchical_node)
+graph.add_node("promote", promotion_node)
+
+graph.add_edge(START, "working_memory")
+graph.add_edge("working_memory", "retrieve")
+graph.add_edge("retrieve", "chat")
+graph.add_edge("chat", "promote")
+graph.add_edge("promote", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+**Memory interactions**:
+
+- **Working memory**: Small, volatile, lives in `messages`, trimmed constantly
+- **Long-term memory**: Durable, user-scoped, lives in store, continuously updated by promotion
+- **Retrieval**: Reads from long-term for this turn, without bloating working memory
+- **Promotion**: Automatic decision-making removes manual memory management burden
+
+**Benefits**:
+
+- Working memory stays small (sliding window)
+- Long-term memory gets populated automatically (promotion)
+- No manual seeding or micromanagement
+- Cross-thread continuity without replaying full transcripts
+
+**When to use**: Complex applications combining short-term + long-term context. Production systems where you want automatic promotion and clean interaction between layers.
+
+**7. OS-Like Memory**
+
+**What it is**: Inspired by computer architecture—treat context window as RAM (fast, limited), external storage as disk (large, slow). Page old turns from active to passive memory, page them back in when query demands it.
+
+**How it works**:
+
+- **Active memory (RAM)**: Slice of conversation currently in context (token-bounded)
+- **Passive memory (disk)**: Everything moved out of context but not thrown away (searchable)
+- **Page out**: Move parts from active to passive when hitting capacity limit (LRU policy)
+- **Page in**: Detect query depends on paged-out content, temporarily bring it back for this call
+
+**Key difference from sliding window**: Sliding window drops old tokens. OS-like memory never loses them—just moves from in-context to off-context but searchable.
+
+**Implementation**:
+
+```python
+import tiktoken
+
+class OSMemoryState(TypedDict):
+    messages: Annotated[list, operator.add]  # Active context (RAM)
+    passive_turns: list  # Evicted messages (disk)
+
+CONTEXT_TOKEN_BUDGET = 300  # Low for demo
+MAX_PAGED_IN = 2  # Max passive turns to page in
+
+def count_tokens(text: str) -> int:
+    """Estimate token count."""
+    enc = tiktoken.get_encoding("cl100k_base")
+    return len(enc.encode(text))
+
+def os_page_out_node(state: OSMemoryState) -> dict:
+    """Page out old messages to stay under token budget."""
+    messages = state["messages"]
+    passive_turns = state.get("passive_turns", [])
+    
+    # Compute total tokens
+    total_tokens = sum([count_tokens(msg.content) for msg in messages])
+    
+    # Page out oldest messages until under budget
+    while total_tokens > CONTEXT_TOKEN_BUDGET and len(messages) > 1:
+        # Remove oldest (LRU)
+        evicted = messages.pop(0)
+        
+        # Add to passive memory
+        passive_turns.append({
+            "role": evicted.role,
+            "content": evicted.content
+        })
+        
+        # Recompute tokens
+        total_tokens = sum([count_tokens(msg.content) for msg in messages])
+    
+    return {"passive_turns": passive_turns, "messages": messages}
+
+def os_page_in_node(state: OSMemoryState) -> dict:
+    """Page in relevant passive memory for current query."""
+    latest_user_msg = state["messages"][-1].content
+    passive_turns = state.get("passive_turns", [])
+    
+    if not passive_turns:
+        return {}
+    
+    # Extract significant words from query
+    query_words = {w.lower() for w in latest_user_msg.split() if len(w) > 3}
+    
+    # Find matching passive turns
+    paged_in = []
+    for turn in passive_turns:
+        turn_words = {w.lower() for w in turn["content"].split() if len(w) > 3}
+        if query_words & turn_words:  # Overlap found
+            paged_in.append(turn)
+            if len(paged_in) >= MAX_PAGED_IN:
+                break
+    
+    if not paged_in:
+        return {}
+    
+    # Create system message with paged-in context
+    paged_context = "\n".join([
+        f"{turn['role']}: {turn['content']}" for turn in paged_in
+    ])
+    
+    paged_msg = SystemMessage(
+        content=f"Previously evicted context that may be relevant:\n{paged_context}"
+    )
+    
+    # Prepend to messages (only for this call)
+    return {"messages": [paged_msg] + state["messages"]}
+
+def chat_llm_os_node(state: OSMemoryState) -> dict:
+    """Generate response with paged-in context."""
+    system_prompt = "You are a helpful support agent."
+    messages = state["messages"]
+    
+    # If paged-in node added context, it's already in messages
+    reply = llm.invoke([
+        {"role": "system", "content": system_prompt},
+        *[{"role": msg.role, "content": msg.content} for msg in messages]
+    ])
+    
+    return {"messages": [AIMessage(content=reply.content)]}
+
+# OS-like graph
+graph = StateGraph(OSMemoryState)
+graph.add_node("page_out", os_page_out_node)
+graph.add_node("page_in", os_page_in_node)
+graph.add_node("chat", chat_llm_os_node)
+
+graph.add_edge(START, "page_out")
+graph.add_edge("page_out", "page_in")
+graph.add_edge("page_in", "chat")
+graph.add_edge("chat", END)
+
+app = graph.compile(checkpointer=MemorySaver())
+```
+
+**Behavior**:
+
+- **Active context**: Stays within token budget (RAM)
+- **Overflow**: Old context paged out to passive memory (disk)
+- **Query relevance**: When user asks about paged-out content, relevant parts paged back in
+- **Benefits**: Bounded context size without permanently throwing away earlier parts
+
+**When to use**: Long or noisy sessions, tools that emit large intermediate context. Works well when you need to keep context bounded but don't want to lose information completely.
+
+**8. Advanced Strategies**
+
+**Token Compression**: Rewrite long sections into tighter, information-dense versions. Store short factual summaries, bullet points, or structured key-value facts. Runs periodically or in background.
+
+**Smart Filtering**: Score each candidate memory for future usefulness. High-scoring items stay in expensive places (context window, vector index); low-scoring items get compressed or dropped. Can be rule-based or LLM-based.
+
+**Dynamic Memory Allocation**: Context budget doesn't have to be static. For simple queries, keep prompt tiny and skip heavy retrieval. For complex queries, spend more tokens on history, background documents, or tool traces. Choose different "memory modes" per request.
+
+**Strategic Forgetting**: Forgetting is a feature. Once goal achieved, keep compact summary and discard noisy exploration steps. Time-limited facts should expire automatically. Keeps indexes clean and avoids stale context.
+
+**Temporal Awareness**: Time influences how you read and rank memory. Recent events carry more weight for immediate decisions. Older events matter for long-term patterns. Retrieve "last 3 relevant events" plus "oldest similar event" to capture both recency and history.
+
+**9. Choosing the Right Strategy**
+
+**Decision framework**:
+
+| Question | Answer | Strategy |
+|----------|--------|----------|
+| **How long are typical interactions?** | Short (few turns) | Sliding window or sequential |
+| | Longer sessions | Summarization + sliding window |
+| **How important is exact recall?** | Approximate fine | Summarization + compression |
+| | Precise matters | Retrieval-based + promotion |
+| **Resource constraints?** | Tight latency/cost | Token-efficient: sliding window, summarization, compression |
+| | Generous resources | Hierarchical memory, long-term storage |
+| **How structured is information?** | Lookup style | Retrieval + hierarchical memory |
+| | Long chains of events | Hierarchical + consolidation |
+| **Will system learn over time?** | One-off tools | Session-based sliding window |
+| | Long-term agents | Durable long-term memory, promotion, consolidation |
+
+**Practical approach**:
+
+1. Start with simplest: sliding window + maybe summarization
+2. Add retrieval when you need cross-session memory
+3. Add hierarchical memory when you need clean interaction between short-term + long-term
+4. Add OS-like paging when sessions become too big
+5. Layer in advanced patterns as complexity grows
+
+**Strategy Comparison Table**:
+
+| Strategy | Token Efficiency | Retrieval Speed | Memory Usage | Best For |
+|----------|-----------------|-----------------|--------------|----------|
+| **Sequential** | Low | Instant | High | Prototypes, very short conversations |
+| **Sliding Window** | High | Instant | Constant | Real-time chat, simple assistants |
+| **Summarization** | High | Fast | Low–Medium | Medium-length sessions, iterative tasks |
+| **Compression** | Very High | Fast | Low | Long-running agents, heavy logs |
+| **Retrieval-based** | High | Fast | Medium | Production systems, cross-session memory |
+| **Hierarchical** | Very High | Fast | Medium | Complex apps, short-term + long-term |
+| **OS-like** | High | Fast | Medium | Long/noisy sessions, large intermediate context |
+
+**EXAM TIP:** Questions about "memory optimization" → understand trade-offs: **Sequential** (perfect recall, expensive) → **Sliding Window** (bounded cost, loses old info) → **Summarization** (preserves context, compresses) → **Compression** (importance-aware, optimized) → **Retrieval** (cross-session, durable) → **Hierarchical** (layered, automatic promotion) → **OS-like** (paging, bounded but recoverable). Questions about "production memory" → think **cost, latency, reliability** trade-offs, not just "more memory". Questions about "choosing memory strategy" → consider **interaction length, recall importance, resource constraints, information structure, learning over time**.
 
 ---
 
