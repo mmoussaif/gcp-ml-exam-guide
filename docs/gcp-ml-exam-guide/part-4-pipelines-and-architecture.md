@@ -3113,7 +3113,7 @@ if __name__ == '__main__':
 **Key Points**:
 
 - **MLModelService**: Inherits from generated `MLModelServicer` base class
-- ****init****: Loads model once when service starts
+- \***\*init\*\***: Loads model once when service starts
 - **Predict method**: Implements the RPC method, converts features, generates prediction, returns response
 - **Error handling**: Sets gRPC error status if prediction fails
 - **grpc.server**: Creates server with thread pool (max_workers=10) for concurrent requests
@@ -3213,6 +3213,414 @@ CMD ["python", "-u", "server.py"]
 - **CMD**: Default command when container starts (runs server with unbuffered output)
 
 **Summary**: This demo demonstrates the journey from training a model to deploying it as a gRPC API, containerized with Docker, ready for production deployment.
+
+**H. Container Orchestration with Kubernetes**:
+
+**Why Kubernetes**: Over the last decade, many software systems (including ML systems) migrated from monoliths to microservices/modular architectures. Each component (e.g., model-serving, data ingestion, API front end) is packaged in containers.
+
+**The Challenge**: When you have many containers across many machines (or nodes), managing them manually becomes hard:
+
+- Which node should run which container?
+- How to recover automatically, in case of failure?
+- How to scale containers up/down with load?
+- How to route traffic among them?
+- How to do rolling updates (updates with zero downtime)?
+
+**What is Kubernetes**: Kubernetes is an open-source system for automating the deployment, scaling, and management of containerized applications. It simplifies complex applications by orchestrating containers (packaged, portable units of software).
+
+**Key Features**:
+
+- **Automatic scheduling**: Kubernetes decides on which node(s) to place containers (or pods, as the primitive) based on resource requirements and policies
+- **Self-healing**: If a container crashes, Kubernetes restarts it. If a node dies, it shifts the container to a healthy node
+- **Scaling**: It supports both manual and auto-scaling (based on CPU, memory, and custom metrics)
+- **Rolling updates & rollbacks**: You can update container versions with minimal downtime, and rollback if something fails
+- **Service discovery & load balancing**: Containers can find each other via DNS, internal IPs, and requests are balanced among replicas
+- **Declarative configuration**: You specify what the cluster should look like (e.g. "3 instances of model-serving"), and Kubernetes works to maintain that state
+- **Extensibility & ecosystem**: Many add-ons, custom resource definitions (CRDs), operators, service meshes, etc.
+
+**Kubernetes helps you deploy and manage model-serving, scalable inference endpoints, and microservices reliably in production**.
+
+**Prerequisites: Foundational Concepts**:
+
+**1. Images and Containers Basics**:
+
+- **Container image**: A lightweight, static, and immutable package containing all the necessary code, runtime, libraries, and configuration to run an application consistently across different environments
+- **Container**: A running, executable instance of a container image, functioning as a live application or service
+- **Relationship**: The image serves as a read-only template or blueprint, while the container is the active, isolated process that runs from that blueprint, similar to a class and its objects/instances in object-oriented design
+- **Isolation**: Because different applications often have conflicting dependencies, containers provide isolated environments, enabling multiple applications to run reliably on the same host without interference
+
+**2. Cloud-Native and Microservices Architecture**:
+
+- **Cloud-native**: Designing and building applications specifically for the cloud environment, emphasizing scalability, resilience, and agility through modern development practices and cloud infrastructure
+- **Cloud-native ecosystem**:
+  - Containers: lightweight, portable execution units
+  - Service meshes: managing service-to-service communication
+  - Microservices: modular application components
+  - Immutable infrastructure: ensuring reproducibility and consistency
+  - APIs: enabling interoperability and integration
+- **Together**: These components form the backbone of scalable systems that can be continuously deployed and updated with minimal downtime
+
+**3. Service Meshes**:
+
+- **What**: An infrastructure layer that manages and secures communication between microservices
+- **Features**:
+  - Traffic management and load balancing
+  - Encryption and service authentication
+  - Observability through metrics, logging, and tracing
+- **Benefit**: By offloading these concerns to the mesh (via proxy sidecars attached to each service), developers can focus on writing business logic, while operations teams manage reliability and performance uniformly across the system
+
+**4. Immutable Infrastructure**:
+
+- **Practice**: Never modifying a deployed component, such as a server or container, after it's running
+- **Process**: When an update or configuration change is required:
+  1. A new version of the system is built from a standardized image
+  2. It's then deployed to replace the existing instance
+  3. The old instance is decommissioned once validation (e.g., A/B testing or canary deployment) confirms success
+- **Benefits**: Guarantees consistency, reliability, and reproducibility, as every deployment begins from a clean, known state
+- **Example**: Docker containers, where each change means the creation of a fresh container
+- **Philosophy**: Containers epitomize immutability; they are ephemeral and disposable, often described as "cattle, not pets", highlighting a shift from manual maintenance to automated, scalable management
+
+**5. Microservices**:
+
+- **What**: A variant of Service-Oriented Architecture (SOA) that arranges an application as a collection of loosely coupled, fine-grained services
+- **Service-Oriented Architecture (SOA)**: A software design pattern that structures applications as a collection of loosely coupled, independent, and reusable services
+- **Key points**:
+  - Each service represents a specific functionality, providing a well-defined interface for other applications to consume without needing to know the internal implementation
+  - Services communicate using lightweight protocols (e.g., HTTP or gRPC)
+  - They can be scaled independently and built by smaller teams using different programming languages
+- **Benefit**: This modular approach fosters agility, enabling faster development, deployment, and maintenance cycles
+
+**Kubernetes: High-Level Architecture & Core Concepts**:
+
+**Cluster, Control Plane & Worker Nodes**:
+
+At its core, a Kubernetes system is a **cluster**, composed of:
+
+- **One (or more) control plane(s)** (also called master nodes) that are responsible for making global decisions, scheduling, and maintaining cluster state
+- **Several worker nodes**: The machines that actually run workloads (containers) under instructions from the control plane
+
+**Analogy**:
+
+- **Control plane** = "brain/decision maker"
+- **Worker nodes** = "execution agents/workers"
+
+The control plane and nodes communicate over APIs and internal protocols. Each cluster must have at least one worker node to run workloads; control plane components can themselves run on separate machines or co-locate (in simple setups).
+
+**Basic Terminology/Abstractions**:
+
+- **Pod**: The smallest deployable unit in Kubernetes. A pod can host one or multiple tightly coupled containers, which share the same network namespace (IP)
+- **Node**: A physical or virtual machine in the cluster, running pods
+- **Cluster**: A set of nodes managed by a control plane
+- **Namespace**: A logical partitioning inside a cluster (to isolate resources)
+- **Deployment and ReplicaSet**: Higher-level abstractions (workloads) to manage pods, specify how many replicas, etc.
+- **Service**: A stable abstraction (IP + DNS) over pods to allow reliable access (load balancing, discovery)
+- **Ingress/Ingress Controller**: Manages external access (HTTP routing) into services
+- **ConfigMap/Secret**: For passing configuration or sensitive data into pods
+- **Volume/PersistentVolume**: Storage abstractions for mounting data into pods
+- **Label & Selector**: Key-value tags attached to objects, used to filter/group resources (e.g. choose which pods a service should route to)
+- **API objects**: Kubernetes resources are represented as API objects with spec (desired state) and status (current state)
+
+**These abstractions allow you to think declaratively**: Define what you want, not step-by-step how to manage containers.
+
+**Control Plane Components**:
+
+**1. kube-apiserver (API Server)**:
+
+- **Front door** for the Kubernetes control plane
+- **Exposes the Kubernetes API** (RESTful), accepting HTTP/HTTPS requests (kubectl, controllers, other components) for CRUD operations on Kubernetes resources (Pods, Deployments, Services, etc.)
+- **All components communicate** via the API Server (i.e., controllers, scheduler, nodes)
+- **Interacts with etcd** to read/write cluster state
+- **Performs**: Validation, authentication & authorization
+- **In short**: It is the central hub. Without the API server, nothing else functions
+
+**2. etcd (key-value store)**:
+
+- **Distributed, strongly consistent** key-value store that holds the entire cluster state (all Kubernetes object definitions, configurations, resource statuses, etc.)
+- **Source of truth**: Every change to cluster resources is persisted here
+- **Kubernetes control plane components** watch etcd for changes and respond appropriately
+- **Critical**: You typically run it redundantly (multiple replicas) in production to avoid a single point of failure
+
+**3. kube-scheduler**:
+
+- **Job**: Pick which node a newly created pod should run on
+- **Process**: Watches for unscheduled pods (i.e., pods without a node assignment) via the API server, then applies scheduling logic: resource constraints (CPU, memory), tolerations, node capacity, etc.
+- **Once it picks a node**: It binds the pod to that node (via the API server)
+
+**4. kube-controller-manager (Controller Manager)**:
+
+- **Runs a set of controllers** as separate control loops (in a single binary)
+- **Controllers monitor** the cluster state and make changes until the desired state matches the actual state
+- **Examples**:
+  - **Replication controller/ReplicaSet controller**: Ensures the specified number of pod replicas are running
+  - **Deployment controller**: Handles rolling updates, rollbacks, and scaling changes
+  - **Node controller**: Monitors node health and reacts (e.g., mark node as "Not Ready")
+  - **Service controller**: Handles service/endpoint objects
+  - **Namespace controller, Garbage collector**, etc.
+- **Each controller loops constantly**: Read state, then compare to the desired state, and finally take action to reconcile
+
+**Together**: These components maintain global cluster behavior: scheduling, scaling, reacting to failures, and maintaining consistency.
+
+**Node/Worker Components**:
+
+**1. kubelet**:
+
+- **Agent** that runs on every node
+- **Watches the API server** for assigned pods, and ensures containers in those pods are running and healthy (via container runtime)
+- **Responsibilities**: Starts/stops containers, reports status, handles health probes (liveness/readiness), etc.
+- **Sends heartbeats/status updates** to the control plane
+- **In short**: The control plane tells kubelet "run these pods", and the kubelet ensures they are running correctly on that node
+
+**2. Container Runtime (CR)**:
+
+- **On each node**: You need a container runtime that can actually pull container images, create and manage containers per spec
+- **Kubernetes interacts** with it via the Container Runtime Interface (CRI)
+- **Historically**: Kubernetes used Docker as the container runtime, but now has evolved to support runtimes like Containerd
+
+**3. kube-proxy (network proxy)**:
+
+- **Runs on each node** and helps implement Kubernetes Service abstraction (cluster IP, load balancing)
+- **Watches the API server** for Service and Endpoint changes, and then configures local rules (iptables, IPVS) to forward traffic as needed to the actual pods backing a service
+- **Ensures**: When a request hits a service's virtual IP, traffic is forwarded to healthy pods
+
+**Hence**: Each node participates actively in running containers and networking while reporting back to the control plane.
+
+**How Components Interact: Workflows and Control Loops**:
+
+**1. Desired State → Actual State → Reconciliation**:
+
+**Flow**:
+
+1. The user or system submits an API object (e.g. a Deployment job specifying 3 replicas, container image, resource limits)
+2. This goes to the API server, gets stored in etcd
+3. The relevant controller (Deployment controller, ReplicaSet controller) sees that the current state (zero replicas) does not match the desired state (3), so it creates 3 pods
+4. For each pod, the scheduler assigns a node
+5. The API server communicates with that node's kubelet
+6. The kubelet (on that node) pulls the container image and starts containers via the container runtime
+7. The node reports back its status
+8. The controller keeps checking, and if a pod fails, it restarts or recreates until 3 are healthy
+
+**This is the control loop/reconciliation model**: It continuously converges towards the declared desired state.
+
+**2. Service Discovery & Routing**:
+
+- **Service object** defines a logical set of pods (via label selectors) and an abstract IP + port
+- **kube-proxy** sets up rules so any traffic coming to that IP:port is forwarded to one of the pods backing it (load-balanced)
+- **Pods refer to services** via DNS (CoreDNS), so they can discover each other stably, without knowing dynamic pod IPs
+
+**3. Rolling Updates**:
+
+- **When the user updates a Deployment** (change container image version), the Deployment controller (classic rollout logic) gradually replaces existing pod replicas with new version pods (e.g., create new pods, wait for readiness, delete old ones)
+- **If something goes wrong**: Rollbacks can be triggered
+
+**4. Failure Handling**:
+
+- **If a node fails/becomes unreachable**: The Node controller marks it as "NotReady." Pods on that node are eventually considered lost, and replacement pods are scheduled on healthy nodes
+- **If a pod container crashes** or fails a readiness probe: The kubelet restarts it (if defined to)
+- **Controllers monitor and enforce replica counts**: So the system remains resilient
+
+**5. Autoscaling**:
+
+- **Horizontal Pod Autoscaler (HPA)**: Monitors metrics (CPU/memory/custom metrics) and scales the number of replicas
+- **Vertical Pod Autoscaler (VPA)**: Adjusts the CPU and memory requests and limits for containers within pods to "right-size" them based on historical resource usage
+- **Cluster autoscaler** (in cloud setups): Adds or removes nodes based on demand so that pods can be scheduled
+
+**Thus**: The system can automatically adapt to load and failure.
+
+**Hands-On: Kubernetes in Action**:
+
+**Objective**: Deploy a simple FastAPI inference service using Kubernetes.
+
+**Steps**:
+
+**1. Train and Save the Model**:
+
+- Train a basic regression model (y = 2x) and save it as `model.pkl` using joblib
+
+**2. Create a FastAPI App for Inference**:
+
+- Write an application that loads `model.pkl` at startup and exposes a `/predict` endpoint
+- The endpoint accepts feature inputs (x) and returns the predicted value
+- Provide a simple `/health` GET endpoint
+
+**Example: FastAPI App**:
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+import joblib
+import numpy as np
+
+app = FastAPI()
+
+# Load model at startup
+model = joblib.load('model.pkl')
+
+class InputData(BaseModel):
+    x: float
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.post("/predict")
+def predict(data: InputData):
+    # Convert to numpy array
+    X = np.array([[data.x]])
+    prediction = model.predict(X)[0]
+    return {"prediction": float(prediction)}
+```
+
+**Key Points**:
+
+- **Pydantic model**: Validates incoming JSON automatically
+- **Load model outside endpoint**: So it loads once when the app starts (avoids re-loading on every request)
+- **FastAPI provides**: Browsable documentation UI at `/docs`
+
+**3. Containerization**:
+
+- Write a Dockerfile to package the FastAPI app, model, and dependencies
+
+**Example: Dockerfile**:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY app.py model.pkl requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+EXPOSE 80
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"]
+```
+
+**4. Orchestration and Deployment with Kubernetes**:
+
+**A. Load Image to Cluster**:
+
+- Build Docker image: `docker build -t k-demo .`
+- Load to kind cluster: `kind load docker-image k-demo --name kind`
+
+**B. Create Deployment**:
+
+**Example: deployment.yaml**:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k-demo-dep
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: k-demo
+  template:
+    metadata:
+      labels:
+        app: k-demo
+    spec:
+      containers:
+        - name: k-demo
+          image: k-demo
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 80
+```
+
+**Key Points**:
+
+- **kind: Deployment**: Higher-level object that manages a group of identical Pods
+- **replicas: 2**: Defines how many Pod instances you want running (high availability)
+- **selector.matchLabels**: Tells the Deployment which Pods it "owns" or manages
+- **template**: Defines what each Pod looks like (label `app: k-demo`, container spec)
+- **imagePullPolicy: IfNotPresent**: Use the local image if available
+
+**Apply**: `kubectl apply -f deployment.yaml`
+
+**C. Create Service**:
+
+**Example: service.yaml**:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: k-demo
+spec:
+  selector:
+    app: k-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+```
+
+**Key Points**:
+
+- **kind: Service**: Networking abstraction that provides a stable IP address and DNS name
+- **selector**: Matches Pods with the label `app: k-demo` (routes traffic to these Pods)
+- **ports**: Service exposes port 80, forwards to container port 80
+- **type: ClusterIP**: Default; accessible only inside the cluster (internal-only)
+- **Load balancing**: Every Service automatically performs load balancing across all Pods that match its selector
+
+**Apply**: `kubectl apply -f service.yaml`
+
+**D. Access the Service**:
+
+**Since Service is ClusterIP** (internal-only), forward port to local machine:
+
+```bash
+kubectl port-forward service/k-demo 8000:80
+```
+
+**This creates a temporary tunnel**: `localhost:8000` → `k-demo:80` (inside cluster)
+
+**Test**: Run test script or use FastAPI docs at `http://localhost:8000/docs`
+
+**Summary**: A usual simplified exercise is:
+
+1. Package a container
+2. Write a Deployment YAML
+3. Write a Service YAML to expose it internally (ClusterIP) or externally (NodePort/LoadBalancer)
+4. `kubectl apply -f deployment.yaml` and `kubectl apply -f service.yaml`
+5. Use `kubectl get pods`, `kubectl describe`, etc.
+6. Upgrade, if needed: change the image tag, reapply, observe rolling update, etc.
+
+**Important Note on API Versions**:
+
+In Kubernetes, the `apiVersion` field in a resource definition (YAML file) specifies the version of the Kubernetes API that the resource adheres to.
+
+**Stability Levels**:
+
+- **Alpha** (e.g., `v1alpha1`): Experimental features, subject to change and potential bugs
+- **Beta** (e.g., `v1beta1`): More stable than alpha, but still subject to potential changes in future releases
+- **Stable** (e.g., `v1`, `apps/v1`): Fully supported and considered stable, with minimal risk of breaking changes
+
+**Structure**:
+
+- **Core API**: For core Kubernetes objects like Pods and Services, the apiVersion is often `v1`
+- **API Groups**: For objects belonging to specific API groups (e.g., Deployments and ReplicaSets within the apps group), the apiVersion includes the group name (`apps/v1`)
+
+**Key Takeaways**:
+
+- **Kubernetes is a container orchestration system** that automates deployment, scaling, healing, and networking of containerized applications
+- **Core architecture**: Control plane + worker nodes structure
+- **Works by reconciling**: Desired state (YAML definitions) with actual state continuously
+- **While Kubernetes has a learning curve and operational overhead**, its advantages make it a standard in modern production systems, especially for ML systems that need reliable, scalable deployment
+
+**This chapter covers the basics of Kubernetes**. These concepts are merely the tip of the iceberg. Kubernetes in itself is a topic that could take tens to hundreds of learning hours.
+
+**Recommended Further Learning**:
+
+- Kubernetes Tutorial for Beginners: Basic Concepts
+- Kubernetes Documentation
+- kubectl Quick Reference
+
+**EXAM TIP:** Questions about "container orchestration" → think **Kubernetes** (automatic scheduling, self-healing, scaling, rolling updates, service discovery). Questions about "Kubernetes architecture" → think **control plane** (API server, etcd, scheduler, controller manager) + **worker nodes** (kubelet, container runtime, kube-proxy). Questions about "Kubernetes abstractions" → think **Pods** (smallest deployable unit), **Deployments** (manage Pods), **Services** (stable IP/DNS, load balancing), **Namespaces** (logical partitioning). Questions about "Kubernetes deployment" → think **Deployment YAML** (replicas, selector, template) + **Service YAML** (selector, ports, type: ClusterIP/NodePort/LoadBalancer).
 
 **G. Deployment as a Service (Online Inference)**:
 
