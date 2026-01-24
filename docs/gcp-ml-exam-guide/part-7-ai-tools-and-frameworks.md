@@ -308,7 +308,8 @@ This section provides implementation-ready code snippets for the most important 
 
 **ADK** is Google's open-source Python framework for building agents that can be deployed to Vertex AI Agent Engine or run locally.
 
-Official repo: `https://github.com/google/adk-python`
+Official repo: `https://github.com/google/adk-python`  
+Official docs: `https://google.github.io/adk-docs/`
 
 #### ADK core concepts
 
@@ -319,100 +320,69 @@ Official repo: `https://github.com/google/adk-python`
 | **Session** | Conversation context and memory                                                        |
 | **Runner**  | Executes the agent locally or remotely                                                 |
 
-#### ADK: Simple agent with tools
+#### ADK: Simple agent with tools (pseudocode — verify imports in ADK docs)
 
 ```python
-from google.adk import Agent, Tool
-from google.adk.tools import FunctionTool
+# NOTE: ADK is evolving quickly; treat this as *structure*, not exact imports.
+# Verify the current import paths / class names in the official docs:
+# - https://google.github.io/adk-docs/
+# - https://github.com/google/adk-python
 
-# Define a tool as a Python function
+# 1) Define tools as regular functions
 def get_weather(city: str) -> str:
-    """Get current weather for a city."""
-    # In production, call a real weather API
+    # Call a real API in production
     return f"Weather in {city}: 72°F, sunny"
 
-def search_database(query: str) -> str:
-    """Search internal knowledge base."""
-    # In production, query your vector DB or search service
-    return f"Found 3 results for '{query}': [doc1, doc2, doc3]"
+def search_kb(query: str) -> str:
+    # Query your search / vector store in production
+    return f"Found results for '{query}': [doc1, doc2, doc3]"
 
-# Wrap functions as tools
-weather_tool = FunctionTool(get_weather)
-search_tool = FunctionTool(search_database)
+# 2) Register tools with the agent runtime
+tools = [get_weather, search_kb]  # (wrapped/registered per ADK docs)
 
-# Create agent with tools
-agent = Agent(
-    name="assistant",
-    model="gemini-2.0-flash",
-    instruction="""You are a helpful assistant.
-    Use the weather tool for weather questions.
-    Use the search tool for knowledge base queries.
-    Always cite your sources.""",
-    tools=[weather_tool, search_tool],
-)
+# 3) Create an agent with instructions + tools
+agent = {
+    "name": "assistant",
+    "model": "gemini-2.0-flash",
+    "instruction": (
+        "Use get_weather for weather. Use search_kb for internal knowledge. "
+        "Cite sources when using retrieved content."
+    ),
+    "tools": tools,
+}
 
-# Run locally
-from google.adk.runners import LocalRunner
-
-runner = LocalRunner(agent)
-response = runner.run("What's the weather in Seattle and find docs about ML pipelines")
-print(response.text)
+# 4) Run locally (runner/session setup per ADK docs)
+result = run(agent, "What's the weather in Seattle and find docs about ML pipelines")
+print(result)
 ```
 
-#### ADK: Multi-agent with delegation
+#### ADK: Multi-agent with delegation (pseudocode)
 
 ```python
-from google.adk import Agent, Tool
-from google.adk.agents import SequentialAgent, ParallelAgent
+# 3-agent pipeline: research → write → review
+researcher = {"name": "researcher", "instruction": "Research and cite sources.", "tools": [search_kb]}
+writer = {"name": "writer", "instruction": "Write a clear summary from research."}
+reviewer = {"name": "reviewer", "instruction": "Check accuracy, clarity, and add missing caveats."}
 
-# Specialist agents
-researcher = Agent(
-    name="researcher",
-    model="gemini-2.0-flash",
-    instruction="You research topics and provide detailed analysis.",
-    tools=[search_tool],
-)
-
-writer = Agent(
-    name="writer",
-    model="gemini-2.0-flash",
-    instruction="You write clear, concise summaries based on research.",
-)
-
-reviewer = Agent(
-    name="reviewer",
-    model="gemini-2.0-flash",
-    instruction="You review content for accuracy and clarity. Suggest improvements.",
-)
-
-# Sequential pipeline: research → write → review
-pipeline = SequentialAgent(
-    name="content_pipeline",
-    agents=[researcher, writer, reviewer],
-)
-
-# Run the pipeline
-response = pipeline.run("Create a summary of recent developments in agentic AI")
+pipeline = sequential([researcher, writer, reviewer])  # per ADK composition primitives
+final = pipeline.run("Create a summary of recent developments in agentic AI")
+print(final)
 ```
 
-#### ADK: Deploy to Vertex AI Agent Engine
+#### ADK: Deploy to Vertex AI Agent Engine (pseudocode — verify current deployment API)
 
 ```python
-from google.adk.deploy import deploy_to_vertex
-
-# Deploy agent to managed infrastructure
-deployed_agent = deploy_to_vertex(
+# Pseudocode: deployment API names change; use official docs for the exact call.
+# Typical inputs: agent artifact, project, region, display name, scaling config.
+deployment = deploy_agent(
     agent=agent,
     project_id="your-project",
     location="us-central1",
     display_name="my-assistant-agent",
-    # Optional: configure scaling, traffic splitting
-    min_replica_count=1,
-    max_replica_count=10,
+    min_replicas=1,
+    max_replicas=10,
 )
-
-# Get endpoint URL for production use
-print(f"Agent deployed at: {deployed_agent.endpoint}")
+print(deployment.endpoint)
 ```
 
 ---
@@ -431,12 +401,9 @@ Traditional RAG: query → retrieve → generate (single pass).
 | No validation of retrieved docs    | Agent can verify relevance, ask clarifying questions     |
 | Fixed retrieval query = user query | Agent can rewrite/decompose queries for better retrieval |
 
-#### Agentic RAG with ADK
+#### Agentic RAG with ADK (pseudocode — verify ADK tool wrappers in docs)
 
 ```python
-from google.adk import Agent, Tool
-from google.adk.tools import FunctionTool
-
 def retrieve_documents(query: str, top_k: int = 5) -> list[dict]:
     """Retrieve relevant documents from vector store."""
     # In production: embed query, search vector DB, return chunks
@@ -450,25 +417,19 @@ def verify_source(claim: str, source_id: str) -> str:
     # In production: fetch full doc, check if claim is supported
     return f"Claim '{claim}' is supported by {source_id}"
 
-retrieve_tool = FunctionTool(retrieve_documents)
-verify_tool = FunctionTool(verify_source)
+agent = {
+    "name": "agentic_rag",
+    "model": "gemini-2.0-flash",
+    "instruction": (
+        "Decide if retrieval is needed. If needed, decompose the query, retrieve, and iterate. "
+        "Verify key claims and cite sources. If you cannot find support in retrieved sources, say so."
+    ),
+    # Tools are wrapped/registered per ADK docs:
+    "tools": [retrieve_documents, verify_source],
+}
 
-agentic_rag_agent = Agent(
-    name="agentic_rag",
-    model="gemini-2.0-flash",
-    instruction="""You are a research assistant with access to a knowledge base.
-
-    RETRIEVAL STRATEGY:
-    1. First, decide if retrieval is needed (skip for general knowledge questions)
-    2. If needed, decompose complex queries into sub-queries
-    3. Retrieve documents for each sub-query
-    4. If initial results are insufficient, reformulate and retrieve again
-    5. Always verify key claims using the verify_source tool
-    6. Cite sources in your final answer
-
-    IMPORTANT: Do NOT hallucinate. If you can't find information, say so.""",
-    tools=[retrieve_tool, verify_tool],
-)
+answer = run(agent, "Compare Feature Store vs raw feature tables for churn prediction. Cite sources.")
+print(answer)
 ```
 
 #### Multi-hop retrieval pattern
@@ -684,7 +645,7 @@ data_analyst = Agent(
 
 **LangGraph** provides explicit control flow for agent workflows using graph-based state machines. It's ideal when you need deterministic, testable, and debuggable agent behavior.
 
-Official docs: `https://langchain-ai.github.io/langgraph/`
+Official docs: `https://docs.langchain.com/oss/python/langgraph/overview`
 
 #### LangGraph core concepts
 
@@ -696,88 +657,32 @@ Official docs: `https://langchain-ai.github.io/langgraph/`
 | **Edge**         | Connection between nodes; can be conditional                              |
 | **Checkpointer** | Persistence layer for state (enables pause/resume, time-travel debugging) |
 
-#### LangGraph: Simple agent loop
+#### LangGraph: Minimal workflow (aligned with upstream README)
 
 ```python
-from typing import TypedDict, Annotated, Literal
-from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolNode
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, AIMessage
-import operator
+from langgraph.graph import START, StateGraph
+from typing_extensions import TypedDict
 
-# Define state schema
-class AgentState(TypedDict):
-    messages: Annotated[list, operator.add]  # Message history (append-only)
-    iteration: int
+class State(TypedDict):
+    text: str
 
-# Initialize LLM
-llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
+def node_a(state: State) -> dict:
+    return {"text": state["text"] + "a"}
 
-# Define tools
-from langchain_core.tools import tool
+def node_b(state: State) -> dict:
+    return {"text": state["text"] + "b"}
 
-@tool
-def search_web(query: str) -> str:
-    """Search the web for information."""
-    return f"Search results for '{query}': [result1, result2, result3]"
+graph = StateGraph(State)
+graph.add_node("node_a", node_a)
+graph.add_node("node_b", node_b)
+graph.add_edge(START, "node_a")
+graph.add_edge("node_a", "node_b")
 
-@tool
-def calculate(expression: str) -> str:
-    """Evaluate a mathematical expression."""
-    try:
-        return str(eval(expression))
-    except:
-        return "Error: invalid expression"
-
-tools = [search_web, calculate]
-llm_with_tools = llm.bind_tools(tools)
-
-# Define nodes
-def agent_node(state: AgentState) -> AgentState:
-    """Main agent reasoning node."""
-    response = llm_with_tools.invoke(state["messages"])
-    return {"messages": [response], "iteration": state["iteration"] + 1}
-
-def should_continue(state: AgentState) -> Literal["tools", "end"]:
-    """Decide whether to call tools or end."""
-    last_message = state["messages"][-1]
-    if hasattr(last_message, "tool_calls") and last_message.tool_calls:
-        return "tools"
-    return "end"
-
-# Build graph
-graph = StateGraph(AgentState)
-
-# Add nodes
-graph.add_node("agent", agent_node)
-graph.add_node("tools", ToolNode(tools))
-
-# Set entry point
-graph.set_entry_point("agent")
-
-# Add edges
-graph.add_conditional_edges(
-    "agent",
-    should_continue,
-    {"tools": "tools", "end": END}
-)
-graph.add_edge("tools", "agent")  # After tools, go back to agent
-
-# Compile
 app = graph.compile()
-
-# Run
-result = app.invoke({
-    "messages": [HumanMessage(content="What is 25 * 4 and search for LangGraph tutorials")],
-    "iteration": 0
-})
-
-for msg in result["messages"]:
-    print(f"{msg.type}: {msg.content}")
+print(app.invoke({"text": ""}))  # {'text': 'ab'}
 ```
 
-#### LangGraph: Multi-agent supervisor pattern
+#### LangGraph: Multi-agent supervisor pattern (conceptual; see docs for the latest routing APIs)
 
 ```python
 from typing import TypedDict, Annotated, Literal
@@ -895,7 +800,7 @@ result = multi_app.invoke(
 )
 ```
 
-#### LangGraph: Human-in-the-loop (approval gates)
+#### LangGraph: Human-in-the-loop (approval gates) (conceptual; see docs for interrupt/checkpoint APIs)
 
 ```python
 from langgraph.graph import StateGraph, END
@@ -1111,70 +1016,35 @@ class SessionState:
     metadata: dict[str, Any] = field(default_factory=dict)
 ```
 
-### Implementation: Session Management with ADK
+### Implementation: Session Management with ADK (conceptual)
 
 ```python
-from google.adk import Agent
-from google.adk.sessions import Session, SessionService
-from google.adk.memory import InMemoryStore, FirestoreStore
+# NOTE: Treat this as a reference architecture, not exact imports.
+# Verify current ADK session APIs in the official docs:
+# - https://google.github.io/adk-docs/
 
-# Option 1: In-memory (development/testing)
-memory_store = InMemoryStore()
+session_store = make_session_store(backend="firestore", ttl_hours=24)
 
-# Option 2: Persistent (production) — Firestore
-memory_store = FirestoreStore(
-    project_id="your-project",
-    collection="agent_sessions"
-)
+session_id = "user-123-session-456"
+user_id = "user-123"
+session = session_store.get_or_create(session_id=session_id, user_id=user_id)
 
-# Create session service
-session_service = SessionService(store=memory_store)
+agent = {"name": "assistant", "model": "gemini-2.0-flash", "instruction": "Use conversation history."}
 
-# Create or resume session
-session = session_service.get_or_create(
-    session_id="user-123-session-456",
-    user_id="user-123",
-    ttl_hours=24  # Auto-expire after 24 hours
-)
+run(agent, "My name is Alice and I work on ML pipelines", session=session)
+reply = run(agent, "What did I say my job was?", session=session)
+print(reply)
 
-# Agent with session
-agent = Agent(
-    name="assistant",
-    model="gemini-2.0-flash",
-    instruction="You are a helpful assistant. Use conversation history for context.",
-)
-
-# Run with session (history is automatically managed)
-from google.adk.runners import LocalRunner
-
-runner = LocalRunner(agent, session_service=session_service)
-
-# First turn
-response1 = runner.run(
-    "My name is Alice and I work on ML pipelines",
-    session_id="user-123-session-456"
-)
-
-# Second turn (agent remembers context)
-response2 = runner.run(
-    "What did I say my job was?",  # Agent should remember "ML pipelines"
-    session_id="user-123-session-456"
-)
-
-# Save session explicitly (or auto-saved on each turn)
-session_service.save(session)
+session_store.save(session)
 ```
 
-### Implementation: Session Management with LangGraph
+### Implementation: Session Management with LangGraph (conceptual)
 
 LangGraph uses **checkpointers** for state persistence.
 
 ```python
 from typing import TypedDict, Annotated
 from langgraph.graph import StateGraph, END
-from langgraph.checkpoint.memory import MemorySaver
-from langgraph.checkpoint.sqlite import SqliteSaver
-from langgraph.checkpoint.postgres import PostgresSaver
 import operator
 
 # State includes conversation history
@@ -1183,16 +1053,10 @@ class ConversationState(TypedDict):
     user_id: str
     session_metadata: dict
 
-# Option 1: In-memory checkpointer (development)
-checkpointer = MemorySaver()
-
-# Option 2: SQLite (lightweight persistence)
-checkpointer = SqliteSaver.from_conn_string("sessions.db")
-
-# Option 3: PostgreSQL (production)
-checkpointer = PostgresSaver.from_conn_string(
-    "postgresql://user:pass@localhost/sessions"
-)
+# LangGraph supports checkpointing for persistence; specific backends and import paths evolve.
+# Follow the official docs for current options and examples:
+# https://docs.langchain.com/oss/python/langgraph/overview
+checkpointer = make_checkpointer(backend="sqlite", path="sessions.db")
 
 # Build graph (simplified)
 def chat_node(state: ConversationState) -> ConversationState:
@@ -1363,35 +1227,20 @@ class LongTermMemoryStore:
 | **Recovery**         | Checkpointing enables resume after crashes                            |
 | **Observability**    | Log session lifecycle events; track memory usage                      |
 
-### Vertex AI Agent Engine Session Management
+### Vertex AI Agent Engine Session Management (conceptual)
 
-When using Vertex AI Agent Engine, session management is handled by the platform:
+Agent Engine provides a managed runtime where sessions are typically identified by a **session ID** and the platform persists conversation state across turns. The exact client API is evolving, so treat the following as conceptual:
 
 ```python
-from google.cloud import aiplatform
-from vertexai.preview.reasoning_engines import ReasoningEngine
+# Pseudocode: shape varies by SDK version / preview surface.
+session_id = "user-alice-project-xyz"
 
-# Agent Engine handles sessions automatically
-# Each conversation gets a session_id
-
-# Option 1: Let platform generate session ID
-response = reasoning_engine.query(
-    query="Hello, I'm starting a new project"
-)
-session_id = response.session_id  # Platform-generated
-
-# Option 2: Provide your own session ID (for user-specific sessions)
-response = reasoning_engine.query(
-    query="What did we discuss earlier?",
-    session_id="user-alice-project-xyz"  # Your ID
-)
-
-# Session state is automatically:
-# - Persisted across turns
-# - Associated with the session_id
-# - Managed for TTL/cleanup
-# - Available for replay/debugging in Cloud Console
+resp1 = agent_engine.query("Hello, I'm starting a new project", session_id=session_id)
+resp2 = agent_engine.query("What did we discuss earlier?", session_id=session_id)
+print(resp2.text)
 ```
+
+Use the official Vertex AI documentation for the current SDK surface and best practices around retention/TTL, privacy, and observability.
 
 **EXAM TIP:** When questions mention "conversation history", "multi-turn", "remember previous context", or "resume conversation" → think **session management + memory patterns**.
 
