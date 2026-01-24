@@ -618,6 +618,29 @@ Common cost drivers:
 - **Tuning/fine-tuning**: weeks-to-months (needs data + evals).
 - **Brand-new model**: months (rarely necessary).
 
+#### GenAI solution needs (scope and feasibility checklist)
+
+Before you commit to a build path, sanity-check the solution across:
+
+- **Scale**: individual, small team, enterprise, or millions of customers?
+  - Small scale: pre-built apps can go very far.
+  - Large scale: prioritize scalability + security; factor infra/storage + latency.
+- **Customization**: start with existing models/APIs; add grounding or tuning only if needed.
+  - Ask: what is genuinely unique (domain, task complexity, UX)?
+  - If the domain is specialized (law/medicine), consider domain-specific data and/or tuning.
+- **User interaction (UI/UX)**: how do users engage (chat, embedded workflow, task-oriented tool)?
+  - Design for the right level of guidance and feedback.
+- **Privacy, data security, compliance**: sensitivity, encryption/access controls, and regulations (e.g., GDPR/HIPAA).
+- **Other constraints**:
+  - **Latency**: real-time vs tolerant of delay.
+  - **Connectivity**: always online vs offline/edge scenarios.
+  - **Accuracy tolerances**: define acceptable error rates.
+  - **Explainability**: do you need to understand “why” (regulated/high-stakes)?
+
+**Quiz-style intuition**
+
+- “Need realistic text-to-image for marketing, short on time” → **use a pre-trained API** first (fastest path).
+
 **Google Cloud’s ML models (via Vertex AI)**
 
 Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google’s suite:
