@@ -139,6 +139,19 @@ This framing is adapted from the GenAI Leader curriculum and is useful for exam-
 - **Imagen**: image generation/editing foundation model trained primarily on images + text descriptions.
 - **Chirp**: audio/speech foundation model trained on multilingual audio (speech recognition / transcription / translation use cases).
 
+#### Prompting foundation models (how you “use” GenAI)
+
+Foundation models, like other AI models, take **inputs** (“prompts”) and produce **outputs**. The difference is flexibility: many foundation models (especially multimodal ones) can accept a broader set of inputs than traditional models.
+
+| Input (prompt)                     | Output (typical)                 |
+| ---------------------------------- | -------------------------------- |
+| Question                           | Answer                           |
+| Text request for an image          | Generated image                  |
+| “Summarize this file/document”     | Summary                          |
+| Buggy code snippet                 | Corrected code / explanation     |
+
+**EXAM TIP:** Prompting (prompt engineering / prompt design) is a practical skill: better prompts often beat “more training” for many business use cases.
+
 ```mermaid
 flowchart TD
   A[AI] --> B[Machine Learning]
@@ -181,6 +194,22 @@ The core mechanism that allows transformers to weigh relationships between all p
 **EXAM TIP:** Token limits don’t make the model “more concise” — they just stop generation. If you need short outputs, you usually also need explicit prompt constraints (format + length requirements).
 
 **Prompt documentation (real-world + exam-friendly):** Keep prompts as “prompt-as-code” artifacts (system + user + examples + guardrails) and track iterations, because prompts evolve like any other dependency.
+
+#### Prompting the Gemini app (hands-on mental model)
+
+If you’re new, the fastest way to build intuition is to treat the prompt box like a conversation with a very capable assistant: ask questions, give creative tasks, and iterate. A helpful practice loop is to try one prompt in each category:
+
+- **Create**: “Write website copy for \<product\>.”
+- **Summarize**: “Summarize this long email/document and list action items.”
+- **Discover**: “Research \<topic\> and provide a 5-bullet brief with sources to verify.”
+- **Automate**: “Draft a template reply / create a checklist / propose steps I can follow.”
+
+**Multimodal input types (quiz-style intuition):** the “right input” depends on the desired output.
+
+- Want a **realistic image** → provide a **text description** (and optionally an image for editing).
+- Want a **fixed Python script** → provide a **code snippet** (and error/output if available).
+- Want a **summary of a customer service call** → provide an **audio file** (or transcript) depending on the workflow.
+- Want a **personalized workout plan** → provide a **text description** (goals, constraints, schedule).
 
 #### Sampling controls: when outputs are too random (or too repetitive)
 
