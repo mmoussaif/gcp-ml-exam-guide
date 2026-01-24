@@ -12,6 +12,7 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 - **Part VI**: [`part-6-generative-ai.md`](./part-6-generative-ai.md)
 - **Part VII**: [`part-7-ai-tools-and-frameworks.md`](./part-7-ai-tools-and-frameworks.md)
 - **Quick Reference + Common Exam Traps**: [`quick-reference.md`](./quick-reference.md)
+- **BigQuery SQL Cheat Sheet**: [`bigquery-sql-cheat-sheet.md`](./bigquery-sql-cheat-sheet.md)
 
 **Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam guide/scope. It’s included as an author-curated “tooling + ecosystem” reference to capture additional details and practical knowledge.
 
