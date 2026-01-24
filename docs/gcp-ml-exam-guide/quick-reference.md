@@ -170,6 +170,8 @@
 | Prevent agent from exfiltrating data                 | **VPC Service Controls** perimeter around agent project                               |
 | Highly sensitive data (healthcare/finance)           | **Confidential Computing** (Confidential VMs/GKE); data encrypted in use              |
 | Gemini 3 agents losing reasoning in long sessions    | Use **thought signatures** (pass back to maintain state); `thinking_level` parameter  |
+| Block prompt injection / jailbreaks at agent level   | **Model Armor** (LLM-level guardrails); Cloud Armor is HTTP-level, not semantic       |
+| Agent leaking PII / sensitive data in responses      | **Model Armor** output filters + Cloud DLP for redaction                              |
 
 ### Common Exam Traps
 

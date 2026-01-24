@@ -1598,26 +1598,26 @@ from google.cloud import secretmanager
 
 class SecretProvider:
     """Fetch secrets from Secret Manager with caching and rotation awareness."""
-    
+
     def __init__(self, project_id: str):
         self.client = secretmanager.SecretManagerServiceClient()
         self.project_id = project_id
         self._cache = {}
-    
+
     def get_secret(self, secret_id: str, version: str = "latest") -> str:
         """Get secret value; use 'latest' for auto-rotation."""
         cache_key = f"{secret_id}:{version}"
         if cache_key in self._cache:
             return self._cache[cache_key]
-        
+
         name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version}"
         response = self.client.access_secret_version(request={"name": name})
         secret_value = response.payload.data.decode("UTF-8")
-        
+
         # Cache for short duration (secrets can rotate)
         self._cache[cache_key] = secret_value
         return secret_value
-    
+
     def get_tool_credential(self, tool_name: str) -> dict:
         """Get credentials for a specific tool."""
         return {
@@ -1629,11 +1629,11 @@ class SecretProvider:
 class DatabaseTool:
     def __init__(self, secret_provider: SecretProvider):
         self.secrets = secret_provider
-    
+
     async def execute(self, query: str):
         # Get fresh credentials (supports rotation)
         creds = self.secrets.get_tool_credential("database")
-        
+
         # Connect with credentials from Secret Manager
         conn = await connect(
             host=creds["endpoint"],
@@ -1644,13 +1644,13 @@ class DatabaseTool:
 
 **Best practices for Secret Manager with agents**:
 
-| Practice | Description |
-|----------|-------------|
-| **Use `latest` version** | Enables automatic secret rotation without code changes |
-| **Short TTL caching** | Cache secrets for minutes, not hours (rotation awareness) |
-| **Separate secrets per environment** | Different secrets for dev/staging/prod |
-| **Audit access** | Enable Cloud Audit Logs for secret access |
-| **Principle of least privilege** | Grant `secretAccessor` role only to service accounts that need it |
+| Practice                             | Description                                                       |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| **Use `latest` version**             | Enables automatic secret rotation without code changes            |
+| **Short TTL caching**                | Cache secrets for minutes, not hours (rotation awareness)         |
+| **Separate secrets per environment** | Different secrets for dev/staging/prod                            |
+| **Audit access**                     | Enable Cloud Audit Logs for secret access                         |
+| **Principle of least privilege**     | Grant `secretAccessor` role only to service accounts that need it |
 
 #### IAM Policies for Agent Systems
 
@@ -1689,13 +1689,13 @@ Agents require careful IAM design to prevent privilege escalation.
 
 **IAM patterns for agents**:
 
-| Pattern | Use Case | Implementation |
-|---------|----------|----------------|
-| **Service account per agent** | Isolate agent permissions | Each agent type has dedicated SA with minimal roles |
-| **Workload Identity** | GKE-based agents | Map K8s SA → GCP SA; no key files |
-| **Short-lived credentials** | Tool access | Use `generateAccessToken` for 1-hour tokens |
-| **User impersonation** | Access user's data | Agent acts on behalf of user with their permissions |
-| **VPC Service Controls** | Data exfiltration prevention | Restrict which APIs can be called from agent VPC |
+| Pattern                       | Use Case                     | Implementation                                      |
+| ----------------------------- | ---------------------------- | --------------------------------------------------- |
+| **Service account per agent** | Isolate agent permissions    | Each agent type has dedicated SA with minimal roles |
+| **Workload Identity**         | GKE-based agents             | Map K8s SA → GCP SA; no key files                   |
+| **Short-lived credentials**   | Tool access                  | Use `generateAccessToken` for 1-hour tokens         |
+| **User impersonation**        | Access user's data           | Agent acts on behalf of user with their permissions |
+| **VPC Service Controls**      | Data exfiltration prevention | Restrict which APIs can be called from agent VPC    |
 
 ```python
 # Pseudocode: IAM-aware tool execution
@@ -1706,11 +1706,11 @@ class IAMAwareToolExecutor:
     def __init__(self):
         # Agent's base credentials
         self.agent_credentials, self.project = default()
-    
+
     def get_user_impersonated_credentials(self, user_email: str, scopes: list[str]):
         """Get credentials that act as the user (requires domain-wide delegation or user consent)."""
         target_principal = f"user:{user_email}"
-        
+
         # Create impersonated credentials
         impersonated = impersonated_credentials.Credentials(
             source_credentials=self.agent_credentials,
@@ -1719,7 +1719,7 @@ class IAMAwareToolExecutor:
             lifetime=3600  # 1 hour
         )
         return impersonated
-    
+
     def get_scoped_service_credentials(self, target_service_account: str, scopes: list[str]):
         """Get short-lived credentials for a specific service account."""
         impersonated = impersonated_credentials.Credentials(
@@ -1729,18 +1729,208 @@ class IAMAwareToolExecutor:
             lifetime=3600
         )
         return impersonated
-    
+
     async def execute_tool_as_user(self, tool: str, params: dict, user_context: dict):
         """Execute tool with user's permissions."""
         user_email = user_context["email"]
         allowed_scopes = user_context["allowed_scopes"]
-        
+
         # Get user-scoped credentials
         user_creds = self.get_user_impersonated_credentials(user_email, allowed_scopes)
-        
+
         # Execute tool with user credentials
         return await self.tools[tool].execute(params, credentials=user_creds)
 ```
+
+#### Model Armor: Agent-Specific Guardrails
+
+Source: [Build a Secure Agent with Model Armor and Identity](https://codelabs.developers.google.com/secure-customer-service-agent/instructions)
+
+**Model Armor** is Google Cloud's service for real-time input/output filtering on agent traffic. It addresses threats that traditional WAFs (like Cloud Armor) can't catch — specifically **prompt injection** and **sensitive data disclosure** at the semantic level.
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                      MODEL ARMOR DEFENSE LAYERS                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Layer 1: RUNTIME POLICY ENFORCEMENT                                       │
+│  ├── Model Armor templates for input/output validation                     │
+│  ├── Block prompt injection patterns                                        │
+│  └── Prevent sensitive data disclosure                                      │
+│                                                                            │
+│  Layer 2: REASONING-BASED DEFENSES                                         │
+│  ├── Model hardening (adversarial training)                                 │
+│  ├── Classifier guards                                                      │
+│  └── Intent verification                                                    │
+│                                                                            │
+│  Layer 3: CONTINUOUS ASSURANCE                                             │
+│  ├── Red teaming / attack scenario testing                                  │
+│  ├── Regression testing on guardrails                                       │
+│  └── Variant analysis                                                       │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+**What Model Armor catches that Cloud Armor doesn't**:
+
+| Threat                   | Cloud Armor | Model Armor      |
+| ------------------------ | ----------- | ---------------- |
+| SQL injection in HTTP    | ✅          | ❌ (not its job) |
+| DDoS / rate limiting     | ✅          | ❌               |
+| **Prompt injection**     | ❌          | ✅               |
+| **Jailbreak attempts**   | ❌          | ✅               |
+| **PII in LLM output**    | ❌          | ✅               |
+| **Malicious tool calls** | ❌          | ✅               |
+
+**Integration pattern**:
+
+```python
+# Pseudocode: Model Armor integration with agent
+from google.cloud import modelarmor_v1  # Conceptual import
+
+class ModelArmorGuardrail:
+    def __init__(self, project_id: str, template_id: str):
+        self.client = modelarmor_v1.ModelArmorClient()
+        self.template = f"projects/{project_id}/locations/global/templates/{template_id}"
+
+    async def sanitize_input(self, user_input: str, context: dict) -> dict:
+        """Check user input before sending to LLM."""
+        request = modelarmor_v1.SanitizeRequest(
+            template=self.template,
+            content=user_input,
+            content_type="USER_PROMPT",
+            metadata={
+                "session_id": context.get("session_id"),
+                "user_id": context.get("user_id"),
+            }
+        )
+        response = await self.client.sanitize(request)
+
+        if response.blocked:
+            return {
+                "allowed": False,
+                "reason": response.block_reason,
+                "category": response.threat_category,  # e.g., "PROMPT_INJECTION", "PII_DETECTED"
+            }
+
+        return {
+            "allowed": True,
+            "sanitized_content": response.sanitized_content,  # May have redactions
+        }
+
+    async def sanitize_output(self, llm_output: str, context: dict) -> dict:
+        """Check LLM output before returning to user."""
+        request = modelarmor_v1.SanitizeRequest(
+            template=self.template,
+            content=llm_output,
+            content_type="MODEL_RESPONSE",
+            metadata=context,
+        )
+        response = await self.client.sanitize(request)
+
+        if response.blocked:
+            return {
+                "allowed": False,
+                "reason": response.block_reason,
+                "fallback_response": "I can't provide that information.",
+            }
+
+        return {
+            "allowed": True,
+            "sanitized_content": response.sanitized_content,
+        }
+
+# Usage in agent pipeline
+class SecureAgent:
+    def __init__(self):
+        self.guardrail = ModelArmorGuardrail(
+            project_id="my-project",
+            template_id="agent-security-template"
+        )
+        self.llm = get_llm_client()
+
+    async def process(self, user_input: str, session: dict) -> str:
+        # 1. Input guardrail
+        input_check = await self.guardrail.sanitize_input(user_input, session)
+        if not input_check["allowed"]:
+            return f"Request blocked: {input_check['reason']}"
+
+        # 2. Call LLM with sanitized input
+        llm_response = await self.llm.generate(input_check["sanitized_content"])
+
+        # 3. Output guardrail
+        output_check = await self.guardrail.sanitize_output(llm_response, session)
+        if not output_check["allowed"]:
+            return output_check["fallback_response"]
+
+        return output_check["sanitized_content"]
+```
+
+**Model Armor template configuration** (conceptual):
+
+```yaml
+# Model Armor template definition
+apiVersion: modelarmor.googleapis.com/v1
+kind: SecurityTemplate
+metadata:
+  name: agent-security-template
+spec:
+  inputFilters:
+    - type: PROMPT_INJECTION
+      action: BLOCK
+      sensitivity: HIGH
+
+    - type: JAILBREAK_ATTEMPT
+      action: BLOCK
+      patterns:
+        - 'ignore previous instructions'
+        - 'you are now'
+        - 'pretend you are'
+
+    - type: PII_DETECTION
+      action: REDACT
+      categories:
+        - EMAIL
+        - PHONE
+        - SSN
+        - CREDIT_CARD
+
+  outputFilters:
+    - type: SENSITIVE_DATA
+      action: REDACT
+      categories:
+        - INTERNAL_CREDENTIALS
+        - API_KEYS
+        - DATABASE_QUERIES
+
+    - type: HARMFUL_CONTENT
+      action: BLOCK
+      categories:
+        - HATE_SPEECH
+        - VIOLENCE
+        - ILLEGAL_ACTIVITY
+
+    - type: GROUNDING_VERIFICATION
+      action: WARN
+      requireSources: true
+
+  logging:
+    enabled: true
+    destination: 'projects/my-project/logs/model-armor'
+    logBlocked: true
+    logRedacted: true
+```
+
+**Cloud Armor + Model Armor: complementary defense**:
+
+| Layer           | Tool        | What It Protects                                                 |
+| --------------- | ----------- | ---------------------------------------------------------------- |
+| **Network**     | Cloud Armor | HTTP-level attacks (XSS, SQLi, DDoS, bot traffic)                |
+| **Application** | Model Armor | LLM-specific attacks (prompt injection, jailbreaks, PII leakage) |
+
+Use **both** for production agent deployments — they protect different attack surfaces.
+
+---
 
 #### Apigee + GKE Inference Gateway for LLM Policies
 
@@ -1755,49 +1945,49 @@ kind: APIProduct
 metadata:
   name: agent-api-product
 spec:
-  displayName: "Agent API"
+  displayName: 'Agent API'
   approvalType: auto
   attributes:
     - name: llm-policies
-      value: "enabled"
-  
+      value: 'enabled'
+
   # Rate limiting per developer/app
   quota:
     limit: 1000
     interval: 1
     timeUnit: day
-  
+
   # LLM-specific policies
   llmPolicies:
     # Token budget per request
     maxInputTokens: 32000
     maxOutputTokens: 8000
-    
+
     # Model allowlist
     allowedModels:
       - gemini-2.0-flash
       - gemini-2.0-pro
-    
+
     # Content safety
     contentFiltering: strict
-    
+
     # Cost tracking
     costTracking:
       enabled: true
-      alertThreshold: 100.00  # USD per day
+      alertThreshold: 100.00 # USD per day
 ```
 
 **What Apigee + GKE Inference Gateway provides**:
 
-| Capability | Description |
-|------------|-------------|
+| Capability             | Description                                       |
+| ---------------------- | ------------------------------------------------- |
 | **OAuth/API key auth** | Standard API authentication before reaching agent |
-| **Rate limiting** | Per-developer, per-app, per-endpoint quotas |
-| **Token budgets** | Enforce max input/output tokens per request |
-| **Model allowlisting** | Restrict which models can be called |
-| **Cost tracking** | Real-time cost monitoring and alerts |
-| **Content filtering** | Apply safety policies at the gateway level |
-| **Audit logging** | Full request/response logging for compliance |
+| **Rate limiting**      | Per-developer, per-app, per-endpoint quotas       |
+| **Token budgets**      | Enforce max input/output tokens per request       |
+| **Model allowlisting** | Restrict which models can be called               |
+| **Cost tracking**      | Real-time cost monitoring and alerts              |
+| **Content filtering**  | Apply safety policies at the gateway level        |
+| **Audit logging**      | Full request/response logging for compliance      |
 
 #### VPC Service Controls for Data Protection
 
@@ -1806,40 +1996,40 @@ Prevent data exfiltration by restricting which APIs agents can access:
 ```yaml
 # VPC Service Controls perimeter (conceptual)
 accessPolicy:
-  name: "agent-data-perimeter"
-  
+  name: 'agent-data-perimeter'
+
   servicePerimeters:
-    - name: "agent-perimeter"
+    - name: 'agent-perimeter'
       perimeterType: PERIMETER_TYPE_REGULAR
-      
+
       # Resources inside the perimeter
       resources:
-        - "projects/my-agent-project"
-      
+        - 'projects/my-agent-project'
+
       # Restricted services (agent can only call these)
       restrictedServices:
-        - "aiplatform.googleapis.com"      # Vertex AI
-        - "bigquery.googleapis.com"         # BigQuery
-        - "storage.googleapis.com"          # Cloud Storage
-        - "secretmanager.googleapis.com"    # Secret Manager
-      
+        - 'aiplatform.googleapis.com' # Vertex AI
+        - 'bigquery.googleapis.com' # BigQuery
+        - 'storage.googleapis.com' # Cloud Storage
+        - 'secretmanager.googleapis.com' # Secret Manager
+
       # Block external APIs
       vpcAccessibleServices:
         enableRestriction: true
         allowedServices:
-          - "RESTRICTED-SERVICES"
-      
+          - 'RESTRICTED-SERVICES'
+
       # Ingress rules (who can access the perimeter)
       ingressPolicies:
         - ingressFrom:
             identityType: ANY_SERVICE_ACCOUNT
             sources:
-              - resource: "projects/my-agent-project"
+              - resource: 'projects/my-agent-project'
           ingressTo:
             operations:
-              - serviceName: "aiplatform.googleapis.com"
+              - serviceName: 'aiplatform.googleapis.com'
                 methodSelectors:
-                  - method: "*"
+                  - method: '*'
 ```
 
 #### Confidential Computing for Sensitive AI
@@ -1848,12 +2038,12 @@ Source: [Building End-to-End Confidential Applications on Google Cloud](https://
 
 For highly sensitive workloads (healthcare, finance), **Confidential Computing** encrypts data in use:
 
-| Feature | Description |
-|---------|-------------|
-| **Confidential VMs** | Memory encrypted with AMD SEV or Intel TDX |
-| **Confidential GKE Nodes** | Run agent containers in confidential VMs |
-| **Attestation** | Cryptographic proof that code runs in trusted environment |
-| **Use case** | Process sensitive data without exposing to cloud provider |
+| Feature                    | Description                                               |
+| -------------------------- | --------------------------------------------------------- |
+| **Confidential VMs**       | Memory encrypted with AMD SEV or Intel TDX                |
+| **Confidential GKE Nodes** | Run agent containers in confidential VMs                  |
+| **Attestation**            | Cryptographic proof that code runs in trusted environment |
+| **Use case**               | Process sensitive data without exposing to cloud provider |
 
 ```yaml
 # Confidential GKE node pool (conceptual)
@@ -1863,7 +2053,7 @@ metadata:
   name: confidential-agent-pool
 spec:
   nodeConfig:
-    machineType: n2d-standard-4  # AMD EPYC (required for SEV)
+    machineType: n2d-standard-4 # AMD EPYC (required for SEV)
     confidentialNodes:
       enabled: true
     shieldedInstanceConfig:
@@ -1873,19 +2063,20 @@ spec:
 
 #### Agent Security Checklist (Google Cloud)
 
-| Layer | Service | Purpose |
-|-------|---------|---------|
-| **Network** | Cloud Armor | WAF, DDoS protection, rate limiting |
-| **Network** | VPC Service Controls | Data exfiltration prevention |
-| **API Gateway** | Apigee | Auth, rate limiting, LLM-specific policies |
-| **Identity** | IAM | Service accounts, workload identity, impersonation |
-| **Secrets** | Secret Manager | API keys, credentials, certificates |
-| **Audit** | Cloud Audit Logs | Who did what, when |
-| **Data** | Cloud DLP | PII detection and redaction |
-| **Compute** | Confidential VMs/GKE | Encryption in use for sensitive workloads |
-| **Model** | Vertex AI safety settings | Content filtering at the model level |
+| Layer           | Service                   | Purpose                                                         |
+| --------------- | ------------------------- | --------------------------------------------------------------- |
+| **Network**     | Cloud Armor               | WAF, DDoS protection, rate limiting (HTTP-level)                |
+| **Network**     | VPC Service Controls      | Data exfiltration prevention                                    |
+| **API Gateway** | Apigee                    | Auth, rate limiting, LLM-specific policies                      |
+| **Agent**       | **Model Armor**           | Prompt injection, jailbreak, PII leakage (LLM-level guardrails) |
+| **Identity**    | IAM                       | Service accounts, workload identity, impersonation              |
+| **Secrets**     | Secret Manager            | API keys, credentials, certificates                             |
+| **Audit**       | Cloud Audit Logs          | Who did what, when                                              |
+| **Data**        | Cloud DLP                 | PII detection and redaction                                     |
+| **Compute**     | Confidential VMs/GKE      | Encryption in use for sensitive workloads                       |
+| **Model**       | Vertex AI safety settings | Content filtering at the model level                            |
 
-**EXAM TIP:** When questions mention "secure agent deployment" or "enterprise agent architecture" → think **IAM (least privilege) + Secret Manager (no hardcoded creds) + Cloud Armor (WAF/rate limits) + VPC Service Controls (data perimeter) + audit logging**.
+**EXAM TIP:** When questions mention "secure agent deployment" or "enterprise agent architecture" → think **Model Armor (prompt injection defense) + IAM (least privilege) + Secret Manager (no hardcoded creds) + Cloud Armor (WAF/rate limits) + VPC Service Controls (data perimeter) + audit logging**.
 
 ---
 
