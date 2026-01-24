@@ -327,7 +327,7 @@ Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-p
 
 This whitepaper provides a comprehensive guide to the **operational lifecycle of AI agents**, focusing on deployment, scaling, and productionizing.
 
-**Practical Implementation**: Throughout this whitepaper, examples reference the **Google Cloud Platform Agent Starter Pack**—a Python package providing production-ready Generative AI agent templates for Google Cloud. It includes pre-built agents, automated CI/CD setup, Terraform deployment, Vertex AI evaluation integration, and built-in Google Cloud observability. See: `https://github.com/GoogleCloudPlatform/agent-starter-pack`
+**Practical Implementation**: Throughout this whitepaper, examples reference the **Google Cloud Platform Agent Starter Pack**—a Python package providing production-ready Generative AI agent templates for Google Cloud. It includes pre-built agents, automated CI/CD setup, Terraform deployment, Vertex AI evaluation integration, and built-in Google Cloud observability. See: [Agent Starter Pack](https://github.com/GoogleCloudPlatform/agent-starter-pack)
 
 #### People and Process: The Team Behind Production Agents
 
@@ -1160,9 +1160,9 @@ Even if you work mostly on GenAI, the ML Engineer exam (and many real systems) s
 
 These show up when you need explicit uncertainty, probabilistic inference, and Bayesian modeling:
 
-- **Stan** (probabilistic programming + HMC/NUTS): `https://mc-stan.org/`
-- **PyMC** (Python Bayesian modeling): `https://www.pymc.io/`
-- **Turing.jl** (Julia Bayesian modeling): `https://turinglang.org/`
+- **Stan** (probabilistic programming + HMC/NUTS): [mc-stan.org](https://mc-stan.org/)
+- **PyMC** (Python Bayesian modeling): [pymc.io](https://www.pymc.io/)
+- **Turing.jl** (Julia Bayesian modeling): [turinglang.org](https://turinglang.org/)
 - **Edward** (legacy research ecosystem; still referenced historically)
 
 Example table: core model frameworks
@@ -1179,7 +1179,7 @@ Example table: core model frameworks
 
 Core docs entry point:
 
-- Generative AI on Vertex AI: `https://cloud.google.com/vertex-ai/generative-ai/docs`
+- Generative AI on Vertex AI: [Vertex AI Generative AI Documentation](https://cloud.google.com/vertex-ai/generative-ai/docs)
 
 High-yield building blocks you should recognize:
 
@@ -1196,8 +1196,8 @@ Practical “when to choose” map:
 
 Core docs entry points:
 
-- Agents: `https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html`
-- Amazon Bedrock docs home: `https://docs.aws.amazon.com/bedrock/`
+- Agents: [AWS Bedrock Agents Documentation](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
+- Amazon Bedrock docs home: [docs.aws.amazon.com/bedrock](https://docs.aws.amazon.com/bedrock/)
 
 What to look for in AWS-style questions:
 
@@ -1209,7 +1209,7 @@ What to look for in AWS-style questions:
 
 Core docs entry point:
 
-- Microsoft Foundry documentation: `https://learn.microsoft.com/en-us/azure/ai-foundry/`
+- Microsoft Foundry documentation: [Azure AI Foundry](https://learn.microsoft.com/en-us/azure/ai-foundry/)
 
 From the Foundry documentation navigation (high-yield):
 
@@ -1273,16 +1273,16 @@ High-level positioning
 
 These are common choices when you want portability or deeper control:
 
-- **LangChain + LangGraph** (Python/JS): LLM app building + agent orchestration graphs. Docs: `https://docs.langchain.com/`
-- **LlamaIndex**: RAG-first framework (indexing/retrieval patterns + connectors). Docs: `https://docs.llamaindex.ai/`
-- **Haystack (deepset)**: RAG pipelines, retrievers/rerankers, production patterns. Docs: `https://docs.haystack.deepset.ai/`
-- **Semantic Kernel (Microsoft)**: agent/plugins patterns + orchestration. Docs: `https://learn.microsoft.com/en-us/semantic-kernel/`
-- **AutoGen (Microsoft Research)**: multi-agent conversation patterns. Repo: `https://github.com/microsoft/autogen`
-- **CrewAI**: role-based multi-agent orchestration (teams of agents with roles/goals/tasks; often paired with tools + RAG). Docs: `https://docs.crewai.com/`
-- **PydanticAI**: typed/validated agent outputs and tool calling patterns. Docs: `https://ai.pydantic.dev/`
-- **DSPy**: programmatic prompt optimization / “compiled prompting”. Repo: `https://github.com/stanfordnlp/dspy`
-- **Rasa**: assistants/chatbots with NLU + dialogue management. Docs: `https://rasa.com/docs/`
-- **promptflow / Prompt Flow (Microsoft)**: workflow authoring + evaluation loops for LLM apps (Azure-centric, but OSS tooling exists). Repo: `https://github.com/microsoft/promptflow`
+- **LangChain + LangGraph** (Python/JS): LLM app building + agent orchestration graphs. Docs: [docs.langchain.com](https://docs.langchain.com/)
+- **LlamaIndex**: RAG-first framework (indexing/retrieval patterns + connectors). Docs: [docs.llamaindex.ai](https://docs.llamaindex.ai/)
+- **Haystack (deepset)**: RAG pipelines, retrievers/rerankers, production patterns. Docs: [docs.haystack.deepset.ai](https://docs.haystack.deepset.ai/)
+- **Semantic Kernel (Microsoft)**: agent/plugins patterns + orchestration. Docs: [Microsoft Semantic Kernel](https://learn.microsoft.com/en-us/semantic-kernel/)
+- **AutoGen (Microsoft Research)**: multi-agent conversation patterns. Repo: [microsoft/autogen](https://github.com/microsoft/autogen)
+- **CrewAI**: role-based multi-agent orchestration (teams of agents with roles/goals/tasks; often paired with tools + RAG). Docs: [docs.crewai.com](https://docs.crewai.com/)
+- **PydanticAI**: typed/validated agent outputs and tool calling patterns. Docs: [ai.pydantic.dev](https://ai.pydantic.dev/)
+- **DSPy**: programmatic prompt optimization / "compiled prompting". Repo: [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy)
+- **Rasa**: assistants/chatbots with NLU + dialogue management. Docs: [rasa.com/docs](https://rasa.com/docs/)
+- **promptflow / Prompt Flow (Microsoft)**: workflow authoring + evaluation loops for LLM apps (Azure-centric, but OSS tooling exists). Repo: [microsoft/promptflow](https://github.com/microsoft/promptflow)
 
 Other tools you may see in the wild (often more “product” than “framework”, or newer):
 
@@ -1298,15 +1298,15 @@ These sit between “pure model API” and “full cloud platform”: they provi
 
 - **OpenAI platform (APIs + tooling)**:
   - **ChatGPT**: end-user product; often used for prototyping and ad-hoc analysis.
-  - **OpenAI API**: model access for apps (tool/function calling patterns, structured outputs, etc.). Docs: `https://platform.openai.com/docs`
+  - **OpenAI API**: model access for apps (tool/function calling patterns, structured outputs, etc.). Docs: [platform.openai.com/docs](https://platform.openai.com/docs)
   - **OpenAI agent guidance/frameworks**: lightweight orchestration patterns (e.g., Swarm) and official “how to build agents” materials.
 - **Anthropic (Claude ecosystem)**:
   - **Claude**: end-user assistant.
   - **Claude Code**: developer-focused “coding agent” workflow integrated with your repo/terminal (useful for refactors, debugging, code navigation).
-  - **Model Context Protocol (MCP)**: open protocol used broadly for tool/context integration in agentic apps. Spec/docs: `https://modelcontextprotocol.io/`
+  - **Model Context Protocol (MCP)**: open protocol used broadly for tool/context integration in agentic apps. Spec/docs: [modelcontextprotocol.io](https://modelcontextprotocol.io/)
 - **Other commercial app platforms** (often appear in industry, less in exam questions):
   - **Cohere**, **Mistral**, etc. (provider APIs + embeddings/rerankers + deployment options; vendor-specific feature sets).
-  - **Vellum**: visual LLM app builder + SDK for workflows/experiments/evals. `https://www.vellum.ai/`
+  - **Vellum**: visual LLM app builder + SDK for workflows/experiments/evals. [vellum.ai](https://www.vellum.ai/)
 
 **EXAM TIP:** Provider SDKs (OpenAI/Anthropic/etc.) help you ship faster, but enterprise answers still hinge on **governance, eval, monitoring, and least privilege tool execution**.
 
@@ -1546,8 +1546,8 @@ This section provides implementation-ready code snippets for the most important 
 
 **ADK** is Google's open-source Python framework for building agents that can be deployed to Vertex AI Agent Engine or run locally.
 
-Official repo: `https://github.com/google/adk-python`  
-Official docs: `https://google.github.io/adk-docs/`
+Official repo: [google/adk-python](https://github.com/google/adk-python)  
+Official docs: [ADK Documentation](https://google.github.io/adk-docs/)
 
 #### ADK core concepts
 
@@ -1732,7 +1732,7 @@ Multi-agent systems use multiple specialized agents that collaborate on complex 
 
 **CrewAI** makes it easy to define "crews" of agents with roles, goals, and backstories that work together on tasks.
 
-Official docs: `https://docs.crewai.com/`
+Official docs: [docs.crewai.com](https://docs.crewai.com/)
 
 #### CrewAI core concepts
 
@@ -1883,7 +1883,7 @@ data_analyst = Agent(
 
 **LangGraph** provides explicit control flow for agent workflows using graph-based state machines. It's ideal when you need deterministic, testable, and debuggable agent behavior.
 
-Official docs: `https://docs.langchain.com/oss/python/langgraph/overview`
+Official docs: [LangGraph Documentation](https://docs.langchain.com/oss/python/langgraph/overview)
 
 #### LangGraph core concepts
 
@@ -3848,10 +3848,10 @@ Cloud-native “catalogs” (more curated/managed, less community-driven):
 
 If you host open-weight models (or need extreme throughput), inference engines become a “first-class” tool choice:
 
-- **vLLM**: `https://docs.vllm.ai/`
-- **SGLang**: `https://github.com/sgl-project/sglang`
-- **TensorRT-LLM**: `https://github.com/NVIDIA/TensorRT-LLM`
-- **Text Generation Inference (TGI)**: `https://github.com/huggingface/text-generation-inference`
+- **vLLM**: [docs.vllm.ai](https://docs.vllm.ai/)
+- **SGLang**: [sgl-project/sglang](https://github.com/sgl-project/sglang)
+- **TensorRT-LLM**: [NVIDIA/TensorRT-LLM](https://github.com/NVIDIA/TensorRT-LLM)
+- **Text Generation Inference (TGI)**: [huggingface/text-generation-inference](https://github.com/huggingface/text-generation-inference)
 
 High-yield concepts to recognize across these projects:
 
@@ -3990,7 +3990,7 @@ If you’re using an API router, still treat **evaluation + monitoring** as mand
 
 Beyond AWS/GCP/Azure, you’ll see specialized GPU clouds that focus on price/performance for training and inference. Example:
 
-- **Hyperbolic**: “open-access AI cloud” offering on-demand GPU clusters and serverless inference, marketed as API-compatible with common ecosystems and positioned on cost. See: `https://www.hyperbolic.ai/` ([Hyperbolic](https://www.hyperbolic.ai/)).
+- **Hyperbolic**: "open-access AI cloud" offering on-demand GPU clusters and serverless inference, marketed as API-compatible with common ecosystems and positioned on cost. See: [Hyperbolic](https://www.hyperbolic.ai/)
 
 **Engineering checklist before adopting**: data residency/compliance, private networking, IAM/audit logs, model availability, SLAs, and observability/export (OpenTelemetry/metrics/logs).
 
@@ -4004,13 +4004,13 @@ Typical categories:
 
 Representative tools (vendor-agnostic):
 
-- **DeepEval**: `https://github.com/confident-ai/deepeval`
-- **Ragas** (RAG evaluation): `https://github.com/explodinggradients/ragas`
-- **TruLens**: `https://github.com/truera/trulens`
-- **Arize Phoenix**: `https://github.com/Arize-ai/phoenix`
-- **promptfoo**: `https://github.com/promptfoo/promptfoo`
-- **LangSmith** (LangChain ecosystem): `https://docs.smith.langchain.com/`
-- **Weights & Biases Weave**: `https://weave.wandb.ai/`
+- **DeepEval**: [confident-ai/deepeval](https://github.com/confident-ai/deepeval)
+- **Ragas** (RAG evaluation): [explodinggradients/ragas](https://github.com/explodinggradients/ragas)
+- **TruLens**: [truera/trulens](https://github.com/truera/trulens)
+- **Arize Phoenix**: [Arize-ai/phoenix](https://github.com/Arize-ai/phoenix)
+- **promptfoo**: [promptfoo/promptfoo](https://github.com/promptfoo/promptfoo)
+- **LangSmith** (LangChain ecosystem): [docs.smith.langchain.com](https://docs.smith.langchain.com/)
+- **Weights & Biases Weave**: [weave.wandb.ai](https://weave.wandb.ai/)
 
 **EXAM TIP:** The “correct” operational answer is almost never “manually test a few prompts.” It’s usually **eval dataset + automated evals + monitoring/tracing + safety tests**.
 

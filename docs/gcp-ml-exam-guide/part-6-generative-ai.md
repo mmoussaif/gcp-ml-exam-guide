@@ -889,11 +889,11 @@ def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
 
 #### Official documentation links
 
-- Hugging Face Tokenizers: `https://huggingface.co/docs/tokenizers/`
-- Hugging Face Transformers AutoTokenizer: `https://huggingface.co/docs/transformers/main_classes/tokenizer`
-- Google Vertex AI countTokens: `https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/count-tokens`
-- OpenAI tiktoken: `https://github.com/openai/tiktoken`
-- SentencePiece: `https://github.com/google/sentencepiece`
+- Hugging Face Tokenizers: [huggingface.co/docs/tokenizers](https://huggingface.co/docs/tokenizers/)
+- Hugging Face Transformers AutoTokenizer: [Transformers Tokenizer Documentation](https://huggingface.co/docs/transformers/main_classes/tokenizer)
+- Google Vertex AI countTokens: [Vertex AI countTokens API](https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/count-tokens)
+- OpenAI tiktoken: [openai/tiktoken](https://github.com/openai/tiktoken)
+- SentencePiece: [google/sentencepiece](https://github.com/google/sentencepiece)
 
 **EXAM TIP:** If a question mentions "unexpected behavior with special characters" or "input truncated" → think **tokenization issues** first.
 
@@ -1353,7 +1353,7 @@ These links were originally captured from Google Cloud Skills Boost PDF reading 
 
 Selected links:
 
-- LLM intro: `https://developers.google.com/machine-learning/resources/intro-llms`
-- Prompt engineering: `https://developers.google.com/machine-learning/resources/prompt-eng`
-- LangChain on Vertex AI (Reasoning Engine overview): `https://cloud.google.com/vertex-ai/generative-ai/docs/reasoning-engine/overview`
-- Vertex AI GenAI learn resources: `https://cloud.google.com/vertex-ai/generative-ai/docs/learn-resources`
+- LLM intro: [Introduction to LLMs](https://developers.google.com/machine-learning/resources/intro-llms)
+- Prompt engineering: [Prompt Engineering Guide](https://developers.google.com/machine-learning/resources/prompt-eng)
+- LangChain on Vertex AI (Reasoning Engine overview): [Vertex AI Reasoning Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/reasoning-engine/overview)
+- Vertex AI GenAI learn resources: [Vertex AI Generative AI Learning Resources](https://cloud.google.com/vertex-ai/generative-ai/docs/learn-resources)
