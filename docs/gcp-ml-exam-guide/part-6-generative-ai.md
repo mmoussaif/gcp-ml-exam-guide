@@ -753,6 +753,22 @@ Secure AI is about preventing **intentional harm** and misuse (not just “bugs�
 - **Security Command Center** for centralized security posture visibility
 - **Logging + Monitoring** for audit trails, alerts, and incident response
 
+#### Responsible AI (build on security, then add trust + ethics)
+
+Responsible AI means avoiding **intentional and unintentional harm**. A practical way to remember it:
+
+- **Security is the foundation**: if the system is insecure, you can’t be responsible (attackers can poison data, steal models, or exploit the system).
+
+Beyond security, responsible AI usually includes:
+
+- **Transparency**: users should understand how data is used, what the system can/can’t do, and where bias/limitations may appear (Model Cards/Data Cards help).
+- **Privacy**: anonymize/pseudonymize where feasible; minimize sensitive data; add safeguards against **training-data leakage** and accidental disclosure.
+- **Data quality, bias, and fairness**: poor/incomplete data can amplify societal bias; evaluate fairness across slices and monitor outcomes over time.
+  - Also ask: was the data collected consensually, and could it perpetuate harmful bias?
+- **Accountability + explainability**: define who is responsible for outcomes; use explainability to debug and detect hidden bias.
+  - Google Cloud tool that may show up in exam questions: **Vertex Explainable AI**.
+- **Legal implications**: stay aligned to privacy and non-discrimination requirements, plus IP/licensing and product liability; the landscape evolves quickly.
+
 **EXAM TIP:** If the question hints at “secure, compliant, production-ready agent” → the right direction is **AgentOps + SAIF mindset** (defense-in-depth + evals + monitoring + least privilege), not only “improve prompts”.
 
 #### Agent evaluation (5-stage checklist from the “Operationalizing GenAI on Vertex AI” PDF)
