@@ -201,6 +201,9 @@
 - Data types: structured (tables) vs unstructured (text/images/audio/video) vs semi-structured (JSON/nested) drive what modeling approaches and tooling make sense
 - Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
 - Lifecycle mapping: ingest (Pub/Sub/GCS/SQL/Spanner) → prepare (BigQuery + Data Catalog) → train/deploy/manage (Vertex AI + Pipelines + monitoring/versioning + IAM)
+- Consistency matters: inconsistent formats/labels confuse models and hinder learning (it’s not “just a data engineering issue”)
+- ML lifecycle order (core): data ingestion+preparation → model training → model deployment → model management
+- Ingestion+prep goal: collect, clean, and transform raw data into a usable training/prediction dataset
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)
