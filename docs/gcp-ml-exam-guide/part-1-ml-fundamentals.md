@@ -548,13 +548,37 @@ When dealing with categorical features with many unique values (10K+), standard 
 - Ensure **time-based split** (not random split)
 - Remove/repair features that are highly correlated _because they encode the target/future_
 
-#### Data Drift (Distribution Shift)
+#### Data Drift and Concept Drift
 
-When input data distribution changes over time, model performance degrades even though the model hasn't changed.
+**Data drift** (also called distribution shift): Changes in input data distribution over time, while the relationship between inputs and outputs remains the same.
 
+- **Definition**: Variation in production data from data used to test/validate before deployment
 - **Symptoms**: Model accuracy steadily declines over months; model worked well initially but now performs poorly
-- **Cause**: Production data no longer matches training data distribution (e.g., market changes, user behavior shifts)
-- **Solution**: Set up ALARMS to track skew and retrain the model when drift is detected
+- **Cause**: Production data no longer matches training data distribution (e.g., market changes, user behavior shifts, seasonal changes)
+- **Example**: Image recognition model trained on summer photos struggles with winter photos
+- **Time factor**: Gap between training data collection and present moment can introduce significant drift
+
+**Concept drift**: Input distribution remains the same, but the mapping from input to output changes (the underlying relationship the model is trying to learn changes).
+
+- **Definition**: The relationship between inputs and outputs changes over time
+- **Example**: Customer churn model - pre-pandemic behaviors signaled churn, but post-pandemic those signals changed
+- **Impact**: Model's concept of "likelihood" drifted because the world changed
+
+**Handling drift**:
+
+- **Monitoring**: Track statistical properties of inputs (feature distributions, mean, category frequencies); use statistical tests and distance measures to quantify drift
+- **Thresholds and alerts**: Define acceptable drift thresholds (e.g., PSI or K-S test p-value); raise alerts when exceeded
+- **Periodic retraining**: Retrain regularly (weekly, monthly) with latest data
+- **Online learning**: Incrementally update models in production (with caution - noisy data can degrade performance)
+- **Human-in-the-loop**: For critical systems, fallback to simpler system or human review when drift detected
+
+**Not all drifts are equal**:
+
+- **Feature drift** (input distribution change) might not always hurt performance if model can generalize
+- **Label drift** or **concept drift** directly hurts performance
+- Drift can be **sudden** (regime change) or **gradual** (slow trend)
+
+**Solution**: Set up monitoring/alarms to track drift and retrain the model when drift is detected
 
 | Issue                                         | Diagnosis    | Solution                             |
 | --------------------------------------------- | ------------ | ------------------------------------ |
