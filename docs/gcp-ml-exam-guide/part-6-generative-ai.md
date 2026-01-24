@@ -14,6 +14,11 @@ The October 2024 exam version includes Generative AI topics.
   - [6.1.5 Pretraining and Fine-Tuning](#615-pretraining-and-fine-tuning)
   - [6.1.6 Tokenization](#616-tokenization-how-text-becomes-numbers-for-llms)
 - [6.2 Prompting & Inference Controls](#62-prompting--inference-controls-fastest-customization)
+  - [6.2.1 Decoding Strategies](#621-decoding-strategies)
+  - [6.2.2 Generation Parameters](#622-generation-parameters)
+  - [6.2.3 How LLMs Function (End-to-End)](#623-how-llms-function-end-to-end)
+  - [6.2.4 Hands-On: LLM Decoding and Generation Parameters](#624-hands-on-llm-decoding-and-generation-parameters)
+  - [6.2.5 LLM Application Lifecycle](#625-llm-application-lifecycle)
 - [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
 - [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
 - [6.5 Building agents on Google Cloud](#65-building-agents-on-google-cloud-service-mapping)
@@ -2156,15 +2161,517 @@ def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
 
 ### 6.2 Prompting & Inference Controls (fastest "customization")
 
-- **System prompt vs user prompt**: Use system for global policy (“tone”, “constraints”), user for task-specific instructions.
-- **Few-shot examples**: Provide 1–5 examples to shape output format reliably (especially extraction/classification).
-- **Temperature**: Higher = more diverse/creative; lower = more deterministic/consistent.
-- **Top-K / Top-P**: Sampling controls that restrict which tokens are eligible next (more control over creativity vs factuality).
-- **Max tokens**: Controls response length; helps cap cost/latency.
+**Introduction**:
 
-**EXAM TIP:** Token limits don’t make the model “more concise” — they just stop generation. If you need short outputs, you usually also need explicit prompt constraints (format + length requirements).
+**There is a common misconception**: That large language models directly produce text. In reality, they do not generate text outright. Instead, at each step, they compute logits, which are scores assigned to every token in the model's vocabulary. These logits are then converted into probabilities using the softmax function.
 
-**Prompt documentation (real-world + exam-friendly):** Keep prompts as “prompt-as-code” artifacts (system + user + examples + guardrails) and track iterations, because prompts evolve like any other dependency.
+**As we saw**: In the hands-on section of the previous chapter, given a sequence of tokens, each possible next token has an associated probability of being selected. However, how the actual choice of the next token is made has not been discussed by us so far.
+
+**Large language models**: That are autoregressive predict the next token based on all previously generated tokens. Consider a sequence of tokens w = w₁, w₂, …, w_t. The joint probability of the entire sequence can be factorized using the chain rule of probability as:
+
+$$P(w) = \prod_{i=1}^{t} P(w_i | w_1, \ldots, w_{i-1})$$
+
+**For each token w_i**: The term P(w*i | w₁, …, w*{i-1}) represents the conditional probability of that token given the preceding context. At every generation step, the model computes this conditional probability for every token in its vocabulary.
+
+**This naturally leads**: To an important question: how do we use these probabilities to actually generate text?
+
+**This is where**: Decoding strategies come into play. Decoding strategies define how a single token is selected from the probability distribution at each step.
+
+**Fundamentally**: Decoding is the process of converting the model's raw numerical outputs into human-readable text.
+
+**While the model provides**: A probability distribution over the entire vocabulary, the decoding strategy determines which specific token is chosen and appended to the sequence before moving on to the next step.
+
+**How LLM Decoding Works (in Simple Language)?**
+
+**As we already know**: By now, at its core, an LLM is a next-token predictor that, given a sequence of words or sub-words (tokens), calculates possibilities over its entire vocabulary for what the next most likely token should be.
+
+**Decoding strategies**: Are the set of rules used to translate these raw probabilities into coherent, human-readable text by selecting a token. The process is autoregressive: each newly chosen token is added to the sequence and used as part of the input for predicting the subsequent token, continuing until a stopping condition (like an "end-of-sequence" token or maximum length) is met.
+
+#### 6.2.1 Decoding Strategies
+
+**Now that we know**: The fundamental meaning of decoding, let's go ahead and discuss the four major decoding strategies themselves. These strategies define how the next token is chosen at each step. We will explain each and compare their behavior:
+
+**1. Greedy Decoding**:
+
+**Greedy decoding**: Always picks the highest probability token at each step:
+
+$$\text{token}_t = \arg\max_{v \in V} P(v | w_1, \ldots, w_{t-1})$$
+
+**It's simple and fast**: (no extra search). The advantage is that it produces the single most likely sequence according to the model's learned distribution (or at least a local optimum of that).
+
+**However**: Greedy outputs often suffer from repetition or blandness. This is especially true for open-ended generation, where the model's distribution has a long tail.
+
+**For example**: A model can get stuck repeating some statement because the model keeps choosing the highest probability continuation, which might circle back to a previous phrase.
+
+**Greedy decoding**: Can be appropriate in more constrained tasks. For instance, in translation, greedy often does well for language pairs with monotonic alignment, and it's used in real-time systems due to speed. But for tasks like dialog or storytelling, greedy is usually not what you want if you expect diverse and engaging outputs.
+
+**2. Beam Search**:
+
+**Beam search**: Is an extension of greedy search that keeps track of multiple hypotheses (paths) at each step instead of one.
+
+**If beam width is B**: It will explore the top B tokens for the first word, then for each of those, explore top B for the second word (so B² combinations, but it keeps only the top B sequences by total probability), and so on.
+
+**In essence**: Beam search tries to approximate the globally most likely sequence under the model, rather than making greedy local choices. This often yields better results in tasks where the model's probability correlates with quality (like translation or summarization).
+
+**However**: Beam search has known downsides for LLMs in open generation:
+
+- **It tends to produce repetitive outputs**: Too (the model maximizing probability often means it finds a loop it likes). In fact, beam search can be worse than greedy search for repetition. It has been observed that beyond a certain beam size, the output quality significantly decreases for storytelling tasks
+- **Beam search can result in length bias**: The model often assigns a higher probability to shorter sequences (since each additional token multiplies probabilities, lowering it). Without a length penalty, beam search may prefer ending early to get a higher average score. This is why a length penalty is introduced to encourage longer outputs when appropriate
+
+**In practice**: Beam search is favored in tasks where precision and logical consistency trump creativity, for example, in summarization (you want the most likely fluent summary), translation, or generating code (where randomness could introduce errors). Meanwhile, for conversational AI or creative generation, beam search can make the model too rigid and prone to generic responses, so sampling is preferred.
+
+**3. Top-K Sampling**:
+
+**With top-K sampling**: At each generation step, the model samples from at most the top K most probable options.
+
+**It's a simple truncation**: The low-probability tail is cut off. This avoids weird tokens but still leaves randomness among the top tokens.
+
+**Note**: That if K is large (e.g. K = 100 or so), it's almost like full sampling except excluding really unlikely picks, which hardly changes the distribution. If K is very small (e.g. K = 2 or 3), the model becomes only a bit random, it's like "restricted sampling" where it might alternate between a couple of likely continuations, leading to some limited variation but not a lot.
+
+**This type of strategy**: Tends to improve output quality and coherence because low-probability tokens often are low for a reason (either they are nonsensical in context or extremely rare completions). As a result, top-K sampling can reduce the chance of nonsensical completions while still allowing the model to surprise us by not always picking the top option.
+
+**However**: Like every strategy, there are certain gray areas here too. One drawback is that choosing K is not obvious. A fixed K might be too high in some contexts and too low in others. For example, if the model is very sure about the next word (distribution is peaked), then whether K = 500 or K = 5 doesn't matter because maybe only 3 tokens had significant probability anyway. But if the distribution is flat (lots of possibilities), limiting to K might prematurely cut off some plausible options.
+
+**Despite the above limitation**: Top-K is computationally efficient and easy to implement, so it's quite popular.
+
+**4. Nucleus Sampling (Top-P)**:
+
+**Nucleus (top-P) sampling**: Includes the smallest set of possible tokens whose cumulative probability is greater than or equal to P.
+
+**Nucleus sampling addresses**: The adaptiveness issue. With top-P, you might sample from 2 tokens in one case (if the model is confident) or 20 in another (if unsure), whatever number is needed to reach the cumulative probability P.
+
+**This ensures**: That the tail is cut off based on significance, not an arbitrary count. So in general, top-P tends to preserve more contextually appropriate diversity. If a model is 90% sure about something, top-P = 0.9 will basically become greedy (only that token considered). If a model is very uncertain, top-P=0.9 might allow many options, reflecting genuine ambiguity.
+
+**The quality**: Of top-P outputs is often very good for conversational and creative tasks. It was shown to produce fluent text with less likelihood of incoherence compared to unfiltered random sampling.
+
+**That said**: One still needs to be reasonable about the choice of P (too high P, like 0.99, brings back long-tail weirdness; too low P, like 0.7, might cut off some normal continuations).
+
+**5. Min-P Sampling**:
+
+**Min-P sampling**: Is a dynamic truncation method that adjusts the sampling threshold based on the model's confidence at each decoding step.
+
+**Unlike top-P**: Which uses a fixed cumulative probability threshold, min-P looks at the probability of the most likely token and only keeps tokens that are at least a certain fraction (the min-P value) as likely.
+
+**So if your top token**: Has 60% probability and min-P is set to 0.1, only tokens with at least 6% probability make the cut. But if the top token is just 20% confident, then the adapted 2% threshold lets many more candidates through.
+
+**This dynamic behavior**: Automatically tightens or loosens the sampling pool depending on model confidence, achieving coherence when the model is certain and diversity when it's genuinely uncertain.
+
+**Experiments show**: That min-P sampling improves both quality and diversity across different model families and sizes. Human evaluations also indicate a clear preference for min-P outputs in both text quality and creativity.
+
+**For practical use**: Setting the base threshold between 0.05 and 0.1 typically balances creativity and coherence well across most tasks.
+
+**This completes**: Our discussion of the different decoding strategies.
+
+**With decoding strategies covered**: As a fundamental topic, we now turn our attention to key generation parameters and examine how they influence model output.
+
+#### 6.2.2 Generation Parameters
+
+**When using an LLM**: To generate text, we have a set of knobs we can turn to control how the text is generated. Understanding these parameters is crucial because they allow us to tune the model's output style, creativity, and coherence without retraining the model.
+
+**Here are seven important**: Generation parameters and what they do:
+
+**1. Temperature**:
+
+**You can think of temperature**: As a knob that controls the trade-off between randomness and determinism during sampling-based text generation.
+
+**Formally**: Temperature T rescales the model's logits before the softmax operation:
+
+$$\text{logits}_\text{scaled} = \frac{\text{logits}}{T}$$
+
+**When T = 1.0** (usually the default): The probability distribution remains unchanged and reflects the model's original confidence over tokens.
+
+**When T < 1**: The distribution becomes sharper. High-probability tokens become even more dominant, while low-probability tokens are further suppressed. As a result, the model's choices become more conservative and predictable, often improving coherence but reducing diversity.
+
+**When T > 1**: The distribution flattens. Probabilities move closer together, increasing the chance that lower-probability tokens are sampled. This introduces more randomness and diversity, which can feel more creative, but also increases the risk of incoherence.
+
+**Note**: Temperature does not change the ranking of tokens, it only changes how peaked or flat the distribution is.
+
+**At the extremes**: The behavior becomes degenerate:
+
+- **As T → 0**: The model effectively always selects the highest-probability token, collapsing almost into behavior like greedy decoding
+- **At very high temperatures**: The distribution approaches uniformity, and the generated text can become erratic or nonsensical
+
+**A common rule of thumb**: Is that temperatures in the range 0.7 to 0.8 work well for many creative tasks: they introduce enough randomness to avoid repetitive outputs while preserving overall coherence.
+
+**Note**: The overall ranges of temperature can vary for different vendors/providers, however, the typical range is 0.0 to 2.0.
+
+**2. Top-K**:
+
+**In sampling**: The top-k parameter restricts the model's choice of the next token to only the k most probable tokens at each generation step. At every step, the model first computes logits and applies softmax over the entire vocabulary. The tokens are then ranked by probability, all but the top k are discarded, and the remaining probabilities are renormalized before sampling.
+
+**For example**: With k = 50, the model samples only from the 50 highest-probability tokens and ignores the long tail of extremely unlikely options.
+
+**As discussed earlier**: The primary effect of top-k sampling is improved output stability. By eliminating very low-probability tokens, it reduces the chance that a rare, inappropriate, or nonsensical token is sampled by accident and derails the generation. In this sense, top-k acts as a simple but effective quality filter.
+
+**The value of k**: Is a hyperparameter that controls the diversity and coherence trade-off. Small values lead to focused outputs. As k increases, the behavior gradually approaches unconstrained sampling. In practice, commonly used values are around k = 50 or k = 100.
+
+**However**: A key limitation of top-k (as discussed earlier also) is that it does not adapt to the shape of the probability distribution. Because k is fixed, its behavior can be suboptimal across different contexts.
+
+**This lack of adaptivity**: Is precisely what methods such as nucleus (top-p) sampling aim to address.
+
+**3. Top-P (Nucleus Sampling)**:
+
+**In sampling**: Top-p is a strategy that uses a dynamic cutoff based on probability mass, rather than a fixed number of tokens. Instead of selecting a fixed k, we choose a probability threshold p ∈ (0, 1].
+
+**At each generation step**: The model first computes probabilities over the entire vocabulary. The tokens are then sorted in descending order of probability, and the smallest set of tokens whose cumulative probability mass is at least p is selected. This set is called the nucleus. All tokens outside the nucleus are discarded, the remaining probabilities are renormalized, and sampling is performed from this reduced distribution.
+
+**For example**: Consider the following distribution:
+
+- "dog": 0.40
+- "cat": 0.30
+- "horse": 0.10
+- "elephant": 0.05
+- …
+
+**With (p = 0.9)**: The model would include tokens until their cumulative probability exceeds 0.9. In this case, "dog" (0.40) + "cat" (0.30) + "horse" (0.10) sums to 0.80, which is insufficient, so additional tokens such as "elephant" would be included until the threshold is crossed.
+
+**The key property**: Of top-p sampling is adaptivity. In contexts where the model is highly confident (for example, one token has probability 0.9), the nucleus may contain only a single token, causing top-p sampling to behave almost like greedy decoding. In uncertain contexts, where probability mass is spread across many plausible tokens, the nucleus grows larger, allowing for greater diversity.
+
+**Commonly used values**: In practice are p = 0.9 or p = 0.95.
+
+**In practice**: Top-p and top-k are sometimes combined. For example, a system might first restrict the candidate set to the top k tokens, and then apply nucleus sampling with p within that subset. While using either method alone already cuts off the long tail of unlikely tokens, combining them allows practitioners to both cap the maximum number of candidates and retain adaptivity to the probability distribution's shape.
+
+**Note**: Top-k sampling alone can still include low-quality tokens in certain contexts because the cutoff is fixed, whereas nucleus sampling adapts. However, top-p does not impose an explicit upper bound on the number of tokens in the nucleus; hence in very flat distributions, a large number of tokens may be included, which can still introduce risk or inefficiency. Owing to this a combination of top-k and top-p could be beneficial.
+
+**4. Maximum Length (Max New Tokens)**:
+
+**This is a straightforward**: But crucial parameter: how many tokens to generate before stopping. Models don't inherently "know" when to stop unless they generate a special <EOS> token (end of sequence token) or some stop sequence.
+
+**For open-ended generation**: (story, code completion), you often provide a max_length or max_new_tokens limit to avoid too much rambling or running out of time. In production, you might set this based on user needs (e.g., limit to 100 tokens for an answer). If the model reaches this length without producing a natural endpoint, you cut off the generation.
+
+**Choosing a good max length**: Is a balance: too short and the model may be unable to finish its thought; too long and you waste compute or risk drifting off-topic. Many times, you also monitor for an end-of-sequence token; if the model outputs it, you stop early, even if the max length not reached.
+
+**Max length doesn't affect**: The content except by truncating it.
+
+**One thing to note**: The longer the generated sequence, the higher the chance of the model going off-track or repeating, as errors can accumulate. So sometimes it's beneficial to keep responses reasonably concise, depending on the application.
+
+**5. Repetition Penalties**:
+
+**One common issue**: With LLM outputs is that they can get stuck in loops or repeat phrases excessively (e.g., "I'm not sure. I'm not sure. I'm not sure." or listing the same fact multiple times). This happens because once the model says something, that text is in the context and often the model might predict it again (especially with greedy/beam, which are prone to repetition).
+
+**To combat this**: We use repetition penalties. For example, Hugging Face's repetition_penalty. This is a single factor greater than 1 (like 1.2) that is used to divide the logits of tokens that have already been generated. Essentially, for any token that has been output, its logit is divided by the repetition penalty (making it less likely next time).
+
+**If the penalty is 1.0**: Nothing happens; if it is 1.2, then once a token is used, it's about 20% less likely to be used again (roughly speaking, since the effect is multiplicative across repeated uses). This is a simpler scheme, but effective in practice to avoid verbatim repetition or getting stuck.
+
+**6. Beam Search Parameters**:
+
+**If you use beam search decoding**: The key parameter is num_beams, i.e., how many candidate sequences to explore in parallel. A beam search of size 5, for instance, will try to track the 5 most likely sequences as it generates each new token, expanding each and pruning down to the top 5 again, until an end condition. Beam search is not random; it's an exhaustive search method that aims to find the highest probability full sequence (approximately, it's not guaranteed optimal unless the beam width is infinite).
+
+**Note**: That the higher the num_beams, more computationally expensive, and the more you risk the infamous issue that high beams often produce dull, generic outputs or overly short outputs due to length biases.
+
+**Along with beam width**: If using beam search, you may have a length_penalty (a parameter that penalizes shorter sequences to avoid the beam search preferring short ones with high average probability). For example, length_penalty greater than 1.0 encourages longer outputs (by reducing the score for shorter ones). Additionally, setting early_stopping=True with beam search will stop beams when they reach the end-of-sentence, which is typically what you want.
+
+**Important point**: Just be cautious, too large a beam can degrade quality. Often a beam size of 3-5 is a sweet spot; beyond that returns may diminish or quality worsens (the model might converge on a generic sequence).
+
+**7. Number of Output Sequences**:
+
+**Another useful parameter**: Is simply how many outputs to generate for a given prompt. For instance, num_return_sequences=5 (Hugging Face) will produce 5 independent generations.
+
+**If you're using**: Stochastic sampling techniques, each of those can be different. This can be combined with a strategy of "best of N", i.e., generate multiple and then either show all to a user to choose or automatically pick the best according to some metric.
+
+**For example**: For a difficult prompt, you might sample 5 continuations and then use a scoring function (maybe a separate critic model) to choose the highest-quality one.
+
+**From an LLMOps perspective**: Generating multiple outputs in parallel could be a great trick: it can dramatically improve the final result if you can afford to either filter or ensemble them.
+
+**With that**: We covered our seven key parameters. To recap in plain language:
+
+- **Temperature**: Controls how much to explore unlikely words vs. stick to the top picks
+- **Top-k**: Truncates the options to the top k words
+- **Min-p**: Keeps only tokens that are at least a certain fraction as likely as the top token, dynamically adapting to model confidence
+- **Top-p**: Truncates the options to the smallest set that makes up probability p
+- **Max length**: Means a stop after these many tokens, no matter what
+- **Repetition penalties**: Discourage the model from repeating itself
+- **Beam width and length penalty** (if using beam search): Help determine how broad and length-biased the search is
+- **The number of outputs parameter**: Generates multiple outputs per prompt to increase the chance of a good one
+
+**Tuning these parameters**: Is often necessary to get the desired style of output.
+
+#### 6.2.3 How LLMs Function (End-to-End)
+
+**Once an LLM is trained**: Using it to generate text is a process of iterative forward passes.
+
+**Here's the flow**:
+
+1. **Prompt tokenization**: You provide a prompt or context. This gets tokenized into input IDs and fed through the model. The model processes those tokens through its transformer layers
+
+2. **Logits for next token**: The model produces a vector of logits as output. If the vocabulary size is V, the logits are a length-V vector of raw scores (real numbers) indicating how likely the model thinks each token is to come next. A higher logit means more favored. These logits are unnormalized at this moment for the next token
+
+3. **Probability distribution**: The logits are usually converted to probabilities by applying a softmax, which exponentiates and normalizes them to sum to 1. This gives a categorical probability distribution over the V possible next tokens
+
+4. **Decoding decision**: Now, a decision is made on how to pick the next token. This is where decoding strategies and generation parameters come into play
+
+5. **Append token and repeat**: The chosen token is appended to the output sequence. Now, the prompt plus the newly generated token form a new input to the model to generate the following token. This loop continues until a stopping criterion is met
+
+**This loop shows**: The auto-regressive generation since in each iteration, we condition on the sequence so far (which grows as we generate) and produce one new token.
+
+**Importantly**: Transformer implementations optimize this process using key-value (KV) caching in the self-attention layers. By storing the attention keys and values from previous time steps, each new iteration avoids recomputing attention over the entire sequence and instead computes outputs only for the newly generated token.
+
+**This makes**: Token-by-token generation reasonably fast in practice, although generating very long sequences can still be slow, since each new token must attend to all previously generated tokens and the attention cost grows with sequence length.
+
+**Note**: We will study KV caching in detail in a later chapter.
+
+#### 6.2.4 Hands-On: LLM Decoding and Generation Parameters
+
+**This hands-on section**: Is divided into two parts. The first part provides a visual, step-by-step comparison of greedy and beam search strategies, illustrating how each method operates at the token level. The second part explores how different generation parameters influence the model's responses.
+
+**Comparison: Greedy vs. Beam Search Decoding**:
+
+**Below is a small experiment**: That compares the greedy and beam search decoding strategies and shows how they operate at the token level.
+
+**The purpose**: Is to make clear how behavior differs between greedy decoding and beam search.
+
+**Instead of treating**: Text generation as a black box that magically produces sentences, this code slows the process down and shows, step by step, what the model thinks should come next, how confident it is, and how different decoding strategies lead to different intermediate decisions.
+
+**The prompt used**: For both experiments is intentionally simple. This kind of prompt is ideal because it has a very strong and familiar continuation, which makes the model's probability distributions easy to interpret.
+
+**Greedy Generation**:
+
+**In generate_step_by_step**: The model generates text one token at a time using greedy decoding.
+
+**At each step**:
+
+- The current text is tokenized and passed through the model
+- The model produces logits for every token in the vocabulary
+- Only the logits for the last position are selected (these represent the model's belief about what should come next)
+- A softmax converts logits into probabilities
+- The top-N most probable next tokens are extracted (purely for visualization)
+- The model actually selects the single highest-probability token using argmax
+
+**Key observations**: The model assigns a very high probability (approx. 0.84) to the token " mat". This tells us that, given everything it has learned during training, the model is extremely confident that "mat" is the most likely continuation. Other tokens like " cat", " fence", or " window" appear with much smaller probabilities, representing weaker but still plausible alternatives.
+
+**Because greedy decoding**: Always picks the highest-probability token, " mat" is selected and appended to the text. The same process repeats at every subsequent step and so on.
+
+**Beam Search Generation**:
+
+**The second experiment**: generate_beam_step_by_step, performs the same autoregressive generation, but using beam search instead of greedy decoding.
+
+**Beam search maintains**: Multiple candidate sequences (beams) simultaneously. Each beam has:
+
+- Its own token sequence
+- A cumulative log-probability score
+
+**At each step**:
+
+- Every active beam is expanded using its top candidate next tokens
+- All newly formed sequences are collected
+- These candidates are ranked by score (optionally adjusted using a length penalty)
+- Only the top num_beams sequences are kept
+
+**This allows**: The model to delay commitment, keeping multiple plausible futures alive.
+
+**Key observations**: At STEP 1, beam search expands the prompt into multiple candidates:
+
+- "The cat sat on the mat"
+- "The cat sat on the cat"
+- "The cat sat on the fence"
+
+**Each continuation**: Is associated with a log-probability score. The three highest-scoring ones are retained as beams.
+
+**At STEP 2**: Each of these beams is expanded again. You can see how punctuation and continuation tokens compete, such as ".", ",", and newline tokens.
+
+**Even though**: Multiple beams are explored, the highest-scoring paths often converge toward the same semantic continuation (for example, ending the sentence cleanly with a period). This demonstrates how beam search trades computational cost for global sequence quality.
+
+**Key insights**:
+
+- **Greedy decoding**: Is simple and fast but shortsighted. It always picks the locally best option
+- **Beam search**: Is more expensive but more strategic. It keeps multiple hypotheses alive and chooses the best overall sequence
+- **In both cases**: The model is not "generating text" directly. It is repeatedly answering one question: "Given everything so far, what token is most likely to come next?"
+
+**Note**: Due to differences in hardware configurations or Google Colab runtime versions, readers may observe small numerical differences in probabilities or even minor changes in token selection when running this code in different environments. Hence, their results may differ slightly from ours. However, these variations do not affect the qualitative behavior being demonstrated.
+
+**Exploring Generation Parameters**:
+
+**Below is a minimal demonstration**: That explores how different generation parameters influence the model's responses.
+
+**The purpose**: Is to make sampling-based text generation tangible by showing how an autoregressive language model's outputs change when we adjust decoding hyperparameters: specifically temperature, top-p (nucleus sampling), and top-k.
+
+**Each experiment**: Keeps the model and prompt fixed, and changes only one decoding parameter at a time. This makes it easy to attribute changes in output directly to that parameter, rather than to randomness or prompt differences.
+
+**Experiment 1: Temperature Comparison**:
+
+**Prompt**: "The future of artificial intelligence is"
+
+**Only the temperature**: Is varied; temperature rescales the logits before sampling:
+
+- **Low temperature**: Sharpens the distribution
+- **High temperature**: Flattens it
+
+**This directly affects**: How deterministic or creative the output becomes.
+
+**Key observations**:
+
+- **Temperature = 0.01**: The output is highly repetitive and deterministic. The model repeatedly produces the same phrase ("in the hands of the people"), showing that extremely low temperature behaves almost like greedy decoding
+- **Temperature = 0.7**: The output is coherent, informative, and varied. The model discusses AI's impact on work and society in a natural way. This is typically the most useful range for general-purpose generation
+- **Temperature = 1.5**: The output becomes much more abstract and less grounded. Sentences look loosely connected or historically philosophical, reflecting the inclusion of many low-probability tokens
+
+**Key insight**: Temperature does not change what the model knows; it changes how confidently it sticks to its most likely continuation.
+
+**Experiment 2: Top-P Comparison**:
+
+**Prompt**: "Once upon a time in a distant galaxy"
+
+**Here**: Temperature and other parameters are held fixed, and only top-p is varied.
+
+**Top-p sampling**: Dynamically selects the smallest set of tokens whose cumulative probability exceeds p, and samples only from that set.
+
+**This means**:
+
+- The candidate pool adapts based on how peaked or flat the distribution is
+- The number of considered tokens can change at every step
+
+**Key observations**:
+
+- **Top-p = 0.5 (conservative)**: The story is safe and predictable. The model sticks closely to common narrative patterns and avoids surprising turns
+- **Top-p = 0.9 (balanced)**: The story introduces richer characters and personality traits (e.g., a playful leader), while remaining coherent
+- **Top-p = 1.0 (full distribution)**: The model samples from the entire vocabulary. The story becomes more whimsical and unexpected, with unusual characters and ideas
+
+**Why low top-p is conservative**: Suppose if top_p = 0.4 and the most probable token already has probability 0.9, that single token alone exceeds the nucleus threshold. As a result, by definition of nucleus sampling, it becomes the only candidate for sampling, making the next-token choice effectively deterministic (subject to temperature change). Lower top_p values therefore behave conservatively by collapsing the candidate set to only the highest-confidence tokens.
+
+**Key insight**: Top-p controls how much probability mass you are willing to trust. Lower values prioritize safety; higher values increase diversity.
+
+**Experiment 3: Top-K Comparison**:
+
+**Prompt**: "The recipe for chocolate chip cookies requires"
+
+**In this experiment**: Top-k is varied while temperature and other parameters remains fixed.
+
+**Top-k sampling**: Restricts the candidate tokens to the k most probable tokens, regardless of their cumulative probability.
+
+**Unlike top-p**:
+
+- The number of candidate tokens is fixed
+- The cutoff does not adapt to distribution shape
+
+**Key observations**:
+
+- **Top-k = 10 (very restrictive)**: The output is narrow and possibly repetitive. The model stays locked into a very small set of high-probability continuations
+- **Top-k = 50 (balanced)**: The recipe becomes more realistic and informative
+- **Top-k = 100 (permissive)**: The model introduces more variation and elaboration, sometimes drifting into tangential constraints or hypothetical scenarios
+
+**Key insight**: Top-k gives you direct control over how many choices the model is allowed to consider, but does not adapt to uncertainty the way top-p does.
+
+**Key Takeaways**:
+
+- **Temperature**: Controls randomness intensity
+- **Top-p**: Controls probability mass coverage
+- **Top-k**: Controls candidate set size
+- **Different parameters**: Can produce outputs that are: repetitive, balanced, creative, or chaotic; all from the same model and prompt
+
+**Note**: The exact outputs may vary from those shown here due to the use of stochastic strategies; however, the overall understanding remains consistent and unaffected.
+
+**With this experiment complete**: You now have a clear and practical intuition for how decoding parameters shape LLM behavior. This understanding provides a strong foundation for exploring more advanced concepts and making informed design choices in LLM-based systems.
+
+**As a follow-up self-learning exercise**: We encourage readers to experiment with other parameters such as max_new_tokens and num_return_sequences to develop a deeper and more concrete understanding of their impact.
+
+#### 6.2.5 LLM Application Lifecycle
+
+**Building an LLM-powered application**: Is not a one-time task. It is an iterative engineering process that combines elements of traditional software development, ML/AI workflows, and new challenges unique to LLMs.
+
+**A clear mental model**: Of the general LLM application lifecycle helps teams design systems that are reliable, scalable, and continuously improving.
+
+**Below is a practical**: End-to-end lifecycle for LLM-based applications, from idea to long-term operation.
+
+**1. Problem Framing & Feasibility Study**:
+
+**The lifecycle starts**: By clearly defining the problem and validating whether an LLM is the right solution.
+
+**At this stage**: The goal is not to pick a model, but to understand the task and constraints:
+
+- What is the user problem being solved?
+- Does the task require natural language understanding, reasoning, or generation?
+- What must be correct vs. what can be probabilistic?
+- What are the success metrics (accuracy, latency, cost)?
+- What risks exist (hallucinations, privacy, safety)?
+
+**This phase often reveals**: Whether a simpler system (rules, search, templates) could solve the problem, or whether an LLM adds genuine value. The output of this stage is a clear problem statement, feasibility assessment, and measurable success criteria.
+
+**2. Data & Knowledge Strategy**:
+
+**Once the problem is defined**: The next question is what knowledge the system needs, what information the system must be aware of and how the model will access it.
+
+**Many applications**: Can start with off-the-shelf models accessed via API, but others need more customization through retrieval augmentation (feeding in external documents at runtime) or fine-tuning on domain-specific examples so the model's outputs align with the task.
+
+**Thinking about**: Data sources, required freshness of knowledge, and integration points early helps prevent surprises later.
+
+**3. Model Selection & System Architecture**:
+
+**With requirements and data strategy defined**: The system design takes shape.
+
+**This means weighing trade-offs**: Between hosted APIs versus self-hosting, larger versus smaller models, general versus domain-adapted (fine-tuned) models, and thinking about context windows, throughput, and compute costs.
+
+**The architecture includes**: Not just the model itself, but how it fits into the larger system. At the system level, most LLM applications follow a common pattern:
+
+- Input preprocessing
+- Context assembly (retrieval, tools, memory)
+- One or more LLM calls
+- Output validation and post-processing
+- Response delivery
+
+**This phase results**: In a concrete overall architecture of the application, model choice rationale, and rough cost/latency estimates.
+
+**4. Prompt & Interaction Design**:
+
+**Prompting**: Is where model behavior is shaped. Rather than treating prompts as ad-hoc strings, production systems treat them as versioned, testable artifacts. This includes:
+
+- System prompts defining role, tone, and constraints
+- Structured inputs and outputs (schemas, JSON)
+- Explicit reasoning or tool-use instructions
+- Guardrails for refusal, grounding, and formatting
+
+**Prompt design follows**: An iterative loop for refined and optimal instructions.
+
+**The outputs of this phase**: Are stable prompt templates, test cases, and expected output formats.
+
+**5. Tooling & Integration**:
+
+**Most useful LLM applications**: Go beyond text generation. At this stage, the model is integrated with external systems such as:
+
+- Function/tool calling or MCPs
+- Databases and vector stores
+- APIs and business logic
+- Short-term and long-term memory systems
+
+**A key principle applies here**: Let the LLM reason, but let deterministic systems act.
+
+**This phase defines**: Tool interfaces, error-handling paths, and clear permission boundaries between the model and the system.
+
+**6. Evaluation & Validation**:
+
+**Before deployment**: The system must be evaluated systematically. Evaluation for LLMs is multi-layered:
+
+- **Offline evaluation**: Task-specific metrics (extraction quality, etc.)
+- **Human-in-the-loop reviews**: For open-ended tasks
+- **Safety and edge-case testing**
+
+**Because automatic metrics**: Are often imperfect, qualitative evaluation and failure analysis are also essential. The result is a clear performance profile and a clear go/stop decision.
+
+**7. Deployment & Scaling**:
+
+**Once validated**: The system is deployed into a production environment.
+
+**In production**: The model must be accessible to real users through whatever interface the application demands, whether a chatbot UI, API back-end, or tool chain.
+
+**This stage involves**: Implementing safeguards such as rate limits, caching, batching for efficient inference, and graceful fallbacks when the model can't answer a query. This stage produces a live service, monitoring dashboards, and incident response plans.
+
+**8. Monitoring and Governance**:
+
+**After deployment**: The LLM system enters its most critical phase: real-world usage. This is where development are tested against actual user behavior and production system metrics.
+
+**Monitoring focuses**: On how the system is used in practice, including request volumes, latency, and failure rates, as well as qualitative signals such as output quality and user satisfaction.
+
+**Running alongside monitoring**: Is governance, which spans the entire lifecycle of the application, from ideation to deployment and monitoring. Governance ensures that the system operates within defined boundaries for privacy, safety, and compliance, even as it evolves.
+
+**This includes**: Enforcing data handling policies, maintaining traceability of model versions and prompt configurations, and ensuring outputs can be audited when needed. In regulated domains, governance also includes meeting legal and regulatory requirements and being able to explain system behavior to stakeholders.
+
+**Monitoring and continuous governance**: Makes the lifecycle inherently iterative: deployment feeds back into re-analysis of requirements and design, and improvements are continually pushed to production.
+
+**In sum**: Building an LLM-based application is a continuous loop of defining goals, grounding the model in task-relevant information, designing interactions, validating performance, deploying at scale, and learning from real usage to iterate.
+
+**Treating it this way**: Helps align technical work with business outcomes and ensures the system stays useful, safe, and maintainable over time.
+
+**EXAM TIP:** Questions about "decoding strategies" → think **greedy** (highest probability, fast, repetitive) → **beam search** (multiple hypotheses, global optimization, length bias) → **top-k** (fixed k tokens, simple truncation) → **nucleus/top-p** (dynamic cutoff, adapts to distribution) → **min-p** (dynamic threshold based on top token probability). Questions about "generation parameters" → think **temperature** (randomness vs determinism, T<1 sharper, T>1 flatter, T→0 greedy) → **top-k** (k most probable tokens, fixed cutoff) → **top-p** (cumulative probability threshold, adaptive) → **max length** (stop after N tokens) → **repetition penalties** (divide logits of repeated tokens) → **beam width** (num_beams, 3-5 sweet spot) → **num_return_sequences** (generate multiple outputs). Questions about "LLM function end-to-end" → think **prompt tokenization** → **logits** → **softmax probabilities** → **decoding decision** → **append token** → **repeat** → **KV caching** (optimizes attention). Questions about "LLM application lifecycle" → think **problem framing** → **data/knowledge strategy** → **model selection/architecture** → **prompt design** → **tooling/integration** → **evaluation** → **deployment** → **monitoring/governance** (iterative loop).
+
+**Prompt Documentation (Real-World + Exam-Friendly)**: Keep prompts as "prompt-as-code" artifacts (system + user + examples + guardrails) and track iterations, because prompts evolve like any other dependency.
 
 #### Prompting the Gemini app (hands-on mental model)
 
