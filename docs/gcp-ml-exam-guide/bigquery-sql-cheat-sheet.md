@@ -1,37 +1,71 @@
-## BigQuery SQL Manipulation + Cheat Sheet (ML Engineer Focus)
+## BigQuery SQL Cheat Sheet
 
-This is a practical SQL reference for the workflows that show up constantly in ML engineering on Google Cloud: preparing features, building labels, validating data, and doing lightweight analytics directly in **BigQuery**.
+A practical SQL reference for ML engineering workflows on Google Cloud: preparing features, building labels, validating data, and doing analytics directly in **BigQuery**.
 
-### Official docs (high-signal starting points)
+### Table of Contents
 
-- Query syntax (Standard SQL): [BigQuery Query Syntax](https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax)
-- Functions & operators (Standard SQL): [BigQuery Functions & Operators](https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-and-operators)
-- Procedural language / scripting: [BigQuery Scripting](https://cloud.google.com/bigquery/docs/reference/standard-sql/scripting)
-- Partitioned tables: [Partitioned Tables Documentation](https://cloud.google.com/bigquery/docs/partitioned-tables)
-- Query performance best practices: [BigQuery Performance Best Practices](https://cloud.google.com/bigquery/docs/best-practices-performance-overview)
-
-### 0) BigQuery “SQL mental model”
-
-- **Standard SQL** (default) with BigQuery-specific types and functions.
-- Handles **nested data** with **STRUCT** and **ARRAY**.
-- Scales best when you:
-  - filter on **partition** columns
-  - use **clustering**
-  - avoid exploding data unintentionally (UNNEST mistakes)
-
-#### How BigQuery executes queries (why some patterns are expensive)
-
-- BigQuery is a **distributed columnar** warehouse: you pay primarily for **bytes scanned**.
-- `WHERE` filters on the **partition column** enable **partition pruning** (big cost saver).
-- `SELECT *` on wide tables can scan and return unnecessary columns.
-- Joins and UNNEST can multiply rows; always sanity-check row counts after joins.
+- [Getting Started](#getting-started)
+- [Core Query Patterns](#core-query-patterns)
+- [Joins & Data Leakage Prevention](#joins--data-leakage-prevention)
+- [Window Functions](#window-functions)
+- [Dates & Timestamps](#dates--timestamps)
+- [Safe Casting & Null Handling](#safe-casting--null-handling)
+- [Arrays & Structs (Nested Data)](#arrays--structs-nested-data)
+- [JSON & Semi-Structured Data](#json--semi-structured-data)
+- [BigQuery Scripting](#bigquery-scripting)
+- [Query Power Tools](#query-power-tools)
+- [Text Manipulation & Regex](#text-manipulation--regex)
+- [Data Quality Checks](#data-quality-checks)
+- [Performance & Cost Optimization](#performance--cost-optimization)
+- [BigQuery ML (BQML)](#bigquery-ml-bqml)
+- [Stakeholder KPI Queries](#stakeholder-kpi-queries)
+- [Real-World Analytics Patterns](#real-world-analytics-patterns)
+- [Exam-Style Reminders](#exam-style-reminders)
 
 ---
 
-### 1) Core query patterns (SELECT / WHERE / GROUP BY)
+## Getting Started
+
+### Official Documentation
+
+Quick links to the most useful BigQuery docs:
+
+- **Query Syntax**: <a href="https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax">BigQuery Query Syntax</a>
+- **Functions & Operators**: <a href="https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-and-operators">BigQuery Functions & Operators</a>
+- **Scripting**: <a href="https://cloud.google.com/bigquery/docs/reference/standard-sql/scripting">BigQuery Scripting</a>
+- **Partitioned Tables**: <a href="https://cloud.google.com/bigquery/docs/partitioned-tables">Partitioned Tables Documentation</a>
+- **Performance Best Practices**: <a href="https://cloud.google.com/bigquery/docs/best-practices-performance-overview">BigQuery Performance Best Practices</a>
+
+### BigQuery SQL Mental Model
+
+**Key concepts:**
+
+- **Standard SQL** (default) with BigQuery-specific types and functions
+- Handles **nested data** with **STRUCT** and **ARRAY** types
+- Scales best when you:
+  - Filter on **partition** columns
+  - Use **clustering** on common join/filter columns
+  - Avoid unintentional data explosions (UNNEST mistakes)
+
+#### How BigQuery Executes Queries
+
+Understanding BigQuery's execution model helps you write efficient queries:
+
+- BigQuery is a **distributed columnar** warehouse: you pay primarily for **bytes scanned**
+- `WHERE` filters on the **partition column** enable **partition pruning** (big cost saver)
+- `SELECT *` on wide tables can scan and return unnecessary columns
+- Joins and UNNEST can multiply rows; always sanity-check row counts after joins
+
+**💡 Cost Tip:** Filter early and filter on partition columns to minimize bytes scanned!
+
+---
+
+## Core Query Patterns
+
+### Basic SELECT with Aggregation
 
 ```sql
--- Basic pattern
+-- Count events and purchases per user in the last 30 days
 SELECT
   user_id,
   COUNT(*) AS events,
@@ -43,27 +77,28 @@ ORDER BY purchases DESC
 LIMIT 100;
 ```
 
-**Explanation:** Per user, count total events and purchases in the last 30 days, then rank users by purchases.
+**What it does:** Counts total events and purchases per user, then ranks users by purchase count.
 
-**Useful functions**
+**Key functions:**
+- `COUNTIF(condition)` - Count rows matching a condition
+- `ANY_VALUE(col)` - Get "some value" when grouping (useful when all values are the same)
+- `APPROX_COUNT_DISTINCT(col)` - Faster approximate distinct count
+- `APPROX_QUANTILES(col, n)` - Get approximate percentiles (p50/p90/p99)
 
-- `COUNTIF(condition)`
-- `ANY_VALUE(col)` (when you need “some value” to satisfy grouping)
-- `APPROX_COUNT_DISTINCT(col)` (faster, approximate)
-- `APPROX_QUANTILES(col, n)` (for p50/p90/p99-ish summaries)
-
-#### Core SQL clauses you must know (stakeholder reporting)
+### DISTINCT: Count Unique Values
 
 ```sql
--- DISTINCT: how many unique customers?
+-- How many unique customers?
 SELECT COUNT(DISTINCT customer_id) AS unique_customers
 FROM `project.dataset.orders`;
 ```
 
-**Explanation:** Counts unique customers who placed at least one order.
+**What it does:** Counts unique customers who placed at least one order.
+
+### HAVING: Filter After Aggregation
 
 ```sql
--- HAVING: filter after aggregation (e.g., power users)
+-- Find power users (10+ sessions)
 SELECT user_id, COUNT(*) AS sessions
 FROM `project.dataset.sessions`
 GROUP BY user_id
@@ -71,10 +106,12 @@ HAVING sessions >= 10
 ORDER BY sessions DESC;
 ```
 
-**Explanation:** Filters to users with 10+ sessions (HAVING applies after GROUP BY).
+**What it does:** Filters to users with 10+ sessions. **Remember:** `HAVING` applies after `GROUP BY`, while `WHERE` applies before.
+
+### CASE: Create Business Segments
 
 ```sql
--- CASE: business-friendly segments
+-- Bucket users by purchase count
 SELECT
   user_id,
   purchases,
@@ -87,23 +124,27 @@ SELECT
 FROM `project.dataset.user_purchase_counts`;
 ```
 
-**Explanation:** Converts raw counts into readable segments for reporting.
+**What it does:** Converts raw counts into readable segments for reporting and analysis.
+
+### UNION ALL: Combine Tables
 
 ```sql
--- UNION ALL: combine two tables with the same schema (don’t deduplicate)
+-- Combine web and store orders
 SELECT order_id, created_at, 'web' AS source FROM `project.dataset.web_orders`
 UNION ALL
 SELECT order_id, created_at, 'store' AS source FROM `project.dataset.store_orders`;
 ```
 
-**Explanation:** Combines two sources into one dataset without removing duplicates.
+**What it does:** Combines two sources into one dataset. **Note:** `UNION ALL` doesn't remove duplicates (use `UNION` if you need deduplication).
 
 ---
 
-### 2) Joins (and ML data leakage traps)
+## Joins & Data Leakage Prevention
+
+### Basic Feature Join
 
 ```sql
--- Typical feature join: base table + aggregates
+-- Attach features to labeled rows
 SELECT
   b.user_id,
   b.label,
@@ -114,24 +155,25 @@ LEFT JOIN `project.dataset.user_features_30d` f
 USING (user_id);
 ```
 
-**Explanation:** Attach feature columns to each labeled row; keep all base rows even when features are missing.
+**What it does:** Attaches feature columns to each labeled row, keeping all base rows even when features are missing.
 
-**Common pitfalls**
+### Join Types: When to Use Which
 
-- **Many-to-many joins** silently multiply rows → always validate row counts.
-- **Future leakage** in time-series joins → ensure feature windows end _before_ label timestamp.
+| Join Type | Use Case |
+|-----------|----------|
+| **INNER JOIN** | Keep only rows that match in both tables (good for "must have feature" cases) |
+| **LEFT JOIN** | Keep all labels/base rows even if features are missing (common for training tables) |
+| **CROSS JOIN** | Cartesian product (almost always accidental unless you mean "expand") |
 
-#### Join types: when to use which
+**⚠️ Common Pitfalls:**
 
-- **INNER JOIN**: keep only rows that match in both tables (good for “must have feature” cases).
-- **LEFT JOIN**: keep all labels/base rows even if features are missing (common for training tables).
-- **CROSS JOIN**: cartesian product (almost always accidental unless you mean “expand”).
+- **Many-to-many joins** silently multiply rows → always validate row counts
+- **Future leakage** in time-series joins → ensure feature windows end _before_ label timestamp
 
-#### A “time-safe” feature join pattern (anti-leakage)
+### Time-Safe Feature Join (Anti-Leakage Pattern)
 
 ```sql
--- For each label event, aggregate features using only prior events.
--- (Pattern: join on user_id AND event_ts <= label_ts, then aggregate.)
+-- Build features using only events BEFORE the label timestamp
 SELECT
   l.user_id,
   l.label_ts,
@@ -140,19 +182,23 @@ SELECT
 FROM `project.dataset.labels` l
 LEFT JOIN `project.dataset.events` e
   ON e.user_id = l.user_id
- AND e.event_ts <= l.label_ts
+ AND e.event_ts <= l.label_ts  -- CRITICAL: only use past events
  AND e.event_ts >= TIMESTAMP_SUB(l.label_ts, INTERVAL 30 DAY)
 GROUP BY l.user_id, l.label_ts, l.label;
 ```
 
-**Explanation:** Builds time-safe features by using only events that occurred before the label timestamp (anti-leakage).
+**What it does:** Builds time-safe features by using only events that occurred before the label timestamp. This prevents **data leakage** that can inflate offline metrics.
+
+**💡 Exam Tip:** Always check that feature timestamps ≤ label timestamps in your training data!
 
 ---
 
-### 3) Window functions (ranking, rolling stats, dedup)
+## Window Functions
+
+### Deduplicate: Keep Latest Record Per Key
 
 ```sql
--- Deduplicate: keep latest record per key
+-- Keep the most recent row per user
 SELECT * EXCEPT(rn)
 FROM (
   SELECT
@@ -163,7 +209,9 @@ FROM (
 WHERE rn = 1;
 ```
 
-**Explanation:** Keeps the most recent row per user (typical “latest state” table cleanup).
+**What it does:** Keeps the most recent row per user (typical "latest state" table cleanup).
+
+### Rolling Window: Last 7 Rows
 
 ```sql
 -- Rolling count of events in the last 7 rows (not time-based)
@@ -178,25 +226,34 @@ SELECT
 FROM `project.dataset.events`;
 ```
 
-**Explanation:** Rolling count over the current + previous 6 rows per user (not a time-duration window).
+**What it does:** Rolling count over the current + previous 6 rows per user (not a time-duration window).
 
-Key window functions:
+### Key Window Functions
 
-- `ROW_NUMBER()`, `RANK()`, `DENSE_RANK()`
-- `LAG()`, `LEAD()`
-- `SUM() OVER (...)`, `AVG() OVER (...)`, `COUNT() OVER (...)`
+| Function | Purpose |
+|----------|---------|
+| `ROW_NUMBER()` | Sequential numbering (1, 2, 3...) |
+| `RANK()` | Ranking with gaps (1, 2, 2, 4...) |
+| `DENSE_RANK()` | Ranking without gaps (1, 2, 2, 3...) |
+| `LAG(col, n)` | Value from n rows before |
+| `LEAD(col, n)` | Value from n rows ahead |
+| `SUM() OVER (...)`, `AVG() OVER (...)`, `COUNT() OVER (...)` | Aggregations over window |
 
-#### Window frames: ROWS vs RANGE (quick intuition)
+### Window Frames: ROWS vs RANGE
 
-- **ROWS**: “N physical rows before/after” (depends on row ordering, not time gaps).
-- **RANGE**: “value-based window” (e.g., timestamps within a range). Use with care.
+- **ROWS**: "N physical rows before/after" (depends on row ordering, not time gaps)
+- **RANGE**: "value-based window" (e.g., timestamps within a range). Use with care.
+
+**Example:** `ROWS BETWEEN 6 PRECEDING AND CURRENT ROW` = last 7 rows, regardless of time gaps.
 
 ---
 
-### 4) Dates + timestamps (common transformations)
+## Dates & Timestamps
+
+### Common Date Transformations
 
 ```sql
--- Convert and bucket
+-- Convert and bucket timestamps
 SELECT
   DATE(event_ts) AS event_date,
   TIMESTAMP_TRUNC(event_ts, HOUR) AS event_hour,
@@ -204,35 +261,47 @@ SELECT
 FROM `project.dataset.events`;
 ```
 
-Common helpers:
+**Common date functions:**
 
-- `CURRENT_DATE()`, `CURRENT_TIMESTAMP()`
-- `DATE_ADD`, `DATE_SUB`, `TIMESTAMP_ADD`, `TIMESTAMP_SUB`
-- `*_TRUNC` for bucketing
+- `CURRENT_DATE()`, `CURRENT_TIMESTAMP()` - Get current date/time
+- `DATE_ADD(date, INTERVAL n DAY)`, `DATE_SUB(date, INTERVAL n DAY)` - Add/subtract days
+- `TIMESTAMP_ADD(ts, INTERVAL n HOUR)`, `TIMESTAMP_SUB(ts, INTERVAL n HOUR)` - Add/subtract time
+- `*_TRUNC` - Bucket by day/week/month/etc.
+
+**💡 Tip:** Use `DATE_TRUNC` for clean weekly/monthly aggregations!
 
 ---
 
-### 5) Safe casting + null handling (avoid pipeline breakage)
+## Safe Casting & Null Handling
+
+### Safe Operations to Avoid Pipeline Breakage
 
 ```sql
 SELECT
-  SAFE_CAST(value AS INT64) AS value_int, -- returns NULL instead of error
-  IFNULL(col, 0) AS col_filled,
-  COALESCE(col1, col2, 'unknown') AS first_non_null
+  SAFE_CAST(value AS INT64) AS value_int,  -- Returns NULL instead of error
+  IFNULL(col, 0) AS col_filled,            -- Replace NULL with 0
+  COALESCE(col1, col2, 'unknown') AS first_non_null  -- First non-NULL value
 FROM `project.dataset.table`;
 ```
 
-Also useful:
+**Useful safe functions:**
 
-- `SAFE_DIVIDE(a, b)` (returns NULL if `b = 0`)
-- `NULLIF(x, 0)` to prevent divide-by-zero
+- `SAFE_CAST(value AS TYPE)` - Returns NULL instead of error on cast failure
+- `SAFE_DIVIDE(a, b)` - Returns NULL if `b = 0` (prevents divide-by-zero)
+- `NULLIF(x, 0)` - Returns NULL if `x = 0` (useful before division)
+- `IFNULL(col, default)` - Replace NULL with default value
+- `COALESCE(col1, col2, ...)` - Return first non-NULL value
+
+**💡 Best Practice:** Use `SAFE_DIVIDE` instead of regular division to avoid errors!
 
 ---
 
-### 6) Arrays + structs (nested data) + UNNEST
+## Arrays & Structs (Nested Data)
+
+### UNNEST: Explode Arrays
 
 ```sql
--- Explode an array safely
+-- Expand order items into individual rows
 SELECT
   user_id,
   item.item_id,
@@ -241,8 +310,12 @@ FROM `project.dataset.orders` o,
 UNNEST(o.items) AS item;
 ```
 
+**What it does:** Expands nested arrays into individual rows for analysis.
+
+### Build Arrays/Structs
+
 ```sql
--- Build arrays/structs (for feature generation or export)
+-- Aggregate events into an array per user
 SELECT
   user_id,
   ARRAY_AGG(STRUCT(event_name, event_ts) ORDER BY event_ts DESC LIMIT 10) AS last_events
@@ -250,15 +323,17 @@ FROM `project.dataset.events`
 GROUP BY user_id;
 ```
 
-**Common UNNEST traps**
+**What it does:** Creates nested structures for feature generation or export.
 
-- `FROM t, UNNEST(arr)` is a cross join → row explosion if you don’t mean it.
-- If `arr` can be NULL, consider `UNNEST(IFNULL(arr, []))`.
+**⚠️ Common UNNEST Traps:**
 
-#### Aggregating back after UNNEST (common feature pattern)
+- `FROM t, UNNEST(arr)` is a cross join → row explosion if you don't mean it
+- If `arr` can be NULL, consider `UNNEST(IFNULL(arr, []))`
+
+### Aggregating After UNNEST
 
 ```sql
--- Example: total order value from nested items
+-- Calculate total order value from nested items
 SELECT
   order_id,
   SUM(item.price * item.qty) AS order_value
@@ -267,25 +342,37 @@ UNNEST(IFNULL(o.items, [])) AS item
 GROUP BY order_id;
 ```
 
+**What it does:** Aggregates nested data after expanding it. Common pattern for feature engineering.
+
 ---
 
-### 7) JSON + semi-structured fields
+## JSON & Semi-Structured Data
+
+### JSON Extraction
 
 ```sql
--- JSON extraction (function availability depends on type: JSON vs STRING)
+-- Extract values from JSON fields
 SELECT
   JSON_VALUE(payload, '$.user.id') AS user_id,
   JSON_QUERY(payload, '$.items') AS items_json
 FROM `project.dataset.events_json`;
 ```
 
+**Functions:**
+
+- `JSON_VALUE(json, path)` - Extract scalar value (string/number)
+- `JSON_QUERY(json, path)` - Extract JSON object/array
+
+**Note:** Function availability depends on whether the field is JSON type or STRING type.
+
 ---
 
-### 7.1) BigQuery scripting (procedural SQL) for pipelines
+## BigQuery Scripting
 
 Useful when you need multi-step SQL jobs, variables, and dynamic SQL:
 
 ```sql
+-- Declare variables and use them in queries
 DECLARE start_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY);
 DECLARE end_date DATE DEFAULT CURRENT_DATE();
 
@@ -304,12 +391,20 @@ EXECUTE IMMEDIATE FORMAT("""
 """, FORMAT_DATE('%Y%m%d', end_date), start_date, end_date);
 ```
 
+**Use cases:**
+
+- Parameterized queries for pipelines
+- Multi-step transformations
+- Dynamic table creation
+
 ---
 
-### 7.2) Query syntax power tools (often used in production SQL)
+## Query Power Tools
+
+### QUALIFY: Filter on Window Functions
 
 ```sql
--- QUALIFY lets you filter on window functions without nesting
+-- Keep latest row per user (simpler than nested query)
 SELECT
   user_id,
   updated_at,
@@ -318,20 +413,24 @@ FROM `project.dataset.users`
 QUALIFY rn = 1;
 ```
 
-**Explanation:** Filter to the latest row per user using a window function in a single query.
+**What it does:** Filters to the latest row per user using a window function in a single query. Much cleaner than nested queries!
+
+### SELECT * EXCEPT / REPLACE
 
 ```sql
--- SELECT * EXCEPT / REPLACE is common in feature pipelines
+-- Keep all columns but normalize one field
 SELECT
   * EXCEPT(raw_text),
   LOWER(raw_text) AS raw_text
 FROM `project.dataset.table`;
 ```
 
-**Explanation:** Keep all columns but normalize one field (avoid rewriting long SELECT lists).
+**What it does:** Avoids rewriting long SELECT lists when you only need to modify a few columns.
+
+### WITH (CTEs): Readable Multi-Step Transformations
 
 ```sql
--- WITH (CTEs) for readable multi-step transformations
+-- Structure complex logic into named steps
 WITH base AS (
   SELECT * FROM `project.dataset.events`
 ),
@@ -343,10 +442,12 @@ agg AS (
 SELECT * FROM agg;
 ```
 
-**Explanation:** Structure complex logic into named steps for readability and reuse.
+**What it does:** Makes complex queries readable by breaking them into logical steps.
+
+### PIVOT: Rows to Columns
 
 ```sql
--- PIVOT: turn rows into columns (handy for feature wide tables)
+-- Turn event types into columns (wide feature table)
 SELECT *
 FROM (
   SELECT user_id, event_name, 1 AS cnt
@@ -355,18 +456,24 @@ FROM (
 PIVOT (SUM(cnt) FOR event_name IN ('view', 'add_to_cart', 'purchase'));
 ```
 
-**Explanation:** Produce a wide per-user feature table with one column per event type.
+**What it does:** Produces a wide per-user feature table with one column per event type.
+
+### UNPIVOT: Columns to Rows
 
 ```sql
--- UNPIVOT: turn wide columns back into rows (useful for analysis/debug)
+-- Convert wide features back to long form
 SELECT user_id, feature_name, feature_value
 FROM `project.dataset.user_features_wide`
 UNPIVOT(feature_value FOR feature_name IN (f1, f2, f3));
 ```
 
-**Explanation:** Convert wide features back to long form for easier inspection and comparisons.
+**What it does:** Converts wide features back to long form for easier inspection and comparisons.
 
-### 8) Text manipulation + regex (common cleaning)
+---
+
+## Text Manipulation & Regex
+
+### Common Text Cleaning Patterns
 
 ```sql
 SELECT
@@ -376,12 +483,21 @@ SELECT
 FROM `project.dataset.users`;
 ```
 
+**Common functions:**
+
+- `LOWER()`, `UPPER()`, `TRIM()` - Case and whitespace normalization
+- `REGEXP_REPLACE(str, pattern, replacement)` - Replace matching patterns
+- `REGEXP_CONTAINS(str, pattern)` - Check if pattern matches
+- `REGEXP_EXTRACT(str, pattern)` - Extract matching substring
+
 ---
 
-### 9) Data quality checks (fast sanity queries)
+## Data Quality Checks
+
+### Quick Sanity Checks
 
 ```sql
--- Null rate + duplicates
+-- Check null rate and duplicates
 SELECT
   COUNT(*) AS rows,
   COUNTIF(user_id IS NULL) / COUNT(*) AS null_user_id_rate,
@@ -389,56 +505,66 @@ SELECT
 FROM `project.dataset.table`;
 ```
 
-**Explanation:** Quick sanity check on size, missing key rate, and unique-key cardinality.
+**What it does:** Quick sanity check on size, missing key rate, and unique-key cardinality.
+
+### Leakage Detection
 
 ```sql
--- Leakage check idea: ensure feature timestamp <= label timestamp
+-- Ensure feature timestamp <= label timestamp
 SELECT
   COUNTIF(feature_ts > label_ts) AS leakage_rows
 FROM `project.dataset.training_view`;
 ```
 
-**Explanation:** Detects “future info” leakage that can inflate offline metrics.
+**What it does:** Detects "future info" leakage that can inflate offline metrics. Should return 0!
 
 ---
 
-### 10) Performance + cost cheat sheet (BigQuery-specific)
+## Performance & Cost Optimization
 
-- **Partition your large fact tables** (often by date) and always filter on the partition column.
-- **Cluster on common filters/joins** (e.g., `user_id`, `account_id`) for faster scans.
-- Prefer **SELECT only needed columns** (avoid `SELECT *` on wide tables).
-- Avoid accidental blowups with `UNNEST` and many-to-many joins.
-- Use `EXPLAIN` to understand query stages.
+### BigQuery Performance Best Practices
 
-Common performance tips from the official guidance:
+**Key strategies:**
 
-- **Filter early** and avoid scanning unnecessary partitions.
-- Avoid **cross joins** unless intended (including accidental `UNNEST` explosions).
-- Prefer **approximate** aggregation functions where exactness isn’t required.
+1. **Partition your large fact tables** (often by date) and always filter on the partition column
+2. **Cluster on common filters/joins** (e.g., `user_id`, `account_id`) for faster scans
+3. **SELECT only needed columns** (avoid `SELECT *` on wide tables)
+4. **Avoid accidental blowups** with UNNEST and many-to-many joins
+5. **Use `EXPLAIN`** to understand query stages
 
-#### Partition pruning example (the pattern you want)
+**Common tips:**
+
+- **Filter early** and avoid scanning unnecessary partitions
+- Avoid **cross joins** unless intended (including accidental UNNEST explosions)
+- Prefer **approximate** aggregation functions where exactness isn't required
+
+### Partition Pruning Example
 
 ```sql
--- Good: partition filter (example assumes a DATE partition column named event_date)
+-- Good: partition filter (assumes DATE partition column named event_date)
 SELECT COUNT(*)
 FROM `project.dataset.events_partitioned`
 WHERE event_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE();
 ```
 
-**Explanation:** Filters by partition to reduce scanned bytes (faster and cheaper).
+**What it does:** Filters by partition to reduce scanned bytes (faster and cheaper).
 
-#### Cost/debug tools (practical)
+**💡 Cost Tip:** Always filter on partition columns in WHERE clauses!
 
-- Use `EXPLAIN` to understand stages.
-- Consider running queries with limits and narrowed partitions first to validate logic.
-- Prefer pre-aggregating expensive transforms into feature tables if reused.
+### Cost/Debug Tools
+
+- Use `EXPLAIN` to understand query stages
+- Run queries with limits and narrowed partitions first to validate logic
+- Prefer pre-aggregating expensive transforms into feature tables if reused
 
 ---
 
-### 11) BigQuery ML (BQML) SQL quick hits
+## BigQuery ML (BQML)
+
+### Create a Model
 
 ```sql
--- Create a model (example shape; pick the right model type for your use case)
+-- Create a logistic regression model
 CREATE OR REPLACE MODEL `project.dataset.my_model`
 OPTIONS(
   model_type='LOGISTIC_REG',
@@ -450,19 +576,29 @@ SELECT
 FROM `project.dataset.training_table`;
 ```
 
+**Common model types:**
+
+- `LOGISTIC_REG` - Binary classification
+- `LINEAR_REG` - Regression
+- `BOOSTED_TREE_CLASSIFIER` - Gradient boosting for classification
+- `BOOSTED_TREE_REGRESSOR` - Gradient boosting for regression
+
+### Predict with Model
+
 ```sql
--- Predict
+-- Generate predictions
 SELECT *
 FROM ML.PREDICT(MODEL `project.dataset.my_model`, (
   SELECT * FROM `project.dataset.eval_table`
 ));
 ```
 
-### 11.1) MERGE (upserts) for feature tables
+**💡 Exam Tip:** BQML doesn't support CNN or some advanced model types. Check the docs for supported models!
 
-Useful when you maintain a “latest features” table:
+### MERGE: Upserts for Feature Tables
 
 ```sql
+-- Maintain a "latest features" table with upserts
 MERGE `project.dataset.user_features` T
 USING `project.dataset.user_features_new` S
 ON T.user_id = S.user_id
@@ -475,32 +611,27 @@ WHEN NOT MATCHED THEN
   VALUES (S.user_id, S.last_30d_purchases, CURRENT_TIMESTAMP());
 ```
 
-**Explanation:** Upsert pattern to keep a “latest features” table current without full rebuilds.
+**What it does:** Upsert pattern to keep a "latest features" table current without full rebuilds.
 
-### 11.2) Views vs materialized views (when to use)
+### Views vs Materialized Views
 
-- **View**: saved query; recomputed each time (cheap to create; cost depends on underlying query).
-- **Materialized view**: precomputed results maintained by BigQuery; good for repeated aggregations (subject to constraints).
+| Type | Use Case |
+|------|----------|
+| **View** | Saved query; recomputed each time (cheap to create; cost depends on underlying query) |
+| **Materialized View** | Precomputed results maintained by BigQuery; good for repeated aggregations (subject to constraints) |
 
-Use cases:
+**When to use:**
 
-- **View**: feature logic you want centralized and always “latest”.
-- **Materialized view**: frequently queried aggregates that are expensive to recompute.
-
----
-
-### 12) “Exam-style” BigQuery SQL reminders
-
-- BigQuery is excellent for **feature aggregation** and large-scale analytics; it often beats moving data to Spark for simple transforms.
-- For time series, beware **random splits** and ensure your SQL joins respect time boundaries.
+- **View**: Feature logic you want centralized and always "latest"
+- **Materialized view**: Frequently queried aggregates that are expensive to recompute
 
 ---
 
-### 13) Stakeholder-ready KPI queries (examples you can put in a deck)
+## Stakeholder KPI Queries
 
-These are “business analyst” patterns: clean metrics, clear definitions, easy to explain.
+These are "business analyst" patterns: clean metrics, clear definitions, easy to explain.
 
-#### Revenue and orders by week (trend)
+### Revenue and Orders by Week (Trend)
 
 ```sql
 SELECT
@@ -513,9 +644,9 @@ GROUP BY week_start
 ORDER BY week_start;
 ```
 
-**Explanation:** Weekly trend line for orders and revenue over the last 12 weeks.
+**What it does:** Weekly trend line for orders and revenue over the last 12 weeks.
 
-#### Conversion funnel (simple event funnel)
+### Conversion Funnel
 
 ```sql
 WITH per_user AS (
@@ -537,9 +668,9 @@ SELECT
 FROM per_user;
 ```
 
-**Explanation:** One-row funnel summary with step counts and conversion rates (safe divide prevents errors).
+**What it does:** One-row funnel summary with step counts and conversion rates (safe divide prevents errors).
 
-#### Top customers (Pareto-style)
+### Top Customers (Pareto-Style)
 
 ```sql
 SELECT
@@ -552,16 +683,16 @@ ORDER BY revenue DESC
 LIMIT 50;
 ```
 
-**Explanation:** Identifies top revenue customers over the last 90 days (useful for retention/sales prioritization).
+**What it does:** Identifies top revenue customers over the last 90 days (useful for retention/sales prioritization).
 
 ---
 
-### 14) Real-world analytics & experimentation patterns
+## Real-World Analytics Patterns
 
-#### 14.1 Cohort retention (weekly)
+### Cohort Retention (Weekly)
 
 ```sql
--- Cohort users by first week seen, then compute retention by week offset.
+-- Cohort users by first week seen, then compute retention by week offset
 WITH first_seen AS (
   SELECT
     user_id,
@@ -595,14 +726,16 @@ GROUP BY cohort_week, week_offset
 ORDER BY cohort_week, week_offset;
 ```
 
-#### 14.2 A/B test (simple lift + confidence-friendly summaries)
+**What it does:** Tracks how many users from each cohort return in subsequent weeks.
+
+### A/B Test Analysis
 
 ```sql
--- Compute conversion rate by experiment group.
+-- Compute conversion rate by experiment group
 WITH per_user AS (
   SELECT
     user_id,
-    ANY_VALUE(variant) AS variant, -- 'control' or 'treatment'
+    ANY_VALUE(variant) AS variant,  -- 'control' or 'treatment'
     MAX(event_name = 'purchase') AS converted
   FROM `project.dataset.experiment_events`
   WHERE experiment_id = 'exp_123'
@@ -617,10 +750,12 @@ FROM per_user
 GROUP BY variant;
 ```
 
-#### 14.3 Sessionization (30-minute inactivity gap)
+**What it does:** Compares conversion rates between control and treatment groups.
+
+### Sessionization (30-Minute Inactivity Gap)
 
 ```sql
--- Assign session_id based on a 30-minute inactivity threshold.
+-- Assign session_id based on a 30-minute inactivity threshold
 WITH ordered AS (
   SELECT
     user_id,
@@ -648,10 +783,12 @@ sessions AS (
 SELECT * FROM sessions;
 ```
 
-#### 14.4 Incremental backfill into a partitioned table (date parameter)
+**What it does:** Groups events into sessions based on 30-minute inactivity gaps.
+
+### Incremental Backfill Pattern
 
 ```sql
--- Pattern: backfill one date (or a date range) into a partitioned table.
+-- Backfill one date (or a date range) into a partitioned table
 DECLARE run_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
 
 INSERT INTO `project.dataset.daily_features` (event_date, user_id, events)
@@ -664,9 +801,12 @@ WHERE DATE(event_ts) = run_date
 GROUP BY user_id;
 ```
 
-#### 14.5 Anomaly scan (day-over-day change for a KPI)
+**What it does:** Incrementally processes one day at a time for partitioned feature tables.
+
+### Anomaly Detection: Day-over-Day Change
 
 ```sql
+-- Detect day-over-day changes in revenue
 WITH daily AS (
   SELECT
     DATE(order_ts) AS d,
@@ -683,3 +823,22 @@ SELECT
 FROM daily
 ORDER BY d;
 ```
+
+**What it does:** Calculates day-over-day percentage changes to detect anomalies.
+
+---
+
+## Exam-Style Reminders
+
+**Key points for the ML Engineer exam:**
+
+- BigQuery is excellent for **feature aggregation** and large-scale analytics; it often beats moving data to Spark for simple transforms
+- For time series, beware **random splits** and ensure your SQL joins respect time boundaries
+- Always filter on **partition columns** to reduce costs
+- Use **SAFE_DIVIDE** and **SAFE_CAST** to avoid pipeline failures
+- Check for **data leakage** by ensuring feature timestamps ≤ label timestamps
+- **BQML doesn't support CNN** - use Vertex AI for deep learning models
+
+---
+
+**💡 Tip:** Use Ctrl+F (or Cmd+F) to quickly search this document for specific SQL patterns or functions!
