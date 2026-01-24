@@ -16,18 +16,18 @@ Google has published comprehensive whitepapers on GenAI and agents as part of th
 
 **Complete whitepaper list**:
 
-| Whitepaper                                                          | URL                                                                                      | Key Topics                                                                         |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Foundational LLM and Text Generation**                            | [Link](https://www.kaggle.com/whitepaper-foundational-llm-and-text-generation)          | LLM evolution, transformers, fine-tuning, inference acceleration, reasoning models |
-| **Embeddings and Vector Stores**                                    | [Link](https://www.kaggle.com/whitepaper-embeddings-and-vector-stores)                   | Embedding methods, vector search algorithms, RAG foundations                       |
-| **Generative AI Agents**                                            | [Link](https://www.kaggle.com/whitepaper-agents)                                         | Core components, production-grade frameworks, observability, domain knowledge    |
-| **Introduction to Agents**                                           | [Link](https://www.kaggle.com/whitepaper-introduction-to-agents)                          | Agent architectures, reasoning loops, tool use patterns                            |
-| **Context Engineering, Sessions and Memory**                       | [Link](https://www.kaggle.com/whitepaper-context-engineering-sessions-and-memory)       | Context management, session state, memory hierarchies, ADK context architecture  |
-| **Agent Tools and Interoperability with MCP**                      | [Link](https://www.kaggle.com/whitepaper-agent-tools-and-interoperability-with-mcp)       | MCP protocol, tool design, agent-to-tool communication                              |
-| **Agent Quality**                                                   | [Link](https://www.kaggle.com/whitepaper-agent-quality)                                  | Evaluation metrics, quality assurance, testing strategies                         |
-| **Prototype to Production**                                         | [Link](https://www.kaggle.com/whitepaper-prototype-to-production)                        | CI/CD, scaling, A2A interoperability, production deployment                        |
-| **Solving Domain-Specific Problems Using LLMs**                     | [Link](https://www.kaggle.com/whitepaper-solving-domains-specific-problems-using-llms)  | Specialized LLMs (SecLM, Med-PaLM), domain adaptation                              |
-| **Operationalizing Generative AI on Vertex AI using MLOps**        | [Link](https://www.kaggle.com/whitepaper-operationalizing-generative-ai-on-vertex-ai-using-mlops) | MLOps for GenAI, Vertex AI tooling, deployment pipelines                           |
+| Whitepaper                                                  | URL                                                                                               | Key Topics                                                                         |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Foundational LLM and Text Generation**                    | [Link](https://www.kaggle.com/whitepaper-foundational-llm-and-text-generation)                    | LLM evolution, transformers, fine-tuning, inference acceleration, reasoning models |
+| **Embeddings and Vector Stores**                            | [Link](https://www.kaggle.com/whitepaper-embeddings-and-vector-stores)                            | Embedding methods, vector search algorithms, RAG foundations                       |
+| **Generative AI Agents**                                    | [Link](https://www.kaggle.com/whitepaper-agents)                                                  | Core components, production-grade frameworks, observability, domain knowledge      |
+| **Introduction to Agents**                                  | [Link](https://www.kaggle.com/whitepaper-introduction-to-agents)                                  | Agent architectures, reasoning loops, tool use patterns                            |
+| **Context Engineering, Sessions and Memory**                | [Link](https://www.kaggle.com/whitepaper-context-engineering-sessions-and-memory)                 | Context management, session state, memory hierarchies, ADK context architecture    |
+| **Agent Tools and Interoperability with MCP**               | [Link](https://www.kaggle.com/whitepaper-agent-tools-and-interoperability-with-mcp)               | MCP protocol, tool design, agent-to-tool communication                             |
+| **Agent Quality**                                           | [Link](https://www.kaggle.com/whitepaper-agent-quality)                                           | Evaluation metrics, quality assurance, testing strategies                          |
+| **Prototype to Production**                                 | [Link](https://www.kaggle.com/whitepaper-prototype-to-production)                                 | CI/CD, scaling, A2A interoperability, production deployment                        |
+| **Solving Domain-Specific Problems Using LLMs**             | [Link](https://www.kaggle.com/whitepaper-solving-domains-specific-problems-using-llms)            | Specialized LLMs (SecLM, Med-PaLM), domain adaptation                              |
+| **Operationalizing Generative AI on Vertex AI using MLOps** | [Link](https://www.kaggle.com/whitepaper-operationalizing-generative-ai-on-vertex-ai-using-mlops) | MLOps for GenAI, Vertex AI tooling, deployment pipelines                           |
 
 **Why these matter for the exam**:
 
@@ -50,13 +50,14 @@ Source: [Generative AI Agents Whitepaper](https://www.kaggle.com/whitepaper-agen
 
 A production-grade agent framework must satisfy three critical requirements:
 
-| Requirement            | Description                                                                                                                                    | Why It Matters                                                                     |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| **Open**               | Allow plug-in of any model or tool to prevent vendor lock-in                                                                                   | Flexibility to switch models, integrate custom tools, avoid platform dependencies |
-| **Precise Control**    | Enable hybrid approach where non-deterministic LM reasoning is governed by hard-coded business rules                                           | Enforce policies, constraints, and deterministic logic where needed              |
-| **Observability**      | Generate detailed traces and logs exposing reasoning trajectory, internal monologue, tool choices, parameters, and results                      | Debug unexpected behavior, audit decisions, improve over time                    |
+| Requirement         | Description                                                                                                                | Why It Matters                                                                    |
+| ------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Open**            | Allow plug-in of any model or tool to prevent vendor lock-in                                                               | Flexibility to switch models, integrate custom tools, avoid platform dependencies |
+| **Precise Control** | Enable hybrid approach where non-deterministic LM reasoning is governed by hard-coded business rules                       | Enforce policies, constraints, and deterministic logic where needed               |
+| **Observability**   | Generate detailed traces and logs exposing reasoning trajectory, internal monologue, tool choices, parameters, and results | Debug unexpected behavior, audit decisions, improve over time                     |
 
 **The observability requirement is especially critical**: For unexpected agent behavior, a robust framework must expose:
+
 - **Reasoning trajectory**: The sequence of thoughts/decisions
 - **Internal monologue**: What the agent "thought" at each step
 - **Tool choices**: Which tools were selected and why
@@ -70,11 +71,13 @@ A production-grade agent framework must satisfy three critical requirements:
 Source: [Generative AI Agents Whitepaper](https://www.kaggle.com/whitepaper-agents)
 
 The **system prompt** (or core instructions) is the **agent's constitution** — it defines:
+
 - **Domain knowledge**: What the agent knows about the problem space
 - **Persona**: How the agent should behave, communicate, and make decisions
 - **Constraints**: What the agent must or must not do
 
 **Best practices**:
+
 - **Be explicit**: Clearly state the agent's role, expertise, and boundaries
 - **Include examples**: Few-shot examples in the system prompt guide behavior
 - **Separate concerns**: System instructions (constitution) vs user messages (requests)
@@ -84,11 +87,11 @@ The **system prompt** (or core instructions) is the **agent's constitution** —
 
 Agents exist on a spectrum from **tools** (augmenting existing processes) to **autonomous drivers** (dynamically adapting, planning, and executing tasks to achieve goals).
 
-| Position on Spectrum | Description                                                                 | Use Case Example                                    |
-| -------------------- | --------------------------------------------------------------------------- | --------------------------------------------------- |
-| **Tool**             | Agent augments existing processes; human remains in control                 | Code completion, content suggestions                 |
-| **Assistant**        | Agent handles routine tasks; human reviews/approves                         | Email triage, ticket routing                        |
-| **Autonomous Driver** | Agent plans and executes multi-step tasks independently                    | Research agent, automated workflow execution         |
+| Position on Spectrum  | Description                                                 | Use Case Example                             |
+| --------------------- | ----------------------------------------------------------- | -------------------------------------------- |
+| **Tool**              | Agent augments existing processes; human remains in control | Code completion, content suggestions         |
+| **Assistant**         | Agent handles routine tasks; human reviews/approves         | Email triage, ticket routing                 |
+| **Autonomous Driver** | Agent plans and executes multi-step tasks independently     | Research agent, automated workflow execution |
 
 **EXAM TIP:** Questions about "agent autonomy" or "human-in-the-loop" → consider where on this spectrum the use case falls.
 
@@ -96,12 +99,13 @@ Agents exist on a spectrum from **tools** (augmenting existing processes) to **a
 
 Source: [Generative AI Agents Whitepaper](https://www.kaggle.com/whitepaper-agents)
 
-| Approach              | Best For                                                          | Example                                                                 |
-| --------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **No-code builders**  | Speed and accessibility; empowering business users; simple agents | Vertex AI Agent Builder, low-code automation tools                      |
-| **Code-first**        | Complex, mission-critical systems; custom logic; deep control    | ADK (Agent Development Kit), LangGraph, custom Python/TypeScript agents |
+| Approach             | Best For                                                          | Example                                                                 |
+| -------------------- | ----------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| **No-code builders** | Speed and accessibility; empowering business users; simple agents | Vertex AI Agent Builder, low-code automation tools                      |
+| **Code-first**       | Complex, mission-critical systems; custom logic; deep control     | ADK (Agent Development Kit), LangGraph, custom Python/TypeScript agents |
 
 **When to choose code-first**:
+
 - You need **custom business logic** that can't be expressed in visual builders
 - You require **precise control** over agent behavior and error handling
 - You need **deep integration** with existing systems and APIs
@@ -120,6 +124,7 @@ This whitepaper aligns with ADK's context engineering approach (covered in § 7.
 #### The Context Problem
 
 As agents run longer, context explodes:
+
 - **Chat history** grows linearly with each turn
 - **Tool outputs** accumulate (API responses, database results, code execution)
 - **Intermediate reasoning** (chain-of-thought, planning steps) adds tokens
@@ -127,22 +132,22 @@ As agents run longer, context explodes:
 
 #### Context Engineering Solutions
 
-| Strategy              | How It Works                                                      | When to Use                                                              |
-| --------------------- | ----------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Session management** | Persistent conversation state across turns; structured event logs | Multi-turn conversations, workflow continuity                            |
-| **Memory hierarchies** | Short-term (session) vs long-term (cross-session) vs semantic memory | Agents that need to remember users, preferences, past decisions          |
-| **Artifact externalization** | Large data stored separately; referenced, not pasted into prompts | File processing, large API responses, intermediate computation results  |
-| **Context compilation** | Build working context from sources via explicit processors/pipelines | When you need fine-grained control over what the model sees              |
+| Strategy                     | How It Works                                                         | When to Use                                                            |
+| ---------------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| **Session management**       | Persistent conversation state across turns; structured event logs    | Multi-turn conversations, workflow continuity                          |
+| **Memory hierarchies**       | Short-term (session) vs long-term (cross-session) vs semantic memory | Agents that need to remember users, preferences, past decisions        |
+| **Artifact externalization** | Large data stored separately; referenced, not pasted into prompts    | File processing, large API responses, intermediate computation results |
+| **Context compilation**      | Build working context from sources via explicit processors/pipelines | When you need fine-grained control over what the model sees            |
 
 #### Memory Types (from whitepaper)
 
-| Memory Type           | Lifespan        | Content                                    | Access Pattern                    |
-| --------------------- | --------------- | ------------------------------------------ | --------------------------------- |
-| **Working memory**    | Current turn    | Immediate context for this reasoning step  | Always included                   |
-| **Session memory**    | Conversation     | Full conversation history, tool calls     | Sliding window or summarization   |
-| **Episodic memory**  | Cross-session   | Significant past interactions, outcomes   | Retrieved via similarity search   |
-| **Semantic memory**  | Permanent       | Facts, preferences, learned patterns       | Retrieved via embeddings          |
-| **Procedural memory** | Permanent       | Learned workflows, task-specific behaviors  | Triggered by task patterns        |
+| Memory Type           | Lifespan      | Content                                    | Access Pattern                  |
+| --------------------- | ------------- | ------------------------------------------ | ------------------------------- |
+| **Working memory**    | Current turn  | Immediate context for this reasoning step  | Always included                 |
+| **Session memory**    | Conversation  | Full conversation history, tool calls      | Sliding window or summarization |
+| **Episodic memory**   | Cross-session | Significant past interactions, outcomes    | Retrieved via similarity search |
+| **Semantic memory**   | Permanent     | Facts, preferences, learned patterns       | Retrieved via embeddings        |
+| **Procedural memory** | Permanent     | Learned workflows, task-specific behaviors | Triggered by task patterns      |
 
 **EXAM TIP:** Questions about "agent forgetting" or "maintaining context" → think **session management + memory hierarchies**.
 
@@ -154,13 +159,13 @@ Source: [Agent Tools and Interoperability with MCP Whitepaper](https://www.kaggl
 
 #### Tool Design Principles
 
-| Principle             | Description                                                                 | Example                                                                   |
-| --------------------- | --------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
-| **Idempotency**       | Tool calls should be safe to retry; same inputs → same outputs             | Database queries, read-only API calls                                     |
-| **Atomicity**         | Tool either succeeds completely or fails cleanly; no partial states        | File writes, transaction commits                                          |
-| **Observability**     | Tools should log inputs/outputs for debugging                               | All tool calls logged with timestamps, parameters, results                |
-| **Error handling**    | Tools should return structured errors, not crash                           | Return `{"error": "reason", "retryable": true}` instead of exceptions    |
-| **Scoped permissions** | Tools should operate with least-privilege credentials                       | Database tool uses read-only credentials unless write is explicitly needed |
+| Principle              | Description                                                         | Example                                                                    |
+| ---------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| **Idempotency**        | Tool calls should be safe to retry; same inputs → same outputs      | Database queries, read-only API calls                                      |
+| **Atomicity**          | Tool either succeeds completely or fails cleanly; no partial states | File writes, transaction commits                                           |
+| **Observability**      | Tools should log inputs/outputs for debugging                       | All tool calls logged with timestamps, parameters, results                 |
+| **Error handling**     | Tools should return structured errors, not crash                    | Return `{"error": "reason", "retryable": true}` instead of exceptions      |
+| **Scoped permissions** | Tools should operate with least-privilege credentials               | Database tool uses read-only credentials unless write is explicitly needed |
 
 #### MCP (Model Context Protocol) Deep Dive
 
@@ -196,20 +201,20 @@ MCP enables **standardized communication** between agents/hosts and tools/data s
 
 **MCP Server Types**:
 
-| Server Type | Purpose                                    | Example Implementations                          |
-| ---------- | ------------------------------------------ | ------------------------------------------------- |
-| **Tool Server** | Expose callable functions                 | GitHub MCP (create issues, PRs), Jira MCP        |
-| **Resource Server** | Provide access to data/files               | File system MCP, database MCP, Snowflake MCP    |
-| **Hybrid Server** | Both tools and resources                   | Most production MCP servers                       |
+| Server Type         | Purpose                      | Example Implementations                      |
+| ------------------- | ---------------------------- | -------------------------------------------- |
+| **Tool Server**     | Expose callable functions    | GitHub MCP (create issues, PRs), Jira MCP    |
+| **Resource Server** | Provide access to data/files | File system MCP, database MCP, Snowflake MCP |
+| **Hybrid Server**   | Both tools and resources     | Most production MCP servers                  |
 
 **MCP Security** (from whitepaper):
 
-| Security Concern        | MCP Solution                                                              |
-| ----------------------- | ------------------------------------------------------------------------- |
-| **Authentication**      | OAuth 2.1, API keys, or custom auth per server                            |
-| **Authorization**      | Resource indicators prevent token reuse attacks                            |
-| **Confused deputy**     | Explicit resource scoping prevents unauthorized access                     |
-| **Session hijacking**   | Short-lived tokens, secure transport (TLS)                                 |
+| Security Concern      | MCP Solution                                           |
+| --------------------- | ------------------------------------------------------ |
+| **Authentication**    | OAuth 2.1, API keys, or custom auth per server         |
+| **Authorization**     | Resource indicators prevent token reuse attacks        |
+| **Confused deputy**   | Explicit resource scoping prevents unauthorized access |
+| **Session hijacking** | Short-lived tokens, secure transport (TLS)             |
 
 **EXAM TIP:** Questions about "agent tool integration" or "standardized agent communication" → think **MCP protocol**.
 
@@ -220,6 +225,7 @@ MCP enables **standardized communication** between agents/hosts and tools/data s
 Source: [Agent Quality Whitepaper](https://www.kaggle.com/whitepaper-agent-quality)
 
 Agent evaluation differs from traditional ML evaluation because:
+
 - **Non-deterministic outputs**: Same input can produce different valid outputs
 - **Multi-step trajectories**: Success depends on the entire sequence of actions
 - **Tool interactions**: Quality depends on tool selection and parameter generation
@@ -227,35 +233,35 @@ Agent evaluation differs from traditional ML evaluation because:
 
 #### Evaluation Dimensions
 
-| Dimension              | What to Measure                                                           | Metrics                                                                    |
-| ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Task completion**    | Did the agent achieve the goal?                                          | Success rate, goal achievement score                                       |
-| **Correctness**        | Are the outputs factually accurate?                                       | Accuracy, factual consistency, grounding verification                     |
-| **Efficiency**        | How many steps/tokens did it take?                                       | Steps to completion, token usage, cost per task                            |
-| **Reliability**        | Does it work consistently?                                               | Success rate variance, failure modes, edge case handling                   |
-| **Safety**             | Does it avoid harmful outputs?                                            | Safety violation rate, guardrail triggers, content filter blocks           |
+| Dimension           | What to Measure                     | Metrics                                                          |
+| ------------------- | ----------------------------------- | ---------------------------------------------------------------- |
+| **Task completion** | Did the agent achieve the goal?     | Success rate, goal achievement score                             |
+| **Correctness**     | Are the outputs factually accurate? | Accuracy, factual consistency, grounding verification            |
+| **Efficiency**      | How many steps/tokens did it take?  | Steps to completion, token usage, cost per task                  |
+| **Reliability**     | Does it work consistently?          | Success rate variance, failure modes, edge case handling         |
+| **Safety**          | Does it avoid harmful outputs?      | Safety violation rate, guardrail triggers, content filter blocks |
 
 #### Evaluation Strategies
 
-| Strategy               | Description                                                               | When to Use                                                                 |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Unit testing**       | Test individual tool calls, prompt templates, parsing logic               | During development, CI/CD pipeline                                          |
-| **Integration testing** | Test agent + tools + external systems together                            | Before deployment, regression testing                                       |
-| **End-to-end testing** | Test complete agent workflows with realistic scenarios                     | Pre-production validation, acceptance testing                               |
-| **LLM-as-judge**      | Use another LLM to evaluate agent outputs                                 | When human evaluation is expensive; for large-scale evaluation               |
-| **Human evaluation**   | Human reviewers assess quality, correctness, safety                     | High-stakes decisions, final validation, edge cases                         |
-| **A/B testing**        | Compare agent versions in production                                     | Gradual rollouts, prompt optimization, model selection                      |
+| Strategy                | Description                                                 | When to Use                                                    |
+| ----------------------- | ----------------------------------------------------------- | -------------------------------------------------------------- |
+| **Unit testing**        | Test individual tool calls, prompt templates, parsing logic | During development, CI/CD pipeline                             |
+| **Integration testing** | Test agent + tools + external systems together              | Before deployment, regression testing                          |
+| **End-to-end testing**  | Test complete agent workflows with realistic scenarios      | Pre-production validation, acceptance testing                  |
+| **LLM-as-judge**        | Use another LLM to evaluate agent outputs                   | When human evaluation is expensive; for large-scale evaluation |
+| **Human evaluation**    | Human reviewers assess quality, correctness, safety         | High-stakes decisions, final validation, edge cases            |
+| **A/B testing**         | Compare agent versions in production                        | Gradual rollouts, prompt optimization, model selection         |
 
 #### Quality Metrics for Agents
 
-| Metric Category        | Specific Metrics                                                          |
-| ---------------------- | ------------------------------------------------------------------------- |
-| **Task success**        | Task completion rate, goal achievement score, user satisfaction          |
-| **Tool usage**         | Tool call accuracy, parameter correctness, tool selection precision       |
-| **Trajectory quality** | Steps to completion, backtracking frequency, plan adherence              |
-| **Response quality**   | Relevance, coherence, helpfulness, factual accuracy                       |
-| **Cost efficiency**    | Tokens per task, cost per successful task, tool call costs                |
-| **Safety**             | Guardrail trigger rate, harmful content rate, PII leakage rate            |
+| Metric Category        | Specific Metrics                                                    |
+| ---------------------- | ------------------------------------------------------------------- |
+| **Task success**       | Task completion rate, goal achievement score, user satisfaction     |
+| **Tool usage**         | Tool call accuracy, parameter correctness, tool selection precision |
+| **Trajectory quality** | Steps to completion, backtracking frequency, plan adherence         |
+| **Response quality**   | Relevance, coherence, helpfulness, factual accuracy                 |
+| **Cost efficiency**    | Tokens per task, cost per successful task, tool call costs          |
+| **Safety**             | Guardrail trigger rate, harmful content rate, PII leakage rate      |
 
 **EXAM TIP:** Questions about "agent evaluation" or "quality assurance" → think **multi-dimensional evaluation** (not just accuracy) + **trajectory analysis** + **safety metrics**.
 
@@ -271,25 +277,25 @@ This whitepaper provides a comprehensive guide to the **operational lifecycle of
 
 #### Key Challenges in Production
 
-| Challenge              | Description                                                               | Mitigation Strategy                                                          |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Reliability**        | Agents can fail unpredictably; tool calls may timeout or return errors   | Retries, fallbacks, circuit breakers, graceful degradation                  |
-| **Scalability**        | Agent workloads are bursty; context management is expensive               | Auto-scaling, context optimization, caching, async processing                |
-| **Observability**      | Non-deterministic behavior makes debugging difficult                       | Comprehensive logging, tracing, metrics, reasoning exposure                  |
-| **Cost control**       | LLM calls and tool usage can spiral without limits                        | Token budgets, cost tracking, rate limiting, model tier routing             |
-| **Security**          | Agents have expanded attack surface (prompt injection, tool misuse)       | Input/output guardrails, tool-level validation, IAM, audit logging          |
-| **Interoperability**   | Agents need to communicate with each other and external systems            | A2A protocol, MCP, standardized APIs, event-driven architecture              |
+| Challenge            | Description                                                            | Mitigation Strategy                                                |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Reliability**      | Agents can fail unpredictably; tool calls may timeout or return errors | Retries, fallbacks, circuit breakers, graceful degradation         |
+| **Scalability**      | Agent workloads are bursty; context management is expensive            | Auto-scaling, context optimization, caching, async processing      |
+| **Observability**    | Non-deterministic behavior makes debugging difficult                   | Comprehensive logging, tracing, metrics, reasoning exposure        |
+| **Cost control**     | LLM calls and tool usage can spiral without limits                     | Token budgets, cost tracking, rate limiting, model tier routing    |
+| **Security**         | Agents have expanded attack surface (prompt injection, tool misuse)    | Input/output guardrails, tool-level validation, IAM, audit logging |
+| **Interoperability** | Agents need to communicate with each other and external systems        | A2A protocol, MCP, standardized APIs, event-driven architecture    |
 
 #### CI/CD for Agents
 
 **Traditional CI/CD** → **Agent CI/CD**:
 
-| Stage                 | Traditional                                | Agent-Specific                                                               |
-| --------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| **Build**             | Compile code, run unit tests               | Validate prompts, test tool integrations, check context compilation         |
-| **Test**              | Unit tests, integration tests              | Agent trajectory tests, LLM-as-judge evaluation, safety checks               |
-| **Deploy**            | Blue/green, canary                         | Canary with eval metrics, shadow mode, A/B testing with quality gates        |
-| **Monitor**           | Latency, error rate, throughput            | Task success rate, tool call accuracy, cost per task, safety violations     |
+| Stage       | Traditional                     | Agent-Specific                                                          |
+| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
+| **Build**   | Compile code, run unit tests    | Validate prompts, test tool integrations, check context compilation     |
+| **Test**    | Unit tests, integration tests   | Agent trajectory tests, LLM-as-judge evaluation, safety checks          |
+| **Deploy**  | Blue/green, canary              | Canary with eval metrics, shadow mode, A/B testing with quality gates   |
+| **Monitor** | Latency, error rate, throughput | Task success rate, tool call accuracy, cost per task, safety violations |
 
 **Agent-specific CI/CD pipeline**:
 
@@ -351,12 +357,14 @@ Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-p
 **A2A** enables agents to communicate with each other regardless of programming language or runtime.
 
 **A2A Benefits**:
+
 - **Language-agnostic**: Python agent can call TypeScript agent
 - **Runtime-agnostic**: Cloud Run agent can call GKE agent
 - **Standardized protocol**: Consistent communication patterns
 - **Security**: Built-in authentication and authorization
 
 **A2A Use Cases**:
+
 - **Multi-agent workflows**: Specialized agents collaborate on complex tasks
 - **Agent composition**: Build complex systems from simpler agents
 - **Cross-platform integration**: Connect agents across different environments
@@ -373,30 +381,30 @@ This whitepaper covers the foundational concepts for RAG (Retrieval-Augmented Ge
 
 #### Embedding Methods
 
-| Method                 | Description                                                               | Use Case                                                                   |
-| ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Dense embeddings**   | Fixed-size vectors capturing semantic meaning                             | Semantic search, similarity matching                                       |
-| **Sparse embeddings**  | High-dimensional vectors with many zeros (BM25, SPLADE)                   | Keyword-based search, exact match retrieval                               |
-| **Hybrid search**      | Combine dense + sparse for best of both worlds                            | Production RAG systems (semantic + keyword matching)                      |
-| **Multimodal embeddings** | Embeddings for images, audio, video alongside text                        | Cross-modal retrieval (find images from text queries)                      |
+| Method                    | Description                                             | Use Case                                              |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------------------- |
+| **Dense embeddings**      | Fixed-size vectors capturing semantic meaning           | Semantic search, similarity matching                  |
+| **Sparse embeddings**     | High-dimensional vectors with many zeros (BM25, SPLADE) | Keyword-based search, exact match retrieval           |
+| **Hybrid search**         | Combine dense + sparse for best of both worlds          | Production RAG systems (semantic + keyword matching)  |
+| **Multimodal embeddings** | Embeddings for images, audio, video alongside text      | Cross-modal retrieval (find images from text queries) |
 
 #### Vector Search Algorithms
 
-| Algorithm              | Description                                                               | Trade-offs                                                                 |
-| ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Exact search**       | Linear scan or exhaustive comparison                                     | Accurate but slow for large datasets                                       |
-| **Approximate Nearest Neighbor (ANN)** | Fast approximate search with configurable accuracy                        | Speed vs accuracy trade-off (HNSW, IVF, LSH)                               |
-| **HNSW (Hierarchical Navigable Small World)** | Graph-based ANN with good accuracy/speed balance                          | Popular choice for production (used by many vector DBs)                    |
+| Algorithm                                     | Description                                        | Trade-offs                                              |
+| --------------------------------------------- | -------------------------------------------------- | ------------------------------------------------------- |
+| **Exact search**                              | Linear scan or exhaustive comparison               | Accurate but slow for large datasets                    |
+| **Approximate Nearest Neighbor (ANN)**        | Fast approximate search with configurable accuracy | Speed vs accuracy trade-off (HNSW, IVF, LSH)            |
+| **HNSW (Hierarchical Navigable Small World)** | Graph-based ANN with good accuracy/speed balance   | Popular choice for production (used by many vector DBs) |
 
 #### Vector Store Selection Criteria
 
-| Criterion              | Questions to Ask                                                          | Examples                                                                    |
-| ---------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| **Scale**              | How many vectors? How many dimensions?                                   | pgvector (millions), Milvus (billions)                                     |
-| **Latency**            | What's the acceptable query time?                                        | In-memory (fastest), disk-based (slower but cheaper)                        |
-| **Persistence**        | Do you need durability?                                                   | Redis (ephemeral), PostgreSQL + pgvector (durable)                        |
-| **Metadata filtering** | Do you need to filter by attributes?                                      | Weaviate, Qdrant (strong metadata support)                                  |
-| **Managed vs self-hosted** | Do you want to manage infrastructure?                                    | Pinecone (managed), self-hosted Milvus/Weaviate                            |
+| Criterion                  | Questions to Ask                       | Examples                                             |
+| -------------------------- | -------------------------------------- | ---------------------------------------------------- |
+| **Scale**                  | How many vectors? How many dimensions? | pgvector (millions), Milvus (billions)               |
+| **Latency**                | What's the acceptable query time?      | In-memory (fastest), disk-based (slower but cheaper) |
+| **Persistence**            | Do you need durability?                | Redis (ephemeral), PostgreSQL + pgvector (durable)   |
+| **Metadata filtering**     | Do you need to filter by attributes?   | Weaviate, Qdrant (strong metadata support)           |
+| **Managed vs self-hosted** | Do you want to manage infrastructure?  | Pinecone (managed), self-hosted Milvus/Weaviate      |
 
 **EXAM TIP:** Questions about "RAG implementation" or "vector search" → think **embedding method** (dense/sparse/hybrid) + **ANN algorithm** (HNSW) + **vector store** (managed vs self-hosted).
 
@@ -408,22 +416,22 @@ Source: [Solving Domain-Specific Problems Using LLMs Whitepaper](https://www.kag
 
 #### When to Use Domain-Specific Models
 
-| Scenario               | Approach                                                                  | Example Models                                                              |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **General tasks**      | Use foundation models (Gemini, GPT-4) with prompting/RAG                  | Most use cases                                                               |
-| **Specialized domain** | Fine-tune foundation model on domain data                                | Custom models for finance, legal, healthcare                                |
-| **Regulated industry** | Domain-specific models trained with safety/accuracy focus                 | SecLM (security), Med-PaLM (healthcare)                                      |
-| **Low-latency needs**  | Smaller, specialized models optimized for speed                           | Edge deployment, real-time applications                                     |
+| Scenario               | Approach                                                  | Example Models                               |
+| ---------------------- | --------------------------------------------------------- | -------------------------------------------- |
+| **General tasks**      | Use foundation models (Gemini, GPT-4) with prompting/RAG  | Most use cases                               |
+| **Specialized domain** | Fine-tune foundation model on domain data                 | Custom models for finance, legal, healthcare |
+| **Regulated industry** | Domain-specific models trained with safety/accuracy focus | SecLM (security), Med-PaLM (healthcare)      |
+| **Low-latency needs**  | Smaller, specialized models optimized for speed           | Edge deployment, real-time applications      |
 
 #### Domain Adaptation Strategies
 
-| Strategy               | Description                                                               | When to Use                                                                 |
-| ---------------------- | ------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
-| **Prompting**          | Use domain-specific prompts and few-shot examples                         | Quick iteration, no training data                                            |
-| **RAG**                | Ground model with domain knowledge base                                   | When you have domain documents/knowledge                                     |
-| **Fine-tuning**        | Train foundation model on domain-specific data                            | When you have labeled domain data, need domain terminology                   |
-| **LoRA/QLoRA**         | Efficient fine-tuning with parameter-efficient methods                    | When full fine-tuning is too expensive                                       |
-| **RLHF**               | Reinforcement Learning from Human Feedback for domain alignment           | When you need to align with domain-specific preferences/constraints         |
+| Strategy        | Description                                                     | When to Use                                                         |
+| --------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| **Prompting**   | Use domain-specific prompts and few-shot examples               | Quick iteration, no training data                                   |
+| **RAG**         | Ground model with domain knowledge base                         | When you have domain documents/knowledge                            |
+| **Fine-tuning** | Train foundation model on domain-specific data                  | When you have labeled domain data, need domain terminology          |
+| **LoRA/QLoRA**  | Efficient fine-tuning with parameter-efficient methods          | When full fine-tuning is too expensive                              |
+| **RLHF**        | Reinforcement Learning from Human Feedback for domain alignment | When you need to align with domain-specific preferences/constraints |
 
 **EXAM TIP:** Questions about "specialized models" or "domain expertise" → consider **fine-tuning** (if you have domain data) vs **RAG** (if you have domain documents) vs **specialized models** (SecLM, Med-PaLM for regulated industries).
 
@@ -435,25 +443,304 @@ Source: [Operationalizing Generative AI on Vertex AI using MLOps Whitepaper](htt
 
 #### What's Different for GenAI MLOps
 
-| Traditional MLOps      | GenAI MLOps                                                                |
-| ---------------------- | ------------------------------------------------------------------------- |
-| **Model versioning**   | Model weights + prompts + RAG configs + tool definitions                  |
-| **Evaluation**         | Accuracy metrics → Task success, quality scores, safety metrics           |
-| **Monitoring**         | Prediction accuracy → Task completion, tool usage, cost, safety          |
-| **Retraining**         | Data drift triggers → Prompt optimization, RAG updates, tool additions   |
-| **Deployment**         | Model endpoints → Agent endpoints with streaming, tool orchestration      |
+| Traditional MLOps    | GenAI MLOps                                                            |
+| -------------------- | ---------------------------------------------------------------------- |
+| **Model versioning** | Model weights + prompts + RAG configs + tool definitions               |
+| **Evaluation**       | Accuracy metrics → Task success, quality scores, safety metrics        |
+| **Monitoring**       | Prediction accuracy → Task completion, tool usage, cost, safety        |
+| **Retraining**       | Data drift triggers → Prompt optimization, RAG updates, tool additions |
+| **Deployment**       | Model endpoints → Agent endpoints with streaming, tool orchestration   |
 
 #### Vertex AI Tools for GenAI MLOps
 
-| Tool                  | Purpose                                                                   | Use Case                                                                   |
-| ---------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| **Vertex AI Pipelines** | Orchestrate GenAI workflows (data prep → RAG indexing → evaluation)      | End-to-end GenAI pipelines                                                 |
-| **Vertex AI Evaluation** | Evaluate agent quality, prompt performance, RAG accuracy                  | Pre-deployment validation, continuous monitoring                            |
-| **Vertex AI Model Garden** | Discover and deploy foundation models                                     | Model selection, version management                                        |
-| **Vertex AI Feature Store** | Manage features for traditional ML + embeddings for RAG                  | Unified feature management                                                 |
-| **Vertex AI Monitoring** | Monitor model performance, data drift, prediction quality                | Production observability                                                  |
+| Tool                        | Purpose                                                             | Use Case                                         |
+| --------------------------- | ------------------------------------------------------------------- | ------------------------------------------------ |
+| **Vertex AI Pipelines**     | Orchestrate GenAI workflows (data prep → RAG indexing → evaluation) | End-to-end GenAI pipelines                       |
+| **Vertex AI Evaluation**    | Evaluate agent quality, prompt performance, RAG accuracy            | Pre-deployment validation, continuous monitoring |
+| **Vertex AI Model Garden**  | Discover and deploy foundation models                               | Model selection, version management              |
+| **Vertex AI Feature Store** | Manage features for traditional ML + embeddings for RAG             | Unified feature management                       |
+| **Vertex AI Monitoring**    | Monitor model performance, data drift, prediction quality           | Production observability                         |
 
 **EXAM TIP:** Questions about "GenAI deployment" or "MLOps for agents" → think **Vertex AI Pipelines** (orchestration) + **Vertex AI Evaluation** (quality gates) + **Vertex AI Monitoring** (observability).
+
+---
+
+### 7.5.7 Agent Evaluation: Outside-In vs Inside-Out Framework
+
+Source: [Agent Quality Whitepaper](https://www.kaggle.com/whitepaper-agent-quality)
+
+Agent evaluation requires a strategic shift from traditional software testing. The **"Outside-In" evaluation hierarchy** provides a framework for assessing agent quality.
+
+#### The Outside-In View: End-to-End Evaluation (Black Box)
+
+**First question**: "Did the agent achieve the user's goal effectively?"
+
+**Metrics**:
+
+- **Task Success Rate**: Binary/graded score of whether the final output was correct, complete, and solved the user's problem
+- **User Satisfaction**: Direct feedback (thumbs up/down), CSAT scores
+- **Overall Quality**: Accuracy, completeness for quantitative tasks
+
+**EXAM TIP:** Questions about "agent quality" or "evaluation strategy" → start with **Outside-In** (end-to-end success) before diving into internal details.
+
+#### The Inside-Out View: Trajectory Evaluation (Glass Box)
+
+**When to use**: After identifying a failure, analyze the agent's execution trajectory.
+
+**Components to evaluate**:
+
+1. **LLM Planning (The "Thought")**: Core reasoning quality
+
+   - Hallucinations, off-topic responses, context pollution, repetitive loops
+
+2. **Tool Usage**: Selection and parameterization
+
+   - Wrong tool selection, missing tools, hallucinated tool names, incorrect parameters
+
+3. **Tool Response Interpretation**: Understanding tool outputs
+
+   - Misinterpreting data, failing to extract entities, not recognizing error states
+
+4. **RAG Performance**: Retrieval quality
+
+   - Irrelevant documents, outdated information, LLM ignoring retrieved context
+
+5. **Trajectory Efficiency**: Resource usage
+
+   - Excessive API calls, high latency, redundant efforts
+
+6. **Multi-Agent Dynamics**: Inter-agent communication
+   - Communication loops, role conflicts, coordination failures
+
+**EXAM TIP:** Questions about "debugging agent failures" or "trajectory analysis" → think **Inside-Out** evaluation (glass box).
+
+#### Trajectory Evaluation Metrics
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+| Metric              | Description                                                       | When to Use                                     |
+| ------------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
+| **Exact match**     | Trajectory perfectly mirrors ideal solution; no deviation         | Strict workflows (e.g., financial transactions) |
+| **In-order match**  | Core steps completed in order; extra actions allowed              | Flexible workflows with required sequence       |
+| **Any-order match** | All necessary actions included; order doesn't matter              | Parallelizable tasks                            |
+| **Precision**       | How many tool calls in predicted trajectory are relevant/correct? | Measuring tool call accuracy                    |
+| **Recall**          | How many essential tool calls from reference are captured?        | Measuring completeness                          |
+| **Single-tool use** | Is a specific action within the agent's trajectory?               | Testing if agent learned to use a tool          |
+
+**EXAM TIP:** Questions about "trajectory evaluation" → consider **precision/recall** for tool usage, **exact match** for strict workflows, **any-order match** for flexible tasks.
+
+---
+
+### 7.5.8 Agent Security: Identity, Policies, and Guard Models
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Agent Identity: A New Class of Principal
+
+Agents introduce a **third category of principal** (beyond users and service accounts):
+
+| Principal Entity     | Authentication/Verification                                | Notes                                                   |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| **Users**            | OAuth, SSO                                                 | Human actors with full autonomy                         |
+| **Agents**           | SPIFFE (Secure Production Identity Framework for Everyone) | Agents have delegated authority, act on behalf of users |
+| **Service Accounts** | IAM                                                        | Applications/containers, fully deterministic            |
+
+**Key concept**: Each agent must have a **cryptographically verifiable identity** distinct from:
+
+- The user who invoked it
+- The developer who built it
+
+**SPIFFE** provides:
+
+- Verifiable identity for agents
+- Least-privilege permissions per agent
+- Contained blast radius if an agent is compromised
+
+**EXAM TIP:** Questions about "agent authentication" or "agent identity" → think **SPIFFE** for verifiable agent identity.
+
+#### Policies to Constrain Access
+
+**Policies** are authorization (AuthZ) rules that limit agent capabilities:
+
+- **Tool-level policies**: Which APIs/tools can this agent use?
+- **Data access policies**: Which databases/documents can this agent read?
+- **Action policies**: What actions are allowed/forbidden (e.g., "no purchases over $100")?
+
+**Best practice**: Apply **principle of least privilege**—grant only the minimum capabilities needed.
+
+**EXAM TIP:** Questions about "agent authorization" or "limiting agent actions" → think **policies** + **least privilege**.
+
+#### Defense in Depth: Guardrails and Guard Models
+
+**Hybrid security approach**:
+
+1. **Deterministic Guardrails** (Layer 1):
+
+   - Hardcoded rules outside the model's reasoning
+   - Policy engine blocking actions (e.g., "no purchases > $100")
+   - Provides predictable, auditable limits
+
+2. **Reasoning-Based Defenses** (Layer 2):
+   - **Guard models**: Specialized smaller models acting as security analysts
+   - Examine agent's proposed plan before execution
+   - Flag risky or policy-violating steps for review
+
+**EXAM TIP:** Questions about "agent security" or "preventing harmful actions" → think **defense in depth**: deterministic guardrails + guard models.
+
+---
+
+### 7.5.9 Agent Interoperability: A2A, AP2, and x402
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Agent2Agent (A2A) Protocol
+
+**A2A** enables agents to communicate with each other regardless of language or runtime.
+
+**Key components**:
+
+- **Agent Card**: JSON "business card" advertising agent capabilities, endpoint, security credentials
+- **Task-oriented architecture**: Asynchronous "tasks" instead of simple request-response
+- **Streaming updates**: Long-running connections for progress updates
+
+**Use cases**:
+
+- Multi-agent workflows
+- Agent composition (building complex systems from simpler agents)
+- Cross-platform integration
+
+**EXAM TIP:** Questions about "agent-to-agent communication" → think **A2A protocol** + **Agent Cards** for discovery.
+
+#### Agent Payments Protocol (AP2)
+
+**AP2** is an open protocol for agentic commerce.
+
+**Key features**:
+
+- **Cryptographically-signed mandates**: Verifiable proof of user intent
+- **Non-repudiable audit trail**: Every transaction is logged and verifiable
+- **Delegated authority**: Agents can browse, negotiate, and transact on behalf of users
+
+**Use case**: Enables agents to securely make purchases or transactions on behalf of users.
+
+**EXAM TIP:** Questions about "agent transactions" or "agent payments" → think **AP2** for secure, auditable agent commerce.
+
+#### x402 Payment Protocol
+
+**x402** uses HTTP 402 "Payment Required" status code for machine-to-machine micropayments.
+
+**Key features**:
+
+- **Frictionless micropayments**: Pay-per-use API access or digital content
+- **No complex accounts**: No subscriptions or account management needed
+- **Machine-to-machine**: Designed for agent-to-service payments
+
+**Use case**: Agent pays for API access or digital content on a per-use basis.
+
+**EXAM TIP:** Questions about "micropayments" or "pay-per-use agent services" → think **x402** protocol.
+
+---
+
+### 7.5.10 Multi-Agent Patterns: Diamond, Peer-to-Peer, Collaborative, Adaptive Loop
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+Beyond the basic patterns (Sequential, Hierarchical, Router, Supervisor), production multi-agent systems use additional patterns:
+
+| Pattern             | Description                                                                               | Use Case Example                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Diamond Pattern** | Coordinator delegates to multiple agents in parallel; responses converge to single output | Research team: multiple agents research different angles, coordinator synthesizes |
+| **Peer-to-Peer**    | Agents communicate directly without central coordinator; decentralized coordination       | Swarm intelligence, distributed problem-solving                                   |
+| **Collaborative**   | Agents share information and resources; work together toward common goal                  | Team of researchers contributing expertise                                        |
+| **Adaptive Loop**   | System adapts agent selection/routing based on performance feedback                       | Self-optimizing agent workflows                                                   |
+
+**EXAM TIP:** Questions about "parallel agent execution" → think **Diamond Pattern**. Questions about "decentralized agents" → think **Peer-to-Peer**.
+
+---
+
+### 7.5.11 Agentic RAG: Advanced Retrieval Patterns
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+**Agentic RAG** extends traditional RAG with autonomous retrieval agents that actively refine their search.
+
+#### Key Capabilities
+
+| Capability                        | Description                                                         | Benefit                                 |
+| --------------------------------- | ------------------------------------------------------------------- | --------------------------------------- |
+| **Context-Aware Query Expansion** | Generate multiple query refinements instead of single search pass   | More comprehensive, relevant results    |
+| **Multi-Step Reasoning**          | Decompose complex queries into logical steps; retrieve sequentially | Better handling of multi-part questions |
+| **Adaptive Source Selection**     | Dynamically select best knowledge sources based on context          | Optimal retrieval from multiple sources |
+| **Validation and Correction**     | Evaluator agents cross-check retrieved knowledge for hallucinations | Higher accuracy, reduced errors         |
+
+**EXAM TIP:** Questions about "improving RAG accuracy" or "multi-step retrieval" → think **Agentic RAG** with query expansion + validation.
+
+---
+
+### 7.5.12 Agent-Human Interaction: Computer Use, Live Mode, UI Control
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Computer Use (UI Control)
+
+**Computer use** enables agents to control user interfaces directly.
+
+**Capabilities**:
+
+- Navigate to pages
+- Highlight buttons
+- Pre-fill forms
+- Click elements
+
+**Implementation options**:
+
+- **MCP UI**: Tools that control UI via Model Context Protocol
+- **AG UI**: Specialized UI messaging systems syncing client state with agent
+- **A2UI**: Generation of bespoke interfaces
+
+**EXAM TIP:** Questions about "agent controlling UI" or "browser automation" → think **Computer Use** + **MCP UI** or **AG UI**.
+
+#### Live Mode (Multimodal Real-Time Communication)
+
+**Live Mode** enables bidirectional streaming for real-time, multimodal agent interaction.
+
+**Capabilities**:
+
+- **Bidirectional streaming**: User can speak to agent and interrupt it
+- **Multimodal input**: Camera and microphone access
+- **Low-latency speech**: Generated speech at human conversation latency
+
+**Use cases**:
+
+- Hands-free guidance (e.g., technician repairing equipment)
+- Real-time style advice (e.g., shopper getting fashion recommendations)
+
+**Technology**: **Gemini Live API** enables this capability.
+
+**EXAM TIP:** Questions about "real-time agent interaction" or "multimodal agents" → think **Live Mode** + **Gemini Live API**.
+
+---
+
+### 7.5.13 Contracts and Contract Lifecycle (Multi-Agent Systems)
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+In multi-agent systems, **contracts** define agreements between agents for task delegation and execution.
+
+#### Contract Lifecycle
+
+1. **Contract Creation**: Coordinator agent creates contract defining task, requirements, constraints
+2. **Contract Negotiation**: Agents negotiate terms (deadlines, resources, quality standards)
+3. **Contract Execution**: Agent executes task according to contract
+4. **Contract Feedback**: Performance evaluation, payment (if applicable), contract closure
+
+#### Subcontracts
+
+Agents can create **subcontracts**—delegating portions of their contract to other agents.
+
+**Example**: Project Manager Agent receives contract to "launch product"; creates subcontracts for MarketResearchAgent, MarketingAgent, WebDevAgent.
+
+**EXAM TIP:** Questions about "agent task delegation" or "multi-agent coordination" → think **contracts** + **subcontracts** for structured task distribution.
 
 ---
 
@@ -721,6 +1008,119 @@ Example table: agent and LLM application frameworks
 | Typed/validated “agent code” | PydanticAI                                            |
 | Classic assistants/chatbots  | Rasa                                                  |
 | Vendor-native                | OpenAI (Agents/SDK patterns), Semantic Kernel, Vellum |
+
+---
+
+### 7.5.2 Taxonomy of Agentic Systems: Level 0-4
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+Understanding agent capabilities helps architects and product leaders scope what kind of agent to build. Agents can be classified into five levels, each building on the capabilities of the last:
+
+| Level | Name                          | Capabilities                                                                                                                  | Example Use Case                                                   |
+| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **0** | **Core Reasoning System**     | LM operates in isolation; responds based on pre-trained knowledge only; no tools, memory, or real-time interaction            | Explaining concepts, planning approaches (but can't execute)       |
+| **1** | **Connected Problem-Solver**  | LM + tools; can access real-time information via APIs, databases, RAG; answers questions requiring current data               | Weather agent, flight booking agent, RAG-powered Q&A               |
+| **2** | **Strategic Problem-Solver**  | Level 1 + context engineering; actively selects/manages relevant information; creates multi-step plans; proactive assistance  | Travel planning agent, research assistant, document analysis agent |
+| **3** | **Collaborative Multi-Agent** | Multiple specialized agents work together; coordinator delegates tasks; agents treat other agents as tools; division of labor | Project management agent team, enterprise workflow automation      |
+| **4** | **Self-Evolving System**      | Level 3 + autonomous creation; agents can create new tools/agents dynamically; system expands capabilities on the fly         | Research frontier (not yet production-ready)                       |
+
+#### Level 0: The Core Reasoning System
+
+**What it is**: The LM in its most basic form—a reasoning engine without tools, memory, or real-time awareness.
+
+**Strengths**:
+
+- Extensive pre-trained knowledge
+- Can explain concepts and plan problem-solving approaches
+- Fast, no external dependencies
+
+**Limitations**:
+
+- No access to real-time information
+- Cannot answer questions about events after training cutoff
+- Cannot interact with external systems
+
+**Example**: Asking "What was the Yankees game score last night?" → Cannot answer (game happened after training data).
+
+**EXAM TIP:** Questions about "static knowledge" or "pre-trained only" → think **Level 0**.
+
+#### Level 1: The Connected Problem-Solver
+
+**What it is**: Level 0 + tools. The agent can now access real-time information and interact with external systems.
+
+**Key capability**: Uses the 5-step loop (Get Mission → Scan Scene → Think → Act → Observe) to answer questions requiring current data.
+
+**Example**: Same Yankees question → Agent uses Google Search API → Retrieves score → Answers correctly.
+
+**Common tools**:
+
+- **RAG**: Query vector databases or knowledge bases
+- **APIs**: Weather, flights, databases
+- **NL2SQL**: Query structured databases
+
+**EXAM TIP:** Questions about "real-time data" or "external APIs" → think **Level 1**.
+
+#### Level 2: The Strategic Problem-Solver
+
+**What it is**: Level 1 + context engineering. The agent actively manages information, creates multi-step plans, and provides proactive assistance.
+
+**Key capability**: **Context engineering**—selecting, packaging, and managing the most relevant information for each step.
+
+**Example**: "Find a coffee shop halfway between my office and my client's office"
+
+1. **Think**: "I need the halfway point"
+   - **Act**: Call Maps API with both addresses
+   - **Observe**: "Halfway point is Millbrae, CA"
+2. **Think**: "Now find coffee shops in Millbrae with 4+ stars"
+   - **Act**: Call Places API with refined query
+   - **Observe**: "Millbrae Coffee, The Daily Grind"
+3. **Think**: "Synthesize and present results"
+
+**Strategic planning enables**:
+
+- Multi-step task decomposition
+- Proactive assistance (e.g., reading email → adding calendar event)
+- Context-aware tool selection
+
+**EXAM TIP:** Questions about "multi-step planning" or "proactive assistance" → think **Level 2**.
+
+#### Level 3: The Collaborative Multi-Agent System
+
+**What it is**: Multiple specialized agents working together. Agents treat other agents as tools.
+
+**Key pattern**: **Division of labor**—complex tasks segmented into sub-tasks, each handled by a specialist.
+
+**Example**: "Launch our new 'Solaris' headphones"
+
+- **Project Manager Agent** delegates to:
+  - **MarketResearchAgent**: "Analyze competitor pricing"
+  - **MarketingAgent**: "Draft press release"
+  - **WebDevAgent**: "Generate product page HTML"
+
+**Benefits**:
+
+- Each agent is simpler, focused, easier to build/test/maintain
+- Ideal for dynamic or long-running business processes
+- Mirrors human organizational structures
+
+**EXAM TIP:** Questions about "specialized agents" or "agent teams" → think **Level 3**.
+
+#### Level 4: The Self-Evolving System
+
+**What it is**: Level 3 + autonomous creation. Agents can dynamically create new tools or agents to fill capability gaps.
+
+**Key capability**: **Meta-reasoning**—agents identify gaps and create solutions autonomously.
+
+**Example**: Project Manager Agent realizes it needs social media monitoring but no such tool exists:
+
+1. **Think (Meta-Reasoning)**: "I need to track 'Solaris' social media buzz, but I lack the capability"
+2. **Act (Autonomous Creation)**: Invokes `AgentCreator` tool with mission: "Build agent that monitors social media for 'Solaris headphones', performs sentiment analysis, reports daily summary"
+3. **Observe**: New `SentimentAnalysisAgent` created, tested, added to team
+
+**Status**: Research frontier; not yet production-ready.
+
+**EXAM TIP:** Questions about "agents creating agents" or "autonomous capability expansion" → think **Level 4** (likely research/experimental).
 
 ---
 
