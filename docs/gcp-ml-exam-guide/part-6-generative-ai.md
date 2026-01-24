@@ -356,6 +356,28 @@ flowchart LR
 - “Drive innovation” × “Model tuning” → adapt a model for a niche domain (with eval gates).
 - “Employee productivity” × “Workspace with Gemini” → meeting notes + action items + follow-up drafts.
 
+#### Choosing a model (practical selection checklist)
+
+When picking a model for a GenAI use case, start with the **requirements** (not the hype). Common factors:
+
+- **Modality**: what inputs/outputs do you need (text, image, audio, video, multimodal)?
+- **Context window**: will the model need long documents, many retrieved chunks, or multi-turn history?
+- **Security**: data handling constraints, access controls, isolation needs, policy requirements.
+- **Availability and reliability**: production uptime, behavior under load, resilience/DR expectations.
+- **Cost**: per-request cost + overall system cost (retrieval, storage, logging, evals, monitoring).
+- **Performance**: quality/latency tradeoffs for your task (accuracy, hallucination rate, latency).
+- **Fine-tuning and customization**: do you need prompting/RAG only, or tuning for a domain/style?
+- **Ease of integration**: APIs/SDKs, tool calling/structured output, observability hooks, deployment surface.
+
+**Google Cloud’s ML models (via Vertex AI)**
+
+Vertex AI can help you discover/deploy/customize models, including Google models, third-party proprietary models, and open models. In Google’s suite:
+
+- **Gemini**: **multimodal** model family (text + images + audio + video) for complex understanding, conversational AI, and content generation.
+- **Gemma**: **lightweight, open** model family (built on research/tech behind Gemini) that can be a good fit for local deployments and specialized apps.
+- **Imagen**: **text-to-image diffusion** model for high-quality image generation/editing from prompts.
+- **Veo**: **video generation** model (from text prompts and/or still images) for generating video content.
+
 #### Keeping humans at the forefront (augmentation vs automation)
 
 As you adopt GenAI, the “best” use cases usually **augment human strategic work** while **automating repetitive work**.

@@ -203,6 +203,9 @@
 - Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
 - Semi-supervised learning: combine a small labeled set with a large unlabeled set (common when labels are expensive)
 - Diffusion models: generate media by iteratively denoising noise into structured outputs (common for image generation)
+- Model selection factors: modality, context window, security, availability/reliability, cost, performance, tuning/customization, ease of integration
+- Gemini vs Gemma: Gemini = multimodal model family; Gemma = lightweight open models for local/specialized deployments
+- Imagen vs Veo: Imagen = text-to-image diffusion; Veo = text/image-to-video generation
 - Lifecycle mapping: ingest (Pub/Sub/GCS/SQL/Spanner) → prepare (BigQuery + Data Catalog) → train/deploy/manage (Vertex AI + Pipelines + monitoring/versioning + IAM)
 - Consistency matters: inconsistent formats/labels confuse models and hinder learning (it’s not “just a data engineering issue”)
 - ML lifecycle order (core): data ingestion+preparation → model training → model deployment → model management
