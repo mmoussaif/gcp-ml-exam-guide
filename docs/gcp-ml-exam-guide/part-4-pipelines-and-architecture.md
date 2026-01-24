@@ -1777,7 +1777,366 @@ test_accuracy = accuracy_score(y_test, test_pred)
 
 **Best Trade-off**: In many cases, manual exploration guided by human intuition combined with automated hyperparameter tuning offers the best trade-off.
 
-**EXAM TIP:** Questions about "hyperparameter tuning" → think **Grid search** (exhaustive, combinatorial explosion), **Random search** (more efficient, explores high-dimensional spaces), **Bayesian optimization** (intelligent search, fewer runs). Questions about "overfitting in HPO" → think **use cross-validation**, **keep test set untouched**, **nested CV** (unbiased but expensive). Questions about "model selection" → think **start simple**, **four phases** (heuristics → simple ML → optimize → complex), **evaluate trade-offs** (accuracy vs latency, memory, interpretability).
+**F. Fine-Tuning and Transfer Learning**:
+
+**What is Fine-Tuning**: A powerful optimization technique is to leverage pre-trained models and fine-tune them on your task. Fine-tuning is a subtype of transfer learning and is especially prevalent in deep learning for computer vision and natural language processing.
+
+**Why Fine-Tuning Works**:
+
+- **Pre-trained models have learned general patterns**: Edges and textures in images; syntax and semantic structures in language—that are relevant to many tasks
+- **Fine-tuning adapts these general features** to the specifics of your task
+- **It's like starting a new problem with a head start**: Because a lot of low-level learning is already done
+
+**Examples**:
+
+- **Vision**: Models like ResNet or EfficientNet pre-trained on ImageNet have learned rich feature representations. Instead of training a CNN from scratch on your image dataset, you can take a pre-trained network and fine-tune it (or even just use it as a fixed feature extractor). This often yields better performance with much less data and compute
+- **NLP**: Large language models (BERT, GPT, etc.) are pre-trained on vast corpora. Fine-tuning them on a specific text classification or QA task has become the standard because it dramatically boosts performance compared to training from zero
+
+**Typical Transfer Learning + Fine-Tuning Pipeline**:
+
+**1. Start from a Pre-Trained Model**:
+
+- **Example**: ResNet pre-trained on ImageNet, or BERT pre-trained on large corpora
+
+**2. Adapt the Output Layer(s)**:
+
+- Replace the classifier head to match your task (e.g., 1000 → 10 classes, or a sentiment head with 2 outputs)
+
+**3. Freeze Most Layers at First**:
+
+- Train only the new head (or top few layers). This lets the new classifier align without disturbing the rich pre-trained representations
+- **Steps 1–3 = Transfer Learning** (feature extraction mode)
+
+**4. Unfreeze Some or All Layers Gradually**:
+
+- Do it with a much smaller learning rate, so the backbone weights are fine-tuned gently for the new task
+- **Steps 4–5 = Fine-Tuning**
+
+**5. Monitor Validation Performance**:
+
+- Because the base model already learned good features, you usually need only a few epochs to adapt
+
+**Example: Fine-Tuning BERT for Sentiment Classification**:
+
+```python
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
+from transformers import DataCollatorWithPadding
+from datasets import load_dataset
+import evaluate
+
+# Load dataset (SST-2: sentiment positive/negative)
+dataset = load_dataset("glue", "sst2")
+
+# Load tokenizer and model (small, fast BERT variant)
+tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+model = AutoModelForSequenceClassification.from_pretrained(
+    "distilbert-base-uncased",
+    num_labels=2
+)
+
+# Tokenize dataset
+def tokenize_fn(examples):
+    return tokenizer(examples["sentence"], truncation=True)
+
+tokenized_dataset = dataset.map(tokenize_fn, batched=True, remove_columns=["sentence", "idx"])
+
+# Phase 1: Transfer Learning (Freeze base, train head only)
+for param in model.base_model.parameters():
+    param.requires_grad = False  # Freeze DistilBERT base
+
+# Training arguments (phase 1: head-only)
+training_args_phase1 = TrainingArguments(
+    output_dir="sst2-distilbert",
+    learning_rate=5e-4,  # Relatively high LR for small head
+    per_device_train_batch_size=32,
+    per_device_eval_batch_size=64,
+    num_train_epochs=1,
+    eval_strategy="epoch",
+    logging_steps=50,
+    fp16=torch.cuda.is_available(),
+    seed=42
+)
+
+# Build Trainer (phase 1)
+trainer_phase1 = Trainer(
+    model=model,
+    args=training_args_phase1,
+    train_dataset=tokenized_dataset["train"].select(range(8000)),
+    eval_dataset=tokenized_dataset["validation"],
+    data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
+    compute_metrics=lambda eval_pred: {"accuracy": evaluate.load("accuracy").compute(
+        predictions=np.argmax(eval_pred.predictions, axis=1),
+        references=eval_pred.label_ids
+    )["accuracy"]}
+)
+
+# Train (phase 1): Optimizes only classification head
+trainer_phase1.train()
+
+# Phase 2: Fine-Tuning (Selectively unfreeze top layers)
+# Freeze everything again
+for param in model.parameters():
+    param.requires_grad = False
+
+# Unfreeze top 2 transformer layers only
+for name, param in model.named_parameters():
+    if "transformer.layer.4" in name or "transformer.layer.5" in name:
+        param.requires_grad = True
+
+# Training arguments (phase 2: fine-tune with smaller LR)
+training_args_phase2 = TrainingArguments(
+    **training_args_phase1.to_dict(),
+    learning_rate=2e-5  # Much smaller LR when unfreezing transformer layers
+)
+
+# Rebuild Trainer (phase 2)
+trainer_phase2 = Trainer(
+    model=model,
+    args=training_args_phase2,
+    train_dataset=tokenized_dataset["train"].select(range(8000)),
+    eval_dataset=tokenized_dataset["validation"],
+    data_collator=DataCollatorWithPadding(tokenizer=tokenizer),
+    compute_metrics=lambda eval_pred: {"accuracy": evaluate.load("accuracy").compute(
+        predictions=np.argmax(eval_pred.predictions, axis=1),
+        references=eval_pred.label_ids
+    )["accuracy"]}
+)
+
+# Train (phase 2): Updates unfrozen transformer layers + head
+trainer_phase2.train()
+
+# Final evaluation
+trainer_phase2.evaluate()
+```
+
+**Key Points**:
+
+- **Hybrid approach**: Phase 1 is head-only training (transfer learning in feature-extraction style). Phase 2 is selective unfreezing (fine-tuning)
+- **Benefits**: With fine-tuning, it's not unusual to see that within one or two epochs, the model reaches good accuracies, since most features were already learned
+- **Jump-start**: This can be the difference between success and failure when data is limited
+
+**Best Practices for Fine-Tuning**:
+
+**1. Selective Unfreezing**:
+
+- You don't always need to unfreeze all layers. You can get substantive results by only training the final few or selective layers compared to full fine-tuning
+- **If dataset is small**: Training fewer parameters reduces the overfitting risk
+
+**2. Gradual Unfreezing**:
+
+- When unfreezing, unfreeze gradually (layer by layer, starting from the top) and monitor to see if it helps
+- **Technique**: Called gradual unfreezing
+
+**3. Discriminative Fine-Tuning**:
+
+- When layers are unfrozen, you don't have to use the same learning rate across the model
+- **Earlier layers**: Get a smaller learning rate (protects lower-level features like embeddings)
+- **Later layers and classifier head**: Get a higher learning rate (allows higher layers to adapt more quickly)
+
+**4. Much Smaller Learning Rate**:
+
+- Always use a much smaller learning rate when fine-tuning the pre-trained backbone
+- **Reason**: Avoids overwriting the useful knowledge encoded during pre-training
+
+**5. Early Stopping**:
+
+- Often used in fine-tuning because it's easy to overfit the small dataset
+- **As soon as validation performance degrades**: Stop
+
+**6. Data Augmentation and Regularization**:
+
+- Can also help if fine-tuning data is limited
+
+**Why Fine-Tuning Matters**: Fine-tuning is a big reason why machine learning engineering has moved towards using pre-trained foundation models as a starting point. It can save huge amounts of training time (why train from scratch for days if you can fine-tune in an hour?) and can dramatically improve performance, especially in low-data regimes.
+
+**Optimizing Other Pipeline Elements Beyond Models**:
+
+While our focus has been on general HPO (previous section) and model weights (fine-tuning), note that optimization can also target:
+
+- **Feature engineering hyperparameters**: e.g., the number of clusters if you're using k-means for feature extraction, or the window size in a time-series feature. These can also be tuned via search
+- **Training process hyperparameters**: like batch size, learning rate schedule, optimizer type (SGD vs Adam), and number of training epochs. These all affect the outcome and can be included in an HPO search
+- **Objective function tweaks**: sometimes optimizing a slightly different loss (adding a term for precision/recall trade-off, or using a proxy loss that's easier to optimize) can yield better real metrics
+
+**G. Model Compression**:
+
+**What is Model Compression**: Model compression refers to a set of techniques designed to reduce the computational footprint of a model, typically its size and/or its inference time, while preserving as much performance as possible.
+
+**Why Compress**: The models that score highest on accuracy benchmarks are not always the models that make it to production. They may be too slow or too large.
+
+**Benefits**:
+
+- **Smaller model**: Easier to deploy (especially on edge devices or at scale)
+- **Often cheaper to run**: Smaller models use less CPU/GPU, meaning you can serve more requests per machine
+
+**When to Consider Model Compression**:
+
+- Your model is too slow for real-time requirements (inference latency must be low)
+- Your model is too large for the target environment (e.g., cannot fit into memory on a mobile device)
+- You want to reduce cloud serving costs (smaller models use less CPU/GPU)
+- You want to deploy on resource-constrained hardware (IoT sensors, etc., where smaller models are necessary)
+
+**Note**: Always measure baseline performance and requirements. If a model already meets latency/memory targets, you might not need compression. But often, especially with deep learning, some compression is very beneficial.
+
+**Four Major Compression Techniques**:
+
+1. **Pruning** (covered in detail below)
+2. **Knowledge Distillation** (next chapter)
+3. **Low-Rank Factorization** (next chapter)
+4. **Quantization** (next chapter)
+
+**These approaches can be used standalone or in combination**. Often, you might apply multiple: e.g., prune a model and then quantize it for maximum gain. The goal is to strike a good balance between model size/speed and accuracy.
+
+**H. Pruning**:
+
+**What is Pruning**: Pruning involves removing parts of a model that are deemed unnecessary. Typically, this is achieved by setting some weights to zero or removing entire neurons/filters.
+
+**The Idea**: Many parameters in an over-parameterized model have little effect on the output; by pruning them away, we can compress the model.
+
+**Types of Pruning**:
+
+**1. Unstructured Pruning**:
+
+- **Definition**: Remove individual weights. For example, zero out all weights below a certain magnitude. The result is a sparse weight matrix
+- **Benefit**: Can reduce the number of nonzero parameters
+- **Speedup**: Depends on whether your hardware/framework can exploit sparsity (sparse matrix multiplies)
+- **Reality**: Many hardware and BLAS (basic linear algebra subprograms) libraries are not fully optimized for arbitrary sparsity, so unstructured pruning yields memory savings and maybe some speed if properly implemented, but not always a big speedup unless sparsity is very high
+
+**2. Structured Pruning**:
+
+- **Definition**: Remove whole neurons, filters, or channels. For example, remove entire convolutional filters in a CNN, or entire hidden units in an FC layer
+- **Benefit**: Directly reduces the layer dimensions and leads to smaller, denser layers that are faster
+- **Example**: Pruning 2 of 64 convolutional filters means the next layer's input is 62 instead of 64 channels
+- **Physical removal**: You can physically remove those filters from the model architecture. This gives actual speedups on standard hardware because you end up with smaller matrices
+
+**How to Decide What to Prune**:
+
+**Magnitude-Based Pruning** (simplest and widely used):
+
+- **Criterion**: Weight magnitude—the assumption is that weights with very small absolute values contribute less, so zeroing them out has minimal effect on outputs
+- **Other criteria**: Prune weights that cause the least increase in loss (this can be measured by a Taylor expansion or something), or iterative methods that prune and retrain and measure impact
+
+**Iterative Pruning** (popular strategy):
+
+- **Don't prune everything at once**. Instead:
+  1. Prune a little (say 10% of weights)
+  2. Fine-tune the model (retrain on data to recover some lost accuracy)
+  3. Prune more
+  4. Repeat
+- **Benefit**: This alternation of prune → fine-tune often yields better final accuracy for a given sparsity than one-shot pruning
+
+**Example: Unstructured Pruning with PyTorch**:
+
+```python
+import torch
+import torch.nn as nn
+import torch.nn.utils.prune as prune
+import torchvision
+import torchvision.transforms as transforms
+
+# Define model (simple MLP)
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc1 = nn.Linear(784, 256)
+        self.fc2 = nn.Linear(256, 128)
+        self.fc3 = nn.Linear(128, 10)
+
+    def forward(self, x):
+        x = x.view(-1, 784)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
+
+# Train baseline model (omitted for brevity)
+model = MLP()
+# ... training code ...
+
+# Global unstructured pruning (80% sparsity)
+parameters_to_prune = [
+    (model.fc1, 'weight'),
+    (model.fc2, 'weight'),
+    (model.fc3, 'weight')
+]
+
+prune.global_unstructured(
+    parameters_to_prune,
+    pruning_method=prune.L1Unstructured,
+    amount=0.80  # Prune 80% of weights
+)
+
+# Immediate accuracy check (before recovery)
+test_accuracy_before = evaluate(model, test_loader)
+
+# Optional: Brief fine-tuning
+optimizer_ft = torch.optim.Adam(model.parameters(), lr=5e-4)
+# ... train for 1 epoch ...
+
+test_accuracy_after = evaluate(model, test_loader)
+
+# Make pruning permanent
+for module, name in parameters_to_prune:
+    prune.remove(module, name)
+```
+
+**Key Observations**:
+
+- **Reparam & prune.remove**: Pruning initially adds a mask (`weight = weight_orig * mask`). `prune.remove` writes the masked result back into weight and deletes the auxiliary tensors
+- **Accuracy dynamics**: Expect a drop right after pruning; brief fine-tuning usually recovers a chunk of performance or even might surpass baseline in specific cases
+- **High sparsity achievable**: Research has shown you can prune 80-90% of weights from some deep networks (making them 10-20% of their original size) with only a small drop in accuracy, especially if you fine-tune after pruning
+- **Pushing to extremes**: May eventually drop accuracy noticeably
+
+**Example: Structured Pruning**:
+
+```python
+# Structured pruning on fc2 (remove 30% of output neurons)
+prune.ln_structured(
+    model.fc2,
+    name="weight",
+    amount=0.30,
+    n=2,  # L2 norm
+    dim=0  # Prune along output dimension
+)
+```
+
+**Lottery Ticket Hypothesis**:
+
+- **Interesting research**: Within a large network, there exists a small subnetwork (a "winning ticket") that, if trained from scratch, could reach the same accuracy
+- **Practical implication**: Sometimes you can prune a network and then retrain from scratch that pruned architecture to get similar results, which is appealing for deployment (you could train a smaller model from the get-go)
+- **Challenge**: Finding those subnetworks a priori is hard; hence, iterative prune-and-fine-tune remains a common approach
+
+**Important Caveat**: Pruning, by itself, does not reduce memory footprint or make inference faster, because the tensors remain the same size and most deep-learning libraries still use dense matrix multiplications.
+
+**To Actually Gain Speed and Memory Improvements**:
+
+**1. Structured Pruning + Layer Compaction**:
+
+- Rebuild layers with fewer neurons/channels after pruning (e.g., `fc2: 256→128` becomes `256→90`)
+- **Example**: After structured pruning on `fc2`, rebuild layers `fc2` and `fc3` as per the new number of neurons
+
+**2. Sparse-Aware Kernels**:
+
+- Run inference with libraries/hardware that skip zeros (e.g., cuSPARSE, NVIDIA Ampere 2:4 structured sparsity)
+
+**3. Sparse Storage Techniques**:
+
+- **CSR format**: Compressed Sparse Row format for sparse matrices effectively reduces memory usage
+- **Example**: For unstructured pruning, utilize CSR format to reduce memory
+
+**Example: Layer Compaction After Structured Pruning**:
+
+```python
+# After structured pruning on fc2, rebuild layers
+# Original: fc2: 256→128, fc3: 128→10
+# After pruning 30%: fc2: 256→90 (approximately)
+
+# Rebuild fc2 and fc3 with new dimensions
+model.fc2 = nn.Linear(256, 90)  # Adjusted for pruned neurons
+model.fc3 = nn.Linear(90, 10)   # Adjusted for new fc2 output
+```
+
+**Summary**: Pruning can be of several types (unstructured vs structured), and to achieve true compression, we need to perform several more operations, like layer compaction and shape adjustment, post-pruning. Layer compaction and model architecture surgery implementations can vary greatly depending on the layers modified by structured pruning.
+
+**EXAM TIP:** Questions about "fine-tuning" → think **transfer learning first** (freeze base, train head), then **fine-tuning** (unfreeze gradually, smaller learning rate). Questions about "model compression" → think **pruning** (unstructured vs structured), **knowledge distillation**, **quantization**, **low-rank factorization**. Questions about "pruning" → think **magnitude-based**, **iterative prune-and-fine-tune**, **layer compaction** (for structured), **sparse storage** (for unstructured).
 
 **F. Collaboration and Reproducibility**:
 
