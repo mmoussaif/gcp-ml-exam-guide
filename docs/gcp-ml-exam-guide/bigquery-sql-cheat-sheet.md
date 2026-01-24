@@ -43,12 +43,60 @@ ORDER BY purchases DESC
 LIMIT 100;
 ```
 
+Plain-English: “For each user, count how many events they had in the last 30 days and how many of those were purchases. Then show the top 100 users by purchases.”
+
 **Useful functions**
 
 - `COUNTIF(condition)`
 - `ANY_VALUE(col)` (when you need “some value” to satisfy grouping)
 - `APPROX_COUNT_DISTINCT(col)` (faster, approximate)
 - `APPROX_QUANTILES(col, n)` (for p50/p90/p99-ish summaries)
+
+#### Core SQL clauses you must know (stakeholder reporting)
+
+```sql
+-- DISTINCT: how many unique customers?
+SELECT COUNT(DISTINCT customer_id) AS unique_customers
+FROM `project.dataset.orders`;
+```
+
+Plain-English: “How many different customers placed at least one order?”
+
+```sql
+-- HAVING: filter after aggregation (e.g., power users)
+SELECT user_id, COUNT(*) AS sessions
+FROM `project.dataset.sessions`
+GROUP BY user_id
+HAVING sessions >= 10
+ORDER BY sessions DESC;
+```
+
+Plain-English: “Show only users who had 10+ sessions, ordered from most to least sessions.”
+
+```sql
+-- CASE: business-friendly segments
+SELECT
+  user_id,
+  purchases,
+  CASE
+    WHEN purchases = 0 THEN '0'
+    WHEN purchases BETWEEN 1 AND 2 THEN '1-2'
+    WHEN purchases BETWEEN 3 AND 5 THEN '3-5'
+    ELSE '6+'
+  END AS purchase_bucket
+FROM `project.dataset.user_purchase_counts`;
+```
+
+Plain-English: “Bucket users into purchase segments so a stakeholder can read the distribution easily.”
+
+```sql
+-- UNION ALL: combine two tables with the same schema (don’t deduplicate)
+SELECT order_id, created_at, 'web' AS source FROM `project.dataset.web_orders`
+UNION ALL
+SELECT order_id, created_at, 'store' AS source FROM `project.dataset.store_orders`;
+```
+
+Plain-English: “Combine web and store orders into one list and keep all rows (even if an ID repeats).”
 
 ---
 
@@ -65,6 +113,8 @@ FROM `project.dataset.base_labels` b
 LEFT JOIN `project.dataset.user_features_30d` f
 USING (user_id);
 ```
+
+Plain-English: “Start from the labeled dataset (one row per user/label) and attach the feature columns if we have them; if not, keep the user anyway (features will be NULL).”
 
 **Common pitfalls**
 
@@ -95,6 +145,8 @@ LEFT JOIN `project.dataset.events` e
 GROUP BY l.user_id, l.label_ts, l.label;
 ```
 
+Plain-English: “For each labeled moment in time, compute features using only events that happened _before_ that moment, within the previous 30 days—so we don’t accidentally ‘peek into the future’.”
+
 ---
 
 ### 3) Window functions (ranking, rolling stats, dedup)
@@ -111,6 +163,8 @@ FROM (
 WHERE rn = 1;
 ```
 
+Plain-English: “If there are multiple rows per user, keep only the most recent one.”
+
 ```sql
 -- Rolling count of events in the last 7 rows (not time-based)
 SELECT
@@ -123,6 +177,8 @@ SELECT
   ) AS last_7_events
 FROM `project.dataset.events`;
 ```
+
+Plain-English: “As we scan a user’s events in time order, count how many events occurred in the current event plus the previous 6 events (a rolling 7-event window).”
 
 Key window functions:
 
@@ -262,6 +318,8 @@ FROM `project.dataset.users`
 QUALIFY rn = 1;
 ```
 
+Plain-English: “Pick only the latest row per user, but without having to wrap the query in another SELECT.”
+
 ```sql
 -- SELECT * EXCEPT / REPLACE is common in feature pipelines
 SELECT
@@ -269,6 +327,8 @@ SELECT
   LOWER(raw_text) AS raw_text
 FROM `project.dataset.table`;
 ```
+
+Plain-English: “Keep all columns, but replace `raw_text` with a normalized (lowercased) version.”
 
 ```sql
 -- WITH (CTEs) for readable multi-step transformations
@@ -283,6 +343,8 @@ agg AS (
 SELECT * FROM agg;
 ```
 
+Plain-English: “Break a complex query into named steps: first define the base data, then compute aggregates.”
+
 ```sql
 -- PIVOT: turn rows into columns (handy for feature wide tables)
 SELECT *
@@ -293,12 +355,16 @@ FROM (
 PIVOT (SUM(cnt) FOR event_name IN ('view', 'add_to_cart', 'purchase'));
 ```
 
+Plain-English: “Create one column per event type (view/add_to_cart/purchase) so the result is a wide feature table per user.”
+
 ```sql
 -- UNPIVOT: turn wide columns back into rows (useful for analysis/debug)
 SELECT user_id, feature_name, feature_value
 FROM `project.dataset.user_features_wide`
 UNPIVOT(feature_value FOR feature_name IN (f1, f2, f3));
 ```
+
+Plain-English: “Convert a wide feature table back into a long format so it’s easier to scan and compare feature values.”
 
 ### 8) Text manipulation + regex (common cleaning)
 
@@ -323,12 +389,16 @@ SELECT
 FROM `project.dataset.table`;
 ```
 
+Plain-English: “Show how many rows we have, what fraction is missing `user_id`, and how many unique users exist—basic ‘is this dataset sane?’ checks.”
+
 ```sql
 -- Leakage check idea: ensure feature timestamp <= label timestamp
 SELECT
   COUNTIF(feature_ts > label_ts) AS leakage_rows
 FROM `project.dataset.training_view`;
 ```
+
+Plain-English: “Count how many rows contain features that occur after the label time—those are leakage bugs that can make models look unrealistically good.”
 
 ---
 
@@ -354,6 +424,8 @@ SELECT COUNT(*)
 FROM `project.dataset.events_partitioned`
 WHERE event_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE();
 ```
+
+Plain-English: “Count events from the last 7 days while scanning only the relevant date partitions—this is the cheapest/fastest way to query large time-based tables.”
 
 #### Cost/debug tools (practical)
 
@@ -403,6 +475,8 @@ WHEN NOT MATCHED THEN
   VALUES (S.user_id, S.last_30d_purchases, CURRENT_TIMESTAMP());
 ```
 
+Plain-English: “Update existing users’ feature rows and insert new users—this keeps a ‘latest features’ table current without rebuilding everything.”
+
 ### 11.2) Views vs materialized views (when to use)
 
 - **View**: saved query; recomputed each time (cheap to create; cost depends on underlying query).
@@ -419,3 +493,63 @@ Use cases:
 
 - BigQuery is excellent for **feature aggregation** and large-scale analytics; it often beats moving data to Spark for simple transforms.
 - For time series, beware **random splits** and ensure your SQL joins respect time boundaries.
+
+---
+
+### 13) Stakeholder-ready KPI queries (examples you can put in a deck)
+
+These are “business analyst” patterns: clean metrics, clear definitions, easy to explain.
+
+#### Revenue and orders by week (trend)
+
+```sql
+SELECT
+  DATE_TRUNC(DATE(order_ts), WEEK(MONDAY)) AS week_start,
+  COUNT(DISTINCT order_id) AS orders,
+  SUM(order_amount) AS revenue
+FROM `project.dataset.orders`
+WHERE DATE(order_ts) >= DATE_SUB(CURRENT_DATE(), INTERVAL 12 WEEK)
+GROUP BY week_start
+ORDER BY week_start;
+```
+
+Plain-English: “For the last 12 weeks, show weekly order count and revenue so leadership can see the trend.”
+
+#### Conversion funnel (simple event funnel)
+
+```sql
+WITH per_user AS (
+  SELECT
+    user_id,
+    MAX(event_name = 'view') AS did_view,
+    MAX(event_name = 'add_to_cart') AS did_add_to_cart,
+    MAX(event_name = 'purchase') AS did_purchase
+  FROM `project.dataset.events`
+  WHERE DATE(event_ts) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+  GROUP BY user_id
+)
+SELECT
+  COUNTIF(did_view) AS viewers,
+  COUNTIF(did_add_to_cart) AS add_to_cart_users,
+  COUNTIF(did_purchase) AS purchasers,
+  SAFE_DIVIDE(COUNTIF(did_add_to_cart), COUNTIF(did_view)) AS view_to_cart_rate,
+  SAFE_DIVIDE(COUNTIF(did_purchase), COUNTIF(did_add_to_cart)) AS cart_to_purchase_rate
+FROM per_user;
+```
+
+Plain-English: “Out of all users who viewed something, how many added to cart and how many purchased—and what are the conversion rates between steps?”
+
+#### Top customers (Pareto-style)
+
+```sql
+SELECT
+  customer_id,
+  SUM(order_amount) AS revenue
+FROM `project.dataset.orders`
+WHERE DATE(order_ts) >= DATE_SUB(CURRENT_DATE(), INTERVAL 90 DAY)
+GROUP BY customer_id
+ORDER BY revenue DESC
+LIMIT 50;
+```
+
+Plain-English: “List the top 50 customers by revenue in the last 90 days (useful for enterprise sales / retention planning).”
