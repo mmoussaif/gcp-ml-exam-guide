@@ -4254,23 +4254,29 @@ Building ML systems in the cloud is largely about matching workload patterns to 
 To understand AWS effectively, it helps to view it as a layered platform:
 
 **1. Global Infrastructure**:
+
 - **Underpins everything**: AWS operates globally distributed regions and availability zones built on high-performance networking and storage fabrics
 - **Multi-region architecture**: Allows systems to be deployed worldwide with low latency and high availability
 
 **2. Core Services**:
+
 - **Foundational components**: EC2 (compute), EBS (block storage), and S3 (object storage) provide the foundational components that mirror traditional data centers
 
 **3. Managed Platform Services**:
+
 - **Higher-level managed services**: Databases (relational and NoSQL), analytics, serverless computing, containers, managed Kubernetes (EKS), IoT, edge computing, and AI/ML platforms
 
 **4. Developer Tools and Automation**:
+
 - **Robust tools**: CI/CD pipelines, infrastructure management, monitoring, logging, and deployment automation frameworks
 
 **5. Operational Governance, Security, and Cost Management**:
+
 - **Strong suite of services**: IAM for identity and access control, encryption and auditing tools, cost tracking, and compliance management
 - **Spans across all layers**: Effectively spans across all other layers too
 
 **6. Partner, Marketplace, and Community Ecosystem**:
+
 - **Large ecosystem**: Partners, including consulting firms and independent software vendors, as well as a marketplace of third-party integrations and an open-source community around its platform
 
 **Why This Matters**:
@@ -4278,6 +4284,7 @@ To understand AWS effectively, it helps to view it as a layered platform:
 **The richness of the AWS ecosystem** has fundamentally changed how modern systems are designed. AWS is not merely infrastructure; it shapes the principles and patterns of cloud-native architecture.
 
 **Key Transformations**:
+
 - **Modular, composable, and managed services**: AWS encourages architects to think in terms of abstractions, automation, and resilience rather than servers and manual configurations
 - **Rapid innovation**: Foundational components such as databases, queues, and streaming systems are available as managed services, so teams can focus on building product features rather than managing infrastructure
 - **Global scale and reach**: Multi-region architecture allows systems to be deployed worldwide with low latency and high availability
@@ -4291,26 +4298,32 @@ To understand AWS effectively, it helps to view it as a layered platform:
 When evaluating AWS from a system-design perspective, several defining characteristics stand out:
 
 **1. Service Breadth**:
+
 - **Core strength**: Offers one of the most extensive portfolios in the cloud ecosystem, spanning compute, storage, databases, analytics, AI/ML, IoT, developer tools, and more
 - **Benefit**: Allows architects to design end-to-end solutions using native services without relying heavily on external tools or third-party integrations
 
 **2. Global Infrastructure**:
+
 - **Robust foundation**: Provides a robust foundation for distributed, low-latency, and highly available systems
 - **Multiple regions and availability zones**: Across the world, enabling fault-tolerant architectures and disaster recovery scenarios
 - **Geographical diversity**: Enables compliance with data sovereignty requirements and performance optimization for users in different locations
 
 **3. Managed Operations**:
+
 - **Key differentiator**: AWS takes on the responsibility of patching, scaling, and backing up managed services, freeing engineering teams from much of the operational overhead
 - **Benefit**: Lets developers focus more on business logic and innovation rather than maintenance and infrastructure management
 
 **4. Pay-as-You-Go Model and Elasticity**:
+
 - **Fundamental change**: Instead of provisioning for peak capacity, teams can build architectures that automatically scale up and down with demand, optimizing both performance and cost
 - **Flexibility**: Promotes efficiency and supports variable workloads with minimal manual intervention
 
 **5. Ecosystem Integration**:
+
 - **Seamless integration**: Services work seamlessly together. Data can flow efficiently between compute, storage, and analytics components, simplifying workflows and enabling complex architectures such as data lakes, event-driven systems, and microservices-based applications
 
 **6. Continuous Evolution**:
+
 - **Regular releases**: New services and features are released regularly, allowing architects to refine or re-architect components to leverage improved capabilities
 - **Encourages**: Modular, adaptable designs that can evolve alongside AWS's rapidly changing landscape
 
@@ -4321,27 +4334,33 @@ When evaluating AWS from a system-design perspective, several defining character
 For organizations designing or managing architectures on AWS, several strategic and organizational implications come into play:
 
 **1. Platform Engineering Mindset**:
+
 - **Essential**: Successful organizations often go beyond using AWS services ad hoc; they manage multiple accounts within the organization in a centralized manner
 - **Create**: Internal service catalogs, standardized landing zones, CI/CD pipelines, and cost-security guardrails
 - **Benefit**: Allows teams to consume pre-built, compliant, and secure capabilities efficiently, reducing friction and ensuring consistency across projects
 
 **2. Cost Governance**:
+
 - **Establish early**: Because AWS managed services can scale and proliferate rapidly, it's easy for expenses to grow unnoticed
 - **Embed**: Cost-tracking, budgeting, and tagging practices from the outset helps maintain financial visibility and accountability, preventing surprises in cloud bills and promoting a culture of cost awareness
 
 **3. Security and Compliance**:
+
 - **First-class citizens**: Organizations need to implement principles such as least privilege access, strong network isolation, encryption in transit and at rest, and continuous audit logging
 - **Integrate early**: By integrating these measures early, teams can ensure that their architectures remain secure and compliant without introducing friction later in the development lifecycle
 
 **4. Operational Monitoring and Observability**:
+
 - **Critical**: Traditional CPU and memory metrics are not enough; teams need visibility into service interactions, latency, data transfers, and even cost anomalies
 - **AWS-native tools**: Like CloudWatch provide valuable insights that support proactive issue resolution and performance optimization
 
 **5. Vendor Lock-In Awareness**:
+
 - **Remain aware**: While deep adoption of AWS-native services brings efficiency, it can limit long-term flexibility
 - **Maintain**: Interoperability, abstraction layers and multi-cloud setups, can help preserve future options and reduce dependency on any single provider
 
 **6. Continuous Evolution and Training**:
+
 - **Non-negotiable**: The AWS landscape evolves rapidly, with new features and best practices emerging frequently
 - **Invest**: Teams must invest in ongoing learning, certifications, and architectural reviews to stay current and ensure that their systems remain efficient, secure, and aligned with organizational goals
 
@@ -4362,6 +4381,7 @@ For organizations designing or managing architectures on AWS, several strategic 
 At the highest level, an EKS cluster consists of two planes:
 
 **1. Control Plane (Managed by AWS)**:
+
 - **Includes**: The Kubernetes API server, etcd (the key-value store for cluster state), the controller manager, and scheduler
 - **AWS automatically provisions and operates**: These components across multiple availability zones to ensure fault tolerance
 - **You never directly manage**: Or SSH into these control plane nodes; instead, you interact via the Kubernetes API endpoint exposed by AWS
@@ -4370,6 +4390,7 @@ At the highest level, an EKS cluster consists of two planes:
 - **"Redundant"**: Means that the Kubernetes control plane is built with multiple, duplicate components running across different availability zones (AZs) to ensure high availability and fault tolerance
 
 **2. Data Plane (Managed by Users)**:
+
 - **Comprises**: The worker nodes, the actual compute instances where your pods run
 - **These nodes can be**: Either EC2 instances that you manage or Fargate tasks (serverless nodes) that AWS runs on your behalf
 - **Fargate**: A serverless compute engine for containers that works with Amazon's ECS and EKS services. It allows users to run containers without the need to manage the underlying servers or virtual machines, meaning users only have to specify their application's resource requirements (like CPU and memory) and Fargate handles the infrastructure provisioning, scaling, and management
@@ -4392,11 +4413,13 @@ At the highest level, an EKS cluster consists of two planes:
 The data plane is where your workloads run, and EKS provides two ways to host them:
 
 **1. EKS on EC2**:
+
 - **You manage**: A node group of EC2 instances
 - **AWS provides**: The Amazon EKS-optimized AMI (Amazon Machine Image) that comes preconfigured with the kubelet, containerd, and AWS integrations (such as the VPC CNI plugin)
 - **You control**: The instance type, scaling group, and lifecycle, giving you flexibility for performance-sensitive workloads
 
 **2. EKS on Fargate**:
+
 - **AWS provisions compute automatically**: You define Fargate profiles mapping namespaces and labels to pods, and AWS runs those pods on managed serverless infrastructure
 - **Eliminates**: Node management entirely but limits some customizations
 - **Ideal for**: Event-driven tasks
@@ -4424,6 +4447,7 @@ When you use `eksctl` or the AWS Management Console to create a cluster, you can
 **eksctl**: An open-source command-line interface (CLI) tool for creating and managing EKS clusters. It simplifies the process of setting up and operating EKS clusters by automating many of the underlying tasks, including the provisioning of necessary AWS resources.
 
 **1. Managed Node Groups (Recommended)**:
+
 - **AWS automatically handles**: Provisioning and lifecycle for your EC2 instances
 - **You define**: Parameters such as instance type, desired capacity, and scaling configuration
 - **AWS creates**: An Auto Scaling group, joins instances to the cluster, and keeps them updated
@@ -4431,6 +4455,7 @@ When you use `eksctl` or the AWS Management Console to create a cluster, you can
 - **Ideal for**: Most production clusters because they reduce administrative overhead
 
 **2. Self-Managed Nodes**:
+
 - **You manually provision**: EC2 instances, using CloudFormation, Terraform, or other tooling, and join them to the cluster using the aws-auth ConfigMap
 - **Offers**: Maximum control but also full operational responsibility
 - **You must manage**: Scaling, updates, and health checks yourself
@@ -4466,28 +4491,33 @@ Running Kubernetes in production involves more than control and data planes. Net
 **Some Popular EKS Add-Ons and EKS-Related Services**:
 
 **1. AWS VPC CNI**:
+
 - **Default add-on**: Among the foundational components, the AWS VPC CNI plugin is added by default
 - **Allows**: Kubernetes pods to use native VPC networking so that each pod receives an IP address directly from the VPC subnet
 - **Removes**: The need for overlay networks, enabling straightforward communication between pods and other AWS services via familiar routing and security groups
 - **Runs as**: A DaemonSet, each node hosts one CNI pod, ensuring every pod in the cluster can access AWS networking at native speed
 
 **2. CoreDNS**:
+
 - **Default add-on**: Another default add-on, CoreDNS, serves as the internal DNS server for the cluster
 - **Handles**: Name resolution for pods and services, allowing workloads to interact using service names rather than IPs
 - **EKS automatically manages**: CoreDNS, deploying two replicas by default and upgrading them alongside new Kubernetes versions
 
 **3. kube-proxy**:
+
 - **Default add-on**: kube-proxy is also a default add-on, which manages network routing rules on each node
 - **Acts as**: A bridge between Kubernetes Services and pods, ensuring that NodePort or LoadBalancer services correctly distribute incoming traffic
 - **Runs as**: A DaemonSet, with one pod per node for consistent routing behavior across the cluster
 
 **4. Cluster Autoscaler**:
+
 - **Optional add-on**: Scaling in EKS is handled by the Cluster Autoscaler, which is an optional add-on
 - **Monitors**: Unschedulable pods and automatically increases or decreases the number of EC2 instances in a node group based on demand
 - **Runs as**: A single cluster-wide deployment, it integrates tightly with EC2 Auto Scaling Groups and managed node groups
 - **With proper IAM permissions**: It can add or remove nodes autonomously, maintaining both cost efficiency and performance without manual intervention
 
 **5. AWS Load Balancer Controller**:
+
 - **Optional add-on**: A modern, out-of-tree replacement and an optional add-on
 - **Note**: Kubernetes on AWS, by default, includes a built-in, or "in-tree," cloud provider that can automatically provision a Classic Load Balancer (CLB) whenever a Service of type LoadBalancer is created, without having the need to install AWS Load Balancer Controller. This happens because of native EKS integration. Amazon EKS natively integrates with AWS Elastic Load Balancers (ELB). When you create a Kubernetes Service of type: LoadBalancer, EKS automatically provisions a Classic Load Balancer (CLB) by default. This built-in integration allows basic external access to workloads even without installing any additional controllers.
 - **However**: The AWS Load Balancer Controller extends this functionality by supporting Application Load Balancers (ALB) and Network Load Balancers (NLB), enabling advanced features such as Ingress management, path-based routing, SSL termination, and tighter integration with AWS networking
@@ -4495,29 +4525,34 @@ Running Kubernetes in production involves more than control and data planes. Net
 - **In essence**: A Kubernetes Service of type: LoadBalancer can still provision a Classic Load Balancer (CLB) in an EKS cluster even if the AWS Load Balancer Controller is not installed, but installing it unlocks deeper AWS integration and more sophisticated traffic management options
 
 **6. Amazon EBS CSI Driver**:
+
 - **Optional add-on**: Persistent storage in Kubernetes is managed via the Container Storage Interface (CSI)
 - **Lets pods request**: Block storage volumes that map directly to Amazon EBS
 - **Runs**: Both controller pods that handle provisioning and node pods that attach volumes locally
 - **Enables**: On-demand creation of block storage for stateful workloads like databases or analytics pipelines
 
 **7. CloudWatch Container Insights and Fluent Bit**:
+
 - **Optional add-ons**: On the observability front, CloudWatch Container Insights combined with Fluent Bit agents offer built-in monitoring and logging
 - **Fluent Bit**: Runs as a DaemonSet on each node, collecting container logs and forwarding them to CloudWatch Logs
 - **Additional metrics and traces**: Are gathered through lightweight monitoring pods that feed into CloudWatch dashboards, giving teams full visibility into performance, latency, and error trends, all without having to deploy external monitoring stacks
 
 **8. Amazon ECR (Elastic Container Registry)**:
+
 - **Not an in-cluster add-on**: Serves as the native container image registry for AWS and integrates automatically with EKS
 - **Fully managed service**: That works out of the box
 - **When you deploy pods on EKS**: They can pull container images directly from ECR repositories with minimal latency and no extra setup (provided the worker node IAM roles allow access to ecr:GetAuthorizationToken and related permissions)
 - **Available by default**: In the AWS environment. For standard EKS clusters using managed node groups, ECR integration is automatic. You don't install or configure anything
 
 **9. Amazon EBS (Elastic Block Store)**:
+
 - **Beneath every EKS cluster**: The underlying compute infrastructure typically runs on EC2 instances, each of which relies on Amazon Elastic Block Store (EBS) volumes as its root storage
 - **Every worker node**: Whether part of a managed or self-managed node group, launches with an attached EBS volume that contains the operating system, Kubernetes agent binaries, and container runtime storage
 - **Root volumes**: Are automatically provisioned and deleted with the node lifecycle. This EBS integration exists by default, no additional driver is required for node operation
 - **However**: When workloads inside the cluster need persistent volumes of their own (for databases, pipelines, or any stateful workloads), Kubernetes uses the EBS Container Storage Interface (CSI) driver
 
 **10. AWS Fargate**:
+
 - **For clusters that use AWS Fargate**: Instead of EC2 nodes, the story changes slightly
 - **Fargate**: A serverless compute engine where AWS abstracts away the underlying infrastructure
 - **You don't see or manage**: EC2 instances or EBS volumes directly; instead, each pod runs in its own isolated runtime environment with ephemeral storage managed by AWS behind the scenes
@@ -4526,6 +4561,7 @@ Running Kubernetes in production involves more than control and data planes. Net
 **Summary**: EKS brings together default add-ons such as the VPC CNI, CoreDNS, and kube-proxy with optional integrations like the Cluster Autoscaler, Load Balancer Controller, etc. to deliver a truly production-ready environment. In addition, core AWS services like ECR and EBS are seamlessly integrated. Together, these managed components minimize manual setup, improve reliability, and ensure tight interoperability, transforming Kubernetes from a standalone orchestration engine into a unified, cloud operations platform.
 
 **Key Takeaways**:
+
 - **AWS is a comprehensive cloud platform** with over 200 services, operating as a layered platform from infrastructure to domain-specific offerings
 - **EKS is Amazon's managed Kubernetes control plane** that removes operational complexity while maintaining Kubernetes compatibility
 - **EKS architecture**: Control plane (managed by AWS) + Data plane (managed by users, EC2 or Fargate)
@@ -4533,6 +4569,547 @@ Running Kubernetes in production involves more than control and data planes. Net
 - **EKS add-ons**: Default (VPC CNI, CoreDNS, kube-proxy) and optional (Cluster Autoscaler, Load Balancer Controller, EBS CSI, CloudWatch) integrate AWS services seamlessly
 
 **EXAM TIP:** Questions about "AWS" → think **comprehensive cloud platform** (200+ services, layered architecture, managed services). Questions about "EKS" → think **managed Kubernetes control plane** (AWS manages control plane, users manage data plane, EC2 or Fargate nodes). Questions about "EKS architecture" → think **control plane** (managed by AWS, highly available, across 3 AZs) + **data plane** (managed by users, EC2 instances or Fargate tasks). Questions about "EC2 in EKS" → think **worker nodes** (EKS-optimized AMI, managed node groups recommended, Cluster Autoscaler integration). Questions about "EKS add-ons" → think **default** (VPC CNI, CoreDNS, kube-proxy) + **optional** (Cluster Autoscaler, Load Balancer Controller, EBS CSI, CloudWatch). Questions about "EKS networking" → think **VPC CNI** (pods get VPC IPs, first-class network citizenship, no overlay networks). Questions about "EKS storage" → think **EBS** (root volumes for nodes, EBS CSI driver for persistent volumes, Fargate uses ephemeral storage).
+
+**K. EKS Lifecycle and Model Serving**:
+
+**The EKS Lifecycle**:
+
+When it's time to deploy a machine learning model, Amazon EKS offers a robust and repeatable framework for managing the model's lifecycle.
+
+**1. Cluster Creation**:
+
+**The first step**: Provisioning the Kubernetes control plane and the associated compute and networking fabric.
+
+**Tools**: AWS Management Console, AWS CLI, or most commonly, the command-line tool `eksctl`.
+
+**Example eksctl command**:
+
+```bash
+eksctl create cluster \
+  --name demo-cluster \
+  --region us-east-1 \
+  --nodegroup-name demo-nodes \
+  --node-type t3.small \
+  --nodes 2
+```
+
+**This single invocation triggers**:
+
+- **Multi-AZ control plane**: Created and managed by AWS (by default across three availability zones in the selected region)
+- **Managed node group**: EC2 instances (here, t3.small type, two nodes) provisioned, configured to register with the cluster
+- **Networking**: VPC, subnets, security groups, route tables, appropriate tagging, etc.
+- **eksctl automatically creates**: Managed node groups by default when creating a cluster
+- **IAM roles**: Created for the node group and for the EKS control plane to manage Kubernetes operations securely
+- **Default Kubernetes add-ons**: Installed (CoreDNS service, kube-proxy for node networking, Amazon's VPC CNI plugin for Kubernetes pod networking)
+
+**Key point**: EKS abstracts away the control plane lifecycle (patching, scaling, high availability). Hence, our primary scope becomes node management, workload deployment, monitoring and governance.
+
+**2. Node Registration**:
+
+**Once the node group instances are running**: The next step is registration with the Kubernetes scheduler.
+
+**Process**:
+
+- **Each EC2 instance boots**: From the EKS-provided AMI and runs a bootstrap script that uses authentication to register and join the cluster
+- **IAM Role to Kubernetes node identity**: Handled via the `aws-auth` ConfigMap in the `kube-system` namespace
+- **The IAM role**: Attached to the node instances (via the instance profile) appears in that ConfigMap and is thereby granted the ability to work as Kubernetes nodes
+- **kube-system namespace**: A dedicated and crucial namespace reserved for objects and resources that are essential for the functioning of the Kubernetes cluster itself. It houses the core components (Kubernetes API server, Scheduler, kube-proxy, etc.) that make Kubernetes work
+
+**At this point**: The node becomes available in the scheduling pool: it appears in `kubectl get nodes`, and the VPC CNI plugin attaches the required secondary IP addresses permitting pod network communication.
+
+**Crucial takeaway**: Nodes are standard EC2 instances under the hood, but once joined to EKS they behave as part of the Kubernetes cluster. Any AWS-specific steps and processes are abstracted by EKS, allowing us to treat the cluster as a native Kubernetes environment.
+
+**3. Deploying Workloads**:
+
+**With the cluster live and nodes registered**: We move into deploying your workloads. Whether we are deploying a microservice, a stateful endpoint, or a full ML inference pipeline, we use standard Kubernetes manifests (Deployment, Service, etc.).
+
+**Important point**: The integration with AWS services becomes seamless.
+
+**Example: Exposing a model-serving endpoint publicly**:
+
+Create a Service of type LoadBalancer:
+
+- **If AWS Load Balancer Controller is installed**: It will automatically provision an AWS Network Load Balancer (NLB) or Application Load Balancer (ALB), register the appropriate targets and manage the lifecycle of that load balancer
+- **If the controller is not installed**: The built-in provider will instead provision a Classic Load Balancer (CLB), register the Kubernetes nodes as targets, and route traffic through the service's NodePorts to the pods
+
+**Storage integration**:
+
+- **Durable storage**: If your inference service needs durable storage (for caching model artifacts or logs), a PersistentVolumeClaim that binds to an EBS volume via the Kubernetes CSI driver can be created
+- **Large datasets**: If the pipeline needs to ingest large reference datasets, we can connect to S3
+- **All storage modalities**: Integrate easily with Kubernetes workloads running in EKS
+
+**4. Scaling and Updates**:
+
+**Once your model deployment is live**: You need to scale (both up and down) and periodic updates (both in terms of Kubernetes version and node instance types), then EKS supports these via several mechanisms.
+
+**Autoscaling Nodes**:
+
+- **When inference load increases**: The Kubernetes optional add-on component Cluster Autoscaler watches for unscheduled pods (typically due to lack of node capacity)
+- **It then triggers**: AWS Auto Scaling Groups to add more EC2 instances to the node pool
+- **When load decreases**: The autoscaler triggers node termination (respecting pod eviction policies)
+
+**Scaling Your Workloads**:
+
+- **On the Kubernetes side**: One can also configure Horizontal Pod Autoscalers (HPA)
+- **Example**: You might scale up the number of replicas of your model-serving container when request latency exceeds a threshold
+- **Beneath that**: The autoscaler ensures sufficient nodes to host those pods
+- **Monitoring and testing**: Are crucial here to avoid cold-start issues with model loading
+
+**Upgrading the Control Plane**:
+
+- **AWS manages the control plane**: But you initiate version upgrades
+- **You might upgrade**: From Kubernetes v1.XX to v1.XY; you do this via the AWS console, CLI or eksctl
+- **After the control plane version is updated**: You proceed with rolling updates of the node groups
+- **Managed node groups allow**: To update the AMI version, switch instance types, or increase node count with minimal downtime. Pods will be drained from old nodes and rescheduled on new ones
+
+**Update of Add-On Components**:
+
+- **The Kubernetes add-ons**: (kube-proxy, CoreDNS, VPC CNI, etc.) also require updates
+- **EKS provides**: Version compatibility guarantees (the worker nodes and control plane must match within specified skew)
+
+**Integration into the Broader AWS Ecosystem**:
+
+While EKS delivers the Kubernetes control plane and orchestration layer, one of its greatest strengths is how deeply it integrates with other AWS services.
+
+**1. Identity and Access Management (IAM)**:
+
+**The integration between AWS IAM and Kubernetes is critical**:
+
+- **The EKS control plane**: Uses IAM to call AWS APIs
+- **Worker nodes**: Assume EC2 instance profiles with associated IAM roles
+- **These roles**: Are mapped to Kubernetes users and groups via the `aws-auth` ConfigMap
+- **More advanced deployments**: Leverage IRSA (IAM Roles for Service Accounts) so that individual pods assume IAM roles
+
+**This means**: Your model-serving pods can access exactly the S3 buckets or DynamoDB tables they need, no more, no less.
+
+**2. Networking: VPC, Route 53**:
+
+- **EKS cluster lives inside a VPC**: Utilizing subnets
+- **Pods receive IP addresses**: From the VPC via the VPC CNI secondary-IP model
+- **You can expose ingress**: Via AWS Load Balancer Controller, integrate with Route 53 for DNS
+- **Hybrid architecture**: Connect your on-premises network via VPN, enabling a hybrid architecture where training data or model artifacts reside in a local data center, and inference runs in EKS
+- **Networking fabric**: Continues to be under your control
+
+**Amazon Route 53**: A highly available and scalable cloud Domain Name System (DNS) web service that translates human-readable domain names (like www.example.com) into the numerical IP addresses that computers use to connect to each other.
+
+**3. Storage**:
+
+- **EKS supports**: EBS volumes for block storage, S3 for truly durable object storage, and others like EFS
+- **Kubernetes uses**: CSI drivers (Container Storage Interface) for dynamic provisioning of volumes
+- **Beneath every EKS cluster**: The underlying compute infrastructure typically runs on EC2 instances, each of which relies on Amazon Elastic Block Store (EBS) volumes as its root storage
+- **Every worker node**: Launches with an attached EBS volume that contains the operating system, Kubernetes agent binaries, and container runtime storage
+- **Root volumes**: Are automatically provisioned and deleted with the node lifecycle. This EBS integration exists by default, no additional driver is required for node operation
+- **CSI drivers are needed**: When workloads inside the cluster need persistent volumes of their own
+
+**4. Security**:
+
+**Workloads on EKS benefit from AWS's mature security ecosystem**:
+
+- **Secrets**: Can be encrypted via AWS Key Management Service (KMS) and injected into Kubernetes via Secrets Store CSI drivers
+- **VPC-CNI plugin**: Ensures your pods live inside your VPC and respect network security groups and flow logs
+- **Model-serving API exposed to the web**: You can front it with AWS Web Application Firewall (WAF) and ALB (Application Load Balancer) for DDoS protection, bot mitigation and request-inspection
+- **This treats**: Your Kubernetes workload as an AWS first-class citizen with respect to security
+
+**5. Monitoring and Observability**:
+
+- **EKS does not reinvent observability**: Metrics, logs and traces from your cluster and pods can flow into CloudWatch or other logging systems
+- **You can instrument**: Your model-serving containers to emit custom metrics and trace end-to-end requests through your API gateway, Kubernetes service, and database
+
+**Design and Operational Considerations**:
+
+Let's review how key architecture and operations choices influence cost, resilience, performance and security, with particular focus to model deployment.
+
+**1. Cluster Topology**:
+
+- **When you create an EKS cluster**: The control plane is automatically distributed across multiple Availability Zones to ensure high availability
+- **To achieve fault tolerance**: For your workloads, you should also distribute your node groups across multiple AZs
+- **This way**: If one AZ experiences an outage, the control plane remains healthy and your nodes in other zones can continue serving traffic
+- **Using managed node groups**: Further simplifies lifecycle management, as AWS handles provisioning, versioning, and patching of the underlying EC2 instances
+- **You just need to trigger**: Updates when you want to roll out new AMI or Kubernetes versions
+
+**2. Networking Strategy**:
+
+**When designing your model-inference API architecture**, the first step is to determine whether your endpoints should be public or private.
+
+- **Public endpoints**: Allow access over the internet and are suitable for open APIs or publicly available models
+- **Private endpoints**: Restrict access within your secure network and typically require VPC Peering or AWS Direct Connect to establish connectivity from your on-premises environment or internal systems
+  - **VPC peering and AWS Direct Connect**: Two different methods for connecting networks. VPC peering connects two or more VPCs together within AWS, while AWS Direct Connect creates a dedicated network connection between your on-premises data center and AWS
+- **This ensures**: That sensitive inference traffic remains isolated from the public internet, maintaining higher confidentiality and control
+
+**Control plane endpoint**:
+
+- **Should ideally reside**: Within private subnets, ensuring that all cluster management traffic stays internal and protected from external exposure
+- **However**: Using a public control-plane endpoint is not inherently insecure, it remains protected by IAM authentication, Kubernetes RBAC, and TLS encryption. When properly configured, it can offer both security and convenience, particularly for administrative access from trusted external networks
+
+**Latency optimization**:
+
+- **Since latency is critical**: For model inference, ensure that your inference paths are optimized for high bandwidth and low latency
+- **Place your inference nodes**: In the same region or availability zone as your users
+- **Use appropriate instance types**: And networking configurations to guarantee consistent throughput
+
+**3. Storage and Data Architecture**:
+
+**Choose the right storage medium for the job**:
+
+- **Inference pods**: That maintain a local cache of model weights might use EBS for fast block access
+- **Training pipelines**: That ingest large datasets or write logs, S3 is the de-facto durable storage service
+
+**4. Cost Optimization**:
+
+- **A model-serving cluster may idle**: During certain hours (e.g., off-peak). Hence, might use node group autoscaling to scale down to minimum nodes when load is low
+- **Right-size your node types**: For example, if your inference container uses just 2 vCPU and 4 GB RAM, avoid launching larger nodes
+- **Leverage**: Savings plans or reserved instances if you have steady usage patterns
+
+**5. Observability**:
+
+- **Collect**: Logs, metrics, and traces
+- **Create**: CloudWatch dashboards, implement alerts (e.g., for pod restarts, high inference latency)
+- **Ensure**: You have alerting for node group health, control-plane version compatibility warnings and any specific errors
+
+**In a nutshell**: EKS takes care of many of the heavy operational lifts, control-plane lifecycle, high-availability across zones, and integration with AWS services. So you can focus on what matters most: deployment.
+
+**By understanding**: How the control plane, EC2 nodes, and managed add-ons (networking, storage, monitoring) fit together, you are well primed to deploy containerized applications on the AWS cloud.
+
+**Hands-On: Deploying an ML Model on EKS**:
+
+**Objective**: Deploy a simple ML inference service on AWS EKS, demonstrating the complete lifecycle from containerization to production deployment.
+
+**Steps**:
+
+**1. Setting Up an AWS Account**:
+
+**Before you begin**, make sure you have:
+
+- **A unique email address** that you control (becomes your root user ID)
+- **A mobile phone number** that can receive SMS messages or voice calls (for identity verification)
+- **A valid credit or debit card** (required for identity verification, even for Free Tier)
+
+**Sign-Up Process**:
+
+1. Go to AWS Free Tier page and click "Create a Free Account"
+2. Enter email address and account name, verify email
+3. Create a strong root user password (10–12 characters with uppercase, lowercase, numbers, and special symbols)
+4. Choose Free plan (6 months of free access or until exhaustion of credits)
+5. Provide contact information (Personal or Business account type)
+6. Add payment method (temporary authorization charge, reversed automatically)
+7. Verify identity (may require ID verification form and government-issued ID)
+8. Verify phone number (SMS or voice call)
+9. Choose support plan (Basic Support - Free)
+10. Wait for account activation (usually a few minutes, up to 24 hours)
+
+**Securing the Account**:
+
+- **Sign in as root user once**: Enable MFA (Multi-Factor Authentication) for Root user
+- **Create an IAM Admin user**: For daily work (not root user)
+  - Create user in IAM → Users → Create user
+  - Attach "AdministratorAccess" policy or add to admin group
+  - Create access key for CLI use case
+  - Download credentials file (.csv)
+- **Important**: Do not create or use root user access keys. Root keys are powerful and dangerous. AWS strongly recommends never generating them.
+
+**Understanding AWS Free Tier**:
+
+- **6 months or until credit exhaustion** (whichever lower) of free access to a subset of AWS services
+- **100 dollars of credits** at sign-up and an additional 100 dollars as you explore specific AWS services
+- **Set up budgets and usage alerts** to track usage and prevent unexpected charges
+
+**2. Setting Up AWS CLI**:
+
+**Install AWS CLI** and configure:
+
+```bash
+aws configure
+```
+
+**When prompted, enter**:
+
+- Access Key ID (for your admin IAM user)
+- Secret Access Key
+- Default region (e.g., us-east-1)
+- Output format (json recommended)
+
+**These credentials**: Can be found in the CSV file downloaded upon creation of the access key for your "admin" user.
+
+**3. Installing eksctl**:
+
+**eksctl**: The official CLI for Amazon EKS. Install from official GitHub releases.
+
+**Also ensure**: `kubectl` is installed (the Kubernetes CLI that communicates with your cluster).
+
+**4. Hands-On Demo: Deploying an ML Model on EKS**:
+
+**Project Setup**: Train a basic regression model (y = 2x), create FastAPI inference API, containerize with Docker, deploy on EKS.
+
+**A. Train and Save the Model**:
+
+```python
+from sklearn.linear_model import LinearRegression
+import joblib
+import numpy as np
+
+# Create training data (y = 2x)
+X = np.array([[1], [2], [3], [4], [5]])
+y = np.array([2, 4, 6, 8, 10])
+
+# Train model
+model = LinearRegression()
+model.fit(X, y)
+
+# Save model
+joblib.dump(model, 'model.pkl')
+```
+
+**B. Create FastAPI App for Inference**:
+
+```python
+from fastapi import FastAPI
+from pydantic import BaseModel
+import joblib
+import numpy as np
+
+app = FastAPI()
+
+# Load model at startup
+model = joblib.load('model.pkl')
+
+class InputData(BaseModel):
+    x: float
+
+@app.get("/health")
+def health():
+    return {"status": "healthy"}
+
+@app.post("/predict")
+def predict(data: InputData):
+    # Convert to numpy array
+    X = np.array([[data.x]])
+    prediction = model.predict(X)[0]
+    return {"prediction": float(prediction)}
+```
+
+**Key Points**:
+
+- **Pydantic model**: Validates incoming JSON automatically
+- **Load model outside endpoint**: So it loads once when the app starts (avoids re-loading on every request)
+- **FastAPI provides**: Browsable documentation UI at `/docs`
+
+**C. Containerization**:
+
+**Dockerfile**:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY app.py model.pkl requirements.txt ./
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+EXPOSE 80
+
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"]
+```
+
+**Build and Push to Docker Hub**:
+
+```bash
+# Build image
+docker build -t aws-demo .
+
+# Login to Docker Hub
+docker login
+
+# Tag image
+docker tag aws-demo username/aws:v1
+
+# Push to Docker Hub
+docker push username/aws:v1
+```
+
+**Note**: We're using Docker Hub instead of AWS ECR to avoid overdependence on a specific cloud provider. Docker Hub is a cloud-agnostic container registry that can be used across any environment or cloud platform.
+
+**D. Orchestration and Deployment with Kubernetes via EKS**:
+
+**1. Create EKS Cluster**:
+
+```bash
+eksctl create cluster \
+  --name demo-cluster \
+  --region us-east-1 \
+  --nodegroup-name demo-nodes \
+  --node-type t3.small \
+  --nodes 2
+```
+
+**This command**:
+
+- **Creates**: Multi-AZ control plane (across three availability zones)
+- **Provisions**: Managed node group of EC2 instances (t3.small type, two nodes)
+- **Sets up**: Networking (VPC, subnets, security groups, route tables)
+- **Creates**: IAM roles for node group and control plane
+- **Installs**: Default Kubernetes add-ons (CoreDNS, kube-proxy, VPC CNI)
+- **Updates**: Local kubeconfig file automatically
+
+**Important Note**: This command can take around 15–20 minutes to complete. Make sure to use a Free Tier–eligible instance type (like t3.small); otherwise, the provisioning process may hang indefinitely or fail.
+
+**Troubleshooting**: If provisioning fails, check:
+
+- **CloudFormation stack events**: AWS Console → CloudFormation → Stacks → Events tab (look for CREATE_FAILED)
+- **Auto Scaling Activity logs**: AWS Console → EC2 → Auto Scaling Groups → Activity tab
+
+**2. Verify Cluster**:
+
+```bash
+kubectl get nodes
+```
+
+**3. Create Deployment**:
+
+**deployment.yaml**:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: k-demo-dep
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: k-demo
+  template:
+    metadata:
+      labels:
+        app: k-demo
+    spec:
+      containers:
+        - name: k-demo
+          image: username/aws:v1
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80
+```
+
+**Key Points**:
+
+- **replicas: 2**: Provides high availability
+- **selector.matchLabels**: Tells Deployment which Pods it "owns"
+- **imagePullPolicy: Always**: Pull from remote registry every time
+- **On EKS with two nodes**: The Deployment will run 2 pods, likely one on each node
+
+**4. Create Service**:
+
+**service.yaml**:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: k-demo
+spec:
+  selector:
+    app: k-demo
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+  type: LoadBalancer
+```
+
+**Key Points**:
+
+- **type: LoadBalancer**: Requests cloud provider to provision a load balancer that exposes the Service externally
+- **In EKS**: If AWS Load Balancer Controller is not installed, EKS natively provisions a Classic Load Balancer (CLB) by default
+- **Service forwards traffic**: From Service:80 → Pod:80
+
+**5. Apply Configurations**:
+
+```bash
+kubectl apply -f deployment.yaml
+kubectl apply -f service.yaml
+```
+
+**6. Check Status**:
+
+```bash
+kubectl get pods
+kubectl get deployment
+kubectl get svc
+```
+
+**7. Access the Service**:
+
+**Run `kubectl get svc`** and you'll see an EXTERNAL-IP column with a public DNS. Access your app at: `http://<....a9764...>.<region>.elb.amazonaws.com`
+
+**FastAPI Endpoints**:
+
+- `/docs`: Swagger UI for interactive API documentation
+- `/health`: Health check endpoint
+- `/predict`: Prediction endpoint
+
+**8. Testing the API**:
+
+**Test script**:
+
+```python
+import requests
+
+url = "http://<EXTERNAL-IP>/predict"
+data = {"x": 25}
+response = requests.post(url, json=data)
+print(response.json())
+```
+
+**Or use FastAPI docs**: Navigate to `http://<EXTERNAL-IP>/docs` and test interactively.
+
+**E. Clean Up**:
+
+**Delete Kubernetes Resources**:
+
+```bash
+kubectl delete svc k-demo
+kubectl delete deployment k-demo-dep
+```
+
+**Delete EKS Cluster**:
+
+```bash
+eksctl delete cluster --name demo-cluster
+```
+
+**This command**:
+
+- **Deletes**: The EKS cluster and all associated resources (control plane, worker nodes, networking components)
+- **Automatically deletes**: AWS CloudFormation stacks
+- **Removes**: Cluster configuration from local kubeconfig
+- **Takes**: 5–10 minutes, irreversible
+
+**After deletion**: Verify in AWS Management Console that no residual resources or pending CloudFormation stacks remain.
+
+**Summary**: A usual simplified exercise is:
+
+1. Package a container
+2. Write a Deployment YAML
+3. Write a Service YAML
+4. Create EKS cluster via eksctl
+5. `kubectl apply -f deployment.yaml` and `kubectl apply -f service.yaml`
+6. Use `kubectl get pods`, `kubectl describe`, etc.
+7. Upgrade, if needed: change the image tag, reapply, observe rolling update, etc.
+8. Clean up resources
+
+**Through this hands-on journey**: We simulated turning a trained model into an API endpoint as a microservice. This is a highly simplified version of what happens in industry: data scientists often start in notebooks/training scripts, but engineers or ML engineers will take the trained model and wrap it in an application.
+
+**Key Takeaways**:
+
+- **Cloud computing forms the foundation** for efficient ML deployment through flexible deployment, service, and responsibility models
+- **A clear understanding** of cloud infrastructure, networking, and IAM is crucial for building secure and well-managed solutions
+- **Everything remains similar** for all cloud service providers with their own different names and CLI tools
+- **We chose AWS** because it holds the largest market share, making it a reasonable choice for demonstration
+- **Master the fundamentals**: Containers, orchestration, cloud core concepts and networking (agnostic understanding)
+- **Emphasize theoretical foundations**: Tools may evolve or differ, but the core principles and approaches to building robust, production-ready ML systems remain consistent
+
+**EXAM TIP:** Questions about "EKS lifecycle" → think **cluster creation** (eksctl, multi-AZ control plane, managed node groups, networking, IAM roles, default add-ons) → **node registration** (EKS-optimized AMI, bootstrap script, aws-auth ConfigMap, kube-system namespace) → **deploying workloads** (standard Kubernetes manifests, LoadBalancer service, EBS/S3 storage integration) → **scaling and updates** (Cluster Autoscaler, HPA, control plane upgrades, node group updates, add-on updates). Questions about "EKS integration" → think **IAM** (control plane uses IAM, worker nodes assume instance profiles, aws-auth ConfigMap, IRSA for pods) → **Networking** (VPC, Route 53 DNS, VPN for hybrid) → **Storage** (EBS root volumes default, CSI drivers for persistent volumes, S3 for object storage) → **Security** (KMS for secrets, VPC-CNI security groups, WAF/ALB for web exposure) → **Monitoring** (CloudWatch, custom metrics, end-to-end tracing). Questions about "EKS design considerations" → think **cluster topology** (distribute node groups across AZs, managed node groups) → **networking strategy** (public vs private endpoints, VPC peering/Direct Connect, control plane in private subnets, latency optimization) → **storage** (EBS for fast block access, S3 for durable object storage) → **cost optimization** (node group autoscaling, right-size instances, savings plans/reserved instances) → **observability** (CloudWatch dashboards, alerts for pod restarts/latency/node health).
 
 **G. Deployment as a Service (Online Inference)**:
 
