@@ -801,6 +801,76 @@ The core mechanism that allows transformers to weigh relationships between all p
 | Decoder-Only    | Causal (left-to-right) | GPT, Gemini, LLaMA, LLaMA 4 | Generation: completion, chat           |
 | Encoder-Decoder | Both + cross-attention | T5, BART                    | Seq2seq: translation, summarization    |
 
+#### Mixture-of-Experts (MoE) Architecture
+
+**Why MoE for LLMs**: As models scale to hundreds of billions of parameters, traditional Transformers become computationally expensive. MoE allows models to scale capacity without proportional compute increases.
+
+**Core idea**: Instead of activating all parameters for every token, MoE activates only a **subset of expert subnetworks** per token. This enables:
+
+- **Larger models** (hundreds of billions of parameters)
+- **Efficient inference** (only fraction of parameters used per token)
+- **Cost-effective scaling** (GPT-4-level performance at ~half the inference cost)
+
+**How MoE works**:
+
+1. **Router (gate)**: A lightweight neural network that scores each expert based on the token's representation.
+
+   - Produces softmax scores over all experts
+   - Selects **top-K experts** (typically 2-3) per token
+   - Router is trained alongside the model
+
+2. **Experts**: Multiple parallel feedforward networks (MLPs), each learning different representations.
+
+   - Each expert is smaller than a standard Transformer FFN
+   - Different experts specialize in different patterns (verbs, dates, entities, etc.)
+   - Only selected experts process each token
+
+3. **Sparse activation**: Only selected experts compute outputs; others remain inactive.
+   - Outputs from selected experts are weighted and combined
+   - Different tokens can route to different experts
+   - Different layers can use different expert selections
+
+**Key components**:
+
+- **Router**: Multi-class classifier producing expert scores
+- **Top-K selection**: Selects K experts with highest scores
+- **Expert MLPs**: Specialized feedforward networks
+- **Shared expert** (optional): Always processes every token for stability
+
+**Challenges and solutions**:
+
+**Challenge 1: Expert under-training**
+
+- **Problem**: Router may favor one expert early, leaving others untrained
+- **Solution**:
+  - Add noise to router outputs during training
+  - Set non-selected expert logits to -infinity (softmax → 0)
+
+**Challenge 2: Load imbalance**
+
+- **Problem**: Some experts process more tokens than others
+- **Solution**: Limit tokens per expert; overflow to next-best expert
+
+**MoE vs Standard Transformer**:
+
+| Aspect              | Standard Transformer             | MoE Transformer                   |
+| ------------------- | -------------------------------- | --------------------------------- |
+| **FFN**             | Single large feedforward network | Multiple smaller expert networks  |
+| **Activation**      | All parameters active            | Only selected experts active      |
+| **Parameters**      | All loaded in memory             | All loaded, but sparse activation |
+| **Inference speed** | Slower (all params)              | Faster (fraction of params)       |
+| **Model size**      | Limited by compute               | Can scale to 100B+ parameters     |
+
+**Real-world examples**:
+
+- **LLaMA 4**: Uses MoE with 128 experts, activates ~few per token (GPT-4-level performance at ~half cost)
+- **Mixtral 8x7B**: 8 experts, activates 2 per token (7B active parameters, 47B total)
+- **LLaMA 4 Maverick**: 128 experts, activates subset per token
+
+**Analogy**: Think of MoE as a team of specialists (experts) with a manager (router) who assigns work to the best-suited specialists. Only the selected specialists work on each task, making the system efficient while maintaining expertise.
+
+**EXAM TIP:** Questions about "efficient large models" or "scaling to 100B+ parameters" → think **MoE architecture**. Questions about "LLaMA 4 architecture" → **MoE Transformer** with sparse expert activation.
+
 ### 6.1.1 Tokenization (how text becomes numbers for LLMs)
 
 Tokenization is the **first step** in any LLM pipeline: converting raw text into a sequence of integer IDs that the model can process. Understanding tokenization is critical for:
