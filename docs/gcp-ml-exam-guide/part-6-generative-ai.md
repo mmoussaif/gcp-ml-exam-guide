@@ -73,6 +73,13 @@ This framing is adapted from the GenAI Leader curriculum and is meant to sound l
   - Automate documentation and information extraction (code docs, contract review/extraction)
   - Automate ticket creation/notifications from customer feedback signals
 
+**Case study pattern (Imagen for e-commerce content at scale — PUMA example)**
+
+- **Problem**: creating high-quality product imagery for many regions/variants is slow and expensive (photoshoots, localization).
+- **Approach**: use **Imagen** to generate or customize **backgrounds/settings** around an existing product photo library via prompts (and then iterate quickly).
+- **Localization**: adjust prompts to reflect regional context (e.g., landmarks) to make content feel locally relevant.
+- **Outcome**: reported improvements like higher engagement (e.g., a “click-through rate” lift in a regional market). Treat such numbers as directional until validated in your own setup and measurement.
+
 #### Multimodal GenAI (why it changes workflows)
 
 Multimodal models can work across **text, images, video, audio, and PDFs**—either separately or combined in one task. This is why “GenAI” shows up in places like marketing content, document understanding, analytics dashboards, and support operations (not just chat).
