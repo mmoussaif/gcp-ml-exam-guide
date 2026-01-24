@@ -506,6 +506,352 @@ CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"]
 
 **EXAM TIP:** Questions about "deploying model as API" → think **FastAPI/Flask + Docker + container orchestration**. Questions about "model serving" → think **API endpoint + model loading + input validation**.
 
+#### 4.0.4 Reproducibility and Versioning in ML Systems
+
+**Overview**: Reproducibility means you can repeat an experiment or process and get the same results. In ML, this is critical for trust, collaboration, debugging, and compliance. Reproducibility ties closely with versioning—to reproduce an experiment, you need to know exactly which code, data, and parameters were used.
+
+**Key insight**: "If it isn't reproducible, it's not science." In MLOps, if it isn't reproducible, it won't be robust in production. Reproducibility turns ML from a one-off art into an engineering discipline.
+
+**Why Reproducibility Matters**:
+
+**A. Debugging and Error Tracking**:
+
+- If model performance suddenly drops or discrepancy between offline and online behavior, reproducing training process exactly helps pinpoint cause
+- **Questions to answer**: Was it a code change? New library version? Different random seed?
+- **Without reproducibility**: Effectively chasing a moving target
+
+**B. Collaboration**:
+
+- One engineer might want to rerun another's experiment to verify results or build on it
+- **Goal**: Reproducing someone's work should be as easy as pulling code and data and running a script
+- **Reality without reproducibility**: "What environment did you use?" guessing game
+
+**C. Regulations and Compliance**:
+
+- Industries like healthcare, finance, autonomous vehicles need to prove how model was built and that it behaves consistently
+- **Example**: Bank showing regulators exact training procedure for credit risk model
+- **Challenge scenarios**: If model decision is challenged (bias accusations), need to recreate how decision came to be
+
+**D. Continuity**:
+
+- Personnel changes happen—original author might leave company
+- **With reproducibility**: Next person can pick up where they left off
+- **Without reproducibility**: Organizations risk losing "knowledge" locked in model
+
+**E. Production Issues**:
+
+- Models retrained periodically—if new version performs worse, reproducibility helps compare runs
+- **Rollback**: If need to roll back to previous model, should ideally retrain it (if data changed) or have exact artifact
+- **Versioning**: Allows fetching exact model version when needed
+
+**Challenges to Reproducibility**:
+
+1. **Randomness**: ML outcome depends on randomness (initial weights, random train-test split). Two runs with same code/data could yield slightly different models if not controlled.
+
+2. **Data Versioning**: Data is large—can't just throw dataset into Git easily. Data may update over time. Need to version both code and data.
+
+3. **Environment Matters**: Library versions, hardware (floating-point precision differences on different GPUs), OS. If training code relies on system-specific behavior, that's a reproducibility risk.
+
+4. **Moving Pieces**: ML models and pipelines have many components (hyperparameters, feature pipelines, preprocessing steps). Easy to have "experiments" not fully tracked (manual tweaks in notebook, forgotten).
+
+**Best Practices for Reproducibility and Versioning**:
+
+**A. Ensure Deterministic Processes**:
+
+- **Set random seeds**: `np.random.seed(0)`, `random.seed(0)`, TensorFlow/PyTorch seed settings
+- **Note**: Some parallel or GPU operations inherently non-deterministic (race conditions, reduced precision)
+- **Bit-for-bit identical**: Might require sacrificing performance (frameworks have "deterministic" mode, slower)
+- **Practical approach**: Reproducibility within tolerance often enough (similar performance and outputs, not bit-identical)
+- **Control sources**: Data shuffling order, weight initialization, etc.
+- **Multiple threads**: Order of execution could vary. Fix seeds and use single thread for critical parts.
+- **Rule of thumb**: If someone runs training pipeline twice on same machine, should yield effectively same model (or metrics)
+
+**B. Version Control for Code**:
+
+- **Non-negotiable**: All code (data preparation scripts, model training code) should be in Git
+- **Every experiment**: Should tie to Git commit or tag
+- **Include Git commit hash**: In model's metadata (allows tracing back from model to code)
+- **Code versioning**: Well-understood in software engineering; ML extends rigor to other artifacts
+
+**C. Version Data**:
+
+- **Minimum**: Save snapshot or reference to exact data used for training
+- **Challenge**: Training data in database constantly changing—might need to snapshot it
+- **Tool**: DVC (Data Version Control) extends Git workflows to data and models
+  - Doesn't store actual data in Git, but stores hashes/references
+  - Data files versioned externally (cloud storage) while tying into Git commits
+  - **Example**: Track `train.csv`—DVC records hash of file (or pointer to cloud object)
+  - **Later**: Can reproduce exact file even if large
+- **DVC**: "Git-like experience to organize your data, models, and experiments"
+
+**D. Test for Reproducibility**:
+
+- **Process**: Verify reproducibility after training
+- **Quick test**: Load model, run on known test input, see if results as expected
+- **Ensures**: Model file not corrupted, environment can produce same outputs
+- **Retrain test**: Retrain model with same data (different random seed or benign change), ensure metrics in same ballpark
+- **Wild differences**: Indicate bug or unstable training process
+- **Critical models**: Might have "reproducibility test" in CI (re-run old training job on archive data)
+
+**E. Track Experiments and Metadata**:
+
+- **Tool**: Experiment tracker (MLflow, Weights & Biases)
+- **When training script executes**, log:
+  - Unique run ID
+  - Parameters used (hyperparameters, training epochs, etc.)
+  - Metrics (accuracy, loss over epochs, etc.)
+  - Code version (Git hash)
+  - Data version (DVC data hash or dataset ID)
+  - Model artifact or reference to it
+  - Environment info (library versions)
+- **Result**: Record of each experiment
+- **Best run**: If run #42 was best and became production, anyone can inspect run #42's details and reproduce it
+- **MLflow concepts**:
+  - **Experiment**: Named collection of runs
+  - **Run**: Single execution of ML workflow within specific experiment (encapsulates code, parameters, metrics, artifacts)
+
+**F. Version Model Artifacts**:
+
+- **Every production model**: Give it version number or ID, register in model registry
+- **Tool**: MLflow Model Registry provides central place to manage models with versions and stages (e.g., "v1-staging", "v1-production")
+- **Model registry entry contains**:
+  - Model artifact
+  - Metadata (who created it, when)
+  - References to experiment or code
+  - **Lineage**: Which run (with which parameters and data) produced that model
+- **Benefits**: Even if deploy model v5 today, can still fetch model v3 if needed, know exactly what each version is
+
+**G. Data and Model Lineage Logging**:
+
+- **When model trained**: Log references to exact data
+- **Examples**:
+  - Data lake with partitions: Note which partition or timestamp
+  - Database query: Include query or data checksum in log
+- **Advanced setups**: Data lineage tools (track data provenance through pipelines)
+- **Most setups**: Record "used file X of size Y bytes, with checksum Z" is great
+- **DVC**: DVC commit ID acts as the link
+
+**H. Environment Management**:
+
+- **Capture software environment**:
+  - **requirements.txt** or **environment.yml** (Conda) to pin library versions
+  - **Avoid floating dependencies**: Don't say "pandas" without version (update could change behavior)
+- **Containerize if possible**: Docker image as exact snapshot of environment (version Docker images: `my-train-env:v1`)
+- **If not containers**: Use virtual environments to isolate dependencies
+- **Infrastructure as code**: Script cloud instances or specific hardware (even infrastructure differences like GPU capabilities less likely to creep in)
+
+**Trade-offs**:
+
+- **Absolute reproducibility (bit-for-bit)**: Sometimes unnecessarily strict
+- **Practical approach**: Care that performance or behavior is reproducible within tolerance, not exact weights
+- **Example**: Training deep net gives 0.859 accuracy one time, 0.851 next time—effectively same in usefulness
+- **Problem indicator**: 0.88 one time, 0.80 another with supposedly same setup—indicates problem
+- **Business perspective**: Consistency of quality matters, not bit-for-bit identical
+- **If can achieve bit-for-bit easily**: Do it (simplifies debugging), but be aware of sources of nondeterminism
+
+**Key Principle**: "If it's not logged or versioned, it didn't happen."
+
+**Teams often adopt**:
+
+- Checklists or automation to enforce (e.g., training script automatically logs to MLflow so you can't forget)
+- Discipline and culture as much as tools
+- Habit: "Did I commit that code? Did I tag the data version? Am I logging the runs?"
+
+**Hands-On Examples**:
+
+**1. PyTorch Model Training Loop and Model Persistence**:
+
+```python
+import torch
+import torch.nn as nn
+import torch.optim as optim
+
+# Set seed for reproducibility
+torch.manual_seed(0)
+
+# Define simple neural network
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.fc1 = nn.Linear(10, 5)
+        self.fc2 = nn.Linear(5, 1)
+
+    def forward(self, x):
+        x = torch.relu(self.fc1(x))
+        x = self.fc2(x)
+        return x
+
+# Create model instance
+model = Net()
+criterion = nn.MSELoss()
+optimizer = optim.SGD(model.parameters(), lr=0.01)
+
+# Dummy data (in practice, use DataLoader)
+X = torch.randn(100, 10)
+y = torch.randn(100, 1)
+
+# Training loop
+for epoch in range(5):
+    optimizer.zero_grad()
+    outputs = model(X)
+    loss = criterion(outputs, y)
+    loss.backward()
+    optimizer.step()
+    print(f'Epoch {epoch+1}, Loss: {loss.item():.4f}')
+
+# Save model weights
+torch.save(model.state_dict(), 'model_weights.pth')
+
+# Load model
+model2 = Net()
+model2.load_state_dict(torch.load('model_weights.pth'))
+model2.eval()  # Set to evaluation mode
+
+# Save checkpoint (for resuming training)
+checkpoint = {
+    'epoch': 5,
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'loss': loss.item(),
+}
+torch.save(checkpoint, 'checkpoint.pth')
+```
+
+**Key points**:
+
+- Set `torch.manual_seed(0)` for reproducibility
+- Save `state_dict()` (recommended, contains model parameters)
+- Can also save entire model, but saving state dict + code to define class is more version-proof
+- Checkpoint contains everything to resume training (model weights, optimizer state, epoch, loss)
+
+**2. Git + DVC for Version Control**:
+
+**Setup**:
+
+```bash
+# Initialize Git and DVC
+git init
+dvc init
+
+# Add DVC config to Git
+git add .dvc .gitignore
+git commit -m "Initialize DVC"
+
+# Track dataset with DVC
+dvc add data.csv
+# Creates data.csv.dvc (tracked by Git)
+# Adds data.csv to .gitignore
+
+# Set up DVC remote (e.g., cloud storage)
+dvc remote add -d myremote s3://bucket/path
+# Or local: dvc remote add -d myremote /path/to/remote
+
+# Push dataset to remote
+dvc push
+
+# Pull dataset (on another machine)
+dvc pull
+
+# Update dataset
+# Modify data.csv
+dvc add data.csv  # Updates .dvc file with new hash
+git add data.csv.dvc
+git commit -m "Update dataset"
+dvc push
+
+# Restore older version
+git checkout <old-commit-hash>
+dvc checkout  # Restores data.csv from that commit
+```
+
+**DVC workflow**:
+
+- DVC stores hashes/references in `.dvc` files (tracked by Git)
+- Actual data stored externally (cloud storage, local remote)
+- `data.csv.dvc` contains hash and size of data file
+- When commit changes, DVC file hash changes
+- Can restore older versions using Git + DVC checkout
+
+**3. MLflow for Experiment Tracking**:
+
+```python
+import mlflow
+import mlflow.sklearn
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import accuracy_score, log_loss
+from sklearn.datasets import load_iris
+from sklearn.model_selection import train_test_split
+
+# Load data
+iris = load_iris()
+X_train, X_test, y_train, y_test = train_test_split(
+    iris.data, iris.target, test_size=0.2, random_state=42
+)
+
+# Set experiment name
+mlflow.set_experiment("Iris_Classification_Comparison")
+
+# Train and track multiple models
+models = {
+    "RandomForest": RandomForestClassifier(n_estimators=100),
+    "SVC": SVC(probability=True),
+}
+
+for model_name, model in models.items():
+    with mlflow.start_run(run_name=model_name):
+        # Train model
+        model.fit(X_train, y_train)
+
+        # Predictions
+        y_pred = model.predict(X_test)
+        y_pred_proba = model.predict_proba(X_test)
+
+        # Calculate metrics
+        accuracy = accuracy_score(y_test, y_pred)
+        log_loss_score = log_loss(y_test, y_pred_proba)
+
+        # Log parameters and metrics
+        mlflow.log_params({
+            "n_estimators": 100 if model_name == "RandomForest" else None,
+            "model_type": model_name
+        })
+        mlflow.log_metrics({
+            "accuracy": accuracy,
+            "log_loss": log_loss_score
+        })
+
+        # Log model
+        mlflow.sklearn.log_model(model, "model")
+
+# Register best model
+best_run_id = "..."  # From MLflow UI or logged output
+mlflow.register_model(
+    f"runs:/{best_run_id}/model",
+    "IrisBestModel"
+)
+
+# Load registered model for inference
+model = mlflow.sklearn.load_model("models:/IrisBestModel/latest")
+# Or specific version: "models:/IrisBestModel/1"
+
+# Save model to local directory
+mlflow.sklearn.save_model(
+    mlflow.sklearn.load_model("models:/IrisBestModel/1"),
+    "model_dir"
+)
+```
+
+**MLflow features**:
+
+- **Experiment tracking**: Log parameters, metrics, models
+- **Model registry**: Register models with versions and stages
+- **UI**: Browse experiments, compare runs, visualize metrics
+- **Model loading**: Load registered models by name and version
+- **Lineage**: Track which run produced which model
+
+**EXAM TIP:** Questions about "reproducibility" → think **random seeds + version control + environment management**. Questions about "data versioning" → think **DVC** (doesn't store data in Git, stores hashes/references). Questions about "experiment tracking" → think **MLflow** or **Weights & Biases** (log parameters, metrics, models, code version, data version). Questions about "model registry" → think **versioned models with metadata and lineage**.
+
 ```mermaid
 flowchart LR
   subgraph Triggers
