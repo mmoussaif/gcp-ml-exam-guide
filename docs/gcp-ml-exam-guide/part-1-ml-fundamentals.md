@@ -19,7 +19,7 @@ Many exam questions are really about the **workflow** and **framing**, not the m
 
 ```mermaid
 flowchart TD
-  A[Problem formulation\nObjective + constraints + metric] --> B[Data collection/ingestion]
+  A["Problem formulation: Objective + constraints + metric"] --> B[Data collection/ingestion]
   B --> C[Data prep + feature engineering]
   C --> D[Model development]
   D --> E[Hyperparameter tuning]

@@ -240,7 +240,7 @@ You may also see references to lighter-weight “agent workflow” specs (someti
 ```mermaid
 flowchart LR
   subgraph MCP["MCP (agent/host ↔ tools/data)"]
-    Host[Host\nIDE / chat app / agent runtime] --> Client[MCP client]
+    Host["Host: IDE / chat app / agent runtime"] --> Client[MCP client]
     Client --> S1[MCP server: Jira]
     Client --> S2[MCP server: GitHub]
     Client --> S3[MCP server: Snowflake]
