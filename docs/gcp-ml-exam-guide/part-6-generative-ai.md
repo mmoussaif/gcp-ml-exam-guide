@@ -199,6 +199,36 @@ Use these lenses for both top-down and bottom-up efforts:
 - **Impact**: how you’ll measure success (quality, time saved, cost, risk reduction)
 - **Continuous improvement**: evaluation + monitoring + iteration loops
 
+#### Brainstorming use cases: the “creative matrix” method (practical)
+
+When teams struggle to generate *and* prioritize use cases, a simple facilitation technique is a **creative matrix**:
+
+- **Axis 1 (GenAI capabilities)**: pick the tools/capabilities you can realistically use (e.g., Workspace with Gemini, Vertex AI Search, conversational agents, model tuning, multimodal).
+- **Axis 2 (your business)**: pick what matters internally (personas, workflows, strategic goals).
+- **Fill the grid**: write “sticky note” ideas for each intersection (small, concrete use cases).
+
+```mermaid
+flowchart LR
+  A[GenAI capabilities\n(models, search/RAG, agents, multimodal)] --> B[Creative matrix]
+  C[Business axis\n(personas, workflows, priorities)] --> B
+  B --> D[Sticky-note ideas\n(concrete intersections)]
+  D --> E[Prioritize\nImpact × Effort\n+ Feasibility/Risk]
+```
+
+**Prioritization step (keep it lightweight)**
+
+- **Impact**: will this materially improve a priority workflow or KPI?
+- **Effort**: can we ship a safe pilot quickly (days/weeks), or is it months?
+- **Feasibility**: do we have the data, access, and integration path?
+- **Responsible AI risk**: privacy/safety/compliance exposure; review burden.
+
+**Example matrix prompts (to generate sticky notes fast)**
+
+- “Enhance customer experience” × “Vertex AI Search” → image-based search to find similar products.
+- “Increase efficiency” × “Agents/automation” → auto-triage support tickets and draft responses with citations.
+- “Drive innovation” × “Model tuning” → adapt a model for a niche domain (with eval gates).
+- “Employee productivity” × “Workspace with Gemini” → meeting notes + action items + follow-up drafts.
+
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
 - **LLM**: A language model (often transformer-based) trained to predict the next token; can be instruction-tuned to follow tasks.
