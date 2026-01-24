@@ -7,7 +7,12 @@ The October 2024 exam version includes Generative AI topics.
 - [6.0 LLMs & Agentic Systems](#60-llms--agentic-systems-what-the-exam-is-really-testing)
 - [6.0.1 Foundations of AI Engineering and LLMOps](#601-foundations-of-ai-engineering-and-llmops)
 - [6.1 TRANSFORMER ARCHITECTURE](#61-transformer-architecture)
-  - [6.1.1 Tokenization](#611-tokenization-how-text-becomes-numbers-for-llms)
+  - [6.1.1 Self-Attention](#611-self-attention)
+  - [6.1.2 Multi-Head Attention](#612-multi-head-attention)
+  - [6.1.3 Causal Masking](#613-causal-masking)
+  - [6.1.4 Mixture-of-Experts (MoE) Architecture](#614-mixture-of-experts-moe-architecture)
+  - [6.1.5 Pretraining and Fine-Tuning](#615-pretraining-and-fine-tuning)
+  - [6.1.6 Tokenization](#616-tokenization-how-text-becomes-numbers-for-llms)
 - [6.2 Prompting & Inference Controls](#62-prompting--inference-controls-fastest-customization)
 - [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
 - [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
@@ -1171,11 +1176,222 @@ flowchart TD
 
 ### 6.1 TRANSFORMER ARCHITECTURE
 
-#### Self-Attention
+**Introduction**:
 
-The core mechanism that allows transformers to weigh relationships between all positions in a sequence.
+**"Attention"**: Is the key innovation that enabled Transformers to leapfrog previous RNN-based models. At a high level, an attention mechanism lets a model dynamically weight the influence of other tokens when encoding a given token.
 
-- **Formula**: \( \mathrm{Attention}(Q,K,V) = \mathrm{softmax}(QK^\top/\sqrt{d_k}) \times V \)
+**In other words**: The model can attend to relevant parts of the sequence as it processes each position. Instead of a fixed-size memory, attention provides a flexible lookup: for each token, the model can refer to any other token's representation to inform itself, with learnable weights indicating how much to use each other token.
+
+**Hence, in a nutshell**: Attention is the mathematical engine that allows the model to route information between tokens, enabling it to model long-range dependencies.
+
+#### 6.1.1 Self-Attention
+
+**The most common form**: Of attention is self-attention (specifically scaled dot-product self-attention). In self-attention, each position in the sequence sends queries and keys to every other position and receives back a weighted sum of values.
+
+**At its heart**: It is a differentiable dictionary lookup. For every token in a sequence, the model projects the input embedding into three distinct vectors, concretely, for each token (at position i), the model computes:
+
+- **A Query vector Q_i**: Represents what the current token is looking for (e.g., a verb looking for its subject)
+- **A Key vector K_i**: Represents what the current token "advertises" itself as (e.g., "I am a noun, plural")
+- **A Value vector V_i**: The actual content information the token holds
+
+**Important note**:
+
+**In a transformer**: Input token embeddings are linearly projected into Query (Q), Key (K), and Value (V) representations using three separate learned weight matrices.
+
+**Let the input embedding matrix be**: X ∈ R^(n×d_model), where n is the sequence length and d_model is the embedding dimension.
+
+**During training**: The model learns three distinct weight matrices: W_Q ∈ R^(d_model×d_k), W_K ∈ R^(d_model×d_k) and W_V ∈ R^(d_model×d_v). Here, d_k is the length of a query or key vector and d_v is the length of a value vector.
+
+**The Query, Key, and Value matrices**: Are computed as:
+
+$$Q = XW_Q$$
+$$K = XW_K$$
+$$V = XW_V$$
+
+**Note**: Let Q_i, K_i, V_i denote the i-th row of the matrices Q, K, V corresponding to the query, key, and value vectors of the i-th token.
+
+**As mentioned above**: Q_i, K_i and V_i are all derived from the embedding (or the output of the previous layer) via learned linear transformations. You can think of:
+
+- **The Query**: As the question this token is asking at this layer
+- **The Key**: As the distilled information this token is offering to others
+- **The Value**: As the actual content to be used if this token is attended to
+
+**The attention weights**: Between token i and token j are computed as the (scaled) dot product of Q_i and K_j. Intuitively, this measures how relevant token j's content is to token i's query. All tokens j are considered, and a softmax is applied to these dot products to obtain a nice probability distribution that sums to 1.
+
+**Deconstructing the Formula**:
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^\top}{\sqrt{d_k}}\right)V$$
+
+- **Q_i · K_j**: Computes the dot product between the query of token i and the key of token j, measuring their relevance
+- **√d_k (scaling factor)**: As the dimensionality d_k increases, dot-product magnitudes grow, pushing softmax into regions with very small gradients. Dividing by √d_k keeps the variance of scores roughly constant and stabilizes training
+- **Softmax**: Applied over all j, it normalizes the attention scores for a fixed query Q_i, producing a distribution of attention weights that sum to 1
+- **V_j (Aggregation)**: The output is a weighted sum of value vectors, producing a context-aware representation for token i
+
+**These weights determine**: How much attention token i pays to every other position. Finally, the output for token i is the weighted sum of all the Value vectors, using those attention weights.
+
+**Dummy Example (Illustrative)**:
+
+**Now, let's walk through**: A basic example to understand this better.
+
+**Suppose we have**: A tiny sequence of 2 tokens and a very small vector dimension (2-D for simplicity). We'll manually set some Query/Key/Value vectors to illustrate different attention scenarios:
+
+- **Token 1 has query Q_1 = [1, 0]**
+- **Token 2 has query Q_2 = [1, 1]**
+- **Token 1's key K_1 = [1, 0]**
+- **Token 2's key K_2 = [0, 1]**
+- **Token 1's value V_1 = [10, 0]**
+- **Token 2's value V_2 = [0, 10]**
+
+**Here**: Token 1's query is [1,0] which perfectly matches token 1's own key [1,0] but is orthogonal to token 2's key.
+
+**Token 2's query [1,1]**: Is equally similar to both keys. Now we compute attention:
+
+**Given**: d_k = 2, so scaling factor √d_k ≈ 1.414.
+
+**For Token 1**:
+
+- **Raw scores**: s_1,1 = Q_1 · K_1 = 1, s_1,2 = Q_1 · K_2 = 0
+- **Scaled scores**: s_1,1 = 1/√2 ≈ 0.707, s_1,2 = 0/√2 = 0
+- **Softmax**: α_1,1 = e^(0.707) / (e^(0.707) + e^0) ≈ 0.67, α_1,2 ≈ 0.33
+- **Weighted sum**: AttentionOutput_1 = 0.67 × [10, 0] + 0.33 × [0, 10] ≈ [6.7, 3.3]
+
+**For Token 2**:
+
+- **Raw scores**: s_2,1 = Q_2 · K_1 = 1, s_2,2 = Q_2 · K_2 = 1
+- **Scaled scores**: s_2,1 = 1/√2 ≈ 0.707, s_2,2 = 1/√2 ≈ 0.707
+- **Softmax**: α_2,1 = 0.5, α_2,2 = 0.5
+- **Weighted sum**: AttentionOutput_2 = 0.5 × [10, 0] + 0.5 × [0, 10] = [5, 5]
+
+**What does the output actually depict?**
+
+**The attention output**: Depicts a contextualized representation of each word based on its relationships (weights) with other words.
+
+**For token 1**: The attention mechanism calculated weights of 0.67 for itself and 0.33 for token 2. This means the output vector is not just the static definition of V_1. It is a compound concept built from a 67% share of V_1 and a 33% share of V_2. The model has kept the core identity of the word strong, but has added a slight flavor of the other token.
+
+**Note**: The model is not literally mixing meanings, but features useful for the task.
+
+**Similarly, for token 2**: The attention mechanism calculated weights of 0.50 for itself and 0.50 for token 1. This means token 2's representation depends equally on itself and token 1.
+
+**In summary**: The outputs depict the flow of information. It shows exactly how much context each token absorbed from its neighbors to update its own representation.
+
+**Important note**: This example demonstrates the mechanics of self-attention in its simplest, unmasked form. For clarity, causal masking is not applied here, meaning each token is allowed to attend to ALL tokens in the sequence. This setup is purely illustrative. Causal (autoregressive) masking, which restricts attention to past and current tokens, will be introduced and discussed separately in a later section.
+
+#### 6.1.2 Multi-Head Attention
+
+**In our previous example**: We had a single attention mechanism processing the tokens. However, language is too complex for a single calculation to capture everything. A sentence contains grammatical structure, semantic meaning, and references.
+
+**To solve this**: Transformers use multi-head attention (MHA) in practice.
+
+**Hence, let's go ahead**: And understand the conceptual ideas behind multi-head attention.
+
+**The Dimensionality Split**:
+
+**This is where**: The projection mathematics becomes essential. We take the massive "main highway" of information (d_model) and split it into smaller "side roads" (subspaces).
+
+- **d_model (the full embedding)**: Each input token starts as a vector X ∈ R^d_model (e.g., 512). This vector contains all token information entangled together
+- **h (number of heads)**: We split the workload into h parallel heads (e.g., h = 8)
+- **d_k, d_v (the head dimensions)**: Each head operates on a lower-dimensional subspace. In standard architectures (like GPT/BERT), we divide the dimensions equally, say:
+
+$$d_k = d_v = \frac{d_{model}}{h}$$
+
+**For example**: If d_model = 512 and h = 8, then d_k = d_v = 64.
+
+**Clarification**: Mathematically, d_k and d_v do not have to be equal. d_k is about "matching" (keys), while d_v is about "payload" (values). However, we almost always set them equal for computational efficiency and to ensure the final concatenation fits perfectly back into d_model.
+
+**Learnable Projections**:
+
+**For each head i**: The model learns three matrices (which we discussed earlier also):
+
+- **W_Q^i ∈ R^(d_model×d_k)**
+- **W_K^i ∈ R^(d_model×d_k)**
+- **W_V^i ∈ R^(d_model×d_v)**
+
+**The Complete Flow**:
+
+1. **Firstly**: The input vector is split into parts, where each part denotes a head. Each segment of the input goes through the standard attention formula independently, with its own weight matrices. This results in h (total heads) separate vectors, each of size d_v
+
+2. **Next**: We stack the output vectors side-by-side to restore the original width. For example, size: h × d_v = d_model (Back to d_model)
+
+3. **Finally**: We multiply by one last matrix, W_O
+
+**This W_O (output weight matrix)**: Is the final learnable linear layer in the MHA block. You can think of it as the "manager" of the attention heads.
+
+**To understand W_O properly**: Let's look at the sizes involved:
+
+- **The MHA**: Is the concatenated output of all h heads. Size: h heads × d_v = d_model dimensions
+- **Desired output**: The vector that goes to the next layer (the feed-forward network): d_model dimensions
+- **Therefore**: W_O is a square matrix of size d_model × d_model
+
+**You might ask**: "If the concatenation is already size d_model, and we want size d_model, why not just stop there? Why multiply by another matrix?"
+
+**There's a very critical reason**: After concatenation, the vector is segmented:
+
+- **Dimensions 0-63**: Contain only information from Head 1 (e.g., Grammar)
+- **Dimensions 64-127**: Contain only information from Head 2 (e.g., Vocabulary)
+- **And so on**
+
+**These parts haven't "talked"**: To each other yet. They are just sitting side-by-side.
+
+**Multiplying by W_O**: Allows the model to take a weighted sum across all these segments. It mixes the learnings of different heads to create a unified representation.
+
+**Analogy**: Imagine 8 people, each write a report on a separate piece of paper. Concatenation is stapling the 8 papers together and W_O is like a manager reading all 8 papers and writing a single, cohesive summary.
+
+**With this**: We have completed understanding the key details of multi-head attention (MHA) and attention in general. However, before moving on to another topic, there is one more crucial concept we need to understand: causal masking.
+
+#### 6.1.3 Causal Masking
+
+**In Generative LLMs** (like GPT): We use causal language modeling (CLM), where the objective is to predict the next token.
+
+**The Problem**:
+
+**If we allow**: The model to see the whole sentence during training, it will cheat by simply attending to the next word (Token t+1) to predict Token t+1, rather than learning the language patterns.
+
+**The solution**: We must enforce the concept of time. Token t can see the past (1…t), but the future (t+1…) must be invisible.
+
+**The Masking Mechanism**:
+
+**The way attention scores**: Are computed, a square grid where every token looks at every other token is created. To blind the model to the future, we add a mask matrix (M) before we actually do the softmax step.
+
+**The Mask M**: Is an upper-triangular matrix of negative infinity (-∞):
+
+$$
+M_{ij} = \begin{cases}
+0 & \text{if } i \geq j \text{ (can attend)} \\
+-\infty & \text{if } i < j \text{ (cannot attend)}
+\end{cases}
+$$
+
+**To visualize this**: Let's take the example of a sequence of 3 tokens. Therefore, raw scores (before mask):
+
+$$
+\begin{bmatrix}
+s_{11} & s_{12} & s_{13} \\
+s_{21} & s_{22} & s_{23} \\
+s_{31} & s_{32} & s_{33}
+\end{bmatrix}
+$$
+
+**After the mask addition**:
+
+$$
+\begin{bmatrix}
+s_{11} & -\infty & -\infty \\
+s_{21} & s_{22} & -\infty \\
+s_{31} & s_{32} & s_{33}
+\end{bmatrix}
+$$
+
+**Now, since e^(-∞) ≈ 0**: So when we apply softmax to these scores:
+
+- **Row 1 (token 1)**: Can only attend to itself. Weights for T2 and T3 become 0
+- **Row 2 (token 2)**: Can attend to T1 and T2. Weight for T3 becomes 0
+- **Row 3 (token 3)**: Can attend to everyone (T1, T2, T3)
+
+**This ensures**: The autoregressive property, i.e., the representation of any token is built entirely from its history, never its future. This addition of zero or negative infinity based on token position is what is essentially known as causal or autoregressive masking.
+
+**Now, having also understood**: The concept of causal masking, we have broadly covered attention and its related terms, at least to the extent required for understanding the remainder of this series.
+
+**The key takeaway**: Is that attention mechanisms allow the model to dynamically weight relationships between tokens, enabling long-range dependencies and context mixing. And despite the word "attention," there is nothing mystical; it's matrix multiplication, softmax, and weighted sums under the hood, all differentiable, so the model learns those attention weight patterns that help it predict data well.
 
 #### Architecture Variants
 
@@ -1185,17 +1401,55 @@ The core mechanism that allows transformers to weigh relationships between all p
 | Decoder-Only    | Causal (left-to-right) | GPT, Gemini, LLaMA, LLaMA 4 | Generation: completion, chat           |
 | Encoder-Decoder | Both + cross-attention | T5, BART                    | Seq2seq: translation, summarization    |
 
-#### Mixture-of-Experts (MoE) Architecture
+#### 6.1.4 Mixture-of-Experts (MoE) Architecture
 
-**Why MoE for LLMs**: As models scale to hundreds of billions of parameters, traditional Transformers become computationally expensive. MoE allows models to scale capacity without proportional compute increases.
+**The transformer**: Is a dense architecture: every layer's neurons are used for every input. In a standard transformer, each layer consists of the multi-head self-attention mechanism we described, plus a feed-forward network.
 
-**Core idea**: Instead of activating all parameters for every token, MoE activates only a **subset of expert subnetworks** per token. This enables:
+**All tokens go through**: The same layers and computations. Scaling a transformer usually means making it deeper (more layers), wider (more neurons per layer, or more attention heads), or increasing the embedding dimension or vocabulary; all of which increase the total parameters and computation roughly linearly or quadratically.
 
-- **Larger models** (hundreds of billions of parameters)
-- **Efficient inference** (only fraction of parameters used per token)
-- **Cost-effective scaling** (GPT-4-level performance at ~half the inference cost)
+**However**: An alternative architecture family called Mixture-of-Experts (MoE) has emerged as a way to scale models sparsely, meaning not all parameters are used for every token. The idea of MoE is to have several parallel sub-networks ("experts") and a gating mechanism that chooses which expert(s) to use for a given input.
 
-**How MoE works**:
+**In transformers**: MoE is typically applied to the feed-forward part: instead of one feed-forward network in each layer, you have many feed-forward networks, each an expert.
+
+**For each input**: Passing through that layer, the model's router (gate) will activate only one or a few of those experts, based on the input's characteristics.
+
+**The outputs**: From the chosen expert(s) are used, while the others stay idle for that input.
+
+**What's the benefit?**
+
+**MoE lets you increase**: The total number of parameters (since you have dozens of expert networks, each with its own weights) without increasing the computations per input as much. Each input only goes through, say, 2 expert networks instead of all 32.
+
+**Ideally**: This means you could train a trillion-parameter model with the compute cost comparable to a dense model of perhaps 100 billion parameters, because at any given time, most parameters are "inactive". MoE effectively creates a sparsely activated model.
+
+**For example**: Google's Switch Transformer was a pioneering MoE model. In one configuration, it had 26 billion total parameters but only around 700 million active during inference. Another example is Google's GLaM (Generalist Language Model); it had a MoE with 1.2 trillion parameters in total, but at inference time, only about 96 billion are active.
+
+**In these cases**: The "experts" are large MLP (multi-layer perceptron) sublayers, and the gating network is trained to route tokens/inputs to the best expert(s) for that token. The gating usually works by computing a score for each expert and using a softmax or top-k selection.
+
+**Key Points About MoE Architectures**:
+
+**1. Efficiency and Speed**:
+
+**MoEs can be pretrained**: Faster to a certain quality level compared to dense models. Because each batch token only exercises part of the network, you can scale up capacity (parameters) without much scaling of compute.
+
+**This can make**: Pretraining more compute-efficient, and also at inference, a MoE model can be faster than a dense model of equal size, because effectively each output uses fewer floating-point operations. However, note that MoEs require a lot of memory (since all experts' weights must be stored, even if not used every time). So they trade off memory for speed.
+
+**2. Training Complexity**:
+
+**MoEs come with challenges**: Balancing the load between experts is tricky, if the gate sends most tokens to one expert and few to others, that one becomes a bottleneck (and overfits) while others under-utilize.
+
+**Techniques like**: Load-balancing losses (penalizing the gate if it doesn't use experts evenly) are required to be used.
+
+**3. When to Use**:
+
+**MoE models tend to shine**: When you have a very multi-modal or multi-task training data, e.g., a mix of languages or domains, because experts can specialize, analogous to AI agents.
+
+**There's evidence**: That MoEs excel at multitasking or multi-domain learning, as the gate can learn to route different kinds of inputs to different experts who specialize. For example, one expert might handle legal text, another code, another casual dialogue, etc., if trained that way. On the flip side, if the data is homogeneous, a dense model might be just as good or better.
+
+**It's worth noting**: That while MoEs show huge potential, many production and open models still choose dense architectures. Dense models can be simpler to fine-tune and deploy in many scenarios. However, the techniques from MoE research are influencing other areas (like sparsity in general, conditional routing for specific skills, etc.).
+
+**For the scope**: Of this series, understand that transformer (dense) architecture is the default for LLMs, but MoE is a notable variant that trades complexity for capacity. If you're building an application and choosing a model, you likely won't implement MoE from scratch, but it's useful to know why an "MoE 100B" model might actually run faster than a "dense 30B" model.
+
+**How MoE Works**:
 
 1. **Router (gate)**: A lightweight neural network that scores each expert based on the token's representation.
 
@@ -1214,23 +1468,21 @@ The core mechanism that allows transformers to weigh relationships between all p
    - Different tokens can route to different experts
    - Different layers can use different expert selections
 
-**Key components**:
+**Key Components**:
 
 - **Router**: Multi-class classifier producing expert scores
 - **Top-K selection**: Selects K experts with highest scores
 - **Expert MLPs**: Specialized feedforward networks
 - **Shared expert** (optional): Always processes every token for stability
 
-**Challenges and solutions**:
+**Challenges and Solutions**:
 
-**Challenge 1: Expert under-training**
+**Challenge 1: Expert Under-Training**:
 
 - **Problem**: Router may favor one expert early, leaving others untrained
-- **Solution**:
-  - Add noise to router outputs during training
-  - Set non-selected expert logits to -infinity (softmax → 0)
+- **Solution**: Add noise to router outputs during training, set non-selected expert logits to -infinity (softmax → 0)
 
-**Challenge 2: Load imbalance**
+**Challenge 2: Load Imbalance**:
 
 - **Problem**: Some experts process more tokens than others
 - **Solution**: Limit tokens per expert; overflow to next-best expert
@@ -1245,17 +1497,151 @@ The core mechanism that allows transformers to weigh relationships between all p
 | **Inference speed** | Slower (all params)              | Faster (fraction of params)       |
 | **Model size**      | Limited by compute               | Can scale to 100B+ parameters     |
 
-**Real-world examples**:
+**Real-World Examples**:
 
 - **LLaMA 4**: Uses MoE with 128 experts, activates ~few per token (GPT-4-level performance at ~half cost)
 - **Mixtral 8x7B**: 8 experts, activates 2 per token (7B active parameters, 47B total)
-- **LLaMA 4 Maverick**: 128 experts, activates subset per token
+- **Google Switch Transformer**: 26B total parameters, ~700M active during inference
+- **Google GLaM**: 1.2T total parameters, ~96B active during inference
 
 **Analogy**: Think of MoE as a team of specialists (experts) with a manager (router) who assigns work to the best-suited specialists. Only the selected specialists work on each task, making the system efficient while maintaining expertise.
 
-**EXAM TIP:** Questions about "efficient large models" or "scaling to 100B+ parameters" → think **MoE architecture**. Questions about "LLaMA 4 architecture" → **MoE Transformer** with sparse expert activation.
+**EXAM TIP:** Questions about "efficient large models" or "scaling to 100B+ parameters" → think **MoE architecture**. Questions about "LLaMA 4 architecture" → **MoE Transformer** with sparse expert activation. Questions about "MoE benefits" → think **sparse activation** (only subset of parameters active), **efficiency** (faster inference than dense models of equal size), **capacity scaling** (can scale to trillion parameters without proportional compute). Questions about "MoE challenges" → think **load balancing** (experts must be used evenly), **training complexity** (router must learn to route correctly), **memory requirements** (all experts stored even if inactive).
 
-### 6.1.1 Tokenization (how text becomes numbers for LLMs)
+#### 6.1.5 Pretraining and Fine-Tuning
+
+**Introduction**:
+
+**When people interact**: With a modern LLM and see it explain calculus, write code, or reason about policy trade-offs, it's tempting to think of the model as something that was explicitly taught these abilities.
+
+**In reality**: Most of what makes an LLM impressive emerges from a surprisingly simple objective applied at an enormous scale: predicting the next token.
+
+**Everything else**: Reasoning, factual recall, linguistic fluency, and even many failure modes falls out of this process.
+
+**From an LLM behavior perspective**: Pretraining and fine-tuning are not just two technical stages. They correspond to two very different personalities of the same underlying architecture.
+
+**Pretraining creates**: A model that is capable but indifferent. Fine-tuning reshapes that capability into something cooperative, aligned, and task-aware. The contrast between these two stages becomes very clear when you directly compare how a pretrained model answers a prompt versus a fine-tuned one.
+
+**Pretraining: Teaching the Model to Imitate the Distribution of Language**:
+
+**At the beginning**: A transformer is nothing more than a stack of layers with random weights. It has no notion of grammar, facts, or meaning. Pretraining is the process that turns this blank slate into a general-purpose language model.
+
+**For autoregressive models**: Such as GPT and LLaMA, the pretraining objective is causal language modeling. The model sees a sequence of tokens and learns to predict the next one.
+
+**Given enough data**: And compute, this simple task forces the model to internalize a vast amount of structure about language.
+
+**What's important here**: Is that the model is never told what grammar is, or what a "fact" is, or how to answer a question. It is only rewarded for assigning high probability to the token that actually occurred next in the training text.
+
+**Over hundreds of billions**: Of examples, the model gradually learns that certain patterns are far more likely than others. Syntax emerges because grammatically correct sequences are more common than incorrect ones.
+
+**From a behavioral standpoint**: A pretrained model is best understood as a statistical mirror of its training data. It does not "know" things in the human sense; it has learned the probability distribution of text. When it produces an answer, it is sampling from that distribution conditioned on the prompt.
+
+**This becomes immediately obvious**: In practice. If you take a pretrained-only model and ask it a question, the model may respond with something that looks like an explanation, but just as often, it may continue in a way that resembles a textbook paragraph, a forum discussion, or even a fictional narrative. It might start answering, then drift, or provide an incomplete explanation.
+
+**A pretrained model**: Is not optimized to answer you. It is optimized to continue text in a statistically plausible way.
+
+**Fine-Tuning: Constraining a Text Predictor for Downstream Tasks**:
+
+**The above stage**: Teaches the LLM the basics of language by training it on massive corpora to predict the next token. This way, it absorbs grammar, world facts, etc.
+
+**But it's not good**: At conversation because when prompted, it just continues the text.
+
+**Fine-tuning**: Is the stage where we deliberately reshape the model's behavior.
+
+**Architecturally**: Nothing changes. What changes is the distribution of examples the model is trained on and the objective we care about.
+
+**For example**: Instruction fine-tuning (a specific type of fine-tuning) typically uses datasets of prompt-response pairs written or curated by humans. Instead of learning "what token comes next in general text," the model now learns "what a good answer looks like given an instruction."
+
+**From a behavioral perspective**: Fine-tuning introduces intent alignment. The model begins to associate prompts with responses that are helpful and task-oriented.
+
+**This is why**: A fine-tuned model responds very differently to the same prompt than a pretrained one. It's behavioral conditioning that makes the difference.
+
+**Key Differences**:
+
+| Aspect           | Pretraining                         | Fine-Tuning                              |
+| ---------------- | ----------------------------------- | ---------------------------------------- |
+| **Objective**    | Predict next token in general text  | Learn task-specific patterns (e.g., Q&A) |
+| **Data**         | Massive unlabeled text corpora      | Smaller, curated task-specific datasets  |
+| **Behavior**     | Statistical text continuation       | Intent-aligned, task-oriented responses  |
+| **Optimization** | Language distribution               | Task performance                         |
+| **Use Case**     | Foundation for all downstream tasks | Specialization for specific applications |
+
+**Hands-On: Next Token Prediction and Pretrained vs. Fine-Tuned Model Behavior**:
+
+**Inspecting Next-Token Probability Distributions**:
+
+**Below is a small experiment**: That inspects the next-token probability distribution of a pretrained language model and shows how changing just one token in the prompt affects the distribution.
+
+**The purpose**: Is to make "next-token prediction" tangible by directly inspecting what an autoregressive LLM thinks should come next, and how that belief changes when you alter just one token/word in the prompt.
+
+**The two prompts**: Are intentionally almost identical:
+
+- "The capital of France is"
+- "The capital of Germany is"
+
+**So any change**: You see in the output distribution is coming purely from that small context change (France ↔ Germany), not from a totally different sentence.
+
+**What the code does**:
+
+1. **Loads**: The Qwen/Qwen2.5-0.5B tokenizer and causal language model using Hugging Face Transformers
+2. **Runs forward pass**: To obtain outputs.logits, which are the raw, unnormalized scores that the model assigns to every vocabulary token at every position
+3. **Selects**: outputs.logits[0, -1], meaning: for the single batch element (0), take the logits at the last time step (-1). This vector has shape (vocab_size,) and represents "scores for what should be the next token after this prompt"
+4. **Applies softmax**: Converts these logits into an actual probability distribution over the entire vocabulary
+5. **Uses torch.topk**: Pulls out the top-k most likely next tokens along with their probabilities
+6. **Converts**: Token IDs back into readable token strings for printing and plotting
+
+**Key Observations**:
+
+**For Prompt A ("France")**: The model's top next-token is "Paris" with probability ≈ 0.319. That means, given the exact prompt "The capital of France is", about 31.9% of the model's probability mass (among the entire vocabulary) is placed on the very next token being "Paris".
+
+**For Prompt B ("Germany")**: The top next-token becomes "Berlin" with probability ≈ 0.168. So the model still strongly prefers the correct capital, but it's less confident than it was for France → Paris in our run.
+
+**The rest**: Of the top-10 list contains tokens that often show up immediately after "is" in general text, such as underscore tokens (like for fill-in-the-blanks), newline tokens, punctuation, or generic continuation tokens like "located", "the", etc.
+
+**This is expected**: The model is simply modeling likely continuations seen as per the training data. So it keeps some probability mass reserved for such possibilities also.
+
+**The most important insight**: From the bar charts is not just that "Paris" and "Berlin" appear at the top, but that the entire distribution changes when you swap a single word in the prompt. You're seeing the model's internal state produce a different probability landscape over the vocabulary, even though the prompt structure is identical.
+
+**Key Takeaways**:
+
+- **Next-token prediction**: Is a distribution, not a single answer: even when the "correct" token is highest-probability, there is always leftover probability mass across other plausible continuations
+- **A one-token context change**: Can reshape the whole distribution
+
+**Note**: Due to differences in hardware configurations or Google Colab runtime versions, readers may observe minor numerical differences in probability values, and their results may differ slightly from ours. These differences arise from hardware-level floating-point nondeterminism and do not affect the qualitative behavior being demonstrated.
+
+**Comparing Response Behavior: Pretrained and Fine-Tuned Models**:
+
+**Below is a minimal experiment**: That contrasts generation outputs from a pretrained model and an instruct-tuned model under identical prompts.
+
+**The purpose**: Is to make the behavioral difference between a base (pretrained) language model and its instruction-tuned counterpart concrete, using the same prompts, same parameters, and same runtime environment.
+
+**Two models are loaded**: Qwen/Qwen2.5-0.5B, which is a pretrained causal language model, and Qwen/Qwen2.5-0.5B-Instruct, which is the same backbone after instruction fine-tuning.
+
+**The gen_base function**: Represents raw language modeling behavior. The prompt is tokenized directly as plain text and passed to the base model. During generation, sampling is enabled (do_sample=True) with a moderate temperature and nucleus sampling (top_p=0.9). The model, therefore, produces a stochastic continuation of the input text. The decoded output is returned as-is, without trimming, because base models are trained to continue sequences, not to produce role-separated replies.
+
+**The gen_instruct function**: By contrast, mirrors how chat models are actually used in practice. Instead of passing the raw user prompt, the input is first wrapped using apply_chat_template. This converts the user message into a structured dialogue format containing role markers such as <\|user\|> and an explicit <\|assistant\|> generation boundary. This step is crucial: the instruction-tuned model was trained on data in exactly this format, and without it, its behavior would degrade significantly.
+
+**After generation**: The decoded output contains both the input dialogue tokens and the newly generated assistant tokens, because generate() always returns the full sequence. Therefore, a trimming step is applied to remove the prompt portion and return only the assistant's response. This trimming is not cosmetic; it reflects the semantic boundary introduced by instruction tuning.
+
+**Key Observations**:
+
+**In the first prompt**: "How do I make a pizza?", the difference is immediately visible. The base model repeats the prompt and then continues in a way that resembles a dataset-style transformation or question equivalence task. It reformulates the question, introduces multiple related queries, etc.
+
+**This is not a failure**: It is a direct consequence of pretraining: the model has learned to continue text in patterns commonly observed in internet data, such as FAQs, exam questions, or paraphrase datasets. The model is not "trying to help" the user; it is statistically continuing the sequence.
+
+**The instruction-tuned model**: However, produces a structured, step-by-step recipe. This behavior does not arise from architectural changes or decoding tricks. It emerges because instruction tuning reshapes the probability distribution so that, given a user instruction followed by an assistant turn marker, the most likely continuation is a helpful response. The trimming step ensures that only this assistant's turn is surfaced.
+
+**The second prompt**: "Write a haiku about summer," further reinforces the distinction. The base model again echoes the instruction and then generates poetic text, blending instruction and output together in a single stream. The instruct model produces a clean, three-line haiku, clearly respecting the intent and format of the request.
+
+**Note**: The exact outputs you observe will differ from those shown here. However, the overall pattern remains consistent. The instruction-tuned model tends to produce more stable, well-structured responses that directly address the user's query. In contrast, the base (pretrained) model operates as a pure text-completion engine with a flatter, more permissive probability distribution. As a result, its outputs may sometimes align with the intent of the query, but can also lead to unrelated or weakly coherent continuations.
+
+**Key Takeaway**: Models that are fine-tuned are better at understanding and responding in a clear, helpful way. Base models, on the other hand, mainly continue text based on patterns they've seen before, which means their outputs can sometimes be useful, but can also drift. That is, pretrained only models, as mentioned earlier, are best understood as a "statistical mirror" of their training data.
+
+**As a follow-up self-learning exercise**: We encourage readers to play around with these demos by experimenting with different types of prompts to develop a more concrete understanding.
+
+**EXAM TIP:** Questions about "pretraining" → think **causal language modeling** (predict next token), **massive unlabeled text corpora**, **statistical text continuation**, **foundation for downstream tasks**. Questions about "fine-tuning" → think **task-specific datasets** (prompt-response pairs), **instruction fine-tuning**, **intent alignment**, **behavioral conditioning**, **reshapes probability distribution**. Questions about "pretrained vs fine-tuned behavior" → think **pretrained** (statistical mirror, continues text, not optimized to answer) vs **fine-tuned** (cooperative, aligned, task-aware, helpful responses). Questions about "next-token prediction" → think **probability distribution** (not single answer), **context-sensitive** (one-token change reshapes entire distribution), **softmax over vocabulary**.
+
+### 6.1.6 Tokenization (how text becomes numbers for LLMs)
 
 **Introduction**:
 
