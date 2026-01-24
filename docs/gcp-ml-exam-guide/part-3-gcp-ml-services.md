@@ -526,6 +526,8 @@ For streaming data that may contain Personally Identifiable Information:
 
 **EXAM TIP:** Replace sensitive data with surrogate characters → Masking.
 
+> **⚠️ Note on "tokenization" terminology**: In the Cloud DLP context, "tokenization" means replacing sensitive values (like SSNs) with non-sensitive surrogate tokens that can be reversed with a key. This is **different** from NLP/LLM tokenization (breaking text into sub-word units for model input). See Part VI § 6.1.1 for LLM tokenization.
+
 #### “Secure but still usable for ML” (coarsening vs tokenization)
 
 Sometimes you must protect data but still preserve numeric meaning:

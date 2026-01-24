@@ -754,7 +754,118 @@ The core mechanism that allows transformers to weigh relationships between all p
 | Decoder-Only    | Causal (left-to-right) | GPT, Gemini, LLaMA | Generation: completion, chat           |
 | Encoder-Decoder | Both + cross-attention | T5, BART           | Seq2seq: translation, summarization    |
 
-### 6.2 Prompting & Inference Controls (fastest “customization”)
+### 6.1.1 Tokenization (how text becomes numbers for LLMs)
+
+Tokenization is the **first step** in any LLM pipeline: converting raw text into a sequence of integer IDs that the model can process. Understanding tokenization is critical for:
+
+- Estimating **cost** (most LLM APIs charge per token)
+- Managing **context window** limits
+- Debugging unexpected model behavior (tokenization artifacts)
+- Optimizing **chunking** for RAG
+
+#### What is a token?
+
+A token is a **sub-word unit** — not necessarily a full word. Modern tokenizers split text into pieces that balance vocabulary size with sequence length.
+
+| Input text     | Approximate tokens | Notes                                      |
+| -------------- | ------------------ | ------------------------------------------ |
+| "Hello"        | 1 token            | Common word = single token                 |
+| "tokenization" | 2-3 tokens         | Less common = split into pieces            |
+| "GPT-4"        | 2+ tokens          | Hyphenated/special chars often split       |
+| "こんにちは"   | 3-5 tokens         | Non-Latin scripts often use more tokens    |
+| Whitespace     | Usually included   | Leading space often attached to next token |
+
+**Rule of thumb**: ~4 characters ≈ 1 token (for English). But this varies by tokenizer and language.
+
+#### Common tokenization algorithms
+
+| Algorithm                    | Used By                           | How It Works                                         |
+| ---------------------------- | --------------------------------- | ---------------------------------------------------- |
+| **BPE (Byte-Pair Encoding)** | GPT, LLaMA, many open models      | Iteratively merges most frequent character pairs     |
+| **WordPiece**                | BERT, DistilBERT                  | Similar to BPE but uses likelihood-based merging     |
+| **SentencePiece**            | T5, Gemini, multilingual models   | Language-agnostic; treats input as raw bytes/unicode |
+| **Unigram**                  | XLNet, some SentencePiece configs | Probabilistic model; keeps most likely subwords      |
+
+**EXAM TIP:** You don't need to implement these from scratch — use the tokenizer that matches your model (e.g., `transformers.AutoTokenizer`).
+
+#### Implementation: How to tokenize (Hugging Face example)
+
+```python
+from transformers import AutoTokenizer
+
+# Load tokenizer matched to your model
+tokenizer = AutoTokenizer.from_pretrained("google/gemma-2b")
+
+text = "Tokenization is essential for LLMs."
+
+# Encode: text → token IDs
+token_ids = tokenizer.encode(text)
+print(token_ids)  # e.g., [15496, 2065, 318, 6393, 329, 406, 31288, 13]
+
+# Decode: token IDs → text
+decoded = tokenizer.decode(token_ids)
+print(decoded)  # "Tokenization is essential for LLMs."
+
+# See individual tokens
+tokens = tokenizer.tokenize(text)
+print(tokens)  # ['▁Token', 'ization', '▁is', '▁essential', '▁for', '▁L', 'LM', 's', '.']
+```
+
+#### Counting tokens (for cost/context estimation)
+
+```python
+# Count tokens in a string
+num_tokens = len(tokenizer.encode(text))
+print(f"Token count: {num_tokens}")
+
+# For OpenAI models, use tiktoken
+import tiktoken
+enc = tiktoken.encoding_for_model("gpt-4")
+num_tokens = len(enc.encode(text))
+```
+
+**Google Cloud / Vertex AI**: Use the `countTokens` API method to get accurate token counts for Gemini models before sending requests.
+
+#### Why tokenization matters for RAG chunking
+
+When chunking documents for RAG, chunk size is usually specified in **tokens**, not characters:
+
+- **Typical chunk size**: 256–1024 tokens
+- **Overlap**: 10–20% overlap between chunks to preserve context at boundaries
+- **Why tokens matter**: The model's context window is measured in tokens, so chunk + query + system prompt must all fit
+
+```python
+# Chunk by tokens (simplified)
+def chunk_by_tokens(text, tokenizer, chunk_size=512, overlap=50):
+    tokens = tokenizer.encode(text)
+    chunks = []
+    for i in range(0, len(tokens), chunk_size - overlap):
+        chunk_tokens = tokens[i:i + chunk_size]
+        chunks.append(tokenizer.decode(chunk_tokens))
+    return chunks
+```
+
+#### Common tokenization pitfalls
+
+| Pitfall                        | Problem                                       | Solution                                                               |
+| ------------------------------ | --------------------------------------------- | ---------------------------------------------------------------------- |
+| **Wrong tokenizer**            | Token IDs don't match model's vocabulary      | Always use the tokenizer from the same model checkpoint                |
+| **Truncation without warning** | Input silently cut off at max length          | Set `truncation=True` explicitly and handle overflow                   |
+| **Special tokens missing**     | Model expects `[CLS]`, `[SEP]`, `<s>`, `</s>` | Use `tokenizer.encode()` or `tokenizer()` which add them automatically |
+| **Multilingual surprises**     | Non-English text uses many more tokens        | Test with representative samples; budget for 2–3x token count          |
+| **Whitespace handling**        | Leading spaces become separate tokens         | Be consistent with whitespace in prompts                               |
+
+#### Official documentation links
+
+- Hugging Face Tokenizers: `https://huggingface.co/docs/tokenizers/`
+- Hugging Face Transformers AutoTokenizer: `https://huggingface.co/docs/transformers/main_classes/tokenizer`
+- Google Vertex AI countTokens: `https://cloud.google.com/vertex-ai/generative-ai/docs/model-reference/count-tokens`
+- OpenAI tiktoken: `https://github.com/openai/tiktoken`
+- SentencePiece: `https://github.com/google/sentencepiece`
+
+**EXAM TIP:** If a question mentions "unexpected behavior with special characters" or "input truncated" → think **tokenization issues** first.
+
+### 6.2 Prompting & Inference Controls (fastest "customization")
 
 - **System prompt vs user prompt**: Use system for global policy (“tone”, “constraints”), user for task-specific instructions.
 - **Few-shot examples**: Provide 1–5 examples to shape output format reliably (especially extraction/classification).
