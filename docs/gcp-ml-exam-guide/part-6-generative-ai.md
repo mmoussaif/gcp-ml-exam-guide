@@ -143,12 +143,12 @@ This framing is adapted from the GenAI Leader curriculum and is useful for exam-
 
 Foundation models, like other AI models, take **inputs** (“prompts”) and produce **outputs**. The difference is flexibility: many foundation models (especially multimodal ones) can accept a broader set of inputs than traditional models.
 
-| Input (prompt)                     | Output (typical)                 |
-| ---------------------------------- | -------------------------------- |
-| Question                           | Answer                           |
-| Text request for an image          | Generated image                  |
-| “Summarize this file/document”     | Summary                          |
-| Buggy code snippet                 | Corrected code / explanation     |
+| Input (prompt)                 | Output (typical)             |
+| ------------------------------ | ---------------------------- |
+| Question                       | Answer                       |
+| Text request for an image      | Generated image              |
+| “Summarize this file/document” | Summary                      |
+| Buggy code snippet             | Corrected code / explanation |
 
 **EXAM TIP:** Prompting (prompt engineering / prompt design) is a practical skill: better prompts often beat “more training” for many business use cases.
 
@@ -158,6 +158,46 @@ flowchart TD
   B --> C[Foundation models]
   C --> D[LLMs (language-focused)]
 ```
+
+### Building a successful GenAI strategy (top-down + bottom-up)
+
+This framing is adapted from the GenAI Leader curriculum and is written for “how should an org do this responsibly?” questions.
+
+#### The core idea: don’t start with the newest tech
+
+- Start with **business priorities and high-value workflows**.
+- Then decide where GenAI can help (and where it introduces unacceptable risk).
+
+#### A two-fold approach that works in real organizations
+
+- **Top-down**: executives define a clear vision, pick strategic priorities, allocate resources, and set guardrails (safety/responsible AI).
+- **Bottom-up**: teams closest to the work run small experiments, surface ideas, and share what actually improves daily workflows.
+
+**Why both matter**
+
+- Top-down without bottom-up misses practical opportunities.
+- Bottom-up without top-down creates scattered experiments with inconsistent risk controls and no path to scale.
+
+#### Roles (who does what)
+
+- **Executives / senior leaders**
+  - Provide sponsorship, budget, and a clear “why now”
+  - Align GenAI initiatives to business goals and risk appetite
+- **Mid-level managers + individual contributors**
+  - Identify feasible, high-impact use cases in real workflows
+  - Encourage safe experimentation and gather feedback
+  - Help integrate tools into existing processes (change management)
+
+#### A lightweight strategy checklist (multi-directional)
+
+Use these lenses for both top-down and bottom-up efforts:
+
+- **Strategic focus**: which workflows matter most and why?
+- **Exploration**: where can teams prototype safely and quickly?
+- **Responsible AI**: policies, privacy, and safety guardrails (before scaling)
+- **Resourcing**: time, people, tooling, and review capacity
+- **Impact**: how you’ll measure success (quality, time saved, cost, risk reduction)
+- **Continuous improvement**: evaluation + monitoring + iteration loops
 
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
