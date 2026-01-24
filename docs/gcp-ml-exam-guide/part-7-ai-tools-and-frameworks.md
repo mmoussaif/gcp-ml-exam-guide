@@ -1837,7 +1837,15 @@ Multi-agent systems use multiple specialized agents that collaborate on complex 
 
 ### CrewAI — Role-Based Multi-Agent Orchestration
 
-**CrewAI** makes it easy to define "crews" of agents with roles, goals, and backstories that work together on tasks.
+**CrewAI** is an open-source framework for orchestrating role-playing, autonomous AI agents. It makes it easy to define "crews" of agents with roles, goals, and backstories that work together on tasks.
+
+**Key features**:
+
+- Standalone framework (no dependencies on LangChain or other frameworks)
+- Integrates with multiple LLM providers (OpenAI, Gemini, Groq, Azure, Ollama, etc.)
+- Supports YAML configuration for decoupling logic from configuration
+- Built-in tool integration (web search, file readers, database queries, etc.)
+- Multi-agent collaboration with sequential or hierarchical execution
 
 Official docs: [docs.crewai.com](https://docs.crewai.com/)
 
