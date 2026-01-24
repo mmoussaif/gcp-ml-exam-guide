@@ -32,14 +32,41 @@ Many exam questions are really about the **workflow** and **framing**, not the m
 
 #### Typical ML workflow (conceptual)
 
-- **Problem formulation**: Define objective + constraints + success metric
-- **Data collection/ingestion**: Acquire + centralize data
-- **Data prep + feature engineering**: Clean/transform data; create useful features
-- **Model development**: Choose approach and train
-- **Hyperparameter tuning**: Find best settings for the chosen approach
-- **Evaluation**: Validate against defined metric(s) and baseline(s)
-- **Deployment**: Make the model available for production use
-- **Monitoring + maintenance**: Detect drift/performance issues; retrain and iterate
+**Project scoping**: Decide if ML-based solution is appropriate; define success criteria and requirements
+
+**Data Processing**:
+
+- **Data ingestion & collection**: Gather data from various sources (logs, databases, APIs, sensors, user feedback)
+- **Data preparation (ETL) & feature engineering**: Clean/preprocess raw data; handle missing values, normalization, joins; create new features; output curated training dataset
+
+**Modeling**:
+
+- **Model training & experimentation**: Train models iteratively; try different algorithms/architectures; tune hyperparameters; evaluate on validation set; track best model/version
+- **Model evaluation & validation**: Thorough performance assessment; ensure business requirements met; check for overfitting, bias; additional testing on hold-out data or trial with real users
+
+**Deployment**: Deploy trained model to production (API service, embedded in app, edge devices); set up inference infrastructure (compute environment for predictions)
+
+**Monitoring & observability**: Continuously monitor:
+
+- Operational metrics (latency, throughput, errors)
+- Predictive performance on real data
+- Input distribution vs training (drift detection)
+- Error rates (via feedback)
+- Signs of drift
+
+**Maintenance & continuous improvement**: Based on monitoring and new needs:
+
+- Collect new data (especially error cases)
+- Retrain with updated data
+- Adjust features
+- Formulate new model if needed
+- **Loops back** to earlier stages
+
+**Key points**:
+
+- **Not strictly linear**: Iterative cycle (CD4ML - Continuous Delivery for Machine Learning)
+- **ML flywheel**: Ongoing cycle of improvement (data → model → deployment → monitoring → back to data)
+- **Automation goal**: Shorten cycle, make as automated as possible (continuous delivery for ML)
 
 ```mermaid
 flowchart TD
