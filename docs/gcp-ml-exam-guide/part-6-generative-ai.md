@@ -117,6 +117,31 @@ Business data is often framed as **structured** vs **unstructured** (and in prac
 - Digital image of a cat → **Unstructured**
 - Medical record fields (DOB/address/vaccines) → **Structured**
 
+#### Types of learning (and the data each needs)
+
+How you use data depends on the learning approach. Three common approaches are **supervised**, **unsupervised**, and **reinforcement learning**.
+
+**Labeled vs unlabeled**
+
+- **Labeled data**: examples are tagged with the “right answer” (target), like emails labeled **spam/not spam**.
+- **Unlabeled data**: raw data without tags (photos, audio streams, logs). The algorithm must find structure/patterns on its own.
+
+**Supervised vs unsupervised vs reinforcement learning**
+
+- **Supervised learning (labeled)**: learn a mapping from inputs → target.
+  - Examples: spam classification, demand prediction, churn prediction.
+- **Unsupervised learning (unlabeled)**: discover structure without targets.
+  - Examples: topic modeling in documents, clustering, anomaly detection.
+- **Reinforcement learning (interaction + feedback)**: learn by trying actions and receiving rewards/penalties (trial and error).
+  - Intuition: like training a pet; reward good behavior, discourage bad behavior.
+  - Examples: game-playing agents, robotics/control, recommendation/ranking optimization loops.
+
+**Google Cloud examples (from the course)**
+
+- **Predictive maintenance (supervised)**: train on labeled sensor history (temperature/pressure/vibration) to predict failures (Vertex AI).
+- **Anomaly detection (unsupervised)**: find unusual transactions that deviate from historical patterns (BigQuery ML).
+- **Recommendations (reinforcement learning)**: optimize recommendations over time to maximize engagement/sales (Vertex AI).
+
 #### The four primary ways businesses use GenAI
 
 - **Create**: generate new content (text, images, audio, code).

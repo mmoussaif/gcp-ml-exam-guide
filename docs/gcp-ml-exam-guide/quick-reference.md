@@ -199,6 +199,7 @@
 - Definitions: AI ⊃ ML ⊃ GenAI (GenAI creates new content; ML learns a model from data; AI is the broader goal)
 - Data for ML/GenAI: relevance + quality (accuracy/completeness/representativeness/consistency) + accessibility (availability/cost/format) often matter more than “fancier models”
 - Data types: structured (tables) vs unstructured (text/images/audio/video) vs semi-structured (JSON/nested) drive what modeling approaches and tooling make sense
+- Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)
