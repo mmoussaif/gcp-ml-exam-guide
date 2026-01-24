@@ -98,6 +98,25 @@ Data is **information** used as inputs to help models learn patterns and make ou
 - **Cost**: is it affordable to store, move, and query at the required cadence?
 - **Format**: is it usable (schemas, file types, quality checks, documentation)?
 
+#### Data types (structured vs unstructured)
+
+Business data is often framed as **structured** vs **unstructured** (and in practice, you’ll also see **semi-structured**).
+
+- **Structured data**: organized into rows/columns with a consistent schema (tables).
+  - Examples: CSV sales table with `Date`, `Product ID`, `Quantity Sold`, `Price`; medical record fields like DOB, address, vaccination history.
+- **Unstructured data**: no predefined schema; messy/complex; requires more sophisticated processing.
+  - Examples: free-form text (reviews, emails, PDFs), images, audio recordings, video.
+- **Semi-structured data**: has some structure but not a fixed relational schema.
+  - Examples: JSON event logs, nested records, “documents” with optional fields.
+
+**Quiz-style intuition (structured or unstructured?)**
+
+- Product review text (“This phone is great…”) → **Unstructured**
+- Sales data in a CSV with columns → **Structured**
+- Audio recording of a customer service call → **Unstructured**
+- Digital image of a cat → **Unstructured**
+- Medical record fields (DOB/address/vaccines) → **Structured**
+
 #### The four primary ways businesses use GenAI
 
 - **Create**: generate new content (text, images, audio, code).
