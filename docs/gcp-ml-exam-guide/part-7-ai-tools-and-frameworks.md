@@ -2211,6 +2211,7 @@ result = flow.kickoff()
    - Example: `self.state['task'] = "Build feature"`
 
 2. **Structured state**: Pydantic schema (`Flow[TaskState]`)
+
    - Type-safe, prevents runtime errors
    - Enforces predefined attributes only
    - Example:
@@ -2265,24 +2266,29 @@ result = flow.kickoff()
 
 **Crews with Flows**:
 
-Flows can orchestrate multiple Crews, each handling specific responsibilities:
+Flows can orchestrate multiple Crews, each handling specific responsibilities. In real-world applications, a single Crew is often not enough—complex workflows require multiple specialized Crews working together.
 
 **Project structure**:
 
 ```
 project/
 ├── crews/
-│   └── poem_crew/
+│   ├── outline_crew/
+│   │   ├── config/
+│   │   │   ├── agents.yaml
+│   │   │   └── tasks.yaml
+│   │   └── outline_crew.py
+│   └── writer_crew/
 │       ├── config/
 │       │   ├── agents.yaml
 │       │   └── tasks.yaml
-│       └── poem_crew.py
+│       └── writer_crew.py
 ├── tools/
 │   └── custom_tool.py
 └── main.py  # Flow orchestration
 ```
 
-**Flow with Crew**:
+**Single Crew Flow**:
 
 ```python
 class PoemFlow(Flow[PoemState]):
@@ -2299,6 +2305,129 @@ class PoemFlow(Flow[PoemState]):
         })
         self.state.poem = result
 ```
+
+#### Multi-Crew Flows: Real-World Patterns
+
+**Why multi-crew?**: Complex workflows require multiple specialized Crews working in parallel or sequentially to achieve a common goal. Each Crew handles specific responsibilities, improving modularity and scalability.
+
+**Pattern 1: Sequential Multi-Crew (Social Media Content Writer)**
+
+**Use case**: Scrape blog → Analyze → Generate platform-specific content (Twitter or LinkedIn)
+
+**Flow structure**:
+
+1. **Scrape content** (`@start()`): Use FireCrawl to scrape blog post
+2. **Route platform** (`@router()`): Choose Twitter or LinkedIn based on user input
+3. **Generate content** (`@listen("twitter")` or `@listen("linkedin")`): Execute platform-specific Crew
+4. **Save plan** (`@listen(or_(twitter_draft, linkedin_draft))`): Save structured JSON
+
+**Key features**:
+
+- **Routing logic**: `@router()` directs to different Crews based on condition
+- **Structured outputs**: Pydantic models ensure consistent format (Thread for Twitter, LinkedInPost for LinkedIn)
+- **OR conditional**: Save step executes after either Twitter or LinkedIn generation completes
+
+**Example**:
+
+```python
+class ContentPlanningFlow(Flow[ContentPlanningState]):
+    @start()
+    def scrape_blog(self):
+        # FireCrawl scraping logic
+        self.state.draft_path = "assets/blog.md"
+
+    @router(scrape_blog)
+    def route_platform(self):
+        return self.state.post_type  # "twitter" or "linkedin"
+
+    @listen("twitter")
+    def twitter_draft(self):
+        twitter_crew = TwitterPlanningCrew()
+        result = twitter_crew.kickoff(inputs={
+            "draft_path": self.state.draft_path
+        })
+        self.state.content = result
+
+    @listen("linkedin")
+    def linkedin_draft(self):
+        linkedin_crew = LinkedInPlanningCrew()
+        result = linkedin_crew.kickoff(inputs={
+            "draft_path": self.state.draft_path
+        })
+        self.state.content = result
+
+    @listen(or_(twitter_draft, linkedin_draft))
+    def save_plan(self):
+        # Save structured JSON
+        save_to_json(self.state.content)
+```
+
+**Pattern 2: Parallel Multi-Crew (Book Writer)**
+
+**Use case**: Generate outline → Write multiple chapters in parallel
+
+**Flow structure**:
+
+1. **Generate outline** (`@start()`): Outline Crew creates chapter titles
+2. **Write chapters** (`@listen(generate_outline)`): Multiple Chapter Writer Crews run in parallel using `asyncio`
+3. **Save book** (`@listen(write_single_chapter)`): Combine all chapters into Markdown
+
+**Key features**:
+
+- **Asynchronous execution**: Use `asyncio.create_task()` and `asyncio.gather()` for parallel chapter writing
+- **Structured state**: Pydantic models for chapters and book state
+- **Dynamic crew creation**: Create one Crew per chapter, all running concurrently
+
+**Example**:
+
+```python
+import asyncio
+
+class BookWriterFlow(Flow[BookState]):
+    @start()
+    def generate_outline(self):
+        outline_crew = OutlineCrew()
+        result = outline_crew.kickoff(inputs={
+            "topic": self.state.topic
+        })
+        self.state.chapters = result.chapters
+        self.state.chapter_count = len(result.chapters)
+
+    @listen(generate_outline)
+    async def write_single_chapter(self, title: str):
+        chapter_crew = ChapterWriterCrew()
+        result = chapter_crew.kickoff(inputs={
+            "title": title,
+            "topic": self.state.topic,
+            "chapters": self.state.chapters
+        })
+        return result
+
+    @listen(generate_outline)
+    async def write_all_chapters(self):
+        tasks = [
+            asyncio.create_task(self.write_single_chapter(title))
+            for title in self.state.chapters
+        ]
+        chapters = await asyncio.gather(*tasks)
+        self.state.written_chapters = chapters
+
+    @listen(write_all_chapters)
+    def save_book(self):
+        # Save to Markdown
+        save_to_markdown(self.state.written_chapters)
+```
+
+**Multi-crew best practices**:
+
+- **Modularity**: Each Crew handles one responsibility (outline generation, chapter writing, content planning)
+- **Structured outputs**: Use Pydantic models for consistent data formats
+- **State management**: Use structured state (`Flow[StateModel]`) for type safety
+- **Parallel execution**: Use `asyncio` for independent tasks (chapters, multiple platforms)
+- **Routing**: Use `@router()` for conditional Crew execution
+- **Dependencies**: Use `@listen()` to ensure proper execution order
+
+**EXAM TIP:** Questions about "parallel task execution" or "multiple independent workflows" → think **asyncio** with `create_task()` and `gather()`. Questions about "conditional crew execution" → think **@router()** with `@listen()` for specific routes.
 
 **Benefits of Flows**:
 
