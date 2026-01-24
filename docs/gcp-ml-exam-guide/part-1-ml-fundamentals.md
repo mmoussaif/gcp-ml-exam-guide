@@ -14,6 +14,7 @@ This section covers core ML concepts that form the foundation of the exam. Under
 - [1.7 FEATURE ENGINEERING](#17-feature-engineering)
 - [1.8 DATA SPLITTING](#18-data-splitting)
 - [1.9 EXPLORATORY DATA ANALYSIS (EDA) BASICS](#19-exploratory-data-analysis-eda-basics-often-tested)
+- [1.10 COMMON DATA SCIENCE PITFALLS](#110-common-data-science-pitfalls)
 
 ### Official docs (high-signal starting points)
 
