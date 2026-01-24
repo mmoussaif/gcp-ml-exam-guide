@@ -4299,6 +4299,453 @@ The total population of Japan and India is approximately 1.525 billion.
 
 ---
 
+### Multi-Agent Pattern: Teams of Specialized Agents
+
+**Multi-Agent Pattern** structures an AI workflow as a team of specialized agents that work together, each with a well-defined role. Instead of one agent handling a task from start to finish, multiple agents work in a pipeline where each agent takes on one part of the task and hands off the result to the next agent.
+
+**Why Multi-Agent matters**:
+
+- **Modularity**: Each agent focuses on a specific subtask or role, making the system easier to develop and debug
+- **Separation of concerns**: Changes to one agent's prompt or logic won't derail the entire system
+- **Reduced complexity**: Single agent juggling all tools/instructions can become confused; multiple focused agents stay on track
+- **Specialization**: Each agent becomes a master of one trade, employing domain-specific reasoning or dedicated tools effectively
+- **Transparency**: Clear structure of who does what, making reasoning process more transparent
+- **Cross-verification**: Agents can cross-verify each other's outputs, catching mistakes
+- **Error isolation**: When something goes wrong, easier to pinpoint which agent and step produced bad output
+- **Natural design**: Mirrors how human teams operate, making AI workflows more intuitive to design
+
+**Multi-Agent vs Single-Agent**:
+
+| Aspect              | Single-Agent                                | Multi-Agent                           |
+| ------------------- | ------------------------------------------- | ------------------------------------- |
+| **Complexity**      | One agent handles everything                | Multiple specialized agents           |
+| **Modularity**      | Monolithic, harder to debug                 | Modular, easier to isolate issues     |
+| **Specialization**  | Generalist, may struggle with complex tasks | Specialists, each master of one trade |
+| **Transparency**    | Single opaque reasoning chain               | Clear structure, traceable per agent  |
+| **Error isolation** | Hard to pinpoint failures                   | Easy to identify responsible agent    |
+| **Scalability**     | Limited by single agent's capacity          | Scales by adding more specialists     |
+
+**How Multi-Agent works**:
+
+1. **Agent**: Autonomous AI unit (LLM with prompt) that can perceive inputs, reason (via chain-of-thought), and perform actions to complete a subtask
+
+   - Configured with specific role
+   - Has access to only tools/information needed for that role
+   - Loops through thinking ("Thought...") and acting ("Action...") until outcome produced
+   - Follows ReAct paradigm internally
+
+2. **Tool**: External capability that an agent can invoke to help it act on the world or fetch information
+
+   - Examples: web search API, calculator, database query interface, email-sending function
+   - Each agent has limited toolbox relevant to its role
+   - Tool use involves choosing tool, providing inputs, reading output (observation)
+
+3. **Crew**: Orchestrator that sets up multi-agent workflow and manages execution flow
+   - Container that holds all agents
+   - Scheduler that figures out right order to run them
+   - Controller that executes them
+   - Handles coordination: ensuring each agent gets right input, collecting/consolidating outputs
+   - Can implement looping (repeating agents/steps) or branching (choosing which agent to invoke)
+
+**Information flow**:
+
+In a multi-agent pipeline, information flows sequentially from one agent to the next:
+
+```
+Initial Query → Agent A (gathers data) → Agent B (analyzes) → Agent C (writes report) → Final Output
+```
+
+Each agent only deals with input relevant to its task and doesn't worry about overall mission beyond its part.
+
+**Building Multi-Agent from scratch**:
+
+The system is built using three core abstractions:
+
+1. **Tool class**: Wraps real functions and exposes them so agents can discover, validate inputs, and invoke dynamically
+2. **Agent class**: Represents individual AI agent that can think, invoke tools, pass outputs downstream
+3. **Crew class**: Orchestrator that manages agent registration, dependency resolution, ordered execution
+
+**1. Tool implementation**:
+
+```python
+import inspect
+from typing import Any, Callable, Dict, Optional
+
+class FunctionSignature:
+    """Extracts metadata from a Python function"""
+    def __init__(self, func: Callable):
+        sig = inspect.signature(func)
+        self.name = func.__name__
+        self.docstring = inspect.getdoc(func) or ""
+        self.parameters = {}
+        self.return_type = None
+
+        # Parse parameters
+        for param_name, param in sig.parameters.items():
+            param_info = {
+                "type": param.annotation.__name__ if param.annotation != inspect.Parameter.empty else None,
+                "default": param.default if param.default != inspect.Parameter.empty else None
+            }
+            self.parameters[param_name] = param_info
+
+        # Parse return type
+        if sig.return_annotation != inspect.Signature.empty:
+            self.return_type = sig.return_annotation.__name__
+
+    def to_dict(self):
+        return {
+            "name": self.name,
+            "description": self.docstring,
+            "parameters": self.parameters,
+            "return_type": self.return_type
+        }
+
+class ArgumentValidator:
+    """Validates and type-coerces function arguments"""
+    TYPE_MAP = {
+        "str": str,
+        "int": int,
+        "float": float,
+        "bool": bool
+    }
+
+    def __init__(self, signature: FunctionSignature):
+        self.signature = signature
+
+    def validate(self, **kwargs) -> Dict[str, Any]:
+        validated = {}
+        for param_name, param_info in self.signature.parameters.items():
+            if param_name in kwargs:
+                # Type coercion
+                param_type = param_info.get("type")
+                if param_type and param_type in self.TYPE_MAP:
+                    validated[param_name] = self.TYPE_MAP[param_type](kwargs[param_name])
+                else:
+                    validated[param_name] = kwargs[param_name]
+            elif param_info.get("default") is not None:
+                validated[param_name] = param_info["default"]
+            else:
+                raise ValueError(f"Missing required argument: {param_name}")
+        return validated
+
+class Tool:
+    """Wraps a function to make it callable by an agent"""
+    def __init__(self, func: Callable):
+        self.func = func
+        self.signature = FunctionSignature(func)
+        self.validator = ArgumentValidator(self.signature)
+
+    def __call__(self, **kwargs):
+        validated_args = self.validator.validate(**kwargs)
+        return self.func(**validated_args)
+
+    def info(self):
+        return self.signature.to_dict()
+
+def tool(func: Callable) -> Tool:
+    """Decorator to convert function to Tool"""
+    return Tool(func)
+
+# Example usage
+@tool
+def lookup_weather(city: str, units: str = "Celsius") -> str:
+    \"\"\"Get weather for a city\"\"\"
+    return f"Weather in {city}: 20°{units}"
+
+# Tool can be inspected and called
+weather_tool = lookup_weather
+print(weather_tool.info())  # JSON metadata
+result = weather_tool(city="London", units="C")  # Validated call
+```
+
+**2. Agent implementation**:
+
+```python
+from typing import List, Optional, Dict, Any
+from litellm import completion
+
+class Agent:
+    """Autonomous AI agent that reasons and acts using tools"""
+
+    REACT_PROMPT = """
+    Your workflow is by running a ReAct (Reasoning + Action) loop:
+    1. Thought: Think about what to do
+    2. Action: Call a tool if needed
+    3. Observation: Get tool result
+
+    You have access to function signatures within <tools></tools> tags.
+    Feel free to invoke one or more of these functions to address the user's request.
+    If a tool/function is available for some task you MUST use it, without fail.
+
+    For every function call, return a JSON object wrapped in <tool_call></tool_call> tags:
+    <tool_call>
+    {"name": <function-name>, "arguments": <args-dict>, "id": <sequential-id>}
+    </tool_call>
+
+    After successful tool call, give <observation> result </observation> and <response> final output </response>.
+
+    Here are the available tools:
+    <tools>
+    %s
+    </tools>
+    """
+
+    def __init__(self, name: str, backstory: str, task_description: str,
+                 tools: Optional[List[Tool]] = None, model: str = "openai/gpt-4o"):
+        self.name = name
+        self.backstory = backstory
+        self.task_description = task_description
+        self.tools = {tool.signature.name: tool for tool in (tools or [])}
+        self.model = model
+        self.dependencies = []
+        self.context_messages = []
+
+    def depends_on(self, other_agent: 'Agent'):
+        """Define dependency: this agent depends on other_agent"""
+        self.dependencies.append(other_agent.name)
+        return self
+
+    def receive_context(self, message: str):
+        """Receive context from upstream agents"""
+        self.context_messages.append(message)
+
+    def run(self) -> str:
+        """Execute agent's reasoning loop"""
+        # Build prompt with task, context, and tools
+        prompt = f"{self.backstory}\n\nTask: {self.task_description}\n"
+
+        if self.context_messages:
+            prompt += f"\nContext from previous agents:\n" + "\n".join(self.context_messages)
+
+        if self.tools:
+            # Include tool signatures in prompt
+            tools_json = "\n".join([tool.info() for tool in self.tools.values()])
+            system_prompt = self.REACT_PROMPT % tools_json
+        else:
+            system_prompt = self.backstory
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": prompt}
+        ]
+
+        max_iterations = 10
+        for iteration in range(max_iterations):
+            response = completion(model=self.model, messages=messages)
+            content = response.choices[0].message.content
+
+            # Check for final response
+            if "<response>" in content:
+                final_response = self._extract_tag(content, "response")
+                return final_response
+
+            # Check for tool calls
+            if "<tool_call>" in content:
+                tool_call_json = self._extract_tag(content, "tool_call")
+                tool_result = self._execute_tool(tool_call_json)
+
+                # Add observation to messages
+                messages.append({
+                    "role": "assistant",
+                    "content": content
+                })
+                messages.append({
+                    "role": "user",
+                    "content": f"<observation>{tool_result}</observation>"
+                })
+            else:
+                messages.append({
+                    "role": "assistant",
+                    "content": content
+                })
+
+        return "Agent reached max iterations"
+
+    def _extract_tag(self, text: str, tag: str) -> str:
+        """Extract content between XML tags"""
+        import re
+        pattern = f"<{tag}>(.*?)</{tag}>"
+        match = re.search(pattern, text, re.DOTALL)
+        return match.group(1).strip() if match else ""
+
+    def _execute_tool(self, tool_call_json: str) -> str:
+        """Parse and execute tool call"""
+        import json
+        call = json.loads(tool_call_json)
+        tool_name = call["name"]
+        arguments = call["arguments"]
+
+        if tool_name in self.tools:
+            result = self.tools[tool_name](**arguments)
+            return str(result)
+        else:
+            return f"Tool {tool_name} not found"
+```
+
+**3. Crew implementation**:
+
+```python
+from collections import deque
+from typing import List, Optional, Dict
+
+class Crew:
+    """Orchestrator for multi-agent workflows"""
+    _active = None
+
+    def __init__(self):
+        self.agents: List[Agent] = []
+
+    def __enter__(self):
+        Crew._active = self
+        return self
+
+    def __exit__(self, *args):
+        Crew._active = None
+
+    def register(self, agent: Agent):
+        """Register agent with crew"""
+        if Crew._active == self:
+            self.add(agent)
+
+    def add(self, agent: Agent):
+        """Add agent to crew"""
+        if hasattr(agent, 'name') and hasattr(agent, 'run'):
+            self.agents.append(agent)
+
+    def _topological_sort(self) -> List[Agent]:
+        """Sort agents by dependencies using topological sort"""
+        # Build dependency graph
+        agent_map = {agent.name: agent for agent in self.agents}
+        in_degree = {agent.name: len(agent.dependencies) for agent in self.agents}
+
+        # Queue agents with no dependencies
+        queue = deque([agent for agent in self.agents if in_degree[agent.name] == 0])
+        sorted_agents = []
+
+        while queue:
+            agent = queue.popleft()
+            sorted_agents.append(agent)
+
+            # Reduce in-degree of dependent agents
+            for other_agent in self.agents:
+                if agent.name in other_agent.dependencies:
+                    in_degree[other_agent.name] -= 1
+                    if in_degree[other_agent.name] == 0:
+                        queue.append(other_agent)
+
+        if len(sorted_agents) != len(self.agents):
+            raise ValueError("Circular dependency detected")
+
+        return sorted_agents
+
+    def run_all(self):
+        """Execute all agents in dependency order"""
+        sorted_agents = self._topological_sort()
+
+        # Track outputs for context passing
+        outputs = {}
+
+        for agent in sorted_agents:
+            print(f"\n[{agent.name}] Running...")
+            result = agent.run()
+            outputs[agent.name] = result
+            print(f"[{agent.name}] Output: {result}")
+
+            # Pass output to dependent agents
+            for other_agent in sorted_agents:
+                if agent.name in other_agent.dependencies:
+                    other_agent.receive_context(f"{agent.name}: {result}")
+
+        return outputs
+```
+
+**Complete example**:
+
+```python
+# Define tools
+@tool
+def double_number(n: int) -> int:
+    """Double a number"""
+    return n * 2
+
+@tool
+def square_number(n: int) -> int:
+    """Square a number"""
+    return n * n
+
+# Create agents
+agent_a = Agent(
+    name="Doubler",
+    backstory="You are a math agent that doubles numbers.",
+    task_description="Double the number 4",
+    tools=[double_number],
+    model="openai/gpt-4o"
+)
+
+agent_b = Agent(
+    name="Squarer",
+    backstory="You are a math agent that squares numbers.",
+    task_description="Square the result from Doubler agent",
+    tools=[square_number],
+    model="openai/gpt-4o"
+)
+
+# Define dependency
+agent_b.depends_on(agent_a)
+
+# Run crew
+with Crew() as crew:
+    crew.add(agent_a)
+    crew.add(agent_b)
+    crew.run_all()
+```
+
+**Output**:
+
+```
+[Doubler] Running...
+[Doubler] Output: 8
+
+[Squarer] Running...
+[Squarer] Output: 64
+```
+
+**Key implementation details**:
+
+- **Tool abstraction**: Wraps functions with metadata, validation, and structured invocation
+- **Agent reasoning**: Uses ReAct loop internally (Thought → Action → Observation)
+- **Dependency resolution**: Topological sort ensures correct execution order
+- **Context passing**: Upstream agent outputs passed to downstream agents
+- **Modularity**: Each agent is independent, focused on its role
+
+**Production considerations**:
+
+- **Error handling**: Handle tool failures, agent errors, dependency cycles
+- **Parallelization**: Execute independent agents in parallel
+- **State management**: Track agent state, intermediate results, execution history
+- **Monitoring**: Log agent reasoning, tool calls, outputs for debugging
+
+**Benefits of Multi-Agent pattern**:
+
+- **Modularity**: Easy to develop, debug, and maintain
+- **Specialization**: Each agent masters one trade
+- **Transparency**: Clear structure, traceable reasoning
+- **Scalability**: Add more specialists as needed
+- **Error isolation**: Easy to pinpoint failures
+- **Natural design**: Mirrors human team structure
+
+**When to use Multi-Agent**:
+
+- **Complex workflows**: Tasks that naturally break into distinct phases
+- **Specialized roles**: Different expertise needed (research, analysis, writing)
+- **Sequential processing**: Output of one agent feeds into next
+- **Quality control**: Multiple agents can verify each other's work
+- **Modularity requirements**: Need to update/replace agents independently
+
+**EXAM TIP:** Questions about "multiple specialized agents" or "team of agents" → think **Multi-Agent pattern**. Questions about "modular agent design" or "separation of concerns" → think **Multi-Agent**. Questions about "agent orchestration" or "dependency management" → think **Crew** or **orchestrator**.
+
+---
+
 ### LangGraph — State Machine Orchestration for Agents
 
 **LangGraph** provides explicit control flow for agent workflows using graph-based state machines. It's ideal when you need deterministic, testable, and debuggable agent behavior.
