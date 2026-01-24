@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Editor/IDE
+.vscode/
+.idea/
+
+# Node/Python misc
+node_modules/
+__pycache__/
+*.pyc
+
+# Keep PDFs/text exports out of the public repo unless you explicitly want them shared
+docs/gcp-ml-exam-guide/pdfs/
+docs/gcp-ml-exam-guide/pdfs_txt/
+docs/gcp-ml-exam-guide/pdfs_links/
+
