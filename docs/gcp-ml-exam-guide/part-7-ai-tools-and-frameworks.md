@@ -8,7 +8,59 @@ This part is a **tooling map** (commercial + open-source) for building LLM apps 
 - Recognize common tool categories that show up in exam-style scenarios (RAG, orchestration, guardrails, eval/observability, serving).
 - Translate requirements (latency, governance, data access, compliance, cost) into a concrete stack.
 
-### Google's Official Agent Whitepapers (Kaggle Course)
+### Table of Contents
+
+**Foundations & Core Concepts**:
+
+- [7.1 Ecosystem Taxonomy](#71-ecosystem-taxonomy-and-layers)
+- [7.2 Agent Taxonomy: Level 0-4](#72-agent-taxonomy-level-0-4)
+- [7.3 Google's Official Agent Whitepapers](#73-googles-official-agent-whitepapers-kaggle-course)
+
+**Platforms & Cloud Services**:
+
+- [7.4 Google Cloud (Vertex AI + Agent Stack)](#74-google-cloud-vertex-ai--google-agent-stack)
+- [7.5 AWS (Amazon Bedrock + Managed Agents)](#75-aws-amazon-bedrock--managed-agents)
+- [7.6 Microsoft Azure (Azure AI Foundry)](#76-microsoft-azure-azure-ai-foundry--azure-openai--agent-service)
+- [7.7 Cloud Platform Comparison](#77-cloud-platform-comparison-aws-vs-gcp-vs-azure)
+
+**Frameworks & Tools**:
+
+- [7.8 Core ML/DL Frameworks](#78-core-mldl-frameworks-foundation-of-non-llm-ml-engineering)
+- [7.9 Open-Source Agent Frameworks](#79-open-source--multi-cloud-frameworks-the-app--orchestration-layer)
+- [7.10 Commercial Agent Builders](#710-commercial-agent-builders-and-provider-sdks)
+- [7.11 Interoperability Protocols (MCP & A2A)](#711-interoperability-protocols-mcp--a2a)
+
+**Agent Development**:
+
+- [7.12 Agent Frameworks Deep Dive](#712-agent-frameworks-deep-dive-building-intelligent-systems)
+- [7.13 Context Management & Memory](#713-context-management-memory--session-state-for-agents)
+- [7.14 Multi-Agent Patterns](#714-multi-agent-patterns-and-architectures)
+
+**Production & Operations**:
+
+- [7.15 Production Deployment](#715-genai--agent-production-deployment)
+- [7.16 Agent Evaluation & Quality](#716-agent-evaluation-and-quality-assurance)
+- [7.17 Agent Security & Governance](#717-agent-security-identity-policies-and-guard-models)
+- [7.18 Prototype to Production Lifecycle](#718-prototype-to-production-operational-lifecycle)
+
+**Advanced Topics**:
+
+- [7.19 Agentic RAG](#719-agentic-rag-advanced-retrieval-patterns)
+- [7.20 Agent-Human Interaction](#720-agent-human-interaction-computer-use-live-mode-ui-control)
+- [7.21 Contracts & Multi-Agent Systems](#721-contracts-and-contract-lifecycle-multi-agent-systems)
+- [7.22 Vector Stores & Retrieval Infrastructure](#722-vector-stores--retrieval-infrastructure-rag-substrate)
+- [7.23 LLM Serving & Inference](#723-llm-serving--inference-engines)
+- [7.24 Evaluation & Observability Tools](#724-evaluation--observability-llmops--agentops-tooling)
+- [7.25 Security & Guardrails Tooling](#725-security--guardrails-tooling-checklist)
+- [7.26 Default Stacks by Scenario](#726-default-stacks-by-scenario-quick-mapping)
+- [7.27 AI Tools for Developers](#727-ai-tools-for-developers-and-business-users)
+- [7.28 Integration Platforms](#728-integration-platforms-and-nocode-ai)
+- [7.29 Domain-Specific Libraries](#729-domain--and-language-specific-ml-libraries)
+- [7.30 Governance & Compliance](#730-governance-risk-and-compliance-frameworks)
+
+---
+
+### 7.3 Google's Official Agent Whitepapers (Kaggle Course)
 
 Google has published comprehensive whitepapers on GenAI and agents as part of the **5-Day GenAI Intensive Course** on Kaggle. These are **critical authoritative sources** for understanding Google's official approach to agent development and production deployment.
 
@@ -40,9 +92,9 @@ Google has published comprehensive whitepapers on GenAI and agents as part of th
 
 ---
 
-## 7.5.6 Key Concepts from Google's Agent Whitepapers
+## 7.3.1 Key Concepts from Google's Agent Whitepapers
 
-This section integrates critical insights from Google's official Kaggle whitepapers, organized by topic area.
+This section integrates critical insights from Google's official Kaggle whitepapers, organized by topic area. These concepts are foundational and referenced throughout this guide.
 
 ### Production-Grade Agent Framework Requirements
 
@@ -267,7 +319,7 @@ Agent evaluation differs from traditional ML evaluation because:
 
 ---
 
-### Prototype to Production: Operational Lifecycle
+## 7.18 Prototype to Production: Operational Lifecycle
 
 Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-prototype-to-production)
 
@@ -283,20 +335,20 @@ This whitepaper provides a comprehensive guide to the **operational lifecycle of
 
 **Traditional MLOps Teams**:
 
-| Team                        | Responsibilities                                                                                    |
-| --------------------------- | --------------------------------------------------------------------------------------------------- |
-| **Cloud Platform Team**     | Cloud architects, administrators, security specialists; manage infrastructure, security, access control; grant least-privilege roles |
-| **Data Engineering Team**   | Data engineers and data owners; build/maintain data pipelines, handle ingestion, preparation, quality standards |
+| Team                        | Responsibilities                                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud Platform Team**     | Cloud architects, administrators, security specialists; manage infrastructure, security, access control; grant least-privilege roles      |
+| **Data Engineering Team**   | Data engineers and data owners; build/maintain data pipelines, handle ingestion, preparation, quality standards                           |
 | **Data Science/MLOps Team** | Data scientists (experiment/train models), ML engineers (automate ML pipelines), MLOps Engineers (build/maintain pipeline infrastructure) |
-| **ML Governance**           | Product owners, auditors; oversee ML lifecycle, ensure compliance, transparency, accountability |
+| **ML Governance**           | Product owners, auditors; oversee ML lifecycle, ensure compliance, transparency, accountability                                           |
 
 **Generative AI introduces new specialized roles**:
 
-| Role                  | Responsibilities                                                                                    |
-| --------------------- | --------------------------------------------------------------------------------------------------- |
-| **Prompt Engineers**  | Blend technical skill in crafting prompts with deep domain expertise; define right questions and expected answers (may be done by AI Engineers or domain experts) |
-| **AI Engineers**      | Scale GenAI solutions to production; build robust backend systems with evaluation at scale, guardrails, RAG/tool integration |
-| **DevOps/App Developers** | Build front-end components and user-friendly interfaces that integrate with GenAI backend |
+| Role                      | Responsibilities                                                                                                                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Prompt Engineers**      | Blend technical skill in crafting prompts with deep domain expertise; define right questions and expected answers (may be done by AI Engineers or domain experts) |
+| **AI Engineers**          | Scale GenAI solutions to production; build robust backend systems with evaluation at scale, guardrails, RAG/tool integration                                      |
+| **DevOps/App Developers** | Build front-end components and user-friendly interfaces that integrate with GenAI backend                                                                         |
 
 **EXAM TIP:** Questions about "who builds agents" or "team structure" → think **AI Engineers** (backend) + **Prompt Engineers** (prompts) + **DevOps** (frontend) + **Cloud Platform Team** (infrastructure).
 
@@ -307,6 +359,7 @@ This whitepaper provides a comprehensive guide to the **operational lifecycle of
 **Two implementation methods**:
 
 1. **Manual "Pre-PR" Evaluation**:
+
    - AI Engineer/Prompt Engineer runs evaluation suite locally before PR
    - Performance report (comparing new agent vs production baseline) linked in PR description
    - Reviewer (AI Engineer or ML Governor) assesses code + behavioral changes
@@ -325,12 +378,14 @@ This whitepaper provides a comprehensive guide to the **operational lifecycle of
 A robust pipeline is designed as a **funnel**—catching errors as early and cheaply as possible ("shifting left").
 
 **Phase 1: Pre-Merge Integration (CI)**
+
 - **Purpose**: Rapid feedback to developer who opened PR
 - **Checks**: Unit tests, code linting, dependency scanning, **agent quality evaluation suite**
 - **Benefit**: Prevents polluting main branch; catches performance degradation before merge
 - **Example**: Cloud Build PR checks template from Agent Starter Pack
 
 **Phase 2: Post-Merge Validation in Staging (CD)**
+
 - **Purpose**: Operational readiness of integrated system
 - **Process**: Package agent → deploy to staging (high-fidelity replica of production)
 - **Tests**: Load testing, integration tests against remote services, **internal user testing ("dogfooding")**
@@ -338,12 +393,14 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 - **Example**: Staging deployment template from Agent Starter Pack
 
 **Phase 3: Gated Deployment to Production**
+
 - **Purpose**: Final deployment to production
 - **Process**: Product Owner gives final sign-off (human-in-the-loop) → exact artifact from staging promoted to production
 - **Benefit**: Ensures production deployment matches tested staging artifact
 - **Example**: Production deployment template from Agent Starter Pack
 
 **Key technologies**:
+
 - **Infrastructure as Code (IaC)**: Terraform defines environments programmatically (identical, repeatable, version-controlled)
 - **Automated Testing Frameworks**: Pytest executes tests/evaluations at each stage
 - **Secret Management**: Secret Manager for API keys (injected at runtime, not hardcoded)
@@ -354,12 +411,12 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 
 **Four proven patterns** for gradual rollouts:
 
-| Strategy        | Description                                                                  | Use Case                                    |
-| --------------- | ---------------------------------------------------------------------------- | ------------------------------------------- |
-| **Canary**      | Start with 1% of users; monitor for prompt injections, unexpected tool usage; scale up gradually or roll back instantly | Low-risk initial rollout                    |
-| **Blue-Green**  | Run two identical production environments; route traffic to "blue" while deploying to "green"; switch instantly; zero downtime, instant recovery | Zero-downtime deployments                   |
-| **A/B Testing** | Compare agent versions on real business metrics for data-driven decisions (internal or external users) | Comparing agent versions                    |
-| **Feature Flags** | Deploy code but control release dynamically; test new capabilities with select users first | Gradual feature rollout                     |
+| Strategy          | Description                                                                                                                                      | Use Case                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| **Canary**        | Start with 1% of users; monitor for prompt injections, unexpected tool usage; scale up gradually or roll back instantly                          | Low-risk initial rollout  |
+| **Blue-Green**    | Run two identical production environments; route traffic to "blue" while deploying to "green"; switch instantly; zero downtime, instant recovery | Zero-downtime deployments |
+| **A/B Testing**   | Compare agent versions on real business metrics for data-driven decisions (internal or external users)                                           | Comparing agent versions  |
+| **Feature Flags** | Deploy code but control release dynamically; test new capabilities with select users first                                                       | Gradual feature rollout   |
 
 **Foundation**: **Rigorous versioning**—every component (code, prompts, model endpoints, tool schemas, memory structures, evaluation datasets) must be versioned. Enables instant rollback to known-good state.
 
@@ -370,6 +427,7 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 #### Building Security from the Start
 
 **Unique agent risks**:
+
 - **Prompt Injection & Rogue Actions**: Malicious users trick agents into unintended actions
 - **Data Leakage**: Agents expose sensitive information through responses or tool usage
 - **Memory Poisoning**: False information stored in agent's memory corrupts future interactions
@@ -377,10 +435,12 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 **Three layers of defense** (Google's Secure AI Framework - SAIF):
 
 1. **Policy Definition and System Instructions** (The Agent's Constitution):
+
    - Define policies for desired/undesired behavior
    - Engineer into System Instructions (SIs)
 
 2. **Guardrails, Safeguards, and Filtering** (The Enforcement Layer):
+
    - **Input Filtering**: Classifiers (e.g., Perspective API) analyze prompts, block malicious inputs
    - **Output Filtering**: Vertex AI's built-in safety filters check for harmful content, PII, policy violations
    - **Human-in-the-Loop (HITL) Escalation**: Pause and escalate high-risk/ambiguous actions for human review
@@ -404,11 +464,11 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 
 **Three pillars of observability**:
 
-| Pillar    | Description                                                          | Example                                    |
-| --------- | -------------------------------------------------------------------- | ------------------------------------------ |
-| **Logs**  | Granular, factual diary of what happened (every tool call, error, decision) | Cloud Logging                              |
-| **Traces** | Narrative connecting individual logs (reveals causal path of why agent took action) | Cloud Trace (unique ID links Vertex AI Agent Engine invocation, model calls, tool executions) |
-| **Metrics** | Aggregated report card (performance, cost, operational health at scale) | Cloud Monitoring dashboards (alert when latency thresholds exceeded) |
+| Pillar      | Description                                                                         | Example                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Logs**    | Granular, factual diary of what happened (every tool call, error, decision)         | Cloud Logging                                                                                 |
+| **Traces**  | Narrative connecting individual logs (reveals causal path of why agent took action) | Cloud Trace (unique ID links Vertex AI Agent Engine invocation, model calls, tool executions) |
+| **Metrics** | Aggregated report card (performance, cost, operational health at scale)             | Cloud Monitoring dashboards (alert when latency thresholds exceeded)                          |
 
 **ADK Integration**: Agent Development Kit provides built-in Cloud Trace integration for automatic instrumentation.
 
@@ -419,11 +479,13 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 1. **Managing System Health: Performance, Cost, and Scale**
 
    **Designing for Scale**:
+
    - **Horizontal Scaling**: Design agent as stateless, containerized service; external state enables any instance to handle any request (Cloud Run, Vertex AI Agent Engine Runtime)
    - **Asynchronous Processing**: Offload long-running tasks using event-driven patterns (Pub/Sub → Cloud Run)
    - **Externalized State Management**: Persist memory externally (Vertex AI Agent Engine built-in Session/memory service, or Cloud Run + AlloyDB/Cloud SQL)
 
    **Balancing Competing Goals**:
+
    - **Speed (Latency)**: Parallel processing, aggressive caching, smaller efficient models for routine tasks
    - **Reliability**: Automatic retries with exponential backoff; design idempotent tools (safe-to-retry)
    - **Cost**: Shorten prompts, use cheaper models for easier tasks, batch requests
@@ -447,6 +509,7 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 **Example**: Retail agent logs show 15% of users receive error when asking for 'similar products' → Create failing test case → Engineer refines prompt + adds robust similarity search tool → Commits change → Passes updated evaluation suite → Safely rolled out via canary deployment → Resolved in under 48 hours.
 
 **Evolving Security**: Production feedback loop for security:
+
 - **Observe**: Monitoring detects new threat vector (novel prompt injection, unexpected data leak)
 - **Act**: Security response team contains threat
 - **Evolve**: Feed insight back into development lifecycle:
@@ -461,6 +524,7 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 **Agent Card**: Standardized JSON specification acting as "business card" for each agent.
 
 **Agent Card structure**:
+
 ```json
 {
   "name": "check_prime_agent",
@@ -487,6 +551,7 @@ A robust pipeline is designed as a **funnel**—catching errors as early and che
 ```
 
 **Making an agent A2A-compatible (ADK)**:
+
 ```python
 from google.adk.a2a.utils.agent_to_a2a import to_a2a
 
@@ -502,6 +567,7 @@ a2a_app = to_a2a(root_agent, port=8001)
 ```
 
 **Consuming a remote agent via A2A (ADK)**:
+
 ```python
 from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
 
@@ -513,6 +579,7 @@ prime_agent = RemoteA2aAgent(
 ```
 
 **Hierarchical agent composition**:
+
 ```python
 # Local sub-agent for dice rolling
 roll_agent = Agent(
@@ -535,10 +602,12 @@ root_agent = Agent(
 ```
 
 **Non-negotiable technical requirements**:
+
 - **Distributed tracing**: Every request carries unique trace ID (essential for debugging, audit trail)
 - **Robust state management**: A2A interactions are stateful; require sophisticated persistence layer
 
 **When to use A2A vs local sub-agents**:
+
 - **A2A**: Formal, cross-team integrations requiring durable service contract
 - **Local sub-agents**: Tightly coupled tasks within single application (more efficient)
 
@@ -548,14 +617,15 @@ root_agent = Agent(
 
 **They are complementary, not competing**:
 
-| Protocol | Domain                          | Use Case Example                                    |
-| -------- | ------------------------------- | --------------------------------------------------- |
-| **MCP**  | Tools and resources (primitives) | Calculator, database API, weather API               |
+| Protocol | Domain                            | Use Case Example                                                                    |
+| -------- | --------------------------------- | ----------------------------------------------------------------------------------- |
+| **MCP**  | Tools and resources (primitives)  | Calculator, database API, weather API                                               |
 | **A2A**  | Other agents (autonomous systems) | "Analyze last quarter's customer churn and recommend three intervention strategies" |
 
 **Layered architecture**: Use **A2A** for high-level agent collaboration; each agent internally uses **MCP** to interact with its specific tools.
 
 **Example workflow** (auto repair shop):
+
 1. **User-to-Agent (A2A)**: Customer communicates with "Shop Manager" agent
 2. **Agent-to-Agent (A2A)**: Shop Manager delegates to specialized "Mechanic" agent
 3. **Agent-to-Tool (MCP)**: Mechanic agent uses MCP to call tools (`scan_vehicle_for_error_codes()`, `get_repair_procedure()`, `raise_platform()`)
@@ -563,11 +633,14 @@ root_agent = Agent(
 
 **EXAM TIP:** Questions about "MCP vs A2A" → **MCP** for tools/resources, **A2A** for agent-to-agent collaboration.
 
+**For detailed A2A implementation** (Agent Cards, code examples, hierarchical composition), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
+
 #### Registry Architectures: When and How to Build Them
 
 **Decision framework**: Build registries when scale/complexity demands centralized management.
 
 **Tool Registry** (using MCP):
+
 - **Purpose**: Catalog all assets (functions, APIs)
 - **Patterns**:
   - **Generalist agents**: Access full catalog (trades speed/accuracy for scope)
@@ -577,6 +650,7 @@ root_agent = Agent(
 - **Build when**: Tool discovery becomes bottleneck OR security requires centralized auditing
 
 **Agent Registry** (using A2A AgentCards):
+
 - **Purpose**: Catalog agents for discovery and reuse
 - **Benefits**: Teams discover/reuse existing agents, reduce redundant work, enable automated agent-to-agent delegation
 - **Build when**: Multiple teams need to discover/reuse specialized agents without tight coupling
@@ -596,6 +670,7 @@ root_agent = Agent(
 5. **Evolution Loop**: Turn every insight into the next improvement
 
 **Key capabilities**:
+
 - **Evaluation**: Golden datasets, LLM-as-judge, trajectory evaluation
 - **CI/CD**: Three-phase pipeline (Pre-merge → Staging → Production)
 - **Observability**: Logs, traces, metrics (Cloud Logging, Cloud Trace, Cloud Monitoring)
@@ -683,6 +758,8 @@ root_agent = Agent(
 
 Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-prototype-to-production)
 
+**Note**: For foundational concepts on A2A vs MCP, see [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet). This section focuses on **production implementation** details.
+
 **A2A** enables agents to communicate with each other regardless of programming language or runtime.
 
 **A2A Benefits**:
@@ -702,7 +779,7 @@ Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-p
 
 ---
 
-### Embeddings and Vector Stores (RAG Foundations)
+### 7.3.2 Embeddings and Vector Stores (RAG Foundations)
 
 Source: [Embeddings and Vector Stores Whitepaper](https://www.kaggle.com/whitepaper-embeddings-and-vector-stores)
 
@@ -739,7 +816,7 @@ This whitepaper covers the foundational concepts for RAG (Retrieval-Augmented Ge
 
 ---
 
-### Domain-Specific LLMs
+### 7.3.3 Domain-Specific LLMs
 
 Source: [Solving Domain-Specific Problems Using LLMs Whitepaper](https://www.kaggle.com/whitepaper-solving-domains-specific-problems-using-llms)
 
@@ -766,7 +843,7 @@ Source: [Solving Domain-Specific Problems Using LLMs Whitepaper](https://www.kag
 
 ---
 
-### MLOps for Generative AI
+### 7.3.4 MLOps for Generative AI
 
 Source: [Operationalizing Generative AI on Vertex AI using MLOps Whitepaper](https://www.kaggle.com/whitepaper-operationalizing-generative-ai-on-vertex-ai-using-mlops)
 
@@ -794,7 +871,7 @@ Source: [Operationalizing Generative AI on Vertex AI using MLOps Whitepaper](htt
 
 ---
 
-### 7.5.7 Agent Evaluation: Outside-In vs Inside-Out Framework
+## 7.16 Agent Evaluation: Outside-In vs Inside-Out Framework
 
 Source: [Agent Quality Whitepaper](https://www.kaggle.com/whitepaper-agent-quality)
 
@@ -860,7 +937,7 @@ Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-c
 
 ---
 
-### 7.5.8 Agent Security: Identity, Policies, and Guard Models
+## 7.17 Agent Security: Identity, Policies, and Guard Models
 
 Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
 
@@ -918,7 +995,7 @@ Agents introduce a **third category of principal** (beyond users and service acc
 
 ---
 
-### 7.5.9 Agent Interoperability: A2A, AP2, and x402
+## 7.11.1 Agent Interoperability: A2A, AP2, and x402 (Extended)
 
 Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
 
@@ -970,7 +1047,7 @@ Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-in
 
 ---
 
-### 7.5.10 Multi-Agent Patterns: Diamond, Peer-to-Peer, Collaborative, Adaptive Loop
+## 7.14 Multi-Agent Patterns: Diamond, Peer-to-Peer, Collaborative, Adaptive Loop
 
 Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
 
@@ -987,7 +1064,7 @@ Beyond the basic patterns (Sequential, Hierarchical, Router, Supervisor), produc
 
 ---
 
-### 7.5.11 Agentic RAG: Advanced Retrieval Patterns
+## 7.19 Agentic RAG: Advanced Retrieval Patterns
 
 Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
 
@@ -1006,7 +1083,7 @@ Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-c
 
 ---
 
-### 7.5.12 Agent-Human Interaction: Computer Use, Live Mode, UI Control
+## 7.20 Agent-Human Interaction: Computer Use, Live Mode, UI Control
 
 Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
 
@@ -1050,7 +1127,7 @@ Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-in
 
 ---
 
-### 7.5.13 Contracts and Contract Lifecycle (Multi-Agent Systems)
+## 7.21 Contracts and Contract Lifecycle (Multi-Agent Systems)
 
 Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
 
@@ -1073,9 +1150,9 @@ Agents can create **subcontracts**—delegating portions of their contract to ot
 
 ---
 
-**Note**: These whitepapers are comprehensive technical guides. For full details, refer to the original documents on Kaggle. This integration captures the key concepts most relevant to the ML Engineer exam.
+## 7.1 Ecosystem Taxonomy and Layers
 
-### 7.1 A simple taxonomy (how the ecosystem fits together)
+Think of agentic/LLM systems as a set of layers:
 
 Think of agentic/LLM systems as a set of layers:
 
@@ -1089,7 +1166,7 @@ Think of agentic/LLM systems as a set of layers:
 
 **EXAM TIP:** When a question says “fully managed” + “enterprise governance” + “rapid delivery” → prefer a **cloud-managed** offering. When it says “custom orchestration” + “bring your own model” + “fine control” → prefer **OSS frameworks + custom infra**.
 
-### 7.1.1 Core ML/DL frameworks (foundation of “non-LLM” ML engineering)
+## 7.8 Core ML/DL Frameworks (Foundation of "Non-LLM" ML Engineering)
 
 Even if you work mostly on GenAI, the ML Engineer exam (and many real systems) still rely on classic ML/DL frameworks:
 
@@ -1117,7 +1194,7 @@ Example table: core model frameworks
 | Probabilistic | Stan, PyMC, Turing.jl                        |
 | Legacy DL     | MXNet, PaddlePaddle, CNTK                    |
 
-### 7.2 Google Cloud (Vertex AI + Google agent stack)
+## 7.4 Google Cloud (Vertex AI + Google Agent Stack)
 
 Core docs entry point:
 
@@ -1134,7 +1211,7 @@ Practical “when to choose” map:
 - **Need custom orchestration/agent design**: use code-first agent frameworks (your own or vendor-supported) + deploy on managed compute (Cloud Run / GKE / Vertex).
 - **Need strong governance/observability**: integrate evaluation + logging/tracing + IAM least privilege + audit logs (AgentOps mindset).
 
-### 7.3 AWS (Amazon Bedrock + managed agents)
+## 7.5 AWS (Amazon Bedrock + Managed Agents)
 
 Core docs entry points:
 
@@ -1147,7 +1224,7 @@ What to look for in AWS-style questions:
 - **Safety controls**: look for Bedrock’s “guardrails/safety” concepts when asked about content filtering and policy enforcement.
 - **Managed retrieval**: look for “knowledge base”/managed retrieval primitives for RAG-like solutions.
 
-### 7.4 Microsoft Azure (Azure AI Foundry + Azure OpenAI + agent service)
+## 7.6 Microsoft Azure (Azure AI Foundry + Azure OpenAI + Agent Service)
 
 Core docs entry point:
 
@@ -1163,7 +1240,7 @@ From the Foundry documentation navigation (high-yield):
 
 **EXAM TIP:** When you see “agentic retrieval + eval + red teaming + content safety” described together, it often implies a **platform suite** (not just “write a prompt”).
 
-### 7.4.1 AWS vs GCP vs Azure (ML + GenAI + agents): engineering-focused comparison (2025–2026)
+## 7.7 Cloud Platform Comparison: AWS vs GCP vs Azure (ML + GenAI + Agents)
 
 High-level positioning
 
@@ -1211,7 +1288,7 @@ High-level positioning
 - **Choose GCP** if BigQuery is your analytical core and you want Gemini-first development plus interoperability patterns (MCP/A2A) and Vertex agent surfaces.
 - **Choose Azure** if you’re Microsoft 365/Dynamics/Fabric-centric and need enterprise agents deeply integrated into the Microsoft stack (Copilot-style workflows).
 
-### 7.5 Open-source / multi-cloud frameworks (the “app & orchestration layer”)
+## 7.9 Open-Source / Multi-Cloud Frameworks (The "App & Orchestration Layer")
 
 These are common choices when you want portability or deeper control:
 
@@ -1234,7 +1311,7 @@ Other tools you may see in the wild (often more “product” than “framework�
 - **Lindy** (business workflow automation agents)
 - **MetaGPT**, **OpenAgents**, **Letta**, **AutoGPT-style stacks** (agentic automation ecosystems; quality varies widely—evaluate carefully)
 
-### 7.5.1 Commercial “agent builders” and provider SDKs (OpenAI / Anthropic / others)
+## 7.10 Commercial Agent Builders and Provider SDKs (OpenAI / Anthropic / Others)
 
 These sit between “pure model API” and “full cloud platform”: they provide agent runtimes, tool calling patterns, and ecosystem integrations.
 
@@ -1252,7 +1329,7 @@ These sit between “pure model API” and “full cloud platform”: they provi
 
 **EXAM TIP:** Provider SDKs (OpenAI/Anthropic/etc.) help you ship faster, but enterprise answers still hinge on **governance, eval, monitoring, and least privilege tool execution**.
 
-### 7.5.2 MCP vs A2A (interoperability protocols for the “agent internet”)
+## 7.11 Interoperability Protocols: MCP & A2A (The "Agent Internet")
 
 Two interoperability ideas are showing up more and more in agent stacks:
 
@@ -1340,7 +1417,7 @@ Example table: agent and LLM application frameworks
 
 ---
 
-### 7.5.2 Taxonomy of Agentic Systems: Level 0-4
+## 7.2 Agent Taxonomy: Level 0-4 (Foundational Framework)
 
 Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
 
@@ -1453,7 +1530,7 @@ Understanding agent capabilities helps architects and product leaders scope what
 
 ---
 
-## 7.5.3 Deep Dive: Agent Frameworks with Code Examples
+## 7.12 Agent Frameworks Deep Dive: Building Intelligent Systems
 
 This section provides implementation-ready code snippets for the most important agent frameworks.
 
@@ -2047,7 +2124,7 @@ approval_app = approval_graph.compile(
 
 ---
 
-## 7.5.4 Context Management, Memory & Session State for Agents
+## 7.13 Context Management, Memory & Session State for Agents
 
 Agents need **memory** to maintain coherent conversations, learn from interactions, and handle multi-turn tasks. This section covers the key concepts and implementation patterns.
 
@@ -2426,7 +2503,7 @@ Use the official Vertex AI documentation for the current SDK surface and best pr
 
 ---
 
-## 7.5.5 GenAI & Agent Production Deployment
+## 7.15 GenAI & Agent Production Deployment
 
 Moving agents from prototype to production requires treating them as **distributed systems** with rigorous engineering practices. This section covers the architectural patterns, security controls, and operational discipline needed for production-grade agent deployments.
 
@@ -3717,7 +3794,7 @@ def log_agent_trace(trace: AgentTrace):
 
 ---
 
-### 7.6 Vector stores & retrieval infrastructure (RAG substrate)
+## 7.22 Vector Stores & Retrieval Infrastructure (RAG Substrate)
 
 Common options (managed or self-hosted):
 
@@ -3742,7 +3819,7 @@ Example table: RAG components
 
 **Embedding / similarity providers** (often accessed via frameworks above): OpenAI, Cohere, Voyage AI, Jina, etc.
 
-### 7.6.1 Model hubs and the Hugging Face ecosystem (the “GitHub for models/data” layer)
+### 7.22.1 Model Hubs and the Hugging Face Ecosystem (The "GitHub for Models/Data" Layer)
 
 This layer is easy to miss if you only think in terms of “cloud platforms”, but it’s central in real-world GenAI work:
 
@@ -3786,7 +3863,7 @@ Cloud-native “catalogs” (more curated/managed, less community-driven):
 - **Self-hosted serving stacks**: BentoML / KServe / Triton / Ray Serve (often serving HF models)
 - **Cloud-native endpoints**: SageMaker endpoints, Vertex AI endpoints, Azure ML / Foundry endpoints
 
-### 7.7 LLM serving / inference engines (when you self-host)
+## 7.23 LLM Serving & Inference Engines (When You Self-Host)
 
 If you host open-weight models (or need extreme throughput), inference engines become a “first-class” tool choice:
 
@@ -3799,7 +3876,7 @@ High-yield concepts to recognize across these projects:
 
 - **Continuous batching**, **KV cache management**, **prefill vs decode scheduling**, **prefix/context caching**, **streaming**.
 
-### 7.7.0 Open-source foundation models (beyond LLMs)
+### 7.23.1 Open-Source Foundation Models (Beyond LLMs)
 
 In practice, “open-source foundation models” usually means **open weights** you can download and run (license permitting), across multiple modalities:
 
@@ -3898,7 +3975,7 @@ Open-weight video generation evolves quickly; the recurring practical constraint
 
 **Engineering tip:** treat video generation as an **async job** (queue + batch GPUs) unless the product truly demands interactive latency.
 
-### 7.7.1 Open-source / open-weight LLM examples (what people actually run)
+### 7.23.2 Open-Source / Open-Weight LLM Examples (What People Actually Run)
 
 When someone says “open-source LLM”, they often mean **open-weight** models you can run yourself (license permitting). Common examples you’ll see:
 
@@ -3914,7 +3991,7 @@ Where to find and evaluate them:
 
 **EXAM TIP:** “We need to run on-prem / avoid vendor lock-in / control weights” → open-weight models + self-hosted serving (vLLM/TGI/Triton) is the common direction.
 
-### 7.7.2 API routers / aggregators (OpenRouter-style)
+### 7.23.3 API Routers / Aggregators (OpenRouter-Style)
 
 These products sit above multiple model providers and expose a single API surface:
 
@@ -3928,7 +4005,7 @@ These products sit above multiple model providers and expose a single API surfac
 
 If you’re using an API router, still treat **evaluation + monitoring** as mandatory, because routing changes can change quality.
 
-### 7.7.3 Non-hyperscaler GPU & inference clouds (cost/perf alternatives)
+### 7.23.4 Non-Hyperscaler GPU & Inference Clouds (Cost/Perf Alternatives)
 
 Beyond AWS/GCP/Azure, you’ll see specialized GPU clouds that focus on price/performance for training and inference. Example:
 
@@ -3936,7 +4013,7 @@ Beyond AWS/GCP/Azure, you’ll see specialized GPU clouds that focus on price/pe
 
 **Engineering checklist before adopting**: data residency/compliance, private networking, IAM/audit logs, model availability, SLAs, and observability/export (OpenTelemetry/metrics/logs).
 
-### 7.8 Evaluation + observability (LLMOps / AgentOps tooling)
+## 7.24 Evaluation & Observability (LLMOps / AgentOps Tooling)
 
 Typical categories:
 
@@ -3956,7 +4033,7 @@ Representative tools (vendor-agnostic):
 
 **EXAM TIP:** The “correct” operational answer is almost never “manually test a few prompts.” It’s usually **eval dataset + automated evals + monitoring/tracing + safety tests**.
 
-### 7.8.1 MLOps, pipelines, and observability (classic ML + GenAI)
+### 7.24.1 MLOps, Pipelines, and Observability (Classic ML + GenAI)
 
 This is the “everything around the model” tool layer (data, pipelines, deployment, monitoring):
 
@@ -3982,7 +4059,7 @@ Full platforms (end-to-end suites you’ll see in enterprises):
 - **Azure ML**: `https://learn.microsoft.com/en-us/azure/machine-learning/`
 - **Snowflake Cortex**: `https://www.snowflake.com/en/data-cloud/cortex/`
 
-### 7.9 Security & guardrails (tooling checklist)
+## 7.25 Security & Guardrails (Tooling Checklist)
 
 Regardless of vendor/framework, the same controls repeat:
 
@@ -3992,7 +4069,7 @@ Regardless of vendor/framework, the same controls repeat:
 - **Allow-lists**: tools/functions with explicit schemas; restrict high-risk actions; add human approval for destructive ops.
 - **Auditability**: logs/traces retained; changes to prompts/tools/versioned.
 
-### 7.10 “Default stacks” by scenario (quick mapping)
+## 7.26 Default Stacks by Scenario (Quick Mapping)
 
 - **Fast managed enterprise agent**:
   - Vendor agent platform (Vertex/Azure/AWS) + managed RAG/search + built-in eval + observability
@@ -4001,7 +4078,7 @@ Regardless of vendor/framework, the same controls repeat:
 - **Self-hosted inference at scale**:
   - vLLM/SGLang/TGI + vector DB + strict gateway + eval/monitoring + GPU autoscaling
 
-### 7.11 “AI tools” for developers and business users (products you’ll see everywhere)
+## 7.27 AI Tools for Developers and Business Users (Products You'll See Everywhere)
 
 These are not frameworks, but they matter in real engineering orgs (policy, security, workflows):
 
@@ -4046,7 +4123,7 @@ Source: [https://antigravity.google/](https://antigravity.google/)
 - **Automation / app builders**: Zapier, Make, n8n (AI nodes), voice-agent builders, no/low-code agent builders.
 - **Business suites**: Intercom/Zendesk/HubSpot AI features, etc.
 
-### 7.12 Integration platforms and no-/low-code AI
+## 7.28 Integration Platforms and No-/Low-Code AI
 
 This is a fast-growing “glue layer” for agents in real companies:
 
@@ -4057,7 +4134,7 @@ This is a fast-growing “glue layer” for agents in real companies:
 
 **EXAM TIP:** No/low-code tools are great for speed, but production answers still require **security, auditability, and evaluation**.
 
-### 7.13 Domain- and language-specific ML libraries (useful in “what tool would you use?” questions)
+## 7.29 Domain- and Language-Specific ML Libraries (Useful in "What Tool Would You Use?" Questions)
 
 - **NLP**: spaCy (`https://spacy.io/`), NLTK (`https://www.nltk.org/`), Hugging Face Transformers/tokenizers (`https://huggingface.co/docs/transformers/`).
 - **Computer vision**: OpenCV (`https://opencv.org/`), Detectron2 (`https://github.com/facebookresearch/detectron2`), MMDetection/MMCV (`https://github.com/open-mmlab/mmdetection`), Kornia (`https://github.com/kornia/kornia`).
@@ -4066,7 +4143,7 @@ This is a fast-growing “glue layer” for agents in real companies:
 - **Reinforcement learning**: Stable-Baselines3 (`https://github.com/DLR-RM/stable-baselines3`), RLlib (`https://docs.ray.io/en/latest/rllib/`).
 - **Non-Python ecosystems** (common in “awesome-ml” lists): Go/Java/C++/Julia libraries vary; pick based on deployment/runtime constraints and team skills.
 
-### 7.14 Governance, risk, and compliance frameworks
+## 7.30 Governance, Risk, and Compliance Frameworks
 
 - **NIST AI Risk Management Framework (AI RMF)**: `https://www.nist.gov/itl/ai-risk-management-framework`
 - **Cloud Responsible AI toolkits**: major cloud platforms provide responsible AI guidance and tooling (evaluation, safety, governance, auditability) integrated into their ML/GenAI suites.
