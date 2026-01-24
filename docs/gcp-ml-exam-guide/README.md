@@ -13,8 +13,11 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 - **Part VII**: [`part-7-ai-tools-and-frameworks.md`](./part-7-ai-tools-and-frameworks.md)
 - **Quick Reference + Common Exam Traps**: [`quick-reference.md`](./quick-reference.md)
 - **BigQuery SQL Cheat Sheet**: [`bigquery-sql-cheat-sheet.md`](./bigquery-sql-cheat-sheet.md)
+- **Google AI News & Updates**: [`google-ai-news.md`](./google-ai-news.md)
 
-**Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam guide/scope. It’s included as an author-curated “tooling + ecosystem” reference to capture additional details and practical knowledge.
+**Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam guide/scope. It's included as an author-curated "tooling + ecosystem" reference to capture additional details and practical knowledge.
+
+**Note on News:** The `google-ai-news.md` file tracks recent Google AI announcements from [blog.google](https://blog.google/) and [Innovation & AI](https://blog.google/innovation-and-ai/). Not exam content — just for staying current with the ecosystem.
 
 ### Web verification note (current blocker)
 
