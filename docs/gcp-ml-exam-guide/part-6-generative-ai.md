@@ -57,10 +57,10 @@ The GenAI Leader curriculum frames GenAI as an interconnected stack. A useful an
 
 ```mermaid
 flowchart TB
-  I[Infrastructure\nGPUs/TPUs, servers, storage, network] --> M[Models\nLLMs, diffusion, multimodal]
-  M --> P[Platform\nAPIs, deployment, eval/monitoring, data mgmt, IAM]
-  P --> A[Agents\nmodel + tools + memory + planning]
-  A --> App[Applications\nchat/apps/workflows]
+  I["Infrastructure: GPUs/TPUs, servers, storage, network"] --> M["Models: LLMs, diffusion, multimodal"]
+  M --> P["Platform: APIs, deployment, eval/monitoring, data mgmt, IAM"]
+  P --> A["Agents: model + tools + memory + planning"]
+  A --> App["Applications: chat/apps/workflows"]
 ```
 
 #### The infrastructure layer (what it provides, and why it matters)
@@ -183,12 +183,12 @@ This pattern shows how Vertex AI can combine **specialized extraction** with **L
 ```mermaid
 flowchart TD
   CAD[3D CAD files] --> Ingest[Ingest/store]
-  Ingest --> A[AutoML\nExtract metadata]
-  A --> Meta[Structured metadata\n(materials, dimensions, tolerances)]
-  Meta --> G[Gemini\nSummarize + answer questions]
-  G --> UI[Engineer UI/API\nQ&A + summaries]
+  Ingest --> A["AutoML: Extract metadata"]
+  A --> Meta["Structured metadata (materials, dimensions, tolerances)"]
+  Meta --> G["Gemini: Summarize + answer questions"]
+  G --> UI["Engineer UI/API: Q&A + summaries"]
   subgraph Ops[Vertex AI Ops]
-    P[Vertex AI Pipelines\norchestration]
+    P["Vertex AI Pipelines: orchestration"]
   end
   P --> A
   P --> G
@@ -553,10 +553,10 @@ When teams struggle to generate _and_ prioritize use cases, a simple facilitatio
 
 ```mermaid
 flowchart LR
-  A[GenAI capabilities\n(models, search/RAG, agents, multimodal)] --> B[Creative matrix]
-  C[Business axis\n(personas, workflows, priorities)] --> B
-  B --> D[Sticky-note ideas\n(concrete intersections)]
-  D --> E[Prioritize\nImpact × Effort\n+ Feasibility/Risk]
+  A["GenAI capabilities (models, search/RAG, agents, multimodal)"] --> B[Creative matrix]
+  C["Business axis (personas, workflows, priorities)"] --> B
+  B --> D["Sticky-note ideas (concrete intersections)"]
+  D --> E["Prioritize: Impact × Effort + Feasibility/Risk"]
 ```
 
 **Prioritization step (keep it lightweight)**
@@ -719,12 +719,12 @@ This example is a clean “augmentation, not replacement” pattern: **AI genera
 ```mermaid
 flowchart TD
   V[Video asset] --> I[Ingest to Cloud Storage]
-  I --> T[Transcribe / caption draft generation\n(Vertex AI or Speech APIs)]
-  T --> C[Caption file output\n(time-coded + formatted)]
+  I --> T["Transcribe / caption draft generation (Vertex AI or Speech APIs)"]
+  T --> C["Caption file output (time-coded + formatted)"]
   C --> B[(Cloud Storage bucket/folder)]
-  B --> H[Human review + edit\n(QA + sync check)]
-  H --> P[Publish captions\n(distribution pipeline)]
-  H --> F[Feedback loop\n(error patterns, glossary, eval set)]
+  B --> H["Human review + edit (QA + sync check)"]
+  H --> P["Publish captions (distribution pipeline)"]
+  H --> F["Feedback loop (error patterns, glossary, eval set)"]
   F --> T
 ```
 
