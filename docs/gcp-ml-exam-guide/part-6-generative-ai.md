@@ -795,11 +795,11 @@ The core mechanism that allows transformers to weigh relationships between all p
 
 #### Architecture Variants
 
-| Type            | Attention Direction    | Examples           | Best For                               |
-| --------------- | ---------------------- | ------------------ | -------------------------------------- |
-| Encoder-Only    | Bidirectional          | BERT, RoBERTa      | Understanding: classification, NER, QA |
-| Decoder-Only    | Causal (left-to-right) | GPT, Gemini, LLaMA | Generation: completion, chat           |
-| Encoder-Decoder | Both + cross-attention | T5, BART           | Seq2seq: translation, summarization    |
+| Type            | Attention Direction    | Examples                    | Best For                               |
+| --------------- | ---------------------- | --------------------------- | -------------------------------------- |
+| Encoder-Only    | Bidirectional          | BERT, RoBERTa               | Understanding: classification, NER, QA |
+| Decoder-Only    | Causal (left-to-right) | GPT, Gemini, LLaMA, LLaMA 4 | Generation: completion, chat           |
+| Encoder-Decoder | Both + cross-attention | T5, BART                    | Seq2seq: translation, summarization    |
 
 ### 6.1.1 Tokenization (how text becomes numbers for LLMs)
 
