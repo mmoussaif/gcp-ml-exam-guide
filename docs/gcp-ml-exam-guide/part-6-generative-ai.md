@@ -45,6 +45,24 @@ Together, these shifts made GenAI feel like a step-change in what teams could do
 
 This framing is adapted from the GenAI Leader curriculum and is meant to sound like how leaders talk about adoption (concise, practical, not hype).
 
+#### The 5 layers of GenAI (infrastructure → models → platform → agents → applications)
+
+The GenAI Leader curriculum frames GenAI as an interconnected stack. A useful analogy: **infrastructure is the foundation**, **models are the engine**, **platform is the wiring/control system**, **agents are the drivers**, and **applications are the vehicles** users interact with.
+
+- **Infrastructure**: the compute + storage foundation (servers, GPUs/TPUs, networking, storage).
+- **Models**: the “brains” (foundation models like LLMs and diffusion models) trained on large datasets.
+- **Platform**: the layer that operationalizes models (APIs/SDKs, data access, deployment, evaluation/monitoring, IAM/security controls).
+- **Agents**: software that uses a model + tools to pursue goals (multi-step actions like research, troubleshooting, tool use).
+- **GenAI-powered applications**: the user-facing experiences (e.g., Gemini app, Workspace with Gemini, NotebookLM, custom apps).
+
+```mermaid
+flowchart TB
+  I[Infrastructure\nGPUs/TPUs, servers, storage, network] --> M[Models\nLLMs, diffusion, multimodal]
+  M --> P[Platform\nAPIs, deployment, eval/monitoring, data mgmt, IAM]
+  P --> A[Agents\nmodel + tools + memory + planning]
+  A --> App[Applications\nchat/apps/workflows]
+```
+
 #### GenAI is a technology layer, not “one app”
 
 - A **chatbot app** (like the Gemini app) is one product surface.

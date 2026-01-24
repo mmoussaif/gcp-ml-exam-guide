@@ -198,6 +198,7 @@
 - Why GenAI took off (around 2022): LLM capability jump + more accessible compute/tooling → much stronger “out-of-the-box” usefulness
 - Definitions: AI ⊃ ML ⊃ GenAI (GenAI creates new content; ML learns a model from data; AI is the broader goal)
 - DL/foundation/GenAI: deep learning (neural nets) underpins foundation models; GenAI is an application of these models to generate new content
+- GenAI layers (leader mental model): infrastructure → models → platform → agents → applications (apps are just the top layer)
 - Data for ML/GenAI: relevance + quality (accuracy/completeness/representativeness/consistency) + accessibility (availability/cost/format) often matter more than “fancier models”
 - Data types: structured (tables) vs unstructured (text/images/audio/video) vs semi-structured (JSON/nested) drive what modeling approaches and tooling make sense
 - Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
