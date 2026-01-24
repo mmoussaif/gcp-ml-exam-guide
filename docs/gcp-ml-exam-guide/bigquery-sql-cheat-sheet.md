@@ -4,11 +4,11 @@ This is a practical SQL reference for the workflows that show up constantly in M
 
 ### Official docs (high-signal starting points)
 
-- Query syntax (Standard SQL): `https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax`
-- Functions & operators (Standard SQL): `https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-and-operators`
-- Procedural language / scripting: `https://cloud.google.com/bigquery/docs/reference/standard-sql/scripting`
-- Partitioned tables: `https://cloud.google.com/bigquery/docs/partitioned-tables`
-- Query performance best practices: `https://cloud.google.com/bigquery/docs/best-practices-performance-overview`
+- Query syntax (Standard SQL): [BigQuery Query Syntax](https://cloud.google.com/bigquery/docs/reference/standard-sql/query-syntax)
+- Functions & operators (Standard SQL): [BigQuery Functions & Operators](https://cloud.google.com/bigquery/docs/reference/standard-sql/functions-and-operators)
+- Procedural language / scripting: [BigQuery Scripting](https://cloud.google.com/bigquery/docs/reference/standard-sql/scripting)
+- Partitioned tables: [Partitioned Tables Documentation](https://cloud.google.com/bigquery/docs/partitioned-tables)
+- Query performance best practices: [BigQuery Performance Best Practices](https://cloud.google.com/bigquery/docs/best-practices-performance-overview)
 
 ### 0) BigQuery “SQL mental model”
 
