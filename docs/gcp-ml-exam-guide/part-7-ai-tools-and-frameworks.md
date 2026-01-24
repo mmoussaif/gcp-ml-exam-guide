@@ -1,12 +1,38 @@
 ## PART VII: AI TOOLS & FRAMEWORKS (Agents + LLM Apps)
 
-**Important note:** This part is **not** official exam content/scope. It’s included as an author-curated reference to capture extra details and practical ecosystem knowledge that often helps in real projects (and sometimes informs exam intuition).
+**Important note:** This part is **not** official exam content/scope. It's included as an author-curated reference to capture extra details and practical ecosystem knowledge that often helps in real projects (and sometimes informs exam intuition).
 
 This part is a **tooling map** (commercial + open-source) for building LLM apps and AI agents. The goal is to help you:
 
-- Pick the right layer to “buy vs build” (managed agent platform vs OSS framework vs custom code).
+- Pick the right layer to "buy vs build" (managed agent platform vs OSS framework vs custom code).
 - Recognize common tool categories that show up in exam-style scenarios (RAG, orchestration, guardrails, eval/observability, serving).
 - Translate requirements (latency, governance, data access, compliance, cost) into a concrete stack.
+
+### Google's Official Agent Whitepapers (Kaggle Course)
+
+Google has published comprehensive whitepapers on GenAI and agents as part of the **5-Day GenAI Intensive Course** on Kaggle:
+
+**Source**: [5-Day Gen AI Intensive Course with Google | Kaggle](https://www.kaggle.com/learn-guide/5-day-genai)
+
+**Key whitepapers referenced**:
+
+| Day | Whitepaper | Focus |
+|-----|------------|-------|
+| **Day 1** | "Foundational Large Language Models & Text Generation" | LLM evolution, transformers, fine-tuning, inference acceleration, reasoning models |
+| **Day 2** | "Prompt Engineering" | Prompting fundamentals, evaluation, structured data |
+| **Day 2** | "Embeddings and Vector Stores/Databases" | Embedding methods, vector search algorithms, RAG foundations |
+| **Day 3** | **"Generative AI Agents"** | Core components, iterative development, agent space development |
+| **Day 3** | **"Agents Companion"** | Additional agent patterns and best practices |
+| **Day 4** | "Solving Domain-Specific Problems Using LLMs" | Specialized LLMs (SecLM, Med-PaLM), domain adaptation |
+| **Day 5** | "MLOps for Generative AI" | Adapting MLOps practices for GenAI, Vertex AI tools |
+
+**Why these matter for the exam**:
+- These whitepapers represent **Google's official perspective** on agent architecture and best practices
+- The "Generative AI Agents" whitepaper likely covers patterns we've discussed (ReAct, tool use, multi-agent systems)
+- The "Agents Companion" whitepaper may include additional production patterns and troubleshooting guidance
+- The MLOps whitepaper aligns with Vertex AI's tooling and deployment strategies
+
+**Note**: Access to these whitepapers may require Kaggle account registration and course enrollment. The course also includes hands-on notebooks, case studies, and interactive conversations via NotebookLM.
 
 ### 7.1 A simple taxonomy (how the ecosystem fits together)
 
@@ -2833,33 +2859,36 @@ These are not frameworks, but they matter in real engineering orgs (policy, secu
 
 **Google Antigravity** is Google's desktop application for building and orchestrating AI agents. Launched November 2025.
 
-| Aspect | Details |
-|--------|---------|
-| **Platform** | macOS (Apple Silicon + Intel); enterprise version coming soon |
-| **Price** | Free for individual developers |
-| **Model support** | Gemini 3 Flash, Nano Banana Pro |
-| **Use cases** | UX automation (browser-in-the-loop), production artifact generation, multi-agent orchestration |
+| Aspect            | Details                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------- |
+| **Platform**      | macOS (Apple Silicon + Intel); enterprise version coming soon                                  |
+| **Price**         | Free for individual developers                                                                 |
+| **Model support** | Gemini 3 Flash, Nano Banana Pro                                                                |
+| **Use cases**     | UX automation (browser-in-the-loop), production artifact generation, multi-agent orchestration |
 
 **Key features**:
+
 - **Browser-in-the-loop agents**: Automate repetitive UX tasks via browser automation (similar to Browser Use)
 - **Agent Manager**: Orchestrate multiple agents across workspaces; reduce context switching
 - **Production artifacts**: Generate thoroughly designed code with comprehensive verification tests
 - **Verification tests**: Built-in testing for agent outputs
 
 **When to use Antigravity**:
+
 - You want a **desktop-native experience** for agent development (not cloud-first)
 - You need **browser automation** built into the development workflow
 - You prefer **Google's agent stack** (Gemini models) vs. OpenAI/Anthropic-first tools
 
 **Comparison with other AI IDEs**:
 
-| Tool | Focus | Models | Browser Automation |
-|------|-------|--------|-------------------|
-| **Google Antigravity** | Agent development + orchestration | Gemini 3, Nano Banana Pro | ✅ Built-in |
-| **Cursor** | General coding + AI assistance | Multiple (OpenAI, Anthropic, etc.) | ❌ |
-| **Claude Code** | Agentic coding with Claude | Claude models | ❌ |
+| Tool                   | Focus                             | Models                             | Browser Automation |
+| ---------------------- | --------------------------------- | ---------------------------------- | ------------------ |
+| **Google Antigravity** | Agent development + orchestration | Gemini 3, Nano Banana Pro          | ✅ Built-in        |
+| **Cursor**             | General coding + AI assistance    | Multiple (OpenAI, Anthropic, etc.) | ❌                 |
+| **Claude Code**        | Agentic coding with Claude        | Claude models                      | ❌                 |
 
 Source: [https://antigravity.google/](https://antigravity.google/)
+
 - **Automation / app builders**: Zapier, Make, n8n (AI nodes), voice-agent builders, no/low-code agent builders.
 - **Business suites**: Intercom/Zendesk/HubSpot AI features, etc.
 
