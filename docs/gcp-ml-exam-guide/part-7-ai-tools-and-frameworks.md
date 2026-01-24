@@ -2167,6 +2167,149 @@ data_analyst = Agent(
 )
 ```
 
+#### CrewAI Flows: Event-Driven Workflows
+
+**What are Flows?**: Flows enable structured, event-driven workflows that seamlessly connect multiple tasks, manage state, and control execution flow. They balance deterministic logic with AI-driven autonomy.
+
+**Why Flows?**: Traditional deterministic logic (`IF A → Do X`) excels for well-defined tasks but struggles with ambiguity. LLMs provide reasoning and context interpretation but need constraints. Flows provide infrastructure to harness both strengths.
+
+**Key concepts**:
+
+- **@start()**: Marks entry point(s) of Flow. Multiple methods can have `@start()`, running concurrently.
+- **@listen(task_name)**: Makes decorated task wait for specified task to complete, using its output directly.
+- **State management**: `self.state` dictionary stores intermediate values throughout flow execution.
+
+**Basic Flow example**:
+
+```python
+from crewai.flow import Flow
+
+class MovieRecommendationFlow(Flow):
+    @start()
+    def generate_genre(self):
+        # Generate random genre
+        genre = llm_call("Give me a random movie genre")
+        return genre
+
+    @listen(generate_genre)
+    def recommend_movie(self, random_genre):
+        # Use genre to recommend movie
+        recommendation = llm_call(f"Recommend a {random_genre} movie")
+        return recommendation
+
+# Execute
+flow = MovieRecommendationFlow()
+result = flow.kickoff()
+```
+
+**State Management**:
+
+1. **Unstructured state**: Dynamic dictionary (`self.state['key'] = value`)
+
+   - Flexible, no schema required
+   - Good for prototyping and dynamic workflows
+   - Example: `self.state['task'] = "Build feature"`
+
+2. **Structured state**: Pydantic schema (`Flow[TaskState]`)
+   - Type-safe, prevents runtime errors
+   - Enforces predefined attributes only
+   - Example:
+
+     ```python
+     class TaskState(BaseModel):
+         task: str
+         status: str
+
+     class TaskFlow(Flow[TaskState]):
+         @start()
+         def generate_task(self):
+             self.state.task = "Build feature"
+             self.state.status = "Pending"
+     ```
+
+**Conditional Flow Control**:
+
+1. **or\_()**: Triggers when **any one** condition is met
+
+   ```python
+   @listen(or_(live_chat_request, email_ticket_request))
+   def log_request(self):
+       # Logs request from either source
+   ```
+
+2. **and\_()**: Triggers only when **all** conditions are met
+
+   ```python
+   @listen(and_(user_confirms_issue, agent_reviews_ticket))
+   def escalate_ticket(self):
+       # Escalates only when both conditions met
+   ```
+
+3. **@router()**: Dynamic routing based on decision logic
+
+   ```python
+   @router(classify_ticket)
+   def route_ticket(self):
+       if self.state.priority == "high":
+           return "urgent_support"
+       return "email_support"
+
+   @listen("urgent_support")
+   def assign_to_agent(self):
+       # Handles urgent tickets
+
+   @listen("email_support")
+   def send_to_email_queue(self):
+       # Handles non-urgent tickets
+   ```
+
+**Crews with Flows**:
+
+Flows can orchestrate multiple Crews, each handling specific responsibilities:
+
+**Project structure**:
+
+```
+project/
+├── crews/
+│   └── poem_crew/
+│       ├── config/
+│       │   ├── agents.yaml
+│       │   └── tasks.yaml
+│       └── poem_crew.py
+├── tools/
+│   └── custom_tool.py
+└── main.py  # Flow orchestration
+```
+
+**Flow with Crew**:
+
+```python
+class PoemFlow(Flow[PoemState]):
+    @start()
+    def generate_sentence_count(self):
+        self.state.sentence_count = random.randint(1, 5)
+
+    @listen(generate_sentence_count)
+    def generate_poem(self):
+        # Execute Crew
+        poem_crew = PoemCrew()
+        result = poem_crew.kickoff(inputs={
+            "sentence_count": self.state.sentence_count
+        })
+        self.state.poem = result
+```
+
+**Benefits of Flows**:
+
+- **Automated sequential execution**: No manual intervention needed
+- **Data sharing**: Tasks easily share data through state
+- **Scalability**: Effortlessly add more tasks and dependencies
+- **Modularity**: Separate Crews for different responsibilities
+- **Control**: Balance AI autonomy with deterministic logic
+
+**EXAM TIP:** Questions about "event-driven workflows" or "conditional task execution" → think **CrewAI Flows** with `@start()`, `@listen()`, `or_()`, `and_()`, `@router()`. Questions about "state management" → think **unstructured** (flexible) vs **structured** (Pydantic schema) state.
+
 ---
 
 ### LangGraph — State Machine Orchestration for Agents
