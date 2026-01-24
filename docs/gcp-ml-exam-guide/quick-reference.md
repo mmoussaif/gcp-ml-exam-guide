@@ -201,6 +201,7 @@
 - GenAI layers (leader mental model): infrastructure → models → platform → agents → applications (apps are just the top layer)
 - Agents vs apps: the app is the user-facing product/framework; the agent is the “actor” inside it that reasons + uses tools + takes actions (often multi-agent)
 - Agents beyond models: reasoning loop (observe → interpret → plan → act) + tools (APIs/data/actions) enable multi-step work; conversational vs workflow agents are common patterns
+- Quiz recall: infrastructure = compute/storage foundation; agents layer defines the “actions/tasks” inside an app (filter/summarize/recommend); applications layer = user-facing UI/experience
 - Data for ML/GenAI: relevance + quality (accuracy/completeness/representativeness/consistency) + accessibility (availability/cost/format) often matter more than “fancier models”
 - Data types: structured (tables) vs unstructured (text/images/audio/video) vs semi-structured (JSON/nested) drive what modeling approaches and tooling make sense
 - Learning types: supervised = labeled targets; unsupervised = unlabeled pattern discovery; reinforcement = interaction + rewards/penalties
