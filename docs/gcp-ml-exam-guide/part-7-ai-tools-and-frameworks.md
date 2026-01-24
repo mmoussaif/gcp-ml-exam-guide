@@ -3673,16 +3673,16 @@ class MyAgent:
         self.messages = []
         if system:
             self.messages.append({"role": "system", "content": system})
-    
+
     def complete(self, message=None):
         if message:
             self.messages.append({"role": "user", "content": message})
-        
+
         result = completion(
             model="openai/gpt-4o",
             messages=self.messages
         )
-        
+
         reply = result.choices[0].message.content
         self.messages.append({"role": "assistant", "content": reply})
         return reply
@@ -3789,36 +3789,36 @@ import re
 def agent_loop(query, system_prompt):
     # Initialize agent
     agent = MyAgent(system=system_prompt)
-    
+
     # Define tools
     tools = {
         "math": math_tool,
         "lookup_population": lookup_population
     }
-    
+
     current_prompt = query
     previous_step = None
-    
+
     while True:
         # Get agent response
         response = agent.complete(current_prompt)
         print(f"Agent: {response}\n")
-        
+
         # Check for final answer
         if "Answer:" in response:
             break
-        
+
         # Parse Thought
         if "Thought:" in response:
             previous_step = "Thought"
             current_prompt = ""  # Continue to next step
             continue
-        
+
         # Handle PAUSE
         if "PAUSE" in response:
             current_prompt = ""
             continue
-        
+
         # Parse Action
         if "Action:" in response:
             previous_step = "Action"
@@ -3827,7 +3827,7 @@ def agent_loop(query, system_prompt):
             if match:
                 tool_name = match.group(1)
                 tool_arg = match.group(2).strip()
-                
+
                 # Execute tool
                 if tool_name in tools:
                     observation = tools[tool_name](tool_arg)
@@ -3835,7 +3835,7 @@ def agent_loop(query, system_prompt):
                 else:
                     current_prompt = "Observation: Tool not found. Please retry."
             continue
-    
+
     return response
 
 # Run agent
@@ -3905,6 +3905,397 @@ Agent: Answer: The sum of the population of India and the population of Japan is
 - **Transparency**: Inspect reasoning chains for trust and compliance
 
 **EXAM TIP:** Questions about "step-by-step reasoning with tools" or "transparent agent decision-making" → think **ReAct pattern**. Questions about "reducing hallucination through verification" → think **ReAct** (Thought → Action → Observation). Questions about "how frameworks like CrewAI work internally" → think **ReAct** as the underlying pattern.
+
+---
+
+### Planning Pattern: Think Ahead, Then Execute
+
+**Planning Pattern** is a two-phase approach to problem solving where an agent first devises a high-level plan (decomposing the problem into sub-tasks), then executes those steps sequentially. Unlike ReAct's reactive approach, Planning agents "think before they act" by laying out a solution strategy upfront.
+
+**Why Planning matters**:
+
+- **Complex tasks**: Some problems are too complex to tackle one step at a time without a global strategy
+- **Foresight**: Planning enables strategic thinking before execution, reducing wandering or repeated work
+- **Structure**: Forces the agent to think through the entire solution path, reducing missing-step errors
+- **Optimal sequences**: Encourages global reasoning about the problem, leading to better decision sequences
+- **Interpretability**: Explicit plans provide a blueprint for verification and debugging
+
+**Planning vs ReAct**:
+
+| Aspect           | ReAct                                             | Planning                                      |
+| ---------------- | ------------------------------------------------- | --------------------------------------------- |
+| **Ideology**     | "Think, act, observe, repeat"                     | "Think ahead, then execute"                   |
+| **Approach**     | Reactive decision-making based on current context | Strategic planning before execution           |
+| **Best for**     | Open-ended or uncertain environments              | Tasks that can be broken into clear sub-tasks |
+| **Adaptability** | High—can adapt if unexpected occurs               | Lower—may need to revise plan if flawed       |
+| **Efficiency**   | May not take most direct route                    | More structured, less likely to wander        |
+
+**When to use Planning**:
+
+- Problem naturally breaks into sub-tasks or stages
+- Agent might forget requirements over many steps
+- Greedy step-by-step approach might get stuck
+- Solution path needs to be interpretable and verifiable
+- Tasks like: writing reports, planning trips, creating outlines, multi-step research
+
+**How Planning works**:
+
+The Planning pattern consists of distinct phases:
+
+1. **Planning Phase**: Agent examines query/goal and formulates high-level plan
+
+   - Decomposes problem into subgoals or sub-tasks
+   - Outputs ordered list of steps needed to solve the problem
+   - Creates roadmap before diving into execution
+
+2. **Execution Phase**: Agent enters loop to execute each sub-task iteratively
+
+   - Takes first step from plan, carries it out, obtains result (Observation)
+   - Moves to next step, continues until all planned steps completed
+   - May call external tools or APIs as needed for each sub-task
+   - Uses plan as guide rather than deciding actions from scratch
+
+3. **Aggregation and Response**: After executing necessary steps, agent collects outputs
+
+   - Composes final answer or result
+   - Synthesizes information from multiple sub-tasks
+   - Presents final response to user
+
+4. **Optional: Re-planning**: If sub-task fails or yields unexpected result, agent can revise plan
+   - Pauses execution, revisits plan, inserts new step or modifies future steps
+   - Continues execution with revised plan
+
+**Planning format template**:
+
+```
+Plan:
+1. [Step 1 description]
+2. [Step 2 description]
+3. [Step 3 description]
+
+Execute:
+Step 1: [tool_name]: [arguments]
+
+Observation: [tool result]
+
+Execute:
+Step 2: [tool_name]: [arguments]
+
+Observation: [tool result]
+
+Collect:
+- Step 1: [result summary]
+- Step 2: [result summary]
+- Step 3: [result summary]
+
+Answer: [final answer using collected results]
+```
+
+**Research insights**:
+
+1. **Plan-and-Solve Prompting**: Introduced to fix errors in zero-shot chain-of-thought reasoning
+
+   - Forces LLM to explicitly list solution steps before executing
+   - Consistently outperforms Zero-Shot-CoT by large margin
+   - Matches accuracy of some few-shot methods
+   - Validates that upfront planning guides model to better solutions
+
+2. **Tree-of-Thought (ToT)**: Expands planning by allowing branching and backtracking
+
+   - Generates tree of possible moves/steps, evaluates outcomes
+   - Can explore multiple reasoning paths, iteratively deepen promising ones
+   - Dramatically improved performance on complex problems (e.g., GPT-4: 4% → 74% on puzzle tasks)
+   - Trade-off: More computationally intensive
+
+3. **Reflexion and Self-Reflection**: Augments Planning with self-correcting ability
+
+   - Agent generates solution, then reflects: "Did I make an error?"
+   - Can retry task with benefit of self-feedback, effectively re-planning
+   - Addresses hallucinations and logical errors by having model pinpoint mistakes
+   - Shows planning need not be single-shot—can plan, execute, re-plan based on errors
+
+4. **Function Calling (OpenAI)**: Provides infrastructure to support Planning pattern
+   - Allows defining tools/actions model can use in structured way
+   - Model outputs JSON object calling function
+   - Ensures well-structured output for each action
+   - Makes it easier to implement Plan-and-Execute cleanly
+
+**Building Planning from scratch**:
+
+**1. Agent class** (same as ReAct):
+
+```python
+import os
+from litellm import completion
+
+class MyAgent:
+    def __init__(self, system=None):
+        self.messages = []
+        if system:
+            self.messages.append({"role": "system", "content": system})
+
+    def complete(self, message=None):
+        if message:
+            self.messages.append({"role": "user", "content": message})
+
+        result = completion(
+            model="openai/gpt-4o",
+            messages=self.messages
+        )
+
+        reply = result.choices[0].message.content
+        self.messages.append({"role": "assistant", "content": reply})
+        return reply
+```
+
+**2. Planning system prompt**:
+
+```python
+system_prompt = """
+You are a smart planning agent. You act in iterations and do JUST ONE thing in a single iteration:
+
+1) "Plan" to plan the steps needed to answer the question.
+2) "Execute" to execute the planned steps, one step at a time.
+3) "Observation" to get the output of the execution.
+4) "Collect" to just collect the result of all the steps.
+5) "Answer" to answer the user's question using the collected results.
+
+So to summarize, to answer a question, you will:
+- Think through the entire solution first, listing each step clearly before taking an action.
+- Then execute each step in order by calling one of the available tools.
+- Collect all the individual results.
+- Finally, answer the user's question using the collected results.
+
+Here are the tools available to you:
+
+math:
+Use this to evaluate math expressions using Python syntax.
+Example: math: (125000000 + 1400000000)
+
+lookup_population:
+Use this to get the population of a country.
+Example: lookup_population: Japan
+
+You must first output a PLAN and then execute each step, showing the result after each one.
+
+Here's a sample run for your reference:
+
+Question: What is the population of Japan plus the population of India?
+
+<Iteration 1>
+Plan:
+1. Use lookup_population on Japan.
+2. Use lookup_population on India.
+3. Use math to add the two populations.
+</Iteration 1>
+
+<Iteration 2>
+Execute:
+Step 1: lookup_population: Japan
+</Iteration 2>
+
+<Iteration 3>
+Observation: 125000000
+</Iteration 3>
+
+<Iteration 4>
+Execute:
+Step 2: lookup_population: India
+</Iteration 4>
+
+<Iteration 5>
+Observation: 1400000000
+</Iteration 5>
+
+<Iteration 6>
+Execute:
+Step 3: math: (125000000 + 1400000000)
+</Iteration 6>
+
+<Iteration 7>
+Observation: 1525000000
+</Iteration 7>
+
+<Iteration 8>
+Collect:
+Step 1: Japan population: 125000000
+Step 2: India population: 1400000000
+Step 3: Total population: 1525000000
+</Iteration 8>
+
+<Iteration 9>
+Answer:
+The total population of Japan and India is approximately 1.525 billion.
+</Iteration 9>
+
+Now begin solving:
+"""
+```
+
+**3. Tools** (same as ReAct):
+
+```python
+import math
+import re
+
+def math_tool(expression):
+    """Evaluate mathematical expression"""
+    try:
+        expression = expression.replace("math:", "").strip()
+        result = eval(expression)
+        return str(result)
+    except Exception as e:
+        return f"Error: {e}"
+
+def lookup_population(country):
+    """Lookup population of a country"""
+    populations = {
+        "India": "1400000000",
+        "Japan": "125000000",
+        "Canada": "38000000"
+    }
+    return populations.get(country, "Unknown")
+```
+
+**4. Automated Planning loop**:
+
+```python
+import re
+
+def agent_loop(query, system_prompt):
+    # Initialize agent
+    agent = MyAgent(system=system_prompt)
+
+    # Define tools
+    tools = {
+        "math": math_tool,
+        "lookup_population": lookup_population
+    }
+
+    current_prompt = query
+
+    while True:
+        # Get agent response
+        response = agent.complete(current_prompt)
+        print(f"Agent: {response}\n")
+
+        # Check for final answer
+        if "Answer:" in response:
+            break
+
+        # Handle Plan or Collect phases
+        if "Plan:" in response or "Collect:" in response:
+            current_prompt = ""  # Continue to next stage
+            continue
+
+        # Parse Execute phase
+        if "Execute:" in response:
+            # Extract tool name and argument
+            match = re.search(r"Step \d+:\s*(\w+):\s*(.+)", response)
+            if match:
+                tool_name = match.group(1)
+                tool_arg = match.group(2).strip()
+
+                # Execute tool
+                if tool_name in tools:
+                    observation = tools[tool_name](tool_arg)
+                    current_prompt = f"Observation: {observation}"
+                else:
+                    current_prompt = "Observation: Tool not found. Please retry."
+            continue
+
+    return response
+
+# Run agent
+result = agent_loop(
+    "What is the population of Japan plus the population of India?",
+    system_prompt
+)
+```
+
+**Output example**:
+
+```
+Agent: <Iteration 1>
+Plan:
+1. Use lookup_population on Japan.
+2. Use lookup_population on India.
+3. Use math to add the two populations.
+</Iteration 1>
+
+Agent: <Iteration 2>
+Execute:
+Step 1: lookup_population: Japan
+</Iteration 2>
+
+Agent: Observation: 125000000
+
+Agent: <Iteration 4>
+Execute:
+Step 2: lookup_population: India
+</Iteration 4>
+
+Agent: Observation: 1400000000
+
+Agent: <Iteration 6>
+Execute:
+Step 3: math: (125000000 + 1400000000)
+</Iteration 6>
+
+Agent: Observation: 1525000000
+
+Agent: <Iteration 8>
+Collect:
+Step 1: Japan population: 125000000
+Step 2: India population: 1400000000
+Step 3: Total population: 1525000000
+</Iteration 8>
+
+Agent: <Iteration 9>
+Answer:
+The total population of Japan and India is approximately 1.525 billion.
+</Iteration 9>
+```
+
+**Key implementation details**:
+
+- **Two-phase approach**: Clean separation of planning from execution
+- **Structured phases**: Plan → Execute → Observation → Collect → Answer
+- **Tool execution**: Parse Execute phase, run tools, inject results as Observation
+- **Loop control**: Continue until Answer is produced
+- **Re-planning**: Can detect failures and revise plan (optional enhancement)
+
+**Production considerations**:
+
+- **Robust parsing**: Use structured prompts with JSON outputs or function calling
+- **Plan validation**: Verify plan completeness and feasibility before execution
+- **Error handling**: Handle tool failures, plan revision, and edge cases
+- **State management**: Track plan progress, intermediate results, and execution state
+
+**Benefits of Planning pattern**:
+
+- **Strategic thinking**: Encourages global view of problem before execution
+- **Reduced errors**: Less likely to skip steps or forget requirements
+- **Better organization**: Structured approach improves efficiency
+- **Interpretability**: Explicit plans provide blueprint for verification
+- **Optimal sequences**: Can lead to better decision sequences than reactive approaches
+
+**When to use Planning vs ReAct**:
+
+- **Use Planning** when:
+
+  - Problem breaks into clear sub-tasks
+  - Strategic sequencing is important
+  - You need interpretable solution paths
+  - Tasks like writing reports, planning trips, multi-step research
+
+- **Use ReAct** when:
+  - Environment is open-ended or uncertain
+  - High adaptability is needed
+  - Problem requires reactive decision-making
+  - Tasks like troubleshooting, exploration, dynamic problem-solving
+
+**EXAM TIP:** Questions about "thinking ahead before acting" or "decomposing tasks into sub-steps" → think **Planning pattern**. Questions about "strategic sequencing" or "structured problem-solving" → think **Planning**. Questions about "when to use Planning vs ReAct" → consider task complexity and need for foresight vs adaptability.
 
 ---
 
