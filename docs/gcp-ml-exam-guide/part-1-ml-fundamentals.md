@@ -4,13 +4,13 @@ This section covers core ML concepts that form the foundation of the exam. Under
 
 ### Official docs (high-signal starting points)
 
-- **Google ML Crash Course**: [Machine Learning Crash Course](https://developers.google.com/machine-learning/crash-course)
-- **ML Glossary**: [Machine Learning Glossary](https://developers.google.com/machine-learning/glossary)
-- **Data Preparation & Feature Engineering**: [Data Prep Guide](https://developers.google.com/machine-learning/data-prep)
-- **Problem Framing**: [ML Problem Framing Guide](https://developers.google.com/machine-learning/problem-framing)
-- **Clustering**: [Clustering Guide](https://developers.google.com/machine-learning/clustering)
-- **Recommendation Systems**: [Recommendation Systems Guide](https://developers.google.com/machine-learning/recommendation)
-- **Testing & Debugging ML Models**: [Testing & Debugging Guide](https://developers.google.com/machine-learning/testing-debugging)
+- **Google ML Crash Course**: <https://developers.google.com/machine-learning/crash-course>
+- **ML Glossary**: <https://developers.google.com/machine-learning/glossary>
+- **Data Preparation & Feature Engineering**: <https://developers.google.com/machine-learning/data-prep>
+- **Problem Framing**: <https://developers.google.com/machine-learning/problem-framing>
+- **Clustering**: <https://developers.google.com/machine-learning/clustering>
+- **Recommendation Systems**: <https://developers.google.com/machine-learning/recommendation>
+- **Testing & Debugging ML Models**: <https://developers.google.com/machine-learning/testing-debugging>
 
 ### 1.0 ML PROJECT LIFECYCLE + PROBLEM FRAMING (high-yield)
 
