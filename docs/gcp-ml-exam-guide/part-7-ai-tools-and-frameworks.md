@@ -1260,11 +1260,11 @@ As agents run longer, the information they track—chat history, tool outputs, d
 
 #### The three-way pressure on context
 
-| Pressure | Problem |
-|----------|---------|
-| **Cost & latency spirals** | Model cost and time-to-first-token grow with context size; "shoveling" raw history makes agents slow and expensive |
-| **Signal degradation ("lost in the middle")** | Irrelevant logs, stale tool outputs distract the model from the immediate instruction |
-| **Physical limits** | RAG results, artifacts, and conversation traces eventually overflow even the largest windows |
+| Pressure                                      | Problem                                                                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Cost & latency spirals**                    | Model cost and time-to-first-token grow with context size; "shoveling" raw history makes agents slow and expensive |
+| **Signal degradation ("lost in the middle")** | Irrelevant logs, stale tool outputs distract the model from the immediate instruction                              |
+| **Physical limits**                           | RAG results, artifacts, and conversation traces eventually overflow even the largest windows                       |
 
 #### The ADK thesis: context as a compiled view
 
@@ -1286,20 +1286,20 @@ Instead of treating context as a mutable string buffer, ADK treats **context as 
 
 #### Three design principles
 
-| Principle | Description |
-|-----------|-------------|
-| **Separate storage from presentation** | Durable state (Sessions) vs per-call views (Working Context) evolve independently |
-| **Explicit transformations** | Context is built through named, ordered processors—observable and testable |
-| **Scope by default** | Every model call sees the **minimum context required**; agents reach for more via tools |
+| Principle                              | Description                                                                             |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Separate storage from presentation** | Durable state (Sessions) vs per-call views (Working Context) evolve independently       |
+| **Explicit transformations**           | Context is built through named, ordered processors—observable and testable              |
+| **Scope by default**                   | Every model call sees the **minimum context required**; agents reach for more via tools |
 
 #### The tiered context model
 
-| Layer | Purpose | Lifecycle |
-|-------|---------|-----------|
-| **Working Context** | Immediate prompt for this model call | Ephemeral (thrown away after call) |
-| **Session** | Durable log of events (messages, tool calls, results) | Per-conversation |
-| **Memory** | Long-lived searchable knowledge (preferences, past decisions) | Cross-session |
-| **Artifacts** | Large binary/text data (files, logs, images) | Addressed by name/version, not pasted |
+| Layer               | Purpose                                                       | Lifecycle                             |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------- |
+| **Working Context** | Immediate prompt for this model call                          | Ephemeral (thrown away after call)    |
+| **Session**         | Durable log of events (messages, tool calls, results)         | Per-conversation                      |
+| **Memory**          | Long-lived searchable knowledge (preferences, past decisions) | Cross-session                         |
+| **Artifacts**       | Large binary/text data (files, logs, images)                  | Addressed by name/version, not pasted |
 
 #### Flows and processors: the compilation pipeline
 
@@ -1330,12 +1330,13 @@ self.response_processors = [
 
 When a root agent invokes sub-agents, you must prevent **context explosion**:
 
-| Pattern | Description | Context Scope |
-|---------|-------------|---------------|
+| Pattern             | Description                                                   | Context Scope                                                |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
 | **Agents as Tools** | Sub-agent is a function: call with focused prompt, get result | Callee sees only specific instructions + necessary artifacts |
-| **Agent Transfer** | Control handed off to sub-agent to continue conversation | Sub-agent inherits a configurable view over the Session |
+| **Agent Transfer**  | Control handed off to sub-agent to continue conversation      | Sub-agent inherits a configurable view over the Session      |
 
 **Handoff modes**:
+
 - **Full mode**: Pass full contents of caller's working context (useful when sub-agent needs entire history)
 - **None mode**: Sub-agent sees no prior history; only receives new prompt you construct
 
@@ -1379,13 +1380,13 @@ Production agents are distributed systems with unique challenges.
 
 #### Key distributed systems concerns
 
-| Concern | Challenge | Solution |
-|---------|-----------|----------|
-| **Statefulness** | Agents have multi-turn state; requests must route to correct session | External session store + session ID in request; stateless compute |
-| **Idempotency** | Tool calls may be retried; side effects must be safe | Idempotency keys; deduplication at tool level |
-| **Consistency** | Multiple agent instances may modify same session | Optimistic locking or append-only event logs |
-| **Timeouts** | LLM calls can take 10-60+ seconds | Async processing; long-poll or SSE/WebSocket for clients |
-| **Cascading failures** | Agent calls LLM → LLM calls tool → tool calls external API | Circuit breakers; bulkheads; graceful degradation |
+| Concern                | Challenge                                                            | Solution                                                          |
+| ---------------------- | -------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Statefulness**       | Agents have multi-turn state; requests must route to correct session | External session store + session ID in request; stateless compute |
+| **Idempotency**        | Tool calls may be retried; side effects must be safe                 | Idempotency keys; deduplication at tool level                     |
+| **Consistency**        | Multiple agent instances may modify same session                     | Optimistic locking or append-only event logs                      |
+| **Timeouts**           | LLM calls can take 10-60+ seconds                                    | Async processing; long-poll or SSE/WebSocket for clients          |
+| **Cascading failures** | Agent calls LLM → LLM calls tool → tool calls external API           | Circuit breakers; bulkheads; graceful degradation                 |
 
 #### Resilience patterns
 
@@ -1403,7 +1404,7 @@ class ToolExecutor:
         cached = await self.cache.get(f"tool:{idempotency_key}")
         if cached:
             return cached
-        
+
         # Execute with timeout
         try:
             result = await asyncio.wait_for(
@@ -1412,7 +1413,7 @@ class ToolExecutor:
             )
         except asyncio.TimeoutError:
             raise ToolTimeoutError(f"Tool {tool_name} timed out")
-        
+
         # Cache result for idempotency
         await self.cache.set(f"tool:{idempotency_key}", result, ttl=3600)
         return result
@@ -1426,14 +1427,14 @@ Agent systems expand the attack surface beyond traditional APIs.
 
 #### Threat model for agents
 
-| Threat | Description | Mitigation |
-|--------|-------------|------------|
-| **Prompt injection** | Malicious input manipulates agent behavior | Input sanitization; instruction hierarchy; output filtering |
-| **Tool misuse** | Agent calls tools with harmful parameters | Tool-level validation; allowlists; rate limits |
-| **Data exfiltration** | Agent leaks sensitive data via outputs | Output filtering; PII detection; audit logging |
-| **Privilege escalation** | Agent gains access beyond intended scope | Least-privilege tool permissions; scoped credentials |
-| **Model theft** | Extraction of prompts/fine-tuning data | Rate limiting; output watermarking; monitoring |
-| **Denial of service** | Expensive operations exhaust resources | Cost caps; token budgets; circuit breakers |
+| Threat                   | Description                                | Mitigation                                                  |
+| ------------------------ | ------------------------------------------ | ----------------------------------------------------------- |
+| **Prompt injection**     | Malicious input manipulates agent behavior | Input sanitization; instruction hierarchy; output filtering |
+| **Tool misuse**          | Agent calls tools with harmful parameters  | Tool-level validation; allowlists; rate limits              |
+| **Data exfiltration**    | Agent leaks sensitive data via outputs     | Output filtering; PII detection; audit logging              |
+| **Privilege escalation** | Agent gains access beyond intended scope   | Least-privilege tool permissions; scoped credentials        |
+| **Model theft**          | Extraction of prompts/fine-tuning data     | Rate limiting; output watermarking; monitoring              |
+| **Denial of service**    | Expensive operations exhaust resources     | Cost caps; token budgets; circuit breakers                  |
 
 #### Defense in depth architecture
 
@@ -1498,14 +1499,14 @@ class GuardrailsPipeline:
             ContentSafetyFilter(),
             CostTracker(),
         ]
-    
+
     async def check_input(self, user_input: str, session_id: str) -> GuardrailResult:
         for guardrail in self.input_guardrails:
             result = await guardrail.check(user_input, session_id)
             if not result.allowed:
                 return result
         return GuardrailResult(allowed=True)
-    
+
     async def check_output(self, agent_output: str, context: dict) -> GuardrailResult:
         for guardrail in self.output_guardrails:
             result = await guardrail.check(agent_output, context)
@@ -1521,18 +1522,18 @@ class SecureTool:
         self.name = name
         self.allowed_actions = allowed_actions
         self.credential_scope = credential_scope
-    
+
     async def execute(self, action: str, params: dict, auth_context: dict):
         # Validate action is allowed
         if action not in self.allowed_actions:
             raise PermissionError(f"Action {action} not allowed for tool {self.name}")
-        
+
         # Get scoped credential (short-lived)
         credential = await self.get_scoped_credential(self.credential_scope, auth_context)
-        
+
         # Audit log
         await self.audit_log(action, params, auth_context)
-        
+
         # Execute with scoped credential
         return await self._execute_internal(action, params, credential)
 ```
@@ -1551,15 +1552,15 @@ securityPolicy:
       match:
         expr:
           expression: "evaluatePreconfiguredExpr('xss-stable')"
-      description: "Block XSS attacks"
-    
+      description: 'Block XSS attacks'
+
     - action: deny(403)
       priority: 1001
       match:
         expr:
           expression: "evaluatePreconfiguredExpr('sqli-stable')"
-      description: "Block SQL injection"
-    
+      description: 'Block SQL injection'
+
     - action: rate_based_ban
       priority: 2000
       match:
@@ -1568,9 +1569,9 @@ securityPolicy:
           conformAction: allow
           exceedAction: deny(429)
           rateLimitThreshold:
-            count: 100  # 100 requests per minute per IP
-      description: "Rate limit per IP"
-    
+            count: 100 # 100 requests per minute per IP
+      description: 'Rate limit per IP'
+
     - action: throttle
       priority: 3000
       match:
@@ -1579,11 +1580,312 @@ securityPolicy:
         conformAction: allow
         exceedAction: deny(429)
         enforceOnKey: HTTP_HEADER
-        enforceOnKeyName: "X-Session-ID"
+        enforceOnKeyName: 'X-Session-ID'
         rateLimitThreshold:
-          count: 20  # 20 requests per session per minute
-      description: "Rate limit per session"
+          count: 20 # 20 requests per session per minute
+      description: 'Rate limit per session'
 ```
+
+#### Secret Manager for Agent Credentials
+
+Agents often need credentials to access tools, APIs, and data sources. **Never put secrets in prompts or code** — use Secret Manager.
+
+Source: [Confidential Applications on Google Cloud](https://developers.googleblog.com/dont-trust-verify-building-end-to-end-confidential-applications-on-google-cloud/)
+
+```python
+# Pseudocode: Secure credential access for agent tools
+from google.cloud import secretmanager
+
+class SecretProvider:
+    """Fetch secrets from Secret Manager with caching and rotation awareness."""
+    
+    def __init__(self, project_id: str):
+        self.client = secretmanager.SecretManagerServiceClient()
+        self.project_id = project_id
+        self._cache = {}
+    
+    def get_secret(self, secret_id: str, version: str = "latest") -> str:
+        """Get secret value; use 'latest' for auto-rotation."""
+        cache_key = f"{secret_id}:{version}"
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+        
+        name = f"projects/{self.project_id}/secrets/{secret_id}/versions/{version}"
+        response = self.client.access_secret_version(request={"name": name})
+        secret_value = response.payload.data.decode("UTF-8")
+        
+        # Cache for short duration (secrets can rotate)
+        self._cache[cache_key] = secret_value
+        return secret_value
+    
+    def get_tool_credential(self, tool_name: str) -> dict:
+        """Get credentials for a specific tool."""
+        return {
+            "api_key": self.get_secret(f"{tool_name}-api-key"),
+            "endpoint": self.get_secret(f"{tool_name}-endpoint"),
+        }
+
+# Usage in agent tool
+class DatabaseTool:
+    def __init__(self, secret_provider: SecretProvider):
+        self.secrets = secret_provider
+    
+    async def execute(self, query: str):
+        # Get fresh credentials (supports rotation)
+        creds = self.secrets.get_tool_credential("database")
+        
+        # Connect with credentials from Secret Manager
+        conn = await connect(
+            host=creds["endpoint"],
+            password=creds["api_key"]
+        )
+        return await conn.execute(query)
+```
+
+**Best practices for Secret Manager with agents**:
+
+| Practice | Description |
+|----------|-------------|
+| **Use `latest` version** | Enables automatic secret rotation without code changes |
+| **Short TTL caching** | Cache secrets for minutes, not hours (rotation awareness) |
+| **Separate secrets per environment** | Different secrets for dev/staging/prod |
+| **Audit access** | Enable Cloud Audit Logs for secret access |
+| **Principle of least privilege** | Grant `secretAccessor` role only to service accounts that need it |
+
+#### IAM Policies for Agent Systems
+
+Agents require careful IAM design to prevent privilege escalation.
+
+```
+┌────────────────────────────────────────────────────────────────────────────┐
+│                    IAM ARCHITECTURE FOR AGENTS                              │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  ┌─────────────────────┐          ┌─────────────────────┐                  │
+│  │   User Identity     │          │   Agent Service     │                  │
+│  │   (end user)        │          │   Account           │                  │
+│  └──────────┬──────────┘          └──────────┬──────────┘                  │
+│             │                                │                             │
+│             │ authenticates                  │ runs as                     │
+│             ▼                                ▼                             │
+│  ┌─────────────────────────────────────────────────────────┐               │
+│  │                    AGENT API                             │               │
+│  │  • Validates user identity                               │               │
+│  │  • Maps user → allowed tools/scopes                      │               │
+│  │  • Enforces user-level quotas                            │               │
+│  └──────────┬──────────────────────────────────┬───────────┘               │
+│             │                                  │                            │
+│             │ user context                     │ agent identity             │
+│             ▼                                  ▼                            │
+│  ┌─────────────────────┐          ┌─────────────────────┐                  │
+│  │   Tool A            │          │   Tool B            │                  │
+│  │   (user's data)     │          │   (shared service)  │                  │
+│  │                     │          │                     │                  │
+│  │   IAM: user impersonation    │   IAM: service account │                │
+│  └─────────────────────┘          └─────────────────────┘                  │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+```
+
+**IAM patterns for agents**:
+
+| Pattern | Use Case | Implementation |
+|---------|----------|----------------|
+| **Service account per agent** | Isolate agent permissions | Each agent type has dedicated SA with minimal roles |
+| **Workload Identity** | GKE-based agents | Map K8s SA → GCP SA; no key files |
+| **Short-lived credentials** | Tool access | Use `generateAccessToken` for 1-hour tokens |
+| **User impersonation** | Access user's data | Agent acts on behalf of user with their permissions |
+| **VPC Service Controls** | Data exfiltration prevention | Restrict which APIs can be called from agent VPC |
+
+```python
+# Pseudocode: IAM-aware tool execution
+from google.auth import impersonated_credentials
+from google.auth import default
+
+class IAMAwareToolExecutor:
+    def __init__(self):
+        # Agent's base credentials
+        self.agent_credentials, self.project = default()
+    
+    def get_user_impersonated_credentials(self, user_email: str, scopes: list[str]):
+        """Get credentials that act as the user (requires domain-wide delegation or user consent)."""
+        target_principal = f"user:{user_email}"
+        
+        # Create impersonated credentials
+        impersonated = impersonated_credentials.Credentials(
+            source_credentials=self.agent_credentials,
+            target_principal=target_principal,
+            target_scopes=scopes,
+            lifetime=3600  # 1 hour
+        )
+        return impersonated
+    
+    def get_scoped_service_credentials(self, target_service_account: str, scopes: list[str]):
+        """Get short-lived credentials for a specific service account."""
+        impersonated = impersonated_credentials.Credentials(
+            source_credentials=self.agent_credentials,
+            target_principal=target_service_account,
+            target_scopes=scopes,
+            lifetime=3600
+        )
+        return impersonated
+    
+    async def execute_tool_as_user(self, tool: str, params: dict, user_context: dict):
+        """Execute tool with user's permissions."""
+        user_email = user_context["email"]
+        allowed_scopes = user_context["allowed_scopes"]
+        
+        # Get user-scoped credentials
+        user_creds = self.get_user_impersonated_credentials(user_email, allowed_scopes)
+        
+        # Execute tool with user credentials
+        return await self.tools[tool].execute(params, credentials=user_creds)
+```
+
+#### Apigee + GKE Inference Gateway for LLM Policies
+
+Source: [Apigee Operator for Kubernetes and GKE Inference Gateway Integration](https://developers.googleblog.com/apigee-operator-for-kubernetes-and-gke-inference-gateway-integration-for-auth-and-aillm-policies/)
+
+For enterprise agent deployments, **Apigee** provides API management capabilities specifically designed for LLM traffic:
+
+```yaml
+# Apigee policy for LLM inference (conceptual)
+apiVersion: apigee.cloud.google.com/v1alpha1
+kind: APIProduct
+metadata:
+  name: agent-api-product
+spec:
+  displayName: "Agent API"
+  approvalType: auto
+  attributes:
+    - name: llm-policies
+      value: "enabled"
+  
+  # Rate limiting per developer/app
+  quota:
+    limit: 1000
+    interval: 1
+    timeUnit: day
+  
+  # LLM-specific policies
+  llmPolicies:
+    # Token budget per request
+    maxInputTokens: 32000
+    maxOutputTokens: 8000
+    
+    # Model allowlist
+    allowedModels:
+      - gemini-2.0-flash
+      - gemini-2.0-pro
+    
+    # Content safety
+    contentFiltering: strict
+    
+    # Cost tracking
+    costTracking:
+      enabled: true
+      alertThreshold: 100.00  # USD per day
+```
+
+**What Apigee + GKE Inference Gateway provides**:
+
+| Capability | Description |
+|------------|-------------|
+| **OAuth/API key auth** | Standard API authentication before reaching agent |
+| **Rate limiting** | Per-developer, per-app, per-endpoint quotas |
+| **Token budgets** | Enforce max input/output tokens per request |
+| **Model allowlisting** | Restrict which models can be called |
+| **Cost tracking** | Real-time cost monitoring and alerts |
+| **Content filtering** | Apply safety policies at the gateway level |
+| **Audit logging** | Full request/response logging for compliance |
+
+#### VPC Service Controls for Data Protection
+
+Prevent data exfiltration by restricting which APIs agents can access:
+
+```yaml
+# VPC Service Controls perimeter (conceptual)
+accessPolicy:
+  name: "agent-data-perimeter"
+  
+  servicePerimeters:
+    - name: "agent-perimeter"
+      perimeterType: PERIMETER_TYPE_REGULAR
+      
+      # Resources inside the perimeter
+      resources:
+        - "projects/my-agent-project"
+      
+      # Restricted services (agent can only call these)
+      restrictedServices:
+        - "aiplatform.googleapis.com"      # Vertex AI
+        - "bigquery.googleapis.com"         # BigQuery
+        - "storage.googleapis.com"          # Cloud Storage
+        - "secretmanager.googleapis.com"    # Secret Manager
+      
+      # Block external APIs
+      vpcAccessibleServices:
+        enableRestriction: true
+        allowedServices:
+          - "RESTRICTED-SERVICES"
+      
+      # Ingress rules (who can access the perimeter)
+      ingressPolicies:
+        - ingressFrom:
+            identityType: ANY_SERVICE_ACCOUNT
+            sources:
+              - resource: "projects/my-agent-project"
+          ingressTo:
+            operations:
+              - serviceName: "aiplatform.googleapis.com"
+                methodSelectors:
+                  - method: "*"
+```
+
+#### Confidential Computing for Sensitive AI
+
+Source: [Building End-to-End Confidential Applications on Google Cloud](https://developers.googleblog.com/dont-trust-verify-building-end-to-end-confidential-applications-on-google-cloud/)
+
+For highly sensitive workloads (healthcare, finance), **Confidential Computing** encrypts data in use:
+
+| Feature | Description |
+|---------|-------------|
+| **Confidential VMs** | Memory encrypted with AMD SEV or Intel TDX |
+| **Confidential GKE Nodes** | Run agent containers in confidential VMs |
+| **Attestation** | Cryptographic proof that code runs in trusted environment |
+| **Use case** | Process sensitive data without exposing to cloud provider |
+
+```yaml
+# Confidential GKE node pool (conceptual)
+apiVersion: container.cnrm.cloud.google.com/v1beta1
+kind: ContainerNodePool
+metadata:
+  name: confidential-agent-pool
+spec:
+  nodeConfig:
+    machineType: n2d-standard-4  # AMD EPYC (required for SEV)
+    confidentialNodes:
+      enabled: true
+    shieldedInstanceConfig:
+      enableSecureBoot: true
+      enableIntegrityMonitoring: true
+```
+
+#### Agent Security Checklist (Google Cloud)
+
+| Layer | Service | Purpose |
+|-------|---------|---------|
+| **Network** | Cloud Armor | WAF, DDoS protection, rate limiting |
+| **Network** | VPC Service Controls | Data exfiltration prevention |
+| **API Gateway** | Apigee | Auth, rate limiting, LLM-specific policies |
+| **Identity** | IAM | Service accounts, workload identity, impersonation |
+| **Secrets** | Secret Manager | API keys, credentials, certificates |
+| **Audit** | Cloud Audit Logs | Who did what, when |
+| **Data** | Cloud DLP | PII detection and redaction |
+| **Compute** | Confidential VMs/GKE | Encryption in use for sensitive workloads |
+| **Model** | Vertex AI safety settings | Content filtering at the model level |
+
+**EXAM TIP:** When questions mention "secure agent deployment" or "enterprise agent architecture" → think **IAM (least privilege) + Secret Manager (no hardcoded creds) + Cloud Armor (WAF/rate limits) + VPC Service Controls (data perimeter) + audit logging**.
 
 ---
 
@@ -1615,14 +1917,14 @@ Agent systems require specialized CI/CD practices beyond traditional software.
 
 #### What's different for AI systems
 
-| Stage | Traditional CI/CD | Agent CI/CD |
-|-------|-------------------|-------------|
-| **Unit tests** | Deterministic assertions | Fuzzy assertions; eval metrics; LLM-as-judge |
-| **Integration tests** | API contracts | Tool behavior; multi-turn scenarios |
-| **Evaluation** | Not applicable | Prompt quality; retrieval accuracy; agent trajectories |
-| **Security scan** | Code vulnerabilities | Prompt injection; jailbreak; data leakage |
-| **Staging** | Feature testing | A/B prompt experiments; shadow mode |
-| **Deployment** | Blue/green or rolling | Canary with eval metrics; automatic rollback |
+| Stage                 | Traditional CI/CD        | Agent CI/CD                                            |
+| --------------------- | ------------------------ | ------------------------------------------------------ |
+| **Unit tests**        | Deterministic assertions | Fuzzy assertions; eval metrics; LLM-as-judge           |
+| **Integration tests** | API contracts            | Tool behavior; multi-turn scenarios                    |
+| **Evaluation**        | Not applicable           | Prompt quality; retrieval accuracy; agent trajectories |
+| **Security scan**     | Code vulnerabilities     | Prompt injection; jailbreak; data leakage              |
+| **Staging**           | Feature testing          | A/B prompt experiments; shadow mode                    |
+| **Deployment**        | Blue/green or rolling    | Canary with eval metrics; automatic rollback           |
 
 #### Clean code practices for agents
 
@@ -1644,7 +1946,7 @@ class PromptConfig:
     system_instruction: str
     few_shot_examples: list[dict]
     output_schema: Optional[dict] = None
-    
+
     def render(self, context: dict, user_query: str) -> list[dict]:
         messages = [
             {"role": "system", "content": self.system_instruction},
@@ -1652,10 +1954,10 @@ class PromptConfig:
         for example in self.few_shot_examples:
             messages.append({"role": "user", "content": example["user"]})
             messages.append({"role": "assistant", "content": example["assistant"]})
-        
+
         if context:
             messages.append({"role": "user", "content": f"Context: {context}"})
-        
+
         messages.append({"role": "user", "content": user_query})
         return messages
 
@@ -1688,7 +1990,7 @@ class EvalResult:
 
 async def run_eval_suite(agent_config: dict, eval_dataset: list[dict]) -> list[EvalResult]:
     results = []
-    
+
     # Retrieval quality (for RAG agents)
     retrieval_scores = await eval_retrieval(agent_config, eval_dataset)
     results.append(EvalResult(
@@ -1697,7 +1999,7 @@ async def run_eval_suite(agent_config: dict, eval_dataset: list[dict]) -> list[E
         threshold=0.7,
         passed=retrieval_scores["precision@5"] >= 0.7
     ))
-    
+
     # Response quality (LLM-as-judge)
     response_scores = await eval_responses(agent_config, eval_dataset)
     results.append(EvalResult(
@@ -1706,7 +2008,7 @@ async def run_eval_suite(agent_config: dict, eval_dataset: list[dict]) -> list[E
         threshold=4.0,  # out of 5
         passed=response_scores["average"] >= 4.0
     ))
-    
+
     # Trajectory evaluation (for multi-step agents)
     trajectory_scores = await eval_trajectories(agent_config, eval_dataset)
     results.append(EvalResult(
@@ -1715,7 +2017,7 @@ async def run_eval_suite(agent_config: dict, eval_dataset: list[dict]) -> list[E
         threshold=0.8,
         passed=trajectory_scores["success_rate"] >= 0.8
     ))
-    
+
     # Safety checks
     safety_scores = await eval_safety(agent_config, eval_dataset)
     results.append(EvalResult(
@@ -1724,7 +2026,7 @@ async def run_eval_suite(agent_config: dict, eval_dataset: list[dict]) -> list[E
         threshold=0.99,
         passed=safety_scores["pass_rate"] >= 0.99
     ))
-    
+
     return results
 
 def should_deploy(eval_results: list[EvalResult]) -> bool:
@@ -1739,12 +2041,12 @@ Agent APIs differ from traditional REST APIs in key ways.
 
 #### Streaming vs request/response
 
-| Pattern | Use Case | Implementation |
-|---------|----------|----------------|
-| **Request/response** | Simple queries, internal tools | Standard REST; wait for full response |
+| Pattern                      | Use Case                           | Implementation                         |
+| ---------------------------- | ---------------------------------- | -------------------------------------- |
+| **Request/response**         | Simple queries, internal tools     | Standard REST; wait for full response  |
 | **Server-Sent Events (SSE)** | Chat UIs; token-by-token streaming | `text/event-stream`; partial responses |
-| **WebSockets** | Bidirectional; long-running tasks | Real-time status updates; cancelation |
-| **Long-polling** | Legacy clients; firewalls block WS | Repeated requests with timeout |
+| **WebSockets**               | Bidirectional; long-running tasks  | Real-time status updates; cancelation  |
+| **Long-polling**             | Legacy clients; firewalls block WS | Repeated requests with timeout         |
 
 #### Agent API design patterns
 
@@ -1764,7 +2066,7 @@ async def chat_endpoint(request: Request):
     session_id = body.get("session_id")
     message = body.get("message")
     stream = body.get("stream", False)
-    
+
     if stream:
         return EventSourceResponse(
             stream_agent_response(session_id, message),
@@ -1853,13 +2155,13 @@ Agent workloads have unique scaling characteristics.
 
 #### Characteristics of agent traffic
 
-| Characteristic | Impact | Mitigation |
-|----------------|--------|------------|
-| **High latency** | 5-60+ seconds per request | Async processing; streaming; timeout handling |
-| **Variable cost** | 100x difference between simple/complex queries | Cost prediction; tiered pricing; budgets |
-| **Bursty** | Viral content can spike traffic 100x | Auto-scaling; queue-based processing |
-| **Long connections** | Streaming ties up connections | Connection pooling; horizontal scaling |
-| **Stateful sessions** | Must route to correct session state | External session store; sticky sessions (cautious) |
+| Characteristic        | Impact                                         | Mitigation                                         |
+| --------------------- | ---------------------------------------------- | -------------------------------------------------- |
+| **High latency**      | 5-60+ seconds per request                      | Async processing; streaming; timeout handling      |
+| **Variable cost**     | 100x difference between simple/complex queries | Cost prediction; tiered pricing; budgets           |
+| **Bursty**            | Viral content can spike traffic 100x           | Auto-scaling; queue-based processing               |
+| **Long connections**  | Streaming ties up connections                  | Connection pooling; horizontal scaling             |
+| **Stateful sessions** | Must route to correct session state            | External session store; sticky sessions (cautious) |
 
 #### Scaling architecture
 
@@ -1884,7 +2186,7 @@ spec:
           name: http_requests_in_flight
         target:
           type: AverageValue
-          averageValue: 10  # 10 concurrent requests per pod
+          averageValue: 10 # 10 concurrent requests per pod
     # Also consider queue depth
     - type: External
       external:
@@ -1895,7 +2197,7 @@ spec:
               subscription: agent-tasks-sub
         target:
           type: AverageValue
-          averageValue: 50  # Scale up when queue grows
+          averageValue: 50 # Scale up when queue grows
   behavior:
     scaleUp:
       stabilizationWindowSeconds: 30
@@ -1904,7 +2206,7 @@ spec:
           value: 100
           periodSeconds: 15
     scaleDown:
-      stabilizationWindowSeconds: 300  # Slow scale-down (agent workloads are bursty)
+      stabilizationWindowSeconds: 300 # Slow scale-down (agent workloads are bursty)
       policies:
         - type: Percent
           value: 10
@@ -1927,16 +2229,16 @@ class CostEstimate:
 class CostAwareRouter:
     def __init__(self, budget_per_user_per_day: float = 1.0):
         self.budget = budget_per_user_per_day
-    
+
     async def route_request(self, user_id: str, request: dict) -> str:
         # Estimate cost
         estimate = self.estimate_cost(request)
-        
+
         # Check user's remaining budget
         spent_today = await self.get_user_spend(user_id)
         if spent_today + estimate.estimated_cost_usd > self.budget:
             raise BudgetExceededError("Daily budget exceeded")
-        
+
         # Route to appropriate model tier
         if estimate.tier == "cheap":
             return "gemini-1.5-flash"
@@ -1944,12 +2246,12 @@ class CostAwareRouter:
             return "gemini-2.0-flash"
         else:
             return "gemini-2.0-pro"
-    
+
     def estimate_cost(self, request: dict) -> CostEstimate:
         input_tokens = self.count_tokens(request)
         # Heuristic: output ~2x input for agents
         estimated_output = input_tokens * 2
-        
+
         # Rough pricing (adjust for actual model)
         cost_per_1k_input = 0.00035
         cost_per_1k_output = 0.00105
@@ -1957,9 +2259,9 @@ class CostAwareRouter:
             (input_tokens / 1000) * cost_per_1k_input +
             (estimated_output / 1000) * cost_per_1k_output
         )
-        
+
         tier = "cheap" if estimated_cost < 0.01 else "standard" if estimated_cost < 0.10 else "expensive"
-        
+
         return CostEstimate(
             input_tokens=input_tokens,
             estimated_output_tokens=estimated_output,
@@ -1979,19 +2281,19 @@ AGENT_METRICS = {
     ),
     "llm_call_latency_seconds": Histogram(),
     "tool_call_latency_seconds": Histogram(labels=["tool_name"]),
-    
+
     # Throughput
     "agent_requests_total": Counter(labels=["status", "model"]),
     "tool_calls_total": Counter(labels=["tool_name", "status"]),
-    
+
     # Cost
     "tokens_used_total": Counter(labels=["model", "direction"]),  # input/output
     "estimated_cost_usd": Counter(labels=["model", "user_tier"]),
-    
+
     # Quality (from evals)
     "response_quality_score": Histogram(),
     "retrieval_precision": Gauge(),
-    
+
     # Errors
     "agent_errors_total": Counter(labels=["error_type"]),
     "guardrail_blocks_total": Counter(labels=["guardrail_type"]),
@@ -2018,27 +2320,27 @@ def log_agent_trace(trace: AgentTrace):
 
 ### Production Readiness Checklist
 
-| Category | Item | Status |
-|----------|------|--------|
-| **Context** | Tiered context architecture (working/session/memory/artifacts) | ☐ |
-| **Context** | Context compilation pipeline (explicit processors) | ☐ |
-| **Context** | Multi-agent context scoping | ☐ |
-| **Security** | Input guardrails (PII, injection, safety) | ☐ |
-| **Security** | Output guardrails (PII redaction, safety) | ☐ |
-| **Security** | Tool-level permissions and audit logging | ☐ |
-| **Security** | Cloud Armor or WAF configured | ☐ |
-| **Resiltic** | Circuit breakers on external calls | ☐ |
-| **Resilience** | Idempotency for tool calls | ☐ |
-| **Resilience** | Graceful degradation on LLM failures | ☐ |
-| **CI/CD** | Prompt versioning and testing | ☐ |
-| **CI/CD** | Eval suite in pipeline | ☐ |
-| **CI/CD** | Canary deployment with eval metrics | ☐ |
-| **Scaling** | Auto-scaling on concurrent requests | ☐ |
-| **Scaling** | Cost budgets per user/session | ☐ |
-| **Scaling** | Queue-based processing for long tasks | ☐ |
-| **Observability** | Latency, throughput, error metrics | ☐ |
-| **Observability** | Token/cost tracking | ☐ |
-| **Observability** | Structured agent traces | ☐ |
+| Category          | Item                                                           | Status |
+| ----------------- | -------------------------------------------------------------- | ------ |
+| **Context**       | Tiered context architecture (working/session/memory/artifacts) | ☐      |
+| **Context**       | Context compilation pipeline (explicit processors)             | ☐      |
+| **Context**       | Multi-agent context scoping                                    | ☐      |
+| **Security**      | Input guardrails (PII, injection, safety)                      | ☐      |
+| **Security**      | Output guardrails (PII redaction, safety)                      | ☐      |
+| **Security**      | Tool-level permissions and audit logging                       | ☐      |
+| **Security**      | Cloud Armor or WAF configured                                  | ☐      |
+| **Resiltic**      | Circuit breakers on external calls                             | ☐      |
+| **Resilience**    | Idempotency for tool calls                                     | ☐      |
+| **Resilience**    | Graceful degradation on LLM failures                           | ☐      |
+| **CI/CD**         | Prompt versioning and testing                                  | ☐      |
+| **CI/CD**         | Eval suite in pipeline                                         | ☐      |
+| **CI/CD**         | Canary deployment with eval metrics                            | ☐      |
+| **Scaling**       | Auto-scaling on concurrent requests                            | ☐      |
+| **Scaling**       | Cost budgets per user/session                                  | ☐      |
+| **Scaling**       | Queue-based processing for long tasks                          | ☐      |
+| **Observability** | Latency, throughput, error metrics                             | ☐      |
+| **Observability** | Token/cost tracking                                            | ☐      |
+| **Observability** | Structured agent traces                                        | ☐      |
 
 **EXAM TIP:** Production agent questions often combine multiple concerns. When you see "production-ready agent system" → think **context engineering + guardrails + eval-driven CI/CD + cost controls + observability**.
 

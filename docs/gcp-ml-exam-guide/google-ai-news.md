@@ -37,6 +37,83 @@ Source: [The Keyword (blog.google)](https://blog.google/) | [Innovation & AI](ht
 
 ---
 
+### Agent Development Updates (Late 2025)
+
+These posts from the [Google Developers Blog](https://developers.googleblog.com/) cover the latest in agent development:
+
+#### Gemini 3 for Agents
+
+- **Source**: [Building AI Agents with Google Gemini 3 and Open Source Frameworks](https://developers.googleblog.com/building-ai-agents-with-google-gemini-3-and-open-source-frameworks/)
+- **Key features**:
+  - **`thinking_level`**: Adjust reasoning depth per-request (high for planning/complex tasks, low for throughput)
+  - **Thought Signatures**: Encrypted representations of internal reasoning before tool calls; pass back in conversation for stateful tool use
+  - **`media_resolution`**: Balance token usage vs detail (high for fine text, medium for PDFs, low for video)
+  - **Large context + thought signatures** mitigate "reasoning drift" in long sessions
+- **Best practices**:
+  - Stop using complex "Chain of Thought" prompt engineering — use `thinking_level` instead
+  - Keep temperature at 1.0 (model optimized for this)
+  - Always pass `thoughtSignature` back for function calling (enforced by API)
+  - Set `media_resolution: medium` for PDFs
+
+#### Real-World Agent Examples with Gemini 3
+
+- **Source**: [Real-World Agent Examples with Gemini 3](https://developers.googleblog.com/real-world-agent-examples-with-gemini-3/)
+- **Frameworks showcased**:
+  | Framework | Use Case | Notable Feature |
+  |-----------|----------|-----------------|
+  | **ADK** | Retail Location Strategy | Multi-agent + code execution for visual reports |
+  | **Agno** (ex-Phidata) | Creative Studio + Research | Grounding with Google Search + URL context |
+  | **Browser Use** | Form-filling automation | Multimodal field identification (not CSS selectors) |
+  | **Eigent** | Salesforce automation | CAMEL workforce + thought signatures for long-horizon |
+  | **Letta** (MemGPT) | Social agents | Multi-tiered memory hierarchy |
+  | **mem0** | Memory-aware agents | `mem0-mcp-server` for preferences/history |
+
+#### Multi-Agent Patterns in ADK
+
+- **Source**: [Developer's Guide to Multi-Agent Patterns in ADK](https://developers.googleblog.com/developers-guide-to-multi-agent-patterns-in-adk/)
+- Covers: sequential pipelines, parallel fan-out, router/dispatcher, supervisor/manager, debate patterns
+- Key insight: ADK provides architectural primitives for **modular multi-agent systems** with explicit context scoping
+
+#### ADK + Agent Engine + A2A Enhancements (Google I/O)
+
+- **Source**: [Agents: ADK, Agent Engine, A2A Enhancements](https://developers.googleblog.com/agents-adk-agent-engine-a2a-enhancements-google-io/)
+- **What's new**:
+  - Agent Engine general availability features
+  - A2A protocol enhancements for cross-agent communication
+  - Tighter ADK ↔ Agent Engine integration for deployment
+
+#### AG-UI: Fancy Frontends for ADK Agents
+
+- **Source**: [Delight Users by Combining ADK Agents with Fancy Frontends using AG-UI](https://developers.googleblog.com/delight-users-by-combining-adk-agents-with-fancy-frontends-using-ag-ui/)
+- **AG-UI**: Protocol for connecting agent backends to rich frontend experiences
+- Enables: streaming, tool-call visualization, human-in-the-loop confirmations
+
+#### Apigee + GKE Inference Gateway for AI/LLM Policies
+
+- **Source**: [Apigee Operator for Kubernetes and GKE Inference Gateway Integration for Auth and AI/LLM Policies](https://developers.googleblog.com/apigee-operator-for-kubernetes-and-gke-inference-gateway-integration-for-auth-and-aillm-policies/)
+- **What**: Apigee policies applied to LLM inference traffic on GKE
+- **Why it matters**: Enterprise-grade auth, rate limiting, and policy enforcement for agent APIs
+
+#### DataCommons MCP
+
+- **Source**: [DataCommons MCP](https://developers.googleblog.com/datacommonsmcp/)
+- **What**: MCP server for accessing DataCommons (open knowledge graph of statistical data)
+- **Use case**: Agents that need factual statistical data grounding
+
+#### Jules: AI Code Review Agent
+
+- **Source**: [Meet Jules: Sharpest Critic and Most Valuable Ally](https://developers.googleblog.com/meet-jules-sharpest-critic-and-most-valuable-ally/)
+- **What**: AI agent for code review, integrated into dev workflows
+- **Pattern**: Specialized single-purpose agent with deep domain expertise
+
+#### Confidential AI on Google Cloud
+
+- **Source**: [Don't Trust, Verify: Building End-to-End Confidential Applications on Google Cloud](https://developers.googleblog.com/dont-trust-verify-building-end-to-end-confidential-applications-on-google-cloud/)
+- **What**: Confidential Computing for AI workloads (encrypted in use, not just at rest/transit)
+- **Why it matters**: Regulated industries (healthcare, finance) can run sensitive AI without exposing data
+
+---
+
 ### Key Blogs to Follow
 
 | Blog                                                                    | Focus                                          |
