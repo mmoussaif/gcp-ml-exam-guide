@@ -2614,6 +2614,205 @@ research_task = Task(
 
 **EXAM TIP:** Questions about "validating AI outputs" or "ensuring constraints" → think **guardrails** with retry mechanism. Questions about "parallel task execution" → think **async_execution=True** for independent tasks. Questions about "post-processing" or "logging" → think **callbacks**.
 
+#### Hierarchical Processes
+
+**What are hierarchical processes?**: Instead of sequential execution (one task after another), hierarchical processes use a **manager agent** to oversee specialized agents, delegate tasks, and validate outcomes—mimicking real-world organizational structures.
+
+**Why hierarchical?**: In real organizations, tasks aren't just executed sequentially. Managers delegate work, ensure quality control, and oversee task execution. Hierarchical processes replicate this structure in AI workflows.
+
+**How it works**:
+
+- **Manager Agent**: Oversees entire workflow, delegates tasks, reviews outputs
+  - Set `allow_delegation=True` to enable task assignment
+- **Specialized Agents**: Handle specific tasks (cannot delegate)
+  - Set `allow_delegation=False` (default)
+
+**Example: Research workflow**:
+
+```python
+# Manager Agent
+manager_agent = Agent(
+    role="Project Research Manager",
+    goal="Oversee research workflow and compile final report",
+    allow_delegation=True  # Can delegate tasks
+)
+
+# Specialized Agents
+market_analyst = Agent(
+    role="Market Demand Analyst",
+    goal="Analyze market demand",
+    allow_delegation=False  # Only executes tasks
+)
+
+risk_analyst = Agent(
+    role="Risk Analysis Analyst",
+    goal="Identify project risks",
+    allow_delegation=False
+)
+
+roi_analyst = Agent(
+    role="ROI Analyst",
+    goal="Calculate financial viability",
+    allow_delegation=False
+)
+
+# Tasks
+manager_task = Task(
+    description="Initiate and finalize research",
+    agent=manager_agent
+)
+
+market_task = Task(
+    description="Analyze market demand",
+    agent=market_analyst
+)
+
+risk_task = Task(
+    description="Identify risks",
+    agent=risk_analyst
+)
+
+roi_task = Task(
+    description="Calculate ROI",
+    agent=roi_analyst
+)
+
+# Hierarchical Crew
+crew = Crew(
+    agents=[manager_agent, market_analyst, risk_analyst, roi_analyst],
+    tasks=[manager_task, market_task, risk_task, roi_task],
+    process=Process.hierarchical,
+    manager_agent=manager_agent,  # Specify manager
+    verbose=True
+)
+```
+
+**Workflow**:
+
+1. Manager Agent assigns research tasks to specialized agents
+2. Specialized agents conduct their research (Market Demand, Risk Analysis, ROI)
+3. Manager Agent reviews outputs and compiles final report
+
+**Benefits**:
+
+- **Structured delegation**: Manager assigns tasks based on agent expertise
+- **Quality control**: Manager validates outputs meet requirements
+- **Scalability**: Add new specialized agents without disrupting workflow
+- **Real-world modeling**: Mimics organizational hierarchies
+
+**EXAM TIP:** Questions about "manager overseeing agents" or "task delegation" → think **hierarchical process** with `Process.hierarchical` and `manager_agent` parameter.
+
+#### Human-in-the-Loop (HITL)
+
+**Why human-in-the-loop?**: While AI agents are powerful, we're far from fully autonomous systems. One mistake in a multi-step process can derail the entire operation. Human-in-the-loop workflows combine AI autonomy with human oversight for critical decision-making.
+
+**Use cases**:
+
+- **Critical decisions**: Medical AI, financial reports, legal advice
+- **Content creation**: Blog posts, marketing materials (human review before publishing)
+- **Quality assurance**: Validation of AI-generated outputs
+- **Clarification**: Collecting details or clarification from users as needed
+
+**Implementation**:
+
+```python
+# Enable human input in task
+research_task = Task(
+    description="Research AI trends and get human validation",
+    agent=researcher_agent,
+    human_input=True  # Prompts for human feedback
+)
+
+content_task = Task(
+    description="Write blog post based on research",
+    agent=writer_agent,
+    human_input=True  # Human reviews before finalizing
+)
+
+crew = Crew(
+    agents=[researcher_agent, writer_agent],
+    tasks=[research_task, content_task],
+    verbose=True
+)
+```
+
+**How it works**:
+
+- When `human_input=True`, agent prompts user for feedback after task completion
+- User provides feedback in natural language (e.g., "looks perfect", "add more details")
+- Agent reworks the step if needed based on feedback
+- Moves to next step only when human approves
+
+**Benefits**:
+
+- **Quality assurance**: Human validation ensures accuracy
+- **Error prevention**: Catches mistakes before they propagate
+- **Customization**: Allows human refinement of AI outputs
+- **Trust**: Human oversight builds confidence in AI systems
+
+**EXAM TIP:** Questions about "human validation" or "approval workflows" → think **human_in_the_loop** with `human_input=True` parameter in Task.
+
+#### Multimodal Agents
+
+**What are multimodal agents?**: Agents that can process both **text and images** (and potentially audio, video) in addition to text-only processing.
+
+**Why multimodal?**: Many real-world applications require analyzing visual content:
+
+- Product quality inspection (scratches, dents, misalignment)
+- Medical scan analysis
+- Design element evaluation
+- Document analysis (images with text)
+
+**Implementation**:
+
+```python
+# Enable multimodal capabilities
+quality_inspector = Agent(
+    role="Product Quality Inspector",
+    goal="Identify defects in product images",
+    multimodal=True  # Enables image processing
+)
+
+# Task with image analysis
+inspection_task = Task(
+    description="""Analyze product image at {image_url}.
+    Identify defects: scratches, dents, misalignment.
+    Generate structured quality assessment report.""",
+    agent=quality_inspector
+)
+
+crew = Crew(
+    agents=[quality_inspector],
+    tasks=[inspection_task],
+    verbose=True
+)
+```
+
+**How it works**:
+
+- Setting `multimodal=True` automatically includes image analysis capabilities
+- Uses `AddImageTool` under the hood to retrieve and process images
+- Can process images from URLs or local file paths
+- Integrates image and text-based reasoning for better decision-making
+
+**Best practices**:
+
+- **Image accessibility**: Provide direct URLs or absolute file paths
+- **Specific instructions**: Be clear about what to analyze in the image
+- **Computational power**: Image processing requires more resources than text
+- **LLM support**: Ensure your LLM supports multimodal processing (GPT-4 Vision, Gemini, Claude)
+- **Fallback mechanisms**: Handle image processing failures gracefully
+- **Image compression**: Consider compressing images for efficiency
+
+**Example use cases**:
+
+- **Product quality inspection**: Detect defects, generate quality scores
+- **Medical imaging**: Analyze scans, identify anomalies
+- **Document analysis**: Extract information from images with text
+- **Design review**: Evaluate visual elements, suggest improvements
+
+**EXAM TIP:** Questions about "image analysis" or "visual content processing" → think **multimodal agents** with `multimodal=True`. Questions about "product inspection" or "quality assessment" → think **multimodal agents** for visual defect detection.
+
 ---
 
 ### LangGraph — State Machine Orchestration for Agents
