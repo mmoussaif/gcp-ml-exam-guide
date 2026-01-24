@@ -1673,11 +1673,13 @@ Since LoRA's introduction, several variants have been proposed to address specif
 **Key innovation**: Freezes matrix `A` and only trains matrix `B`.
 
 **How it works**:
+
 - In standard LoRA, both `A` and `B` are trained.
 - LoRA-FA freezes `A` (random initialization) and only updates `B`.
 - "FA" stands for "Frozen-A".
 
 **Benefits**:
+
 - ✅ **Reduced memory**: Less activation memory required (no gradients for `A`).
 - ✅ **Fewer trainable parameters**: ~50% reduction compared to LoRA.
 - ✅ **Similar or better performance**: Often matches or exceeds LoRA accuracy.
@@ -1689,6 +1691,7 @@ Since LoRA's introduction, several variants have been proposed to address specif
 **Key innovation**: Shares frozen random matrices `A` and `B` across all layers, learns only small layer-specific scaling vectors.
 
 **How it works**:
+
 - `A` and `B` are **frozen, random, and shared** across all model layers.
 - Only trains small, layer-specific scaling vectors `b` and `d` (not shared).
 - `A`: random Gaussian initialization (shared).
@@ -1697,6 +1700,7 @@ Since LoRA's introduction, several variants have been proposed to address specif
 - `b`: initialized with zeros (trainable, layer-specific).
 
 **Benefits**:
+
 - ✅ **Massive parameter reduction**: 100x fewer trainable parameters than LoRA.
 - ✅ **Lower memory**: Significantly reduced memory requirements.
 - ✅ **Similar performance**: Matches LoRA accuracy in most cases.
@@ -1708,15 +1712,18 @@ Since LoRA's introduction, several variants have been proposed to address specif
 **Key innovation**: Updates the base weight matrix `W` using delta between consecutive training steps.
 
 **How it works**:
+
 - Standard LoRA never updates `W` (only `A` and `B`).
 - Delta-LoRA updates `W` by computing the scaled difference between `AB` at consecutive steps.
 - Update rule: `ΔW = c × (A_{t+1}B_{t+1} - A_tB_t)` where `c` is a constant.
 
 **Benefits**:
+
 - ✅ **Better performance**: Often outperforms LoRA and full fine-tuning.
 - ✅ **Updates base weights**: Captures fine-grained details better than LoRA alone.
 
 **Limitation**:
+
 - ❌ **Not suitable for multi-tenant scenarios**: Cannot share base model `W` across users since it's updated per customer.
 - ❌ **Storage overhead**: Each fine-tuned model needs its own `W`, defeating LoRA's storage advantage.
 
@@ -1729,11 +1736,13 @@ Since LoRA's introduction, several variants have been proposed to address specif
 **Key innovation**: Uses different learning rates for matrices `A` and `B`.
 
 **How it works**:
+
 - Standard LoRA uses the same learning rate for both `A` and `B`.
 - LoRA+ uses a **higher learning rate for `B`** than `A`.
 - Rationale: `B` starts at zero (needs larger updates), `A` starts random (needs smaller refinements).
 
 **Benefits**:
+
 - ✅ **1-2% performance improvement** over standard LoRA.
 - ✅ **2x faster training** at the same computational cost.
 - ✅ **Simple modification**: Easy to implement (just adjust learning rates).
@@ -1745,6 +1754,7 @@ Since LoRA's introduction, several variants have been proposed to address specif
 **Key innovation**: Selectively applies LoRA to only the most important layers.
 
 **How it works**:
+
 1. Start by adding LoRA to all layers.
 2. Train for a few epochs on a sample dataset.
 3. Compute activations from LoRA matrices (`A·B·X`) for each layer.
@@ -1753,22 +1763,61 @@ Since LoRA's introduction, several variants have been proposed to address specif
 6. Train final model with selected layers only.
 
 **Benefits**:
+
 - ✅ **Faster training**: Fewer LoRA matrices to train.
 - ✅ **Reduced memory**: Only train adapters where they matter.
 - ✅ **Similar accuracy**: Performance maintained by keeping important adapters.
 
 **Use case**: When you want to speed up training by focusing on layers that benefit most from adaptation.
 
+##### DoRA (Weight-Decomposed Low-Rank Adaptation)
+
+**Key innovation**: Decomposes weight matrix into magnitude and direction components, applying LoRA only to direction while training magnitude separately.
+
+**How it works**:
+
+1. **Decompose weight matrix**: Split pretrained weight `W` into:
+
+   - **Magnitude vector `m`**: Scale (length) of each column in `W`
+   - **Directional matrix `V`**: Normalized orientation (unit vectors) of columns
+   - Mathematical relationship: `W = m ⊙ V` (where `V` is normalized)
+
+2. **Apply LoRA to direction**: Apply low-rank adaptation (`ΔV = BA`) only to the directional component `V`.
+
+3. **Train separately**:
+
+   - Train magnitude vector `m` directly as a learnable parameter
+   - Train directional updates `ΔV` using LoRA (matrices `A` and `B`)
+
+4. **Final weight**: `W' = m ⊙ normalize(V + BA)`
+
+**Why DoRA works better**:
+
+- **LoRA limitation**: Updates magnitude and direction proportionally (positive slope in `ΔM` vs `ΔD` plot), limiting flexibility.
+- **Full fine-tuning**: Can independently adjust magnitude and direction (negative slope), allowing nuanced updates.
+- **DoRA advantage**: Achieves negative slope similar to full fine-tuning by decoupling magnitude and direction updates, enabling flexible adjustments while maintaining parameter efficiency.
+
+**Benefits**:
+
+- ✅ **Better performance**: Outperforms LoRA even with reduced rank (e.g., half the rank).
+- ✅ **Flexible updates**: Can make subtle directional changes without proportional magnitude changes (and vice versa).
+- ✅ **Parameter efficient**: Only adds ~0.01% more parameters than LoRA (magnitude vector).
+- ✅ **Closer to full fine-tuning**: Learning patterns more closely match full fine-tuning than LoRA.
+
+**Use case**: When you need better performance than LoRA while maintaining parameter efficiency. Particularly effective when independent magnitude/direction updates are important.
+
+**EXAM TIP:** **DoRA** outperforms LoRA by decomposing weights into magnitude and direction, allowing independent updates. Use when you need better performance than LoRA with minimal parameter overhead.
+
 #### LoRA Variants Comparison
 
-| Variant      | Key Innovation                          | Parameter Reduction | Best For                                    |
-| ------------ | --------------------------------------- | ------------------- | ------------------------------------------- |
-| **LoRA**     | Low-rank decomposition                  | 98%+                | General-purpose efficient fine-tuning      |
-| **LoRA-FA**  | Freeze `A`, train only `B`              | 99%+                | Memory-constrained environments             |
-| **VeRA**     | Shared frozen matrices, learn vectors   | 99.9%+              | Extreme parameter efficiency               |
-| **Delta-LoRA** | Updates base `W` via delta            | 98%+                | Single-tenant, maximum performance          |
-| **LoRA+**    | Different learning rates for `A`/`B`   | 98%+                | Simple improvement over LoRA                |
-| **LoRA-drop** | Selective layer adaptation             | Variable            | Faster training, layer importance analysis |
+| Variant        | Key Innovation                        | Parameter Reduction | Best For                                   |
+| -------------- | ------------------------------------- | ------------------- | ------------------------------------------ |
+| **LoRA**       | Low-rank decomposition                | 98%+                | General-purpose efficient fine-tuning      |
+| **LoRA-FA**    | Freeze `A`, train only `B`            | 99%+                | Memory-constrained environments            |
+| **VeRA**       | Shared frozen matrices, learn vectors | 99.9%+              | Extreme parameter efficiency               |
+| **Delta-LoRA** | Updates base `W` via delta            | 98%+                | Single-tenant, maximum performance         |
+| **LoRA+**      | Different learning rates for `A`/`B`  | 98%+                | Simple improvement over LoRA               |
+| **LoRA-drop**  | Selective layer adaptation            | Variable            | Faster training, layer importance analysis |
 
 **EXAM TIP:** For **multi-tenant LLM providers** (like OpenAI), use **LoRA** or **LoRA-FA** (not Delta-LoRA, which breaks model sharing). For **single-tenant maximum performance**, consider **Delta-LoRA** or **LoRA+**.
 
