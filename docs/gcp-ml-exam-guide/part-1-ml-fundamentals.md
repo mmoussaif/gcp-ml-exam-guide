@@ -437,6 +437,57 @@ For sequential data where order and temporal dependencies matter (text, time ser
 
 **EXAM TIP:** Inventory prediction using region, location, past demand, seasonal trends → RNN/LSTM (not CNN).
 
+#### Graph Neural Networks (GNNs)
+
+**When to use GNNs**: When data has **interdependencies or connections** between entities that are not easily captured by fixed grids (images) or sequences (text).
+
+**Key insight**: Traditional ML assumes **independent data points**. Graph data has **connected entities** where relationships matter.
+
+**Common use cases**:
+
+- **E-commerce recommendations**: Users and products form a graph; learn from user-product interactions
+- **Social network analysis**: Detect fake accounts based on connection patterns (node classification)
+- **Knowledge graphs**: Wikipedia articles connected by hyperlinks; recommend related articles
+- **Fraud detection**: Cardholders and merchants form a graph; detect anomalous patterns
+- **Document classification**: Words/phrases as nodes, co-occurrences as edges (graph-level classification)
+
+**Three types of graph tasks**:
+
+1. **Node-level tasks**: Predict labels/attributes for individual nodes
+   - Example: Classify users as fake/legitimate in social network
+2. **Edge-level tasks**: Predict existence or properties of edges (relationships)
+   - Example: Recommend friends (predict if edge should exist between two users)
+3. **Graph-level tasks**: Classify/regress entire graphs
+   - Example: Classify research papers based on graph structure of concepts
+
+**Challenges with graph data**:
+
+1. **Irregular shapes**: Graphs vary in number of nodes and neighbors per node (unlike fixed-size images/sequences)
+2. **Interdependence**: Nodes are connected; traditional ML assumes independence
+3. **Permutation invariance**: No natural ordering of nodes; model must produce same output regardless of node order
+
+**Graph Convolutional Networks (GCNs)**:
+
+- **Most widely used GNN architecture**
+- **Core idea**: Aggregate information from a node's **local neighborhood** (similar to CNN convolution on spatial patches)
+- **Operation**: Combine node's own features with features of neighboring nodes
+- **Normalization**: Normalize by node degrees to handle varying numbers of neighbors
+- **Formula**: Uses symmetric normalization: \( \frac{1}{\sqrt{\deg(i)}\sqrt{\deg(j)}} \) to balance influence
+
+**Key concepts**:
+
+- **Node embeddings**: Low-dimensional vectors capturing node's position and neighborhood structure
+- **Neighborhood aggregation**: Collect information from connected nodes
+- **Graph representation**:
+  - **Adjacency matrix**: O(N²) storage, sparse (wasteful)
+  - **COO format** (coordinate list): O(E) storage, only stores edges (efficient)
+
+**EXAM TIP:** "Data with connections/interdependencies between entities" → Consider **Graph Neural Networks** (GNNs).  
+**EXAM TIP:** "Recommend products based on user-product interactions" → **Graph-based approach** with GNNs.  
+**EXAM TIP:** "Detect fake accounts in social network" → **Node classification** task using GNNs.
+
+**Note**: GNNs are typically more expensive to train than traditional approaches but can lead to more robust models when relationships matter.
+
 #### High Cardinality Categorical Features
 
 When dealing with categorical features with many unique values (10K+), standard one-hot encoding becomes impractical.
