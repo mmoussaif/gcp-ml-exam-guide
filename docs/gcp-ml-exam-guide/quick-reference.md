@@ -193,6 +193,7 @@
 - Multimodal GenAI = uses multiple modalities together (e.g., video/audio + text), not “any GenAI that outputs images”
 - LLMs are a specialized type of foundation model (LLM ⊂ foundation model); not all foundation models are LLMs
 - GenAI strategy: don’t start with the tech — start with business priorities, run safe bottom-up experiments, and scale with top-down guardrails
+- Augment vs automate: use GenAI to augment human judgment/strategy, and automate repetitive tasks — keep humans-in-the-loop for data, prompts, QA, and monitoring
 - Embeddings from different models/versions are not comparable; plan safe upgrades (re-embed + regression tests)
 - Feature Cross is for TABULAR data, not CNN
 - Location features: feature cross lat×long + binning (not raw lat/long)

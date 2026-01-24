@@ -201,7 +201,7 @@ Use these lenses for both top-down and bottom-up efforts:
 
 #### Brainstorming use cases: the “creative matrix” method (practical)
 
-When teams struggle to generate *and* prioritize use cases, a simple facilitation technique is a **creative matrix**:
+When teams struggle to generate _and_ prioritize use cases, a simple facilitation technique is a **creative matrix**:
 
 - **Axis 1 (GenAI capabilities)**: pick the tools/capabilities you can realistically use (e.g., Workspace with Gemini, Vertex AI Search, conversational agents, model tuning, multimodal).
 - **Axis 2 (your business)**: pick what matters internally (personas, workflows, strategic goals).
@@ -228,6 +228,29 @@ flowchart LR
 - “Increase efficiency” × “Agents/automation” → auto-triage support tickets and draft responses with citations.
 - “Drive innovation” × “Model tuning” → adapt a model for a niche domain (with eval gates).
 - “Employee productivity” × “Workspace with Gemini” → meeting notes + action items + follow-up drafts.
+
+#### Keeping humans at the forefront (augmentation vs automation)
+
+As you adopt GenAI, the “best” use cases usually **augment human strategic work** while **automating repetitive work**.
+
+**Use GenAI for augmentation (enhance strategic thinking)**
+
+- **Critical thinking & problem-solving**: GenAI can surface information; humans interpret it and make decisions.
+- **Creativity & innovation**: GenAI expands options; humans choose direction and take accountability.
+- **Relationship building & collaboration**: GenAI can assist communication; humans build trust and navigate nuance.
+- **Strategic planning & vision**: GenAI can help with analysis/forecasting; leaders set goals and long-term direction.
+
+**Use GenAI for automation (offload the “busy work”)**
+
+- **Repetitive, rule-based tasks**: data entry, basic retrieval, formatting, boilerplate code.
+- **Time-consuming tasks**: research, summarization, first-draft creation, initial analysis.
+
+**Humans-in-the-loop (needed in both cases)**
+
+- **Data selection & preparation**: ensure high-quality, relevant, representative inputs; control sensitive data.
+- **Prompt design & refinement**: iterate prompts as “prompt-as-code” to improve reliability.
+- **Output evaluation & refinement**: review/edit for correctness, compliance, and brand alignment.
+- **Continuous monitoring & feedback**: measure quality/drift/safety issues and improve over time.
 
 ### 6.0 LLMs & Agentic Systems (what the exam is really testing)
 
