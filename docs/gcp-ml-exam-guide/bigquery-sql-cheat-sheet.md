@@ -43,7 +43,7 @@ ORDER BY purchases DESC
 LIMIT 100;
 ```
 
-Plain-English: “For each user, count how many events they had in the last 30 days and how many of those were purchases. Then show the top 100 users by purchases.”
+**Explanation:** Per user, count total events and purchases in the last 30 days, then rank users by purchases.
 
 **Useful functions**
 
@@ -60,7 +60,7 @@ SELECT COUNT(DISTINCT customer_id) AS unique_customers
 FROM `project.dataset.orders`;
 ```
 
-Plain-English: “How many different customers placed at least one order?”
+**Explanation:** Counts unique customers who placed at least one order.
 
 ```sql
 -- HAVING: filter after aggregation (e.g., power users)
@@ -71,7 +71,7 @@ HAVING sessions >= 10
 ORDER BY sessions DESC;
 ```
 
-Plain-English: “Show only users who had 10+ sessions, ordered from most to least sessions.”
+**Explanation:** Filters to users with 10+ sessions (HAVING applies after GROUP BY).
 
 ```sql
 -- CASE: business-friendly segments
@@ -87,7 +87,7 @@ SELECT
 FROM `project.dataset.user_purchase_counts`;
 ```
 
-Plain-English: “Bucket users into purchase segments so a stakeholder can read the distribution easily.”
+**Explanation:** Converts raw counts into readable segments for reporting.
 
 ```sql
 -- UNION ALL: combine two tables with the same schema (don’t deduplicate)
@@ -96,7 +96,7 @@ UNION ALL
 SELECT order_id, created_at, 'store' AS source FROM `project.dataset.store_orders`;
 ```
 
-Plain-English: “Combine web and store orders into one list and keep all rows (even if an ID repeats).”
+**Explanation:** Combines two sources into one dataset without removing duplicates.
 
 ---
 
@@ -114,7 +114,7 @@ LEFT JOIN `project.dataset.user_features_30d` f
 USING (user_id);
 ```
 
-Plain-English: “Start from the labeled dataset (one row per user/label) and attach the feature columns if we have them; if not, keep the user anyway (features will be NULL).”
+**Explanation:** Attach feature columns to each labeled row; keep all base rows even when features are missing.
 
 **Common pitfalls**
 
@@ -145,7 +145,7 @@ LEFT JOIN `project.dataset.events` e
 GROUP BY l.user_id, l.label_ts, l.label;
 ```
 
-Plain-English: “For each labeled moment in time, compute features using only events that happened _before_ that moment, within the previous 30 days—so we don’t accidentally ‘peek into the future’.”
+**Explanation:** Builds time-safe features by using only events that occurred before the label timestamp (anti-leakage).
 
 ---
 
@@ -163,7 +163,7 @@ FROM (
 WHERE rn = 1;
 ```
 
-Plain-English: “If there are multiple rows per user, keep only the most recent one.”
+**Explanation:** Keeps the most recent row per user (typical “latest state” table cleanup).
 
 ```sql
 -- Rolling count of events in the last 7 rows (not time-based)
@@ -178,7 +178,7 @@ SELECT
 FROM `project.dataset.events`;
 ```
 
-Plain-English: “As we scan a user’s events in time order, count how many events occurred in the current event plus the previous 6 events (a rolling 7-event window).”
+**Explanation:** Rolling count over the current + previous 6 rows per user (not a time-duration window).
 
 Key window functions:
 
@@ -318,7 +318,7 @@ FROM `project.dataset.users`
 QUALIFY rn = 1;
 ```
 
-Plain-English: “Pick only the latest row per user, but without having to wrap the query in another SELECT.”
+**Explanation:** Filter to the latest row per user using a window function in a single query.
 
 ```sql
 -- SELECT * EXCEPT / REPLACE is common in feature pipelines
@@ -328,7 +328,7 @@ SELECT
 FROM `project.dataset.table`;
 ```
 
-Plain-English: “Keep all columns, but replace `raw_text` with a normalized (lowercased) version.”
+**Explanation:** Keep all columns but normalize one field (avoid rewriting long SELECT lists).
 
 ```sql
 -- WITH (CTEs) for readable multi-step transformations
@@ -343,7 +343,7 @@ agg AS (
 SELECT * FROM agg;
 ```
 
-Plain-English: “Break a complex query into named steps: first define the base data, then compute aggregates.”
+**Explanation:** Structure complex logic into named steps for readability and reuse.
 
 ```sql
 -- PIVOT: turn rows into columns (handy for feature wide tables)
@@ -355,7 +355,7 @@ FROM (
 PIVOT (SUM(cnt) FOR event_name IN ('view', 'add_to_cart', 'purchase'));
 ```
 
-Plain-English: “Create one column per event type (view/add_to_cart/purchase) so the result is a wide feature table per user.”
+**Explanation:** Produce a wide per-user feature table with one column per event type.
 
 ```sql
 -- UNPIVOT: turn wide columns back into rows (useful for analysis/debug)
@@ -364,7 +364,7 @@ FROM `project.dataset.user_features_wide`
 UNPIVOT(feature_value FOR feature_name IN (f1, f2, f3));
 ```
 
-Plain-English: “Convert a wide feature table back into a long format so it’s easier to scan and compare feature values.”
+**Explanation:** Convert wide features back to long form for easier inspection and comparisons.
 
 ### 8) Text manipulation + regex (common cleaning)
 
@@ -389,7 +389,7 @@ SELECT
 FROM `project.dataset.table`;
 ```
 
-Plain-English: “Show how many rows we have, what fraction is missing `user_id`, and how many unique users exist—basic ‘is this dataset sane?’ checks.”
+**Explanation:** Quick sanity check on size, missing key rate, and unique-key cardinality.
 
 ```sql
 -- Leakage check idea: ensure feature timestamp <= label timestamp
@@ -398,7 +398,7 @@ SELECT
 FROM `project.dataset.training_view`;
 ```
 
-Plain-English: “Count how many rows contain features that occur after the label time—those are leakage bugs that can make models look unrealistically good.”
+**Explanation:** Detects “future info” leakage that can inflate offline metrics.
 
 ---
 
@@ -425,7 +425,7 @@ FROM `project.dataset.events_partitioned`
 WHERE event_date BETWEEN DATE_SUB(CURRENT_DATE(), INTERVAL 7 DAY) AND CURRENT_DATE();
 ```
 
-Plain-English: “Count events from the last 7 days while scanning only the relevant date partitions—this is the cheapest/fastest way to query large time-based tables.”
+**Explanation:** Filters by partition to reduce scanned bytes (faster and cheaper).
 
 #### Cost/debug tools (practical)
 
@@ -475,7 +475,7 @@ WHEN NOT MATCHED THEN
   VALUES (S.user_id, S.last_30d_purchases, CURRENT_TIMESTAMP());
 ```
 
-Plain-English: “Update existing users’ feature rows and insert new users—this keeps a ‘latest features’ table current without rebuilding everything.”
+**Explanation:** Upsert pattern to keep a “latest features” table current without full rebuilds.
 
 ### 11.2) Views vs materialized views (when to use)
 
@@ -513,7 +513,7 @@ GROUP BY week_start
 ORDER BY week_start;
 ```
 
-Plain-English: “For the last 12 weeks, show weekly order count and revenue so leadership can see the trend.”
+**Explanation:** Weekly trend line for orders and revenue over the last 12 weeks.
 
 #### Conversion funnel (simple event funnel)
 
@@ -537,7 +537,7 @@ SELECT
 FROM per_user;
 ```
 
-Plain-English: “Out of all users who viewed something, how many added to cart and how many purchased—and what are the conversion rates between steps?”
+**Explanation:** One-row funnel summary with step counts and conversion rates (safe divide prevents errors).
 
 #### Top customers (Pareto-style)
 
@@ -552,4 +552,134 @@ ORDER BY revenue DESC
 LIMIT 50;
 ```
 
-Plain-English: “List the top 50 customers by revenue in the last 90 days (useful for enterprise sales / retention planning).”
+**Explanation:** Identifies top revenue customers over the last 90 days (useful for retention/sales prioritization).
+
+---
+
+### 14) Real-world analytics & experimentation patterns
+
+#### 14.1 Cohort retention (weekly)
+
+```sql
+-- Cohort users by first week seen, then compute retention by week offset.
+WITH first_seen AS (
+  SELECT
+    user_id,
+    DATE_TRUNC(MIN(DATE(event_ts)), WEEK(MONDAY)) AS cohort_week
+  FROM `project.dataset.events`
+  GROUP BY user_id
+),
+activity AS (
+  SELECT
+    user_id,
+    DATE_TRUNC(DATE(event_ts), WEEK(MONDAY)) AS activity_week
+  FROM `project.dataset.events`
+  GROUP BY user_id, activity_week
+),
+joined AS (
+  SELECT
+    f.cohort_week,
+    a.user_id,
+    DATE_DIFF(a.activity_week, f.cohort_week, WEEK) AS week_offset
+  FROM first_seen f
+  JOIN activity a
+  USING (user_id)
+  WHERE a.activity_week >= f.cohort_week
+)
+SELECT
+  cohort_week,
+  week_offset,
+  COUNT(DISTINCT user_id) AS active_users
+FROM joined
+GROUP BY cohort_week, week_offset
+ORDER BY cohort_week, week_offset;
+```
+
+#### 14.2 A/B test (simple lift + confidence-friendly summaries)
+
+```sql
+-- Compute conversion rate by experiment group.
+WITH per_user AS (
+  SELECT
+    user_id,
+    ANY_VALUE(variant) AS variant, -- 'control' or 'treatment'
+    MAX(event_name = 'purchase') AS converted
+  FROM `project.dataset.experiment_events`
+  WHERE experiment_id = 'exp_123'
+  GROUP BY user_id
+)
+SELECT
+  variant,
+  COUNT(*) AS users,
+  COUNTIF(converted) AS converters,
+  SAFE_DIVIDE(COUNTIF(converted), COUNT(*)) AS conversion_rate
+FROM per_user
+GROUP BY variant;
+```
+
+#### 14.3 Sessionization (30-minute inactivity gap)
+
+```sql
+-- Assign session_id based on a 30-minute inactivity threshold.
+WITH ordered AS (
+  SELECT
+    user_id,
+    event_ts,
+    LAG(event_ts) OVER (PARTITION BY user_id ORDER BY event_ts) AS prev_ts
+  FROM `project.dataset.events`
+),
+flags AS (
+  SELECT
+    *,
+    IF(
+      prev_ts IS NULL OR TIMESTAMP_DIFF(event_ts, prev_ts, MINUTE) > 30,
+      1,
+      0
+    ) AS is_new_session
+  FROM ordered
+),
+sessions AS (
+  SELECT
+    user_id,
+    event_ts,
+    SUM(is_new_session) OVER (PARTITION BY user_id ORDER BY event_ts) AS session_id
+  FROM flags
+)
+SELECT * FROM sessions;
+```
+
+#### 14.4 Incremental backfill into a partitioned table (date parameter)
+
+```sql
+-- Pattern: backfill one date (or a date range) into a partitioned table.
+DECLARE run_date DATE DEFAULT DATE_SUB(CURRENT_DATE(), INTERVAL 1 DAY);
+
+INSERT INTO `project.dataset.daily_features` (event_date, user_id, events)
+SELECT
+  run_date AS event_date,
+  user_id,
+  COUNT(*) AS events
+FROM `project.dataset.events`
+WHERE DATE(event_ts) = run_date
+GROUP BY user_id;
+```
+
+#### 14.5 Anomaly scan (day-over-day change for a KPI)
+
+```sql
+WITH daily AS (
+  SELECT
+    DATE(order_ts) AS d,
+    SUM(order_amount) AS revenue
+  FROM `project.dataset.orders`
+  WHERE DATE(order_ts) >= DATE_SUB(CURRENT_DATE(), INTERVAL 30 DAY)
+  GROUP BY d
+)
+SELECT
+  d,
+  revenue,
+  LAG(revenue) OVER (ORDER BY d) AS prev_revenue,
+  SAFE_DIVIDE(revenue - LAG(revenue) OVER (ORDER BY d), LAG(revenue) OVER (ORDER BY d)) AS pct_change
+FROM daily
+ORDER BY d;
+```
