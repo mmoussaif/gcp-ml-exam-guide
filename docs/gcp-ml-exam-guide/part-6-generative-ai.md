@@ -79,6 +79,32 @@ If you aren’t building on a platform that abstracts infrastructure, you need t
 
 - **Data collection/prep**, **model training**, **model deployment**, **model refinement**, and **model monitoring**.
 
+#### AI on the edge (when cloud isn’t the right place to run inference)
+
+Cloud hosting is powerful, but some use cases need AI to run **closer to the data source** to avoid latency and connectivity issues.
+
+- **Edge computing** runs models on devices/servers near the point of need (phones, embedded devices, factory equipment, vehicles).
+- **Why go edge/local**: **low latency** (real-time responsiveness), **privacy/data control**, and **offline/limited connectivity** operation.
+
+**Google edge tooling (from the course framing)**
+
+- **Lite Runtime (LiteRT)**: a high-performance runtime for running models efficiently on-device.
+- **Gemini Nano**: a compact, efficient model in the Gemini family designed for **on-device** use cases.
+  - Examples mentioned: Pixel features like call/voice summarization; Android developer access via **AI Edge SDK** (where applicable).
+
+**How Vertex AI still fits (even when deploying on edge)**
+
+Use Vertex AI for the heavy lifting (data prep, training/tuning, evaluation, MLOps), then deploy to edge:
+
+- **Convert** models to **LiteRT** formats for on-device performance.
+- **Package & deploy** (e.g., containers/edge packaging) to target hardware.
+- **Manage & monitor** edge deployments and feed learnings back into iteration.
+
+**Quiz-style edge vs cloud intuition**
+
+- **Edge**: real-time, safety-critical, or offline constraints (e.g., surgical device feedback, self-driving).
+- **Cloud**: large-scale centralized analytics or massive concurrency (e.g., high-traffic chatbots, smart-city traffic optimization).
+
 #### The platform layer (Vertex AI as the “glue”)
 
 The platform layer is what makes complex ML/GenAI systems practical to build and operate. It brings the pieces together—**infrastructure, models, data access, deployment, security, and operations**—behind consistent APIs and workflows.

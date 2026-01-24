@@ -200,6 +200,8 @@
 - DL/foundation/GenAI: deep learning (neural nets) underpins foundation models; GenAI is an application of these models to generate new content
 - GenAI layers (leader mental model): infrastructure → models → platform → agents → applications (apps are just the top layer)
 - Infrastructure layer: compute (GPUs/TPUs), storage, networking; if no managed platform, plan infra for data prep + training + deployment + refinement + monitoring
+- Edge vs cloud: edge for low-latency/privacy/offline (cars, surgical devices); cloud for large-scale centralized workloads (chatbots at scale, city traffic analytics)
+- Edge tooling: LiteRT (on-device runtime) + Gemini Nano (compact on-device model) + AI Edge SDK; often train/tune/eval in Vertex AI then convert/deploy/monitor at edge
 - Platform layer (Vertex AI): the “glue” that unifies infra + models + deployment + MLOps (pipelines/metadata/monitoring) + security/IAM
 - Vertex AI MLOps: model registry + evaluation + pipelines (orchestration) + monitoring (skew/drift/perf degradation)
 - Model layer (Vertex AI): Model Garden for ready models (Google/partners/open) + tuning; choose custom training when you need full control
