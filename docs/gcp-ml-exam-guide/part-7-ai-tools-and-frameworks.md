@@ -8302,6 +8302,18 @@ These are not frameworks, but they matter in real engineering orgs (policy, secu
 - **AI-native IDEs / coding agents**: Cursor (`https://www.cursor.com/`), Claude Code (Anthropic), **Google Antigravity** (`https://antigravity.google/`).
 - **General assistants**: ChatGPT, Claude, Gemini, Perplexity, Microsoft Copilot.
 
+#### Google Workspace with Gemini (Docs/Drive/Gmail/Sheets/Meet/Slides)
+
+Google Workspace with Gemini is Gemini embedded inside Google’s productivity suite (Docs, Drive, Gmail, Sheets, Meet, Slides). It’s useful as an example of **how the same GenAI capability shows up differently depending on the workflow surface**.
+
+- **Gemini side panel**: available in many Workspace apps; helps you **summarize, analyze, and generate** content using context from your Workspace (emails, docs) without switching tabs.
+- **Docs “writing aid” pattern**: highlight text → ask Gemini to **rephrase** (e.g., “make this more casual”) or use built-in rephrase options to adjust tone quickly.
+- **Drive “search & discovery” pattern**: ask a question like “what is the definition of Project Horizon?” and Gemini can return the answer **and** point to the source document (helpful when the document name/location is unknown).
+- **Enterprise note**: business/enterprise plans add **enterprise-grade protections** and admin controls for usage/access (relevant for governance discussions).
+- **Extends beyond docs**: Gemini also shows up in adjacent Workspace apps like **Google Vids** and **AppSheet** (no-code app building via natural language prompts).
+
+Official reference: <a href="https://support.google.com/a/answer/13623623">https://support.google.com/a/answer/13623623</a>
+
 #### Google Antigravity (Desktop Agent Development Tool)
 
 **Google Antigravity** is Google's desktop application for building and orchestrating AI agents. Launched November 2025.
