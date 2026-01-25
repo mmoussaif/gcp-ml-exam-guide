@@ -67,6 +67,48 @@ This part is a **tooling map** (commercial + open-source) for building LLM apps 
 
 ---
 
+## 7.1 Ecosystem Taxonomy and Layers
+
+Think of agentic/LLM systems as a set of layers:
+
+- **Models**: foundation models (proprietary or open weights).
+- **App frameworks**: prompts, tool calling, RAG chains, memory, routing.
+- **Agent orchestration**: multi-step execution, planners/routers, multi-agent supervision, retries/timeouts.
+- **Knowledge / retrieval**: indexing, vector stores, reranking, grounding.
+- **Safety & governance**: policies, guardrails, content safety, secrets/IAM boundaries, audit trails.
+- **Evaluation & observability**: offline evals + online monitoring/tracing/cost.
+- **Serving**: endpoints, batching, caching, streaming, concurrency control.
+
+**EXAM TIP:** When a question says “fully managed” + “enterprise governance” + “rapid delivery” → prefer a **cloud-managed** offering. When it says “custom orchestration” + “bring your own model” + “fine control” → prefer **OSS frameworks + custom infra**.
+
+## 7.8 Core ML/DL Frameworks (Foundation of "Non-LLM" ML Engineering)
+
+Even if you work mostly on GenAI, the ML Engineer exam (and many real systems) still rely on classic ML/DL frameworks:
+
+- **Deep learning**: PyTorch, TensorFlow/Keras, JAX (Flax/Haiku).
+- **Classical ML**: scikit-learn, XGBoost, LightGBM, CatBoost.
+- **Interchange / optimized inference**: ONNX + ONNX Runtime.
+- **Legacy (still seen)**: MXNet, PaddlePaddle, CNTK.
+
+#### Probabilistic / Bayesian programming (for uncertainty-aware modeling)
+
+These show up when you need explicit uncertainty, probabilistic inference, and Bayesian modeling:
+
+- **Stan** (probabilistic programming + HMC/NUTS): [mc-stan.org](https://mc-stan.org/)
+- **PyMC** (Python Bayesian modeling): [pymc.io](https://www.pymc.io/)
+- **Turing.jl** (Julia Bayesian modeling): [turinglang.org](https://turinglang.org/)
+- **Edward** (legacy research ecosystem; still referenced historically)
+
+Example table: core model frameworks
+
+| Category      | Tools (examples)                             |
+| ------------- | -------------------------------------------- |
+| Deep learning | PyTorch, TensorFlow, Keras, JAX (Flax/Haiku) |
+| Classical ML  | scikit-learn, XGBoost, LightGBM, CatBoost    |
+| Interchange   | ONNX, ONNX Runtime                           |
+| Probabilistic | Stan, PyMC, Turing.jl                        |
+| Legacy DL     | MXNet, PaddlePaddle, CNTK                    |
+
 ### 7.3 Google's Official Agent Whitepapers (Kaggle Course)
 
 Google has published comprehensive whitepapers on GenAI and agents as part of the **5-Day GenAI Intensive Course** on Kaggle. These are **critical authoritative sources** for understanding Google's official approach to agent development and production deployment.
@@ -389,447 +431,6 @@ Agent evaluation differs from traditional ML evaluation because:
 
 ---
 
-## 7.18 Prototype to Production: Operational Lifecycle
-
-Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-prototype-to-production)
-
-**Authors**: Sokratis Kartakis, Gabriela Hernandez Larios, Ran Li, Elia Secchi, and Huang Xia
-
-This whitepaper provides a comprehensive guide to the **operational lifecycle of AI agents**, focusing on deployment, scaling, and productionizing.
-
-**Practical Implementation**: Throughout this whitepaper, examples reference the **Google Cloud Platform Agent Starter Pack**—a Python package providing production-ready Generative AI agent templates for Google Cloud. It includes pre-built agents, automated CI/CD setup, Terraform deployment, Vertex AI evaluation integration, and built-in Google Cloud observability. See: [Agent Starter Pack](https://github.com/GoogleCloudPlatform/agent-starter-pack)
-
-#### People and Process: The Team Behind Production Agents
-
-**Why focus on people and process?** The best technology is ineffective without the right team to build, manage, and govern it.
-
-**Traditional MLOps Teams**:
-
-| Team                        | Responsibilities                                                                                                                          |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| **Cloud Platform Team**     | Cloud architects, administrators, security specialists; manage infrastructure, security, access control; grant least-privilege roles      |
-| **Data Engineering Team**   | Data engineers and data owners; build/maintain data pipelines, handle ingestion, preparation, quality standards                           |
-| **Data Science/MLOps Team** | Data scientists (experiment/train models), ML engineers (automate ML pipelines), MLOps Engineers (build/maintain pipeline infrastructure) |
-| **ML Governance**           | Product owners, auditors; oversee ML lifecycle, ensure compliance, transparency, accountability                                           |
-
-**Generative AI introduces new specialized roles**:
-
-| Role                      | Responsibilities                                                                                                                                                  |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Prompt Engineers**      | Blend technical skill in crafting prompts with deep domain expertise; define right questions and expected answers (may be done by AI Engineers or domain experts) |
-| **AI Engineers**          | Scale GenAI solutions to production; build robust backend systems with evaluation at scale, guardrails, RAG/tool integration                                      |
-| **DevOps/App Developers** | Build front-end components and user-friendly interfaces that integrate with GenAI backend                                                                         |
-
-**EXAM TIP:** Questions about "who builds agents" or "team structure" → think **AI Engineers** (backend) + **Prompt Engineers** (prompts) + **DevOps** (frontend) + **Cloud Platform Team** (infrastructure).
-
-#### Evaluation-Gated Deployment: The Core Principle
-
-**Core principle**: **No agent version should reach users without first passing a comprehensive evaluation** that proves its quality and safety.
-
-**Two implementation methods**:
-
-1. **Manual "Pre-PR" Evaluation**:
-
-   - AI Engineer/Prompt Engineer runs evaluation suite locally before PR
-   - Performance report (comparing new agent vs production baseline) linked in PR description
-   - Reviewer (AI Engineer or ML Governor) assesses code + behavioral changes
-   - **Use case**: Teams seeking flexibility or beginning their evaluation journey
-
-2. **Automated In-Pipeline Gate**:
-   - Evaluation harness integrated directly into CI/CD pipeline
-   - Failing evaluation automatically blocks deployment
-   - Programmatic enforcement of quality standards
-   - **Use case**: Mature teams prioritizing consistency over flexibility
-
-**EXAM TIP:** Questions about "quality gates" or "pre-production validation" → think **Evaluation-Gated Deployment** (manual pre-PR or automated CI/CD gate).
-
-#### Three-Phase CI/CD Pipeline
-
-A robust pipeline is designed as a **funnel**—catching errors as early and cheaply as possible ("shifting left").
-
-**Phase 1: Pre-Merge Integration (CI)**
-
-- **Purpose**: Rapid feedback to developer who opened PR
-- **Checks**: Unit tests, code linting, dependency scanning, **agent quality evaluation suite**
-- **Benefit**: Prevents polluting main branch; catches performance degradation before merge
-- **Example**: Cloud Build PR checks template from Agent Starter Pack
-
-**Phase 2: Post-Merge Validation in Staging (CD)**
-
-- **Purpose**: Operational readiness of integrated system
-- **Process**: Package agent → deploy to staging (high-fidelity replica of production)
-- **Tests**: Load testing, integration tests against remote services, **internal user testing ("dogfooding")**
-- **Benefit**: Validates agent as integrated system under production-like conditions
-- **Example**: Staging deployment template from Agent Starter Pack
-
-**Phase 3: Gated Deployment to Production**
-
-- **Purpose**: Final deployment to production
-- **Process**: Product Owner gives final sign-off (human-in-the-loop) → exact artifact from staging promoted to production
-- **Benefit**: Ensures production deployment matches tested staging artifact
-- **Example**: Production deployment template from Agent Starter Pack
-
-**Key technologies**:
-
-- **Infrastructure as Code (IaC)**: Terraform defines environments programmatically (identical, repeatable, version-controlled)
-- **Automated Testing Frameworks**: Pytest executes tests/evaluations at each stage
-- **Secret Management**: Secret Manager for API keys (injected at runtime, not hardcoded)
-
-**EXAM TIP:** Questions about "CI/CD for agents" → think **three-phase pipeline**: Pre-merge (CI) → Staging (CD) → Production (gated).
-
-#### Safe Rollout Strategies
-
-**Four proven patterns** for gradual rollouts:
-
-| Strategy          | Description                                                                                                                                      | Use Case                  |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
-| **Canary**        | Start with 1% of users; monitor for prompt injections, unexpected tool usage; scale up gradually or roll back instantly                          | Low-risk initial rollout  |
-| **Blue-Green**    | Run two identical production environments; route traffic to "blue" while deploying to "green"; switch instantly; zero downtime, instant recovery | Zero-downtime deployments |
-| **A/B Testing**   | Compare agent versions on real business metrics for data-driven decisions (internal or external users)                                           | Comparing agent versions  |
-| **Feature Flags** | Deploy code but control release dynamically; test new capabilities with select users first                                                       | Gradual feature rollout   |
-
-**Foundation**: **Rigorous versioning**—every component (code, prompts, model endpoints, tool schemas, memory structures, evaluation datasets) must be versioned. Enables instant rollback to known-good state.
-
-**Deployment options**: Agent Engine or Cloud Run, with Cloud Load Balancing for traffic management.
-
-**EXAM TIP:** Questions about "safe deployment" or "gradual rollout" → think **Canary** (1% → scale up) or **Blue-Green** (zero downtime).
-
-#### Building Security from the Start
-
-**Unique agent risks**:
-
-- **Prompt Injection & Rogue Actions**: Malicious users trick agents into unintended actions
-- **Data Leakage**: Agents expose sensitive information through responses or tool usage
-- **Memory Poisoning**: False information stored in agent's memory corrupts future interactions
-
-**Three layers of defense** (Google's Secure AI Framework - SAIF):
-
-1. **Policy Definition and System Instructions** (The Agent's Constitution):
-
-   - Define policies for desired/undesired behavior
-   - Engineer into System Instructions (SIs)
-
-2. **Guardrails, Safeguards, and Filtering** (The Enforcement Layer):
-
-   - **Input Filtering**: Classifiers (e.g., Perspective API) analyze prompts, block malicious inputs
-   - **Output Filtering**: Vertex AI's built-in safety filters check for harmful content, PII, policy violations
-   - **Human-in-the-Loop (HITL) Escalation**: Pause and escalate high-risk/ambiguous actions for human review
-
-3. **Continuous Assurance and Testing**:
-   - **Rigorous Evaluation**: Any change triggers full re-run of evaluation pipeline (Vertex AI Evaluation)
-   - **Dedicated RAI Testing**: Test for specific risks (NPOV evaluations, Parity evaluations)
-   - **Proactive Red Teaming**: Actively try to break safety systems through creative manual testing and AI-driven simulation
-
-**EXAM TIP:** Questions about "agent security" → think **three-layer defense**: System Instructions + Guardrails/Filtering + Continuous Assurance.
-
-#### Operations in Production: Observe → Act → Evolve Loop
-
-**Core discipline**: Instead of static monitoring, adopt a continuous loop:
-
-1. **Observe**: Understand agent's behavior in real-time
-2. **Act**: Real-time intervention to maintain performance, cost, safety
-3. **Evolve**: Long-term strategic improvement based on production learnings
-
-**Observe: Your Agent's Sensory System**
-
-**Three pillars of observability**:
-
-| Pillar      | Description                                                                         | Example                                                                                       |
-| ----------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| **Logs**    | Granular, factual diary of what happened (every tool call, error, decision)         | Cloud Logging                                                                                 |
-| **Traces**  | Narrative connecting individual logs (reveals causal path of why agent took action) | Cloud Trace (unique ID links Vertex AI Agent Engine invocation, model calls, tool executions) |
-| **Metrics** | Aggregated report card (performance, cost, operational health at scale)             | Cloud Monitoring dashboards (alert when latency thresholds exceeded)                          |
-
-**ADK Integration**: Agent Development Kit provides built-in Cloud Trace integration for automatic instrumentation.
-
-**Act: The Levers of Operational Control**
-
-**Two categories of operational levers**:
-
-1. **Managing System Health: Performance, Cost, and Scale**
-
-   **Designing for Scale**:
-
-   - **Horizontal Scaling**: Design agent as stateless, containerized service; external state enables any instance to handle any request (Cloud Run, Vertex AI Agent Engine Runtime)
-   - **Asynchronous Processing**: Offload long-running tasks using event-driven patterns (Pub/Sub → Cloud Run)
-   - **Externalized State Management**: Persist memory externally (Vertex AI Agent Engine built-in Session/memory service, or Cloud Run + AlloyDB/Cloud SQL)
-
-   **Balancing Competing Goals**:
-
-   - **Speed (Latency)**: Parallel processing, aggressive caching, smaller efficient models for routine tasks
-   - **Reliability**: Automatic retries with exponential backoff; design idempotent tools (safe-to-retry)
-   - **Cost**: Shorten prompts, use cheaper models for easier tasks, batch requests
-
-2. **Managing Risk: The Security Response Playbook**
-
-   **Sequence**: **Contain → Triage → Resolve**
-
-   - **Contain**: Immediate containment via "circuit breaker" (feature flag to disable affected tool)
-   - **Triage**: Route suspicious requests to HITL review queue; investigate exploit scope/impact
-   - **Resolve**: Develop patch (updated input filter, system prompt); deploy via automated CI/CD pipeline
-
-**Evolve: Learning from Production**
-
-**The Evolution Workflow**:
-
-1. **Analyze Production Data**: Identify trends in user behavior, task success rates, security incidents
-2. **Update Evaluation Datasets**: Transform production failures into test cases (augment golden dataset)
-3. **Refine and Deploy**: Commit improvements → trigger automated pipeline (refine prompts, add tools, update guardrails)
-
-**Example**: Retail agent logs show 15% of users receive error when asking for 'similar products' → Create failing test case → Engineer refines prompt + adds robust similarity search tool → Commits change → Passes updated evaluation suite → Safely rolled out via canary deployment → Resolved in under 48 hours.
-
-**Evolving Security**: Production feedback loop for security:
-
-- **Observe**: Monitoring detects new threat vector (novel prompt injection, unexpected data leak)
-- **Act**: Security response team contains threat
-- **Evolve**: Feed insight back into development lifecycle:
-  - Update evaluation datasets (add attack as permanent test case)
-  - Refine guardrails (update system prompt, input filters, tool-use policies)
-  - Automate and deploy (commit change → CI/CD validates → deploy)
-
-**EXAM TIP:** Questions about "production operations" or "continuous improvement" → think **Observe → Act → Evolve loop**.
-
-#### A2A Implementation: Agent Cards and Code Examples
-
-**Agent Card**: Standardized JSON specification acting as "business card" for each agent.
-
-**Agent Card structure**:
-
-```json
-{
-  "name": "check_prime_agent",
-  "version": "1.0.0",
-  "description": "An agent specialized in checking whether numbers are prime",
-  "capabilities": {},
-  "securitySchemes": {
-    "agent_oauth_2_0": {
-      "type": "oauth2"
-    }
-  },
-  "defaultInputModes": ["text/plain"],
-  "defaultOutputModes": ["application/json"],
-  "skills": [
-    {
-      "id": "prime_checking",
-      "name": "Prime Number Checking",
-      "description": "Check if numbers are prime using efficient algorithms",
-      "tags": ["mathematical", "computation", "prime"]
-    }
-  ],
-  "url": "http://localhost:8001/a2a/check_prime_agent"
-}
-```
-
-**Making an agent A2A-compatible (ADK)**:
-
-```python
-from google.adk.a2a.utils.agent_to_a2a import to_a2a
-
-# Your existing agent
-root_agent = Agent(
-    name='hello_world_agent',
-    # ... your agent code ...
-)
-
-# Make it A2A-compatible
-a2a_app = to_a2a(root_agent, port=8001)
-# Serve with uvicorn or Agent Engine
-```
-
-**Consuming a remote agent via A2A (ADK)**:
-
-```python
-from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
-
-prime_agent = RemoteA2aAgent(
-    name="prime_agent",
-    description="Agent that handles checking if numbers are prime.",
-    agent_card="http://localhost:8001/a2a/check_prime_agent/.well-known/agent-card.json"
-)
-```
-
-**Hierarchical agent composition**:
-
-```python
-# Local sub-agent for dice rolling
-roll_agent = Agent(
-    name="roll_agent",
-    instruction="You are an expert at rolling dice."
-)
-
-# Remote A2A agent for prime checking
-prime_agent = RemoteA2aAgent(
-    name="prime_agent",
-    agent_card="http://localhost:8001/.well-known/agent-card.json"
-)
-
-# Root orchestrator combining both
-root_agent = Agent(
-    name="root_agent",
-    instruction="Delegate rolling dice to roll_agent, prime checking to prime_agent.",
-    sub_agents=[roll_agent, prime_agent]
-)
-```
-
-**Non-negotiable technical requirements**:
-
-- **Distributed tracing**: Every request carries unique trace ID (essential for debugging, audit trail)
-- **Robust state management**: A2A interactions are stateful; require sophisticated persistence layer
-
-**When to use A2A vs local sub-agents**:
-
-- **A2A**: Formal, cross-team integrations requiring durable service contract
-- **Local sub-agents**: Tightly coupled tasks within single application (more efficient)
-
-**EXAM TIP:** Questions about "agent discovery" or "agent-to-agent communication" → think **Agent Cards** (JSON specification) + **A2A protocol**.
-
-#### How A2A and MCP Work Together
-
-**They are complementary, not competing**:
-
-| Protocol | Domain                            | Use Case Example                                                                    |
-| -------- | --------------------------------- | ----------------------------------------------------------------------------------- |
-| **MCP**  | Tools and resources (primitives)  | Calculator, database API, weather API                                               |
-| **A2A**  | Other agents (autonomous systems) | "Analyze last quarter's customer churn and recommend three intervention strategies" |
-
-**Layered architecture**: Use **A2A** for high-level agent collaboration; each agent internally uses **MCP** to interact with its specific tools.
-
-**Example workflow** (auto repair shop):
-
-1. **User-to-Agent (A2A)**: Customer communicates with "Shop Manager" agent
-2. **Agent-to-Agent (A2A)**: Shop Manager delegates to specialized "Mechanic" agent
-3. **Agent-to-Tool (MCP)**: Mechanic agent uses MCP to call tools (`scan_vehicle_for_error_codes()`, `get_repair_procedure()`, `raise_platform()`)
-4. **Agent-to-Agent (A2A)**: Mechanic communicates with external "Parts Supplier" agent
-
-**EXAM TIP:** Questions about "MCP vs A2A" → **MCP** for tools/resources, **A2A** for agent-to-agent collaboration.
-
-**For detailed A2A implementation** (Agent Cards, code examples, hierarchical composition), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
-
-#### Registry Architectures: When and How to Build Them
-
-**Decision framework**: Build registries when scale/complexity demands centralized management.
-
-**Tool Registry** (using MCP):
-
-- **Purpose**: Catalog all assets (functions, APIs)
-- **Patterns**:
-  - **Generalist agents**: Access full catalog (trades speed/accuracy for scope)
-  - **Specialist agents**: Use predefined subsets (higher performance)
-  - **Dynamic agents**: Query registry at runtime (adapt to new tools)
-- **Benefits**: Human discovery (developers search before building duplicates), security auditing, capability understanding
-- **Build when**: Tool discovery becomes bottleneck OR security requires centralized auditing
-
-**Agent Registry** (using A2A AgentCards):
-
-- **Purpose**: Catalog agents for discovery and reuse
-- **Benefits**: Teams discover/reuse existing agents, reduce redundant work, enable automated agent-to-agent delegation
-- **Build when**: Multiple teams need to discover/reuse specialized agents without tight coupling
-
-**Trade-off**: Registries offer discovery and governance at the cost of maintenance. **Start without one**; build when ecosystem scale demands centralized management.
-
-**EXAM TIP:** Questions about "tool/agent discovery" or "centralized management" → think **Tool Registry** (MCP) or **Agent Registry** (A2A AgentCards) when scale/complexity demands it.
-
-#### AgentOps Lifecycle: Complete Reference Architecture
-
-**The lifecycle**:
-
-1. **Developer's Inner Loop**: Rapid local testing and prototyping to shape agent's core logic
-2. **Pre-Production Engine**: Automated evaluation gates validate quality and safety against golden dataset
-3. **Safe Rollouts**: Release to production with gradual rollout strategies
-4. **Production Observability**: Comprehensive observability captures real-world data
-5. **Evolution Loop**: Turn every insight into the next improvement
-
-**Key capabilities**:
-
-- **Evaluation**: Golden datasets, LLM-as-judge, trajectory evaluation
-- **CI/CD**: Three-phase pipeline (Pre-merge → Staging → Production)
-- **Observability**: Logs, traces, metrics (Cloud Logging, Cloud Trace, Cloud Monitoring)
-- **Security**: Three-layer defense (System Instructions + Guardrails + Continuous Assurance)
-- **Interoperability**: A2A protocol, MCP protocol, registries
-
-**EXAM TIP:** Questions about "agent operations" or "production lifecycle" → think **AgentOps**: Evaluation-gated deployment → Safe rollouts → Observe → Act → Evolve loop.
-
-#### Key Challenges in Production
-
-| Challenge            | Description                                                            | Mitigation Strategy                                                |
-| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **Reliability**      | Agents can fail unpredictably; tool calls may timeout or return errors | Retries, fallbacks, circuit breakers, graceful degradation         |
-| **Scalability**      | Agent workloads are bursty; context management is expensive            | Auto-scaling, context optimization, caching, async processing      |
-| **Observability**    | Non-deterministic behavior makes debugging difficult                   | Comprehensive logging, tracing, metrics, reasoning exposure        |
-| **Cost control**     | LLM calls and tool usage can spiral without limits                     | Token budgets, cost tracking, rate limiting, model tier routing    |
-| **Security**         | Agents have expanded attack surface (prompt injection, tool misuse)    | Input/output guardrails, tool-level validation, IAM, audit logging |
-| **Interoperability** | Agents need to communicate with each other and external systems        | A2A protocol, MCP, standardized APIs, event-driven architecture    |
-
-#### CI/CD for Agents: Comparison Table and Pipeline Diagram
-
-**Note**: For detailed explanation of the three-phase pipeline (Pre-Merge → Staging → Production), see [§ 7.18: Three-Phase CI/CD Pipeline](#three-phase-cicd-pipeline) above.
-
-**Traditional CI/CD** → **Agent CI/CD** comparison:
-
-| Stage       | Traditional                     | Agent-Specific                                                          |
-| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
-| **Build**   | Compile code, run unit tests    | Validate prompts, test tool integrations, check context compilation     |
-| **Test**    | Unit tests, integration tests   | Agent trajectory tests, LLM-as-judge evaluation, safety checks          |
-| **Deploy**  | Blue/green, canary              | Canary with eval metrics, shadow mode, A/B testing with quality gates   |
-| **Monitor** | Latency, error rate, throughput | Task success rate, tool call accuracy, cost per task, safety violations |
-
-**Agent-specific CI/CD pipeline**:
-
-```
-┌────────────────────────────────────────────────────────────────────────┐
-│                    AGENT CI/CD PIPELINE                                 │
-├────────────────────────────────────────────────────────────────────────┤
-│                                                                        │
-│  Code Commit                                                           │
-│      │                                                                 │
-│      ▼                                                                 │
-│  ┌─────────────────┐                                                   │
-│  │  Build & Lint   │  • Validate prompts                              │
-│  │                 │  • Check tool schemas                             │
-│  │                 │  • Verify context processors                     │
-│  └────────┬────────┘                                                   │
-│           │                                                            │
-│           ▼                                                            │
-│  ┌─────────────────┐                                                   │
-│  │  Unit Tests      │  • Tool function tests                           │
-│  │                 │  • Prompt template tests                          │
-│  │                 │  • Context compilation tests                      │
-│  └────────┬────────┘                                                   │
-│           │                                                            │
-│           ▼                                                            │
-│  ┌─────────────────┐                                                   │
-│  │  Agent Eval      │  • Trajectory evaluation                         │
-│  │                 │  • LLM-as-judge quality checks                   │
-│  │                 │  • Safety/guardrail tests                         │
-│  │                 │  • Cost estimation                               │
-│  └────────┬────────┘                                                   │
-│           │                                                            │
-│           ▼                                                            │
-│  ┌─────────────────┐                                                   │
-│  │  Security Scan   │  • Prompt injection detection                    │
-│  │                 │  • Tool permission audit                          │
-│  │                 │  • PII detection                                 │
-│  └────────┬────────┘                                                   │
-│           │                                                            │
-│           ▼                                                            │
-│  ┌─────────────────┐                                                   │
-│  │  Staging         │  • Shadow mode (log, don't act)                  │
-│  │                 │  • A/B testing with eval metrics                 │
-│  └────────┬────────┘                                                   │
-│           │                                                            │
-│           ▼                                                            │
-│  ┌─────────────────┐                                                   │
-│  │  Production      │  • Canary deployment                            │
-│  │                 │  • Automatic rollback on quality degradation     │
-│  └─────────────────┘                                                   │
-│                                                                        │
-└────────────────────────────────────────────────────────────────────────┘
-```
-
-**Note**: For A2A implementation details (Agent Cards, code examples, hierarchical composition), see [§ 7.18: A2A Implementation](#a2a-implementation-agent-cards-and-code-examples) above. For foundational concepts on A2A vs MCP, see [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet).
-
----
-
 ### 7.3.2 Embeddings and Vector Stores (RAG Foundations)
 
 Source: [Embeddings and Vector Stores Whitepaper](https://www.kaggle.com/whitepaper-embeddings-and-vector-stores)
@@ -921,329 +522,6 @@ Source: [Operationalizing Generative AI on Vertex AI using MLOps Whitepaper](htt
 **EXAM TIP:** Questions about "GenAI deployment" or "MLOps for agents" → think **Vertex AI Pipelines** (orchestration) + **Vertex AI Evaluation** (quality gates) + **Vertex AI Monitoring** (observability).
 
 ---
-
-## 7.16 Agent Evaluation: Outside-In vs Inside-Out Framework
-
-Source: [Agent Quality Whitepaper](https://www.kaggle.com/whitepaper-agent-quality)
-
-Agent evaluation requires a strategic shift from traditional software testing. The **"Outside-In" evaluation hierarchy** provides a framework for assessing agent quality.
-
-#### The Outside-In View: End-to-End Evaluation (Black Box)
-
-**First question**: "Did the agent achieve the user's goal effectively?"
-
-**Metrics**:
-
-- **Task Success Rate**: Binary/graded score of whether the final output was correct, complete, and solved the user's problem
-- **User Satisfaction**: Direct feedback (thumbs up/down), CSAT scores
-- **Overall Quality**: Accuracy, completeness for quantitative tasks
-
-**EXAM TIP:** Questions about "agent quality" or "evaluation strategy" → start with **Outside-In** (end-to-end success) before diving into internal details.
-
-#### The Inside-Out View: Trajectory Evaluation (Glass Box)
-
-**When to use**: After identifying a failure, analyze the agent's execution trajectory.
-
-**Components to evaluate**:
-
-1. **LLM Planning (The "Thought")**: Core reasoning quality
-
-   - Hallucinations, off-topic responses, context pollution, repetitive loops
-
-2. **Tool Usage**: Selection and parameterization
-
-   - Wrong tool selection, missing tools, hallucinated tool names, incorrect parameters
-
-3. **Tool Response Interpretation**: Understanding tool outputs
-
-   - Misinterpreting data, failing to extract entities, not recognizing error states
-
-4. **RAG Performance**: Retrieval quality
-
-   - Irrelevant documents, outdated information, LLM ignoring retrieved context
-
-5. **Trajectory Efficiency**: Resource usage
-
-   - Excessive API calls, high latency, redundant efforts
-
-6. **Multi-Agent Dynamics**: Inter-agent communication
-   - Communication loops, role conflicts, coordination failures
-
-**EXAM TIP:** Questions about "debugging agent failures" or "trajectory analysis" → think **Inside-Out** evaluation (glass box).
-
-#### Trajectory Evaluation Metrics
-
-Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
-
-| Metric              | Description                                                       | When to Use                                     |
-| ------------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
-| **Exact match**     | Trajectory perfectly mirrors ideal solution; no deviation         | Strict workflows (e.g., financial transactions) |
-| **In-order match**  | Core steps completed in order; extra actions allowed              | Flexible workflows with required sequence       |
-| **Any-order match** | All necessary actions included; order doesn't matter              | Parallelizable tasks                            |
-| **Precision**       | How many tool calls in predicted trajectory are relevant/correct? | Measuring tool call accuracy                    |
-| **Recall**          | How many essential tool calls from reference are captured?        | Measuring completeness                          |
-| **Single-tool use** | Is a specific action within the agent's trajectory?               | Testing if agent learned to use a tool          |
-
-**EXAM TIP:** Questions about "trajectory evaluation" → consider **precision/recall** for tool usage, **exact match** for strict workflows, **any-order match** for flexible tasks.
-
----
-
-## 7.17 Agent Security: Identity, Policies, and Guard Models
-
-Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
-
-#### Agent Identity: A New Class of Principal
-
-Agents introduce a **third category of principal** (beyond users and service accounts):
-
-| Principal Entity     | Authentication/Verification                                | Notes                                                   |
-| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
-| **Users**            | OAuth, SSO                                                 | Human actors with full autonomy                         |
-| **Agents**           | SPIFFE (Secure Production Identity Framework for Everyone) | Agents have delegated authority, act on behalf of users |
-| **Service Accounts** | IAM                                                        | Applications/containers, fully deterministic            |
-
-**Key concept**: Each agent must have a **cryptographically verifiable identity** distinct from:
-
-- The user who invoked it
-- The developer who built it
-
-**SPIFFE** provides:
-
-- Verifiable identity for agents
-- Least-privilege permissions per agent
-- Contained blast radius if an agent is compromised
-
-**EXAM TIP:** Questions about "agent authentication" or "agent identity" → think **SPIFFE** for verifiable agent identity.
-
-#### Policies to Constrain Access
-
-**Policies** are authorization (AuthZ) rules that limit agent capabilities:
-
-- **Tool-level policies**: Which APIs/tools can this agent use?
-- **Data access policies**: Which databases/documents can this agent read?
-- **Action policies**: What actions are allowed/forbidden (e.g., "no purchases over $100")?
-
-**Best practice**: Apply **principle of least privilege**—grant only the minimum capabilities needed.
-
-**EXAM TIP:** Questions about "agent authorization" or "limiting agent actions" → think **policies** + **least privilege**.
-
-#### Defense in Depth: Guardrails and Guard Models
-
-**Hybrid security approach**:
-
-1. **Deterministic Guardrails** (Layer 1):
-
-   - Hardcoded rules outside the model's reasoning
-   - Policy engine blocking actions (e.g., "no purchases > $100")
-   - Provides predictable, auditable limits
-
-2. **Reasoning-Based Defenses** (Layer 2):
-   - **Guard models**: Specialized smaller models acting as security analysts
-   - Examine agent's proposed plan before execution
-   - Flag risky or policy-violating steps for review
-
-**EXAM TIP:** Questions about "agent security" or "preventing harmful actions" → think **defense in depth**: deterministic guardrails + guard models.
-
----
-
-## 7.11.1 Agent Interoperability: A2A, AP2, and x402 (Extended Protocols)
-
-**Note**: This section extends [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet) with additional protocols (AP2, x402) and advanced A2A concepts. For A2A implementation details (Agent Cards, code examples), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
-
-Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
-
-#### Agent2Agent (A2A) Protocol
-
-**A2A** enables agents to communicate with each other regardless of language or runtime.
-
-**Key components**:
-
-- **Agent Card**: JSON "business card" advertising agent capabilities, endpoint, security credentials
-- **Task-oriented architecture**: Asynchronous "tasks" instead of simple request-response
-- **Streaming updates**: Long-running connections for progress updates
-
-**Use cases**:
-
-- Multi-agent workflows
-- Agent composition (building complex systems from simpler agents)
-- Cross-platform integration
-
-**EXAM TIP:** Questions about "agent-to-agent communication" → think **A2A protocol** + **Agent Cards** for discovery.
-
-#### Agent Payments Protocol (AP2)
-
-**AP2** is an open protocol for agentic commerce.
-
-**Key features**:
-
-- **Cryptographically-signed mandates**: Verifiable proof of user intent
-- **Non-repudiable audit trail**: Every transaction is logged and verifiable
-- **Delegated authority**: Agents can browse, negotiate, and transact on behalf of users
-
-**Use case**: Enables agents to securely make purchases or transactions on behalf of users.
-
-**EXAM TIP:** Questions about "agent transactions" or "agent payments" → think **AP2** for secure, auditable agent commerce.
-
-#### x402 Payment Protocol
-
-**x402** uses HTTP 402 "Payment Required" status code for machine-to-machine micropayments.
-
-**Key features**:
-
-- **Frictionless micropayments**: Pay-per-use API access or digital content
-- **No complex accounts**: No subscriptions or account management needed
-- **Machine-to-machine**: Designed for agent-to-service payments
-
-**Use case**: Agent pays for API access or digital content on a per-use basis.
-
-**EXAM TIP:** Questions about "micropayments" or "pay-per-use agent services" → think **x402** protocol.
-
----
-
-## 7.14 Multi-Agent Patterns: Diamond, Peer-to-Peer, Collaborative, Adaptive Loop
-
-Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
-
-Beyond the basic patterns (Sequential, Hierarchical, Router, Supervisor), production multi-agent systems use additional patterns:
-
-| Pattern             | Description                                                                               | Use Case Example                                                                  |
-| ------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **Diamond Pattern** | Coordinator delegates to multiple agents in parallel; responses converge to single output | Research team: multiple agents research different angles, coordinator synthesizes |
-| **Peer-to-Peer**    | Agents communicate directly without central coordinator; decentralized coordination       | Swarm intelligence, distributed problem-solving                                   |
-| **Collaborative**   | Agents share information and resources; work together toward common goal                  | Team of researchers contributing expertise                                        |
-| **Adaptive Loop**   | System adapts agent selection/routing based on performance feedback                       | Self-optimizing agent workflows                                                   |
-
-**EXAM TIP:** Questions about "parallel agent execution" → think **Diamond Pattern**. Questions about "decentralized agents" → think **Peer-to-Peer**.
-
----
-
-## 7.19 Agentic RAG: Advanced Retrieval Patterns
-
-Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
-
-**Agentic RAG** extends traditional RAG with autonomous retrieval agents that actively refine their search.
-
-#### Key Capabilities
-
-| Capability                        | Description                                                         | Benefit                                 |
-| --------------------------------- | ------------------------------------------------------------------- | --------------------------------------- |
-| **Context-Aware Query Expansion** | Generate multiple query refinements instead of single search pass   | More comprehensive, relevant results    |
-| **Multi-Step Reasoning**          | Decompose complex queries into logical steps; retrieve sequentially | Better handling of multi-part questions |
-| **Adaptive Source Selection**     | Dynamically select best knowledge sources based on context          | Optimal retrieval from multiple sources |
-| **Validation and Correction**     | Evaluator agents cross-check retrieved knowledge for hallucinations | Higher accuracy, reduced errors         |
-
-**EXAM TIP:** Questions about "improving RAG accuracy" or "multi-step retrieval" → think **Agentic RAG** with query expansion + validation.
-
----
-
-## 7.20 Agent-Human Interaction: Computer Use, Live Mode, UI Control
-
-Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
-
-#### Computer Use (UI Control)
-
-**Computer use** enables agents to control user interfaces directly.
-
-**Capabilities**:
-
-- Navigate to pages
-- Highlight buttons
-- Pre-fill forms
-- Click elements
-
-**Implementation options**:
-
-- **MCP UI**: Tools that control UI via Model Context Protocol
-- **AG UI**: Specialized UI messaging systems syncing client state with agent
-- **A2UI**: Generation of bespoke interfaces
-
-**EXAM TIP:** Questions about "agent controlling UI" or "browser automation" → think **Computer Use** + **MCP UI** or **AG UI**.
-
-#### Live Mode (Multimodal Real-Time Communication)
-
-**Live Mode** enables bidirectional streaming for real-time, multimodal agent interaction.
-
-**Capabilities**:
-
-- **Bidirectional streaming**: User can speak to agent and interrupt it
-- **Multimodal input**: Camera and microphone access
-- **Low-latency speech**: Generated speech at human conversation latency
-
-**Use cases**:
-
-- Hands-free guidance (e.g., technician repairing equipment)
-- Real-time style advice (e.g., shopper getting fashion recommendations)
-
-**Technology**: **Gemini Live API** enables this capability.
-
-**EXAM TIP:** Questions about "real-time agent interaction" or "multimodal agents" → think **Live Mode** + **Gemini Live API**.
-
----
-
-## 7.21 Contracts and Contract Lifecycle (Multi-Agent Systems)
-
-Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
-
-In multi-agent systems, **contracts** define agreements between agents for task delegation and execution.
-
-#### Contract Lifecycle
-
-1. **Contract Creation**: Coordinator agent creates contract defining task, requirements, constraints
-2. **Contract Negotiation**: Agents negotiate terms (deadlines, resources, quality standards)
-3. **Contract Execution**: Agent executes task according to contract
-4. **Contract Feedback**: Performance evaluation, payment (if applicable), contract closure
-
-#### Subcontracts
-
-Agents can create **subcontracts**—delegating portions of their contract to other agents.
-
-**Example**: Project Manager Agent receives contract to "launch product"; creates subcontracts for MarketResearchAgent, MarketingAgent, WebDevAgent.
-
-**EXAM TIP:** Questions about "agent task delegation" or "multi-agent coordination" → think **contracts** + **subcontracts** for structured task distribution.
-
----
-
-## 7.1 Ecosystem Taxonomy and Layers
-
-Think of agentic/LLM systems as a set of layers:
-
-- **Models**: foundation models (proprietary or open weights).
-- **App frameworks**: prompts, tool calling, RAG chains, memory, routing.
-- **Agent orchestration**: multi-step execution, planners/routers, multi-agent supervision, retries/timeouts.
-- **Knowledge / retrieval**: indexing, vector stores, reranking, grounding.
-- **Safety & governance**: policies, guardrails, content safety, secrets/IAM boundaries, audit trails.
-- **Evaluation & observability**: offline evals + online monitoring/tracing/cost.
-- **Serving**: endpoints, batching, caching, streaming, concurrency control.
-
-**EXAM TIP:** When a question says “fully managed” + “enterprise governance” + “rapid delivery” → prefer a **cloud-managed** offering. When it says “custom orchestration” + “bring your own model” + “fine control” → prefer **OSS frameworks + custom infra**.
-
-## 7.8 Core ML/DL Frameworks (Foundation of "Non-LLM" ML Engineering)
-
-Even if you work mostly on GenAI, the ML Engineer exam (and many real systems) still rely on classic ML/DL frameworks:
-
-- **Deep learning**: PyTorch, TensorFlow/Keras, JAX (Flax/Haiku).
-- **Classical ML**: scikit-learn, XGBoost, LightGBM, CatBoost.
-- **Interchange / optimized inference**: ONNX + ONNX Runtime.
-- **Legacy (still seen)**: MXNet, PaddlePaddle, CNTK.
-
-#### Probabilistic / Bayesian programming (for uncertainty-aware modeling)
-
-These show up when you need explicit uncertainty, probabilistic inference, and Bayesian modeling:
-
-- **Stan** (probabilistic programming + HMC/NUTS): [mc-stan.org](https://mc-stan.org/)
-- **PyMC** (Python Bayesian modeling): [pymc.io](https://www.pymc.io/)
-- **Turing.jl** (Julia Bayesian modeling): [turinglang.org](https://turinglang.org/)
-- **Edward** (legacy research ecosystem; still referenced historically)
-
-Example table: core model frameworks
-
-| Category      | Tools (examples)                             |
-| ------------- | -------------------------------------------- |
-| Deep learning | PyTorch, TensorFlow, Keras, JAX (Flax/Haiku) |
-| Classical ML  | scikit-learn, XGBoost, LightGBM, CatBoost    |
-| Interchange   | ONNX, ONNX Runtime                           |
-| Probabilistic | Stan, PyMC, Turing.jl                        |
-| Legacy DL     | MXNet, PaddlePaddle, CNTK                    |
 
 ## 7.4 Google Cloud (Vertex AI + Google Agent Stack)
 
@@ -1509,6 +787,60 @@ Example table: agent and LLM application frameworks
 | Typed/validated “agent code” | PydanticAI                                            |
 | Classic assistants/chatbots  | Rasa                                                  |
 | Vendor-native                | OpenAI (Agents/SDK patterns), Semantic Kernel, Vellum |
+
+---
+
+## 7.11.1 Agent Interoperability: A2A, AP2, and x402 (Extended Protocols)
+
+**Note**: This section extends [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet) with additional protocols (AP2, x402) and advanced A2A concepts. For A2A implementation details (Agent Cards, code examples), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Agent2Agent (A2A) Protocol
+
+**A2A** enables agents to communicate with each other regardless of language or runtime.
+
+**Key components**:
+
+- **Agent Card**: JSON "business card" advertising agent capabilities, endpoint, security credentials
+- **Task-oriented architecture**: Asynchronous "tasks" instead of simple request-response
+- **Streaming updates**: Long-running connections for progress updates
+
+**Use cases**:
+
+- Multi-agent workflows
+- Agent composition (building complex systems from simpler agents)
+- Cross-platform integration
+
+**EXAM TIP:** Questions about "agent-to-agent communication" → think **A2A protocol** + **Agent Cards** for discovery.
+
+#### Agent Payments Protocol (AP2)
+
+**AP2** is an open protocol for agentic commerce.
+
+**Key features**:
+
+- **Cryptographically-signed mandates**: Verifiable proof of user intent
+- **Non-repudiable audit trail**: Every transaction is logged and verifiable
+- **Delegated authority**: Agents can browse, negotiate, and transact on behalf of users
+
+**Use case**: Enables agents to securely make purchases or transactions on behalf of users.
+
+**EXAM TIP:** Questions about "agent transactions" or "agent payments" → think **AP2** for secure, auditable agent commerce.
+
+#### x402 Payment Protocol
+
+**x402** uses HTTP 402 "Payment Required" status code for machine-to-machine micropayments.
+
+**Key features**:
+
+- **Frictionless micropayments**: Pay-per-use API access or digital content
+- **No complex accounts**: No subscriptions or account management needed
+- **Machine-to-machine**: Designed for agent-to-service payments
+
+**Use case**: Agent pays for API access or digital content on a per-use basis.
+
+**EXAM TIP:** Questions about "micropayments" or "pay-per-use agent services" → think **x402** protocol.
 
 ---
 
@@ -6645,6 +5977,23 @@ Use the official Vertex AI documentation for the current SDK surface and best pr
 
 ---
 
+## 7.14 Multi-Agent Patterns: Diamond, Peer-to-Peer, Collaborative, Adaptive Loop
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+Beyond the basic patterns (Sequential, Hierarchical, Router, Supervisor), production multi-agent systems use additional patterns:
+
+| Pattern             | Description                                                                               | Use Case Example                                                                  |
+| ------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Diamond Pattern** | Coordinator delegates to multiple agents in parallel; responses converge to single output | Research team: multiple agents research different angles, coordinator synthesizes |
+| **Peer-to-Peer**    | Agents communicate directly without central coordinator; decentralized coordination       | Swarm intelligence, distributed problem-solving                                   |
+| **Collaborative**   | Agents share information and resources; work together toward common goal                  | Team of researchers contributing expertise                                        |
+| **Adaptive Loop**   | System adapts agent selection/routing based on performance feedback                       | Self-optimizing agent workflows                                                   |
+
+**EXAM TIP:** Questions about "parallel agent execution" → think **Diamond Pattern**. Questions about "decentralized agents" → think **Peer-to-Peer**.
+
+---
+
 ## 7.15 GenAI & Agent Production Deployment
 
 Moving agents from prototype to production requires treating them as **distributed systems** with rigorous engineering practices. This section covers the architectural patterns, security controls, and operational discipline needed for production-grade agent deployments.
@@ -7935,6 +7284,659 @@ def log_agent_trace(trace: AgentTrace):
 **EXAM TIP:** Production agent questions often combine multiple concerns. When you see "production-ready agent system" → think **context engineering + guardrails + eval-driven CI/CD + cost controls + observability**.
 
 ---
+
+## 7.16 Agent Evaluation: Outside-In vs Inside-Out Framework
+
+Source: [Agent Quality Whitepaper](https://www.kaggle.com/whitepaper-agent-quality)
+
+Agent evaluation requires a strategic shift from traditional software testing. The **"Outside-In" evaluation hierarchy** provides a framework for assessing agent quality.
+
+#### The Outside-In View: End-to-End Evaluation (Black Box)
+
+**First question**: "Did the agent achieve the user's goal effectively?"
+
+**Metrics**:
+
+- **Task Success Rate**: Binary/graded score of whether the final output was correct, complete, and solved the user's problem
+- **User Satisfaction**: Direct feedback (thumbs up/down), CSAT scores
+- **Overall Quality**: Accuracy, completeness for quantitative tasks
+
+**EXAM TIP:** Questions about "agent quality" or "evaluation strategy" → start with **Outside-In** (end-to-end success) before diving into internal details.
+
+#### The Inside-Out View: Trajectory Evaluation (Glass Box)
+
+**When to use**: After identifying a failure, analyze the agent's execution trajectory.
+
+**Components to evaluate**:
+
+1. **LLM Planning (The "Thought")**: Core reasoning quality
+
+   - Hallucinations, off-topic responses, context pollution, repetitive loops
+
+2. **Tool Usage**: Selection and parameterization
+
+   - Wrong tool selection, missing tools, hallucinated tool names, incorrect parameters
+
+3. **Tool Response Interpretation**: Understanding tool outputs
+
+   - Misinterpreting data, failing to extract entities, not recognizing error states
+
+4. **RAG Performance**: Retrieval quality
+
+   - Irrelevant documents, outdated information, LLM ignoring retrieved context
+
+5. **Trajectory Efficiency**: Resource usage
+
+   - Excessive API calls, high latency, redundant efforts
+
+6. **Multi-Agent Dynamics**: Inter-agent communication
+   - Communication loops, role conflicts, coordination failures
+
+**EXAM TIP:** Questions about "debugging agent failures" or "trajectory analysis" → think **Inside-Out** evaluation (glass box).
+
+#### Trajectory Evaluation Metrics
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+| Metric              | Description                                                       | When to Use                                     |
+| ------------------- | ----------------------------------------------------------------- | ----------------------------------------------- |
+| **Exact match**     | Trajectory perfectly mirrors ideal solution; no deviation         | Strict workflows (e.g., financial transactions) |
+| **In-order match**  | Core steps completed in order; extra actions allowed              | Flexible workflows with required sequence       |
+| **Any-order match** | All necessary actions included; order doesn't matter              | Parallelizable tasks                            |
+| **Precision**       | How many tool calls in predicted trajectory are relevant/correct? | Measuring tool call accuracy                    |
+| **Recall**          | How many essential tool calls from reference are captured?        | Measuring completeness                          |
+| **Single-tool use** | Is a specific action within the agent's trajectory?               | Testing if agent learned to use a tool          |
+
+**EXAM TIP:** Questions about "trajectory evaluation" → consider **precision/recall** for tool usage, **exact match** for strict workflows, **any-order match** for flexible tasks.
+
+---
+
+## 7.17 Agent Security: Identity, Policies, and Guard Models
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Agent Identity: A New Class of Principal
+
+Agents introduce a **third category of principal** (beyond users and service accounts):
+
+| Principal Entity     | Authentication/Verification                                | Notes                                                   |
+| -------------------- | ---------------------------------------------------------- | ------------------------------------------------------- |
+| **Users**            | OAuth, SSO                                                 | Human actors with full autonomy                         |
+| **Agents**           | SPIFFE (Secure Production Identity Framework for Everyone) | Agents have delegated authority, act on behalf of users |
+| **Service Accounts** | IAM                                                        | Applications/containers, fully deterministic            |
+
+**Key concept**: Each agent must have a **cryptographically verifiable identity** distinct from:
+
+- The user who invoked it
+- The developer who built it
+
+**SPIFFE** provides:
+
+- Verifiable identity for agents
+- Least-privilege permissions per agent
+- Contained blast radius if an agent is compromised
+
+**EXAM TIP:** Questions about "agent authentication" or "agent identity" → think **SPIFFE** for verifiable agent identity.
+
+#### Policies to Constrain Access
+
+**Policies** are authorization (AuthZ) rules that limit agent capabilities:
+
+- **Tool-level policies**: Which APIs/tools can this agent use?
+- **Data access policies**: Which databases/documents can this agent read?
+- **Action policies**: What actions are allowed/forbidden (e.g., "no purchases over $100")?
+
+**Best practice**: Apply **principle of least privilege**—grant only the minimum capabilities needed.
+
+**EXAM TIP:** Questions about "agent authorization" or "limiting agent actions" → think **policies** + **least privilege**.
+
+#### Defense in Depth: Guardrails and Guard Models
+
+**Hybrid security approach**:
+
+1. **Deterministic Guardrails** (Layer 1):
+
+   - Hardcoded rules outside the model's reasoning
+   - Policy engine blocking actions (e.g., "no purchases > $100")
+   - Provides predictable, auditable limits
+
+2. **Reasoning-Based Defenses** (Layer 2):
+   - **Guard models**: Specialized smaller models acting as security analysts
+   - Examine agent's proposed plan before execution
+   - Flag risky or policy-violating steps for review
+
+**EXAM TIP:** Questions about "agent security" or "preventing harmful actions" → think **defense in depth**: deterministic guardrails + guard models.
+
+---
+
+## 7.18 Prototype to Production: Operational Lifecycle
+
+Source: [Prototype to Production Whitepaper](https://www.kaggle.com/whitepaper-prototype-to-production)
+
+**Authors**: Sokratis Kartakis, Gabriela Hernandez Larios, Ran Li, Elia Secchi, and Huang Xia
+
+This whitepaper provides a comprehensive guide to the **operational lifecycle of AI agents**, focusing on deployment, scaling, and productionizing.
+
+**Practical Implementation**: Throughout this whitepaper, examples reference the **Google Cloud Platform Agent Starter Pack**—a Python package providing production-ready Generative AI agent templates for Google Cloud. It includes pre-built agents, automated CI/CD setup, Terraform deployment, Vertex AI evaluation integration, and built-in Google Cloud observability. See: [Agent Starter Pack](https://github.com/GoogleCloudPlatform/agent-starter-pack)
+
+#### People and Process: The Team Behind Production Agents
+
+**Why focus on people and process?** The best technology is ineffective without the right team to build, manage, and govern it.
+
+**Traditional MLOps Teams**:
+
+| Team                        | Responsibilities                                                                                                                          |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud Platform Team**     | Cloud architects, administrators, security specialists; manage infrastructure, security, access control; grant least-privilege roles      |
+| **Data Engineering Team**   | Data engineers and data owners; build/maintain data pipelines, handle ingestion, preparation, quality standards                           |
+| **Data Science/MLOps Team** | Data scientists (experiment/train models), ML engineers (automate ML pipelines), MLOps Engineers (build/maintain pipeline infrastructure) |
+| **ML Governance**           | Product owners, auditors; oversee ML lifecycle, ensure compliance, transparency, accountability                                           |
+
+**Generative AI introduces new specialized roles**:
+
+| Role                      | Responsibilities                                                                                                                                                  |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Prompt Engineers**      | Blend technical skill in crafting prompts with deep domain expertise; define right questions and expected answers (may be done by AI Engineers or domain experts) |
+| **AI Engineers**          | Scale GenAI solutions to production; build robust backend systems with evaluation at scale, guardrails, RAG/tool integration                                      |
+| **DevOps/App Developers** | Build front-end components and user-friendly interfaces that integrate with GenAI backend                                                                         |
+
+**EXAM TIP:** Questions about "who builds agents" or "team structure" → think **AI Engineers** (backend) + **Prompt Engineers** (prompts) + **DevOps** (frontend) + **Cloud Platform Team** (infrastructure).
+
+#### Evaluation-Gated Deployment: The Core Principle
+
+**Core principle**: **No agent version should reach users without first passing a comprehensive evaluation** that proves its quality and safety.
+
+**Two implementation methods**:
+
+1. **Manual "Pre-PR" Evaluation**:
+
+   - AI Engineer/Prompt Engineer runs evaluation suite locally before PR
+   - Performance report (comparing new agent vs production baseline) linked in PR description
+   - Reviewer (AI Engineer or ML Governor) assesses code + behavioral changes
+   - **Use case**: Teams seeking flexibility or beginning their evaluation journey
+
+2. **Automated In-Pipeline Gate**:
+   - Evaluation harness integrated directly into CI/CD pipeline
+   - Failing evaluation automatically blocks deployment
+   - Programmatic enforcement of quality standards
+   - **Use case**: Mature teams prioritizing consistency over flexibility
+
+**EXAM TIP:** Questions about "quality gates" or "pre-production validation" → think **Evaluation-Gated Deployment** (manual pre-PR or automated CI/CD gate).
+
+#### Three-Phase CI/CD Pipeline
+
+A robust pipeline is designed as a **funnel**—catching errors as early and cheaply as possible ("shifting left").
+
+**Phase 1: Pre-Merge Integration (CI)**
+
+- **Purpose**: Rapid feedback to developer who opened PR
+- **Checks**: Unit tests, code linting, dependency scanning, **agent quality evaluation suite**
+- **Benefit**: Prevents polluting main branch; catches performance degradation before merge
+- **Example**: Cloud Build PR checks template from Agent Starter Pack
+
+**Phase 2: Post-Merge Validation in Staging (CD)**
+
+- **Purpose**: Operational readiness of integrated system
+- **Process**: Package agent → deploy to staging (high-fidelity replica of production)
+- **Tests**: Load testing, integration tests against remote services, **internal user testing ("dogfooding")**
+- **Benefit**: Validates agent as integrated system under production-like conditions
+- **Example**: Staging deployment template from Agent Starter Pack
+
+**Phase 3: Gated Deployment to Production**
+
+- **Purpose**: Final deployment to production
+- **Process**: Product Owner gives final sign-off (human-in-the-loop) → exact artifact from staging promoted to production
+- **Benefit**: Ensures production deployment matches tested staging artifact
+- **Example**: Production deployment template from Agent Starter Pack
+
+**Key technologies**:
+
+- **Infrastructure as Code (IaC)**: Terraform defines environments programmatically (identical, repeatable, version-controlled)
+- **Automated Testing Frameworks**: Pytest executes tests/evaluations at each stage
+- **Secret Management**: Secret Manager for API keys (injected at runtime, not hardcoded)
+
+**EXAM TIP:** Questions about "CI/CD for agents" → think **three-phase pipeline**: Pre-merge (CI) → Staging (CD) → Production (gated).
+
+#### Safe Rollout Strategies
+
+**Four proven patterns** for gradual rollouts:
+
+| Strategy          | Description                                                                                                                                      | Use Case                  |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------- |
+| **Canary**        | Start with 1% of users; monitor for prompt injections, unexpected tool usage; scale up gradually or roll back instantly                          | Low-risk initial rollout  |
+| **Blue-Green**    | Run two identical production environments; route traffic to "blue" while deploying to "green"; switch instantly; zero downtime, instant recovery | Zero-downtime deployments |
+| **A/B Testing**   | Compare agent versions on real business metrics for data-driven decisions (internal or external users)                                           | Comparing agent versions  |
+| **Feature Flags** | Deploy code but control release dynamically; test new capabilities with select users first                                                       | Gradual feature rollout   |
+
+**Foundation**: **Rigorous versioning**—every component (code, prompts, model endpoints, tool schemas, memory structures, evaluation datasets) must be versioned. Enables instant rollback to known-good state.
+
+**Deployment options**: Agent Engine or Cloud Run, with Cloud Load Balancing for traffic management.
+
+**EXAM TIP:** Questions about "safe deployment" or "gradual rollout" → think **Canary** (1% → scale up) or **Blue-Green** (zero downtime).
+
+#### Building Security from the Start
+
+**Unique agent risks**:
+
+- **Prompt Injection & Rogue Actions**: Malicious users trick agents into unintended actions
+- **Data Leakage**: Agents expose sensitive information through responses or tool usage
+- **Memory Poisoning**: False information stored in agent's memory corrupts future interactions
+
+**Three layers of defense** (Google's Secure AI Framework - SAIF):
+
+1. **Policy Definition and System Instructions** (The Agent's Constitution):
+
+   - Define policies for desired/undesired behavior
+   - Engineer into System Instructions (SIs)
+
+2. **Guardrails, Safeguards, and Filtering** (The Enforcement Layer):
+
+   - **Input Filtering**: Classifiers (e.g., Perspective API) analyze prompts, block malicious inputs
+   - **Output Filtering**: Vertex AI's built-in safety filters check for harmful content, PII, policy violations
+   - **Human-in-the-Loop (HITL) Escalation**: Pause and escalate high-risk/ambiguous actions for human review
+
+3. **Continuous Assurance and Testing**:
+   - **Rigorous Evaluation**: Any change triggers full re-run of evaluation pipeline (Vertex AI Evaluation)
+   - **Dedicated RAI Testing**: Test for specific risks (NPOV evaluations, Parity evaluations)
+   - **Proactive Red Teaming**: Actively try to break safety systems through creative manual testing and AI-driven simulation
+
+**EXAM TIP:** Questions about "agent security" → think **three-layer defense**: System Instructions + Guardrails/Filtering + Continuous Assurance.
+
+#### Operations in Production: Observe → Act → Evolve Loop
+
+**Core discipline**: Instead of static monitoring, adopt a continuous loop:
+
+1. **Observe**: Understand agent's behavior in real-time
+2. **Act**: Real-time intervention to maintain performance, cost, safety
+3. **Evolve**: Long-term strategic improvement based on production learnings
+
+**Observe: Your Agent's Sensory System**
+
+**Three pillars of observability**:
+
+| Pillar      | Description                                                                         | Example                                                                                       |
+| ----------- | ----------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| **Logs**    | Granular, factual diary of what happened (every tool call, error, decision)         | Cloud Logging                                                                                 |
+| **Traces**  | Narrative connecting individual logs (reveals causal path of why agent took action) | Cloud Trace (unique ID links Vertex AI Agent Engine invocation, model calls, tool executions) |
+| **Metrics** | Aggregated report card (performance, cost, operational health at scale)             | Cloud Monitoring dashboards (alert when latency thresholds exceeded)                          |
+
+**ADK Integration**: Agent Development Kit provides built-in Cloud Trace integration for automatic instrumentation.
+
+**Act: The Levers of Operational Control**
+
+**Two categories of operational levers**:
+
+1. **Managing System Health: Performance, Cost, and Scale**
+
+   **Designing for Scale**:
+
+   - **Horizontal Scaling**: Design agent as stateless, containerized service; external state enables any instance to handle any request (Cloud Run, Vertex AI Agent Engine Runtime)
+   - **Asynchronous Processing**: Offload long-running tasks using event-driven patterns (Pub/Sub → Cloud Run)
+   - **Externalized State Management**: Persist memory externally (Vertex AI Agent Engine built-in Session/memory service, or Cloud Run + AlloyDB/Cloud SQL)
+
+   **Balancing Competing Goals**:
+
+   - **Speed (Latency)**: Parallel processing, aggressive caching, smaller efficient models for routine tasks
+   - **Reliability**: Automatic retries with exponential backoff; design idempotent tools (safe-to-retry)
+   - **Cost**: Shorten prompts, use cheaper models for easier tasks, batch requests
+
+2. **Managing Risk: The Security Response Playbook**
+
+   **Sequence**: **Contain → Triage → Resolve**
+
+   - **Contain**: Immediate containment via "circuit breaker" (feature flag to disable affected tool)
+   - **Triage**: Route suspicious requests to HITL review queue; investigate exploit scope/impact
+   - **Resolve**: Develop patch (updated input filter, system prompt); deploy via automated CI/CD pipeline
+
+**Evolve: Learning from Production**
+
+**The Evolution Workflow**:
+
+1. **Analyze Production Data**: Identify trends in user behavior, task success rates, security incidents
+2. **Update Evaluation Datasets**: Transform production failures into test cases (augment golden dataset)
+3. **Refine and Deploy**: Commit improvements → trigger automated pipeline (refine prompts, add tools, update guardrails)
+
+**Example**: Retail agent logs show 15% of users receive error when asking for 'similar products' → Create failing test case → Engineer refines prompt + adds robust similarity search tool → Commits change → Passes updated evaluation suite → Safely rolled out via canary deployment → Resolved in under 48 hours.
+
+**Evolving Security**: Production feedback loop for security:
+
+- **Observe**: Monitoring detects new threat vector (novel prompt injection, unexpected data leak)
+- **Act**: Security response team contains threat
+- **Evolve**: Feed insight back into development lifecycle:
+  - Update evaluation datasets (add attack as permanent test case)
+  - Refine guardrails (update system prompt, input filters, tool-use policies)
+  - Automate and deploy (commit change → CI/CD validates → deploy)
+
+**EXAM TIP:** Questions about "production operations" or "continuous improvement" → think **Observe → Act → Evolve loop**.
+
+#### A2A Implementation: Agent Cards and Code Examples
+
+**Agent Card**: Standardized JSON specification acting as "business card" for each agent.
+
+**Agent Card structure**:
+
+```json
+{
+  "name": "check_prime_agent",
+  "version": "1.0.0",
+  "description": "An agent specialized in checking whether numbers are prime",
+  "capabilities": {},
+  "securitySchemes": {
+    "agent_oauth_2_0": {
+      "type": "oauth2"
+    }
+  },
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["application/json"],
+  "skills": [
+    {
+      "id": "prime_checking",
+      "name": "Prime Number Checking",
+      "description": "Check if numbers are prime using efficient algorithms",
+      "tags": ["mathematical", "computation", "prime"]
+    }
+  ],
+  "url": "http://localhost:8001/a2a/check_prime_agent"
+}
+```
+
+**Making an agent A2A-compatible (ADK)**:
+
+```python
+from google.adk.a2a.utils.agent_to_a2a import to_a2a
+
+# Your existing agent
+root_agent = Agent(
+    name='hello_world_agent',
+    # ... your agent code ...
+)
+
+# Make it A2A-compatible
+a2a_app = to_a2a(root_agent, port=8001)
+# Serve with uvicorn or Agent Engine
+```
+
+**Consuming a remote agent via A2A (ADK)**:
+
+```python
+from google.adk.agents.remote_a2a_agent import RemoteA2aAgent
+
+prime_agent = RemoteA2aAgent(
+    name="prime_agent",
+    description="Agent that handles checking if numbers are prime.",
+    agent_card="http://localhost:8001/a2a/check_prime_agent/.well-known/agent-card.json"
+)
+```
+
+**Hierarchical agent composition**:
+
+```python
+# Local sub-agent for dice rolling
+roll_agent = Agent(
+    name="roll_agent",
+    instruction="You are an expert at rolling dice."
+)
+
+# Remote A2A agent for prime checking
+prime_agent = RemoteA2aAgent(
+    name="prime_agent",
+    agent_card="http://localhost:8001/.well-known/agent-card.json"
+)
+
+# Root orchestrator combining both
+root_agent = Agent(
+    name="root_agent",
+    instruction="Delegate rolling dice to roll_agent, prime checking to prime_agent.",
+    sub_agents=[roll_agent, prime_agent]
+)
+```
+
+**Non-negotiable technical requirements**:
+
+- **Distributed tracing**: Every request carries unique trace ID (essential for debugging, audit trail)
+- **Robust state management**: A2A interactions are stateful; require sophisticated persistence layer
+
+**When to use A2A vs local sub-agents**:
+
+- **A2A**: Formal, cross-team integrations requiring durable service contract
+- **Local sub-agents**: Tightly coupled tasks within single application (more efficient)
+
+**EXAM TIP:** Questions about "agent discovery" or "agent-to-agent communication" → think **Agent Cards** (JSON specification) + **A2A protocol**.
+
+#### How A2A and MCP Work Together
+
+**They are complementary, not competing**:
+
+| Protocol | Domain                            | Use Case Example                                                                    |
+| -------- | --------------------------------- | ----------------------------------------------------------------------------------- |
+| **MCP**  | Tools and resources (primitives)  | Calculator, database API, weather API                                               |
+| **A2A**  | Other agents (autonomous systems) | "Analyze last quarter's customer churn and recommend three intervention strategies" |
+
+**Layered architecture**: Use **A2A** for high-level agent collaboration; each agent internally uses **MCP** to interact with its specific tools.
+
+**Example workflow** (auto repair shop):
+
+1. **User-to-Agent (A2A)**: Customer communicates with "Shop Manager" agent
+2. **Agent-to-Agent (A2A)**: Shop Manager delegates to specialized "Mechanic" agent
+3. **Agent-to-Tool (MCP)**: Mechanic agent uses MCP to call tools (`scan_vehicle_for_error_codes()`, `get_repair_procedure()`, `raise_platform()`)
+4. **Agent-to-Agent (A2A)**: Mechanic communicates with external "Parts Supplier" agent
+
+**EXAM TIP:** Questions about "MCP vs A2A" → **MCP** for tools/resources, **A2A** for agent-to-agent collaboration.
+
+**For detailed A2A implementation** (Agent Cards, code examples, hierarchical composition), see [§ 7.18 Prototype to Production: A2A Implementation](#718-prototype-to-production-operational-lifecycle).
+
+#### Registry Architectures: When and How to Build Them
+
+**Decision framework**: Build registries when scale/complexity demands centralized management.
+
+**Tool Registry** (using MCP):
+
+- **Purpose**: Catalog all assets (functions, APIs)
+- **Patterns**:
+  - **Generalist agents**: Access full catalog (trades speed/accuracy for scope)
+  - **Specialist agents**: Use predefined subsets (higher performance)
+  - **Dynamic agents**: Query registry at runtime (adapt to new tools)
+- **Benefits**: Human discovery (developers search before building duplicates), security auditing, capability understanding
+- **Build when**: Tool discovery becomes bottleneck OR security requires centralized auditing
+
+**Agent Registry** (using A2A AgentCards):
+
+- **Purpose**: Catalog agents for discovery and reuse
+- **Benefits**: Teams discover/reuse existing agents, reduce redundant work, enable automated agent-to-agent delegation
+- **Build when**: Multiple teams need to discover/reuse specialized agents without tight coupling
+
+**Trade-off**: Registries offer discovery and governance at the cost of maintenance. **Start without one**; build when ecosystem scale demands centralized management.
+
+**EXAM TIP:** Questions about "tool/agent discovery" or "centralized management" → think **Tool Registry** (MCP) or **Agent Registry** (A2A AgentCards) when scale/complexity demands it.
+
+#### AgentOps Lifecycle: Complete Reference Architecture
+
+**The lifecycle**:
+
+1. **Developer's Inner Loop**: Rapid local testing and prototyping to shape agent's core logic
+2. **Pre-Production Engine**: Automated evaluation gates validate quality and safety against golden dataset
+3. **Safe Rollouts**: Release to production with gradual rollout strategies
+4. **Production Observability**: Comprehensive observability captures real-world data
+5. **Evolution Loop**: Turn every insight into the next improvement
+
+**Key capabilities**:
+
+- **Evaluation**: Golden datasets, LLM-as-judge, trajectory evaluation
+- **CI/CD**: Three-phase pipeline (Pre-merge → Staging → Production)
+- **Observability**: Logs, traces, metrics (Cloud Logging, Cloud Trace, Cloud Monitoring)
+- **Security**: Three-layer defense (System Instructions + Guardrails + Continuous Assurance)
+- **Interoperability**: A2A protocol, MCP protocol, registries
+
+**EXAM TIP:** Questions about "agent operations" or "production lifecycle" → think **AgentOps**: Evaluation-gated deployment → Safe rollouts → Observe → Act → Evolve loop.
+
+#### Key Challenges in Production
+
+| Challenge            | Description                                                            | Mitigation Strategy                                                |
+| -------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Reliability**      | Agents can fail unpredictably; tool calls may timeout or return errors | Retries, fallbacks, circuit breakers, graceful degradation         |
+| **Scalability**      | Agent workloads are bursty; context management is expensive            | Auto-scaling, context optimization, caching, async processing      |
+| **Observability**    | Non-deterministic behavior makes debugging difficult                   | Comprehensive logging, tracing, metrics, reasoning exposure        |
+| **Cost control**     | LLM calls and tool usage can spiral without limits                     | Token budgets, cost tracking, rate limiting, model tier routing    |
+| **Security**         | Agents have expanded attack surface (prompt injection, tool misuse)    | Input/output guardrails, tool-level validation, IAM, audit logging |
+| **Interoperability** | Agents need to communicate with each other and external systems        | A2A protocol, MCP, standardized APIs, event-driven architecture    |
+
+#### CI/CD for Agents: Comparison Table and Pipeline Diagram
+
+**Note**: For detailed explanation of the three-phase pipeline (Pre-Merge → Staging → Production), see [§ 7.18: Three-Phase CI/CD Pipeline](#three-phase-cicd-pipeline) above.
+
+**Traditional CI/CD** → **Agent CI/CD** comparison:
+
+| Stage       | Traditional                     | Agent-Specific                                                          |
+| ----------- | ------------------------------- | ----------------------------------------------------------------------- |
+| **Build**   | Compile code, run unit tests    | Validate prompts, test tool integrations, check context compilation     |
+| **Test**    | Unit tests, integration tests   | Agent trajectory tests, LLM-as-judge evaluation, safety checks          |
+| **Deploy**  | Blue/green, canary              | Canary with eval metrics, shadow mode, A/B testing with quality gates   |
+| **Monitor** | Latency, error rate, throughput | Task success rate, tool call accuracy, cost per task, safety violations |
+
+**Agent-specific CI/CD pipeline**:
+
+```
+┌────────────────────────────────────────────────────────────────────────┐
+│                    AGENT CI/CD PIPELINE                                 │
+├────────────────────────────────────────────────────────────────────────┤
+│                                                                        │
+│  Code Commit                                                           │
+│      │                                                                 │
+│      ▼                                                                 │
+│  ┌─────────────────┐                                                   │
+│  │  Build & Lint   │  • Validate prompts                              │
+│  │                 │  • Check tool schemas                             │
+│  │                 │  • Verify context processors                     │
+│  └────────┬────────┘                                                   │
+│           │                                                            │
+│           ▼                                                            │
+│  ┌─────────────────┐                                                   │
+│  │  Unit Tests      │  • Tool function tests                           │
+│  │                 │  • Prompt template tests                          │
+│  │                 │  • Context compilation tests                      │
+│  └────────┬────────┘                                                   │
+│           │                                                            │
+│           ▼                                                            │
+│  ┌─────────────────┐                                                   │
+│  │  Agent Eval      │  • Trajectory evaluation                         │
+│  │                 │  • LLM-as-judge quality checks                   │
+│  │                 │  • Safety/guardrail tests                         │
+│  │                 │  • Cost estimation                               │
+│  └────────┬────────┘                                                   │
+│           │                                                            │
+│           ▼                                                            │
+│  ┌─────────────────┐                                                   │
+│  │  Security Scan   │  • Prompt injection detection                    │
+│  │                 │  • Tool permission audit                          │
+│  │                 │  • PII detection                                 │
+│  └────────┬────────┘                                                   │
+│           │                                                            │
+│           ▼                                                            │
+│  ┌─────────────────┐                                                   │
+│  │  Staging         │  • Shadow mode (log, don't act)                  │
+│  │                 │  • A/B testing with eval metrics                 │
+│  └────────┬────────┘                                                   │
+│           │                                                            │
+│           ▼                                                            │
+│  ┌─────────────────┐                                                   │
+│  │  Production      │  • Canary deployment                            │
+│  │                 │  • Automatic rollback on quality degradation     │
+│  └─────────────────┘                                                   │
+│                                                                        │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+**Note**: For A2A implementation details (Agent Cards, code examples, hierarchical composition), see [§ 7.18: A2A Implementation](#a2a-implementation-agent-cards-and-code-examples) above. For foundational concepts on A2A vs MCP, see [§ 7.11 Interoperability Protocols](#711-interoperability-protocols-mcp--a2a-the-agent-internet).
+
+---
+
+## 7.19 Agentic RAG: Advanced Retrieval Patterns
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+**Agentic RAG** extends traditional RAG with autonomous retrieval agents that actively refine their search.
+
+#### Key Capabilities
+
+| Capability                        | Description                                                         | Benefit                                 |
+| --------------------------------- | ------------------------------------------------------------------- | --------------------------------------- |
+| **Context-Aware Query Expansion** | Generate multiple query refinements instead of single search pass   | More comprehensive, relevant results    |
+| **Multi-Step Reasoning**          | Decompose complex queries into logical steps; retrieve sequentially | Better handling of multi-part questions |
+| **Adaptive Source Selection**     | Dynamically select best knowledge sources based on context          | Optimal retrieval from multiple sources |
+| **Validation and Correction**     | Evaluator agents cross-check retrieved knowledge for hallucinations | Higher accuracy, reduced errors         |
+
+**EXAM TIP:** Questions about "improving RAG accuracy" or "multi-step retrieval" → think **Agentic RAG** with query expansion + validation.
+
+---
+
+## 7.20 Agent-Human Interaction: Computer Use, Live Mode, UI Control
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+#### Computer Use (UI Control)
+
+**Computer use** enables agents to control user interfaces directly.
+
+**Capabilities**:
+
+- Navigate to pages
+- Highlight buttons
+- Pre-fill forms
+- Click elements
+
+**Implementation options**:
+
+- **MCP UI**: Tools that control UI via Model Context Protocol
+- **AG UI**: Specialized UI messaging systems syncing client state with agent
+- **A2UI**: Generation of bespoke interfaces
+
+**EXAM TIP:** Questions about "agent controlling UI" or "browser automation" → think **Computer Use** + **MCP UI** or **AG UI**.
+
+#### Live Mode (Multimodal Real-Time Communication)
+
+**Live Mode** enables bidirectional streaming for real-time, multimodal agent interaction.
+
+**Capabilities**:
+
+- **Bidirectional streaming**: User can speak to agent and interrupt it
+- **Multimodal input**: Camera and microphone access
+- **Low-latency speech**: Generated speech at human conversation latency
+
+**Use cases**:
+
+- Hands-free guidance (e.g., technician repairing equipment)
+- Real-time style advice (e.g., shopper getting fashion recommendations)
+
+**Technology**: **Gemini Live API** enables this capability.
+
+**EXAM TIP:** Questions about "real-time agent interaction" or "multimodal agents" → think **Live Mode** + **Gemini Live API**.
+
+---
+
+## 7.21 Contracts and Contract Lifecycle (Multi-Agent Systems)
+
+Source: [Agents Companion Whitepaper](https://www.kaggle.com/whitepaper-agents-companion)
+
+In multi-agent systems, **contracts** define agreements between agents for task delegation and execution.
+
+#### Contract Lifecycle
+
+1. **Contract Creation**: Coordinator agent creates contract defining task, requirements, constraints
+2. **Contract Negotiation**: Agents negotiate terms (deadlines, resources, quality standards)
+3. **Contract Execution**: Agent executes task according to contract
+4. **Contract Feedback**: Performance evaluation, payment (if applicable), contract closure
+
+#### Subcontracts
+
+Agents can create **subcontracts**—delegating portions of their contract to other agents.
+
+**Example**: Project Manager Agent receives contract to "launch product"; creates subcontracts for MarketResearchAgent, MarketingAgent, WebDevAgent.
+
+**EXAM TIP:** Questions about "agent task delegation" or "multi-agent coordination" → think **contracts** + **subcontracts** for structured task distribution.
+
+---
+
+
 
 ## 7.22 Vector Stores & Retrieval Infrastructure (RAG Substrate)
 
