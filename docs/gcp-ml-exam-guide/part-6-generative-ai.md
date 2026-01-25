@@ -2761,6 +2761,27 @@ Example prompts:
 
 **EXAM TIP:** Role prompting is great when the question is about **controlling tone/format** or aligning outputs to a job function (support, sales, analyst). It does **not** replace grounding: for factual answers over enterprise data, pair it with **RAG/grounding** and cite sources.
 
+#### Prompt chaining (iterative prompting)
+
+When you use a chat-style tool (like Gemini), **previous prompts and answers become context** for the next turn. **Prompt chaining** is the technique of reaching a complex outcome through a **sequence** of smaller prompts, where each step refines or constrains the result.
+
+Why it works:
+
+- **Complex tasks decompose better**: you can iterate instead of trying to “one-shot” the perfect prompt.
+- **Progressive refinement**: you can add constraints (tone, length, structure) after you see a draft.
+- **Interactive discovery**: you can ask the model clarifying questions, then answer them to steer.
+
+Simple chain template (practical):
+
+1. **Set a goal**: “Help me draft X for Y audience with Z constraints.”
+2. **Start broad**: “Give me a first draft / outline.”
+3. **Build the chain**: “Make it shorter”, “add 3 bullet action items”, “output JSON”, “change tone”, “add risks/assumptions”.
+4. **Observe and refine**: keep the parts that work; explicitly remove what doesn’t (“drop section 3”, “avoid jargon”, “no hallucinated facts”).
+
+**COMMON TRAP:** Because chat history carries over, errors (wrong assumptions, wrong definitions, sensitive data pasted earlier) can propagate. When the conversation gets long, prefer: (a) **summarize and restate constraints**, (b) use a clean new thread, or (c) store key facts externally and re-inject only what you need (context engineering).
+
+**EXAM TIP:** If a scenario mentions “multi-step refinement” or “iterating with the model” → think **prompt chaining**. If it mentions “the model keeps using earlier wrong context” → think **session/context management** (reset, summarize, or constrain inputs).
+
 **Systematic Prompt Development Workflow**:
 
 **Developing an effective prompt**: Is an iterative engineering process. Rather than guess-and-check ad hoc, it helps to follow a structured workflow:
