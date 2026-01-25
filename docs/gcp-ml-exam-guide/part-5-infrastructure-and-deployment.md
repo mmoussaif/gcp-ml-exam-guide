@@ -1,13 +1,20 @@
 ## PART V: INFRASTRUCTURE & DEPLOYMENT
 
+**Scope note (important):** This part covers **infrastructure** for _both_ classic predictive ML and GenAI, but they have different bottlenecks and patterns.
+
+- **Predictive ML infrastructure (5.0–5.4)**: storage/security, hardware, cost, and classic model serving (e.g., TensorFlow Serving).
+- **GenAI / LLM infrastructure (5.5)**: token-by-token generation, KV cache, batching/schedulers, and LLM-serving patterns.
+
 ### Table of Contents
 
-- [5.0 STORAGE + SECURITY BASICS](#50-storage--security-basics-often-tested)
-- [5.1 HARDWARE SELECTION](#51-hardware-selection)
-- [5.2 COMMON ERRORS](#52-common-errors)
-- [5.3 COST OPTIMIZATION](#53-cost-optimization)
-- [5.4 TENSORFLOW SERVING OPTIMIZATION](#54-tensorflow-serving-optimization)
-- [5.5 LLM SERVING (GenAI production patterns)](#55-llm-serving-genai-production-patterns)
+- [Predictive ML infrastructure](#predictive-ml-infrastructure-50-54)
+  - [5.0 STORAGE + SECURITY BASICS](#50-storage--security-basics-often-tested)
+  - [5.1 HARDWARE SELECTION](#51-hardware-selection)
+  - [5.2 COMMON ERRORS](#52-common-errors)
+  - [5.3 COST OPTIMIZATION](#53-cost-optimization)
+  - [5.4 TENSORFLOW SERVING OPTIMIZATION](#54-tensorflow-serving-optimization)
+- [GenAI / LLM infrastructure](#genai--llm-infrastructure-55)
+  - [5.5 LLM SERVING (GenAI production patterns)](#55-llm-serving-genai-production-patterns)
 
 ### Official docs (high-signal starting points)
 
@@ -22,6 +29,8 @@
 - **Preemptible VMs**: [Preemptible Instances](https://cloud.google.com/compute/docs/instances/preemptible)
 - **TensorFlow Serving**: [TensorFlow Serving Guide](https://www.tensorflow.org/tfx/guide/serving)
 - **Triton Inference Server on GKE**: [Serve TensorFlow Model on GKE](https://cloud.google.com/kubernetes-engine/docs/tutorials/serve-tensorflow-model)
+
+### Predictive ML infrastructure (5.0–5.4)
 
 ### 5.0 STORAGE + SECURITY BASICS (often tested)
 
@@ -205,6 +214,8 @@ For very large deep models (hundreds of millions of parameters) with strict late
 - Use **GPU-enabled online endpoints** and optimized serving runtimes (e.g., NVIDIA Triton / optimized TF Serving)
 
 **EXAM TIP:** “<50ms online predictions for large deep model” → GPU endpoint + optimized serving (not batch prediction, not Cloud Functions).
+
+### GenAI / LLM infrastructure (5.5)
 
 ### 5.5 LLM SERVING (GenAI production patterns)
 
