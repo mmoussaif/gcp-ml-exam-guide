@@ -1,4 +1,4 @@
-## PART V: INFRASTRUCTURE & DEPLOYMENT
+## PART V: INFRASTRUCTURE & DEPLOYMENT (Track A + Track B)
 
 **Scope note (important):** This part covers **infrastructure** for _both_ classic predictive ML and GenAI, but they have different bottlenecks and patterns.
 

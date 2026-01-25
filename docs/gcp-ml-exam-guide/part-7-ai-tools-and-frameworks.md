@@ -1,4 +1,4 @@
-## PART VII: AI TOOLS & FRAMEWORKS (Agents + LLM Apps)
+## PART VII: AI TOOLS & FRAMEWORKS (Agents + LLM Apps) (Track B — GenAI & Agentic AI)
 
 **Important note:** This part is **not** official exam content/scope. It's included as an author-curated reference to capture extra details and practical ecosystem knowledge that often helps in real projects (and sometimes informs exam intuition).
 

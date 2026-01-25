@@ -1,4 +1,4 @@
-## PART I: MACHINE LEARNING FUNDAMENTALS
+## PART I: MACHINE LEARNING FUNDAMENTALS (Track A — Predictive ML)
 
 This section covers core ML concepts that form the foundation of the exam. Understanding these fundamentals is critical for answering both direct conceptual questions and scenario-based questions.
 

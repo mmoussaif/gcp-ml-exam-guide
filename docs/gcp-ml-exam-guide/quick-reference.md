@@ -32,6 +32,9 @@ Use this section when you’re studying the **core exam track** (Parts I–V).
 
 Use this section when you’re studying **LLMs/RAG/agents** (Parts VI–VII) and **GenAI infra** (Part V.5).
 
+- Track A entry page: `track-predictive-ml.md`
+- Track B entry page: `track-genai-agentic.md`
+
 ---
 
 ## Data & Feature Engineering

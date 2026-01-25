@@ -1,6 +1,11 @@
-## PART VI: GENERATIVE AI
+## PART VI: GENERATIVE AI (Track B — GenAI & Agentic AI)
 
 The October 2024 exam version includes Generative AI topics.
+
+**How to use this part (flow):**
+
+- If you want the **engineering core**, start at **6.0.1 Foundations** and proceed in order through **transformers → prompting/decoding → RAG → agents → production**.
+- The **Executive lens** and **learning journey** sections are intentionally short and **optional** (good context, not required for most exam questions).
 
 ### Table of Contents
 
