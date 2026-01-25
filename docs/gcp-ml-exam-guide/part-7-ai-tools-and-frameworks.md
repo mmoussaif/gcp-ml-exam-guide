@@ -8,6 +8,13 @@ This part is a **tooling map** (commercial + open-source) for building LLM apps 
 - Recognize common tool categories that show up in exam-style scenarios (RAG, orchestration, guardrails, eval/observability, serving).
 - Translate requirements (latency, governance, data access, compliance, cost) into a concrete stack.
 
+### How to use this part (so it doesn’t feel scattered)
+
+- If you’re learning, read **7.1 → 7.7** first (taxonomies + cloud platforms).
+- If you’re building agents, focus on **7.12 → 7.18** (frameworks, memory, patterns, production, eval, security).
+- Treat **7.22 → 7.25** as reference chapters (vector stores, serving engines, eval tooling, guardrails).
+- Everything else is optional “ecosystem breadth” for picking tools.
+
 ### Table of Contents
 
 **Foundations & Core Concepts**:

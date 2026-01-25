@@ -34,44 +34,23 @@ The October 2024 exam version includes Generative AI topics.
 - [6.9 MODEL CUSTOMIZATION](#69-model-customization)
 - [6.10 Skill Boost PDF reading lists](#610-skill-boost-pdf-reading-lists-useful-references)
 
-### Executive lens (why leaders care, and what can go wrong)
+### Official docs (high-signal starting points)
 
-This section is intentionally short and more “human”: it reflects how GenAI leaders describe the space in practice.
+- Vertex AI Generative AI: <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/overview">https://cloud.google.com/vertex-ai/generative-ai/docs/overview</a>
+- Gemini API (Google AI for Developers): <a href="https://ai.google.dev/gemini-api/docs">https://ai.google.dev/gemini-api/docs</a>
+- Vertex AI Search: <a href="https://cloud.google.com/generative-ai-app-builder/docs/overview">https://cloud.google.com/generative-ai-app-builder/docs/overview</a>
+- Vertex AI RAG Engine: <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/overview">https://cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/overview</a>
+- Vertex AI Model Evaluation (GenAI): <a href="https://cloud.google.com/vertex-ai/generative-ai/docs/evaluate/overview">https://cloud.google.com/vertex-ai/generative-ai/docs/evaluate/overview</a>
+- Model Armor: <a href="https://cloud.google.com/security/products/model-armor">https://cloud.google.com/security/products/model-armor</a>
+- Cloud Armor: <a href="https://cloud.google.com/armor/docs">https://cloud.google.com/armor/docs</a>
+- Secret Manager: <a href="https://cloud.google.com/secret-manager/docs">https://cloud.google.com/secret-manager/docs</a>
 
-- **The upside**: GenAI can help teams work faster and unlock new workflows (summarization, translation/rewriting for tone, coding, multimodal creation).
-- **The risk**: One of the biggest risks is **slowing down productivity**—tools can distract, add review burden, or create “busywork outputs” if the organization doesn’t set expectations and guardrails.
-- **The competitive reality**: Not using these tools can be a disadvantage because you miss new ways of working and new opportunities.
-- **Multimodal matters**: The better your organization can provide **high-quality inputs** across modalities (text, images, video), the better these systems tend to perform in real workflows.
-- **Leadership’s lever**: Education + enablement. Teams need practical training on **capabilities and limitations** so they adopt GenAI intentionally (not blindly).
+### Optional context (non-exam): adoption lens
 
-**Note:** Some productivity figures in training materials (e.g., “hours saved per year”) are often context-dependent—treat them as hypotheses to validate in your organization.
-
-### A practical learning journey (from the “GenAI Leader” learning path)
-
-This is **not official exam scope**; it’s included to make the guide feel less robotic and to reflect how Google’s GenAI Leader curriculum frames adoption for non-technical leaders.
-
-- **Start simple**: GenAI “beyond the chatbot” — focus on what it can do in business settings, not the math.
-- **Earn buy-in**: learn how to talk about use cases and value with both technical and non-technical teams.
-- **Build shared language**: cover foundational terms (LLMs, prompts, responsible AI) so teams can collaborate.
-- **Understand the landscape**: think in layers (models → apps → data/RAG → ops/governance), with different opportunities/risks at each layer.
-- **Make it personal**: apply GenAI to individual workflows (where adoption often starts).
-- **Make it durable**: move toward custom tools/agents that fit the organization (with guardrails, evaluation, and governance).
-
-### Why GenAI became a huge buzzword (what changed around 2022)
-
-AI as a field has been around for a long time and has quietly powered everyday products (feeds, recommendations, voice assistants, autocomplete). What changed with “GenAI” is that:
-
-- **LLMs suddenly got much more capable** at understanding complex instructions and producing high-quality text (and later, multimodal outputs).
-- **Compute became more accessible** for training and deployment, alongside tooling designed for AI workloads.
-
-Together, these shifts made GenAI feel like a step-change in what teams could do “out of the box”, and created the adoption wave we’re seeing.
-
-**What you should be able to explain (foundational concepts checklist)**
-
-- **AI vs ML vs GenAI**: where each fits and why GenAI is different from traditional task-specific models
-- **Data types + requirements**: how modality (text, image, audio, video) and data quality shape what's possible
-- **Strategies to address foundation-model limitations**: prompting, grounding/RAG, tuning, evaluation, and guardrails (pick the lightest that works)
-- **Responsible + secure AI in orgs**: privacy, safety, policy, and operational controls (before scaling)
+- **Upside**: unlock new workflows (summarization, rewriting, coding, multimodal creation).
+- **Risks**: hallucinations, safety/compliance, and productivity drag without guardrails.
+- **What changed (2022+)**: stronger instruction-following + better tooling + accessible deployment.
+- **Rule of thumb**: start with **prompting**, then **RAG/grounding**, then **tuning** only if needed.
 
 ### 6.0.1 Foundations of AI Engineering and LLMOps
 

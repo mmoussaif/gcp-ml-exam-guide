@@ -254,6 +254,8 @@ Use this section when you’re studying **LLMs/RAG/agents** (Parts VI–VII) and
 
 ## Generative AI & Agents
 
+**Track B content starts here.**
+
 ### RAG & Grounding
 
 | Problem                                             | Solution                                                                 |
