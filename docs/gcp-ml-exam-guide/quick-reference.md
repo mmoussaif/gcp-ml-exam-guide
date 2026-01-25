@@ -428,7 +428,3 @@ Automated web search in this environment is currently unreliable, so verify thes
 - **Vertex AI endpoints, batch prediction, monitoring**: Vertex AI docs
 - **Cloud DLP format-preserving encryption**: Cloud DLP docs
 - **TFX component definitions**: TFX docs
-
----
-
-**Tip**: Use Ctrl+F (or Cmd+F) to quickly search this document for specific problems or solutions!
