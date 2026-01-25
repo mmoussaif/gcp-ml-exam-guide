@@ -2791,6 +2791,21 @@ If you find yourself typing the same long context repeatedly, you can reuse it i
 - **Saved info**: store persistent facts that should apply to many chats (your role, preferred format, recurring KPIs).
 - **Gems**: create a task-specific assistant with dedicated instructions/resources (e.g., a marketing Gem vs a coding Gem) so context stays scoped to the task.
 
+How Gems work (mental model):
+
+- **A Gem is a reusable “persona + workflow” wrapper**: you configure instructions (role, tone, rules) and optionally add task resources, then reuse it.
+- **Personalized responses**: the Gem follows its instructions so outputs are more consistent for that use case (e.g., “code reviewer”, “project risk assessor”, “marketing writer”).
+- **Streamlined workflows**: Gems can bake in templates, checklists, or guided questions so you don’t retype the same setup every time.
+- **Reset context (important)**: you can start **multiple separate chats** with the same Gem; each chat is its own thread so details from one session **don’t spill** into another (unlike one long chat history).
+- **Built-in vs custom**: you can use Google-provided Gems or create your own Gem tailored to your job.
+
+What to put in a custom Gem:
+
+- **Role prompting**: define the role explicitly (e.g., “You are an air traffic controller…”, “You are a telecom support agent…”).
+- **Constraints and success criteria**: what “good” looks like (format, tone, refusal rules, required citations).
+- **Examples**: 1–3 good input/output examples can stabilize behavior.
+- **A focused knowledge base**: add specific documents/resources so the Gem stays grounded in your project context (e.g., style guide, coding standards, runbooks).
+
 Quick mapping:
 
 | If you need…                                   | Prefer…                         | Why                                         |
