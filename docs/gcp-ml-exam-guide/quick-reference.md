@@ -1,9 +1,16 @@
 ## QUICK REFERENCE
 
-A friendly, organized guide to common ML engineering problems and their solutions on Google Cloud.
+A friendly, organized guide to common ML engineering and GenAI/agent problems and their solutions on Google Cloud.
+
+This quick reference is split into two tracks:
+
+- **Track A (Predictive ML)**: Parts I–V (mostly)
+- **Track B (GenAI/Agentic AI)**: Parts V.5–VII (mostly)
 
 ### Table of Contents
 
+- [Track A — Predictive ML](#track-a--predictive-ml)
+- [Track B — GenAI & Agents](#track-b--genai--agents)
 - [Data & Feature Engineering](#data--feature-engineering)
 - [Model Training & Optimization](#model-training--optimization)
 - [Data Quality & Validation](#data-quality--validation)
@@ -14,6 +21,16 @@ A friendly, organized guide to common ML engineering problems and their solution
 - [Generative AI & Agents](#generative-ai--agents)
 - [Common Exam Traps](#common-exam-traps)
 - [Study Resources](#study-resources)
+
+---
+
+## Track A — Predictive ML
+
+Use this section when you’re studying the **core exam track** (Parts I–V).
+
+## Track B — GenAI & Agents
+
+Use this section when you’re studying **LLMs/RAG/agents** (Parts VI–VII) and **GenAI infra** (Part V.5).
 
 ---
 

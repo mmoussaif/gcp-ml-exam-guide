@@ -4,8 +4,8 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 
 ### How to read this guide (recommended paths)
 
-- **Predictive ML (exam core)**: Read **Parts I → V** in order. This is the classic ML track (data → training → deployment → monitoring).
-- **GenAI / Agentic AI (exam + practical)**: Read **Part VI**, then use **Part VII** as a tooling map.
+- **Track A — Predictive ML (exam core)**: start here → `track-predictive-ml.md`
+- **Track B — GenAI & Agentic AI (exam + practical)**: start here → `track-genai-agentic.md`
 
 ### Table of contents (book order)
 
