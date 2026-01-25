@@ -3157,6 +3157,32 @@ Combines LLM generation with external knowledge retrieval.
 
 **Source**: [Embeddings and Vector Stores Whitepaper](https://www.kaggle.com/whitepaper-embeddings-and-vector-stores)
 
+#### Grounding (no-code): attach resources to reduce hallucinations
+
+**Grounding** means connecting the model’s output to **specific, checkable sources** (documents, emails, policies, knowledge bases). Practically, this is often as simple as attaching/including the relevant resources in:
+
+- A **Gem** (task-specific assistant preloaded with instructions + optional docs/resources)
+- A **Gemini chat** (attach files / paste excerpts / reference links you want the model to use)
+
+This is valuable because it improves:
+
+- **Accuracy and relevance** (the model answers using your provided sources)
+- **Transparency** (you can point to what the answer was based on)
+
+#### RAG as a grounding technique (model-only vs model+retrieval)
+
+**Retrieval-Augmented Generation (RAG)** is one of the most common grounding patterns:
+
+- **Retrieve** relevant passages from a corpus (docs, DBs, web, KB) via search / embeddings / vector DB.
+- **Generate** the answer using the retrieved passages as context.
+
+Conceptual comparison:
+
+- **Model-only (no retrieval)**: answers purely from parameters → higher risk of **hallucinations** and **stale knowledge**.
+- **Model + RAG**: retrieves up-to-date / proprietary context → lower hallucination risk, easier to **justify** with sources.
+
+**No-code entry point**: **NotebookLM** is a practical way to get “RAG-like” behavior without building a vector DB—upload/select sources, then ask questions grounded in those sources. See: <a href="https://notebooklm.google/">https://notebooklm.google/</a>
+
 #### Why grounding matters (foundation model limitations)
 
 Foundation models are powerful, but they have predictable limitations. Grounding is the "reality check" that ties outputs back to trusted sources.
