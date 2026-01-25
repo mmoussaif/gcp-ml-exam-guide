@@ -2782,6 +2782,31 @@ Simple chain template (practical):
 
 **EXAM TIP:** If a scenario mentions “multi-step refinement” or “iterating with the model” → think **prompt chaining**. If it mentions “the model keeps using earlier wrong context” → think **session/context management** (reset, summarize, or constrain inputs).
 
+#### Reusing prompts in Gemini (templates, pinned chats, Saved info, Gems)
+
+If you find yourself typing the same long context repeatedly, you can reuse it in a few ways:
+
+- **Prompt templates**: keep reusable prompt skeletons in a Doc/Sheet (e.g., “Write a social post for [platform] promoting [product]…”).
+- **Pinned/named chats**: keep working in a single conversation thread when you _do_ want the same context carried forward.
+- **Saved info**: store persistent facts that should apply to many chats (your role, preferred format, recurring KPIs).
+- **Gems**: create a task-specific assistant with dedicated instructions/resources (e.g., a marketing Gem vs a coding Gem) so context stays scoped to the task.
+
+Quick mapping:
+
+| If you need…                                   | Prefer…                         | Why                                         |
+| ---------------------------------------------- | ------------------------------- | ------------------------------------------- |
+| Iterative refinement on one artifact           | **Prompt chaining** (same chat) | Keeps full working context                  |
+| Same prompt pattern reused across tasks        | **Templates**                   | Fast + explicit                             |
+| Persistent “profile” info (role, KPIs, format) | **Saved info**                  | Avoid repeating boilerplate                 |
+| Task-scoped reusable assistant                 | **Gems**                        | Reusable without leaking other-chat history |
+
+**COMMON TRAP:** Persistent context is powerful, but risky. Make sure your org’s **data retention**, **privacy**, and **allowed data** policies are followed before saving anything sensitive.
+
+Official references:
+
+- Google Workspace Help: <a href="https://support.google.com/a/answer/13623623">https://support.google.com/a/answer/13623623</a>
+- Gemini Advanced (Help Center): <a href="https://support.google.com/gemini/answer/14152588">https://support.google.com/gemini/answer/14152588</a>
+
 **Systematic Prompt Development Workflow**:
 
 **Developing an effective prompt**: Is an iterative engineering process. Rather than guess-and-check ad hoc, it helps to follow a structured workflow:
