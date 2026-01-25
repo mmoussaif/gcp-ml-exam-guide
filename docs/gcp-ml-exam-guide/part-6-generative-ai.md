@@ -2746,6 +2746,21 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 
 **Overall**: Prompt engineering is fundamentally about constructing these elements in a way that the model reliably produces the desired behavior. We now turn to a systematic approach to developing prompts.
 
+#### Role prompting (persona prompting)
+
+**Role prompting** guides an LLM by assigning a **role/persona** (e.g., “customer support agent with 10 years of telecom experience”, “marketing copywriter”, “business analyst”). This mainly influences:
+
+- **Tone and style** (formal vs casual, concise vs detailed)
+- **Focus** (what the model prioritizes and what it ignores)
+- **Domain framing** (assumptions, vocabulary, and what “good” looks like)
+
+Example prompts:
+
+- **Customer support**: “You are a customer service agent for a telecommunications company with ten years of experience. A customer is inquiring about their latest bill, which is higher than expected. Ask clarifying questions, explain likely causes, and propose next steps.”
+- **Marketing**: “You are a marketing copywriter for a new line of athletic wear. Write a product description for running shoes emphasizing comfort and performance-enhancing features.”
+
+**EXAM TIP:** Role prompting is great when the question is about **controlling tone/format** or aligning outputs to a job function (support, sales, analyst). It does **not** replace grounding: for factual answers over enterprise data, pair it with **RAG/grounding** and cite sources.
+
 **Systematic Prompt Development Workflow**:
 
 **Developing an effective prompt**: Is an iterative engineering process. Rather than guess-and-check ad hoc, it helps to follow a structured workflow:
