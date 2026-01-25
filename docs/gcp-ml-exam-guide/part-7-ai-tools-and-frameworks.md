@@ -7936,8 +7936,6 @@ Agents can create **subcontracts**—delegating portions of their contract to ot
 
 ---
 
-
-
 ## 7.22 Vector Stores & Retrieval Infrastructure (RAG Substrate)
 
 Common options (managed or self-hosted):
