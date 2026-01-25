@@ -1210,7 +1210,7 @@ spark.stop()
 - Prefect tasks/flows can run locally, on Dask, in Docker containers, or on Kubernetes
 - Depends on how workers are deployed
 
-**4. Agent/Worker Model**:
+**4. Worker model (Prefect “agent” process)**:
 
 - A worker polls a work pool for scheduled flow runs and executes them
 - Makes it easy to run flows across different environments without leaving a terminal open
@@ -1344,7 +1344,9 @@ if __name__ == "__main__":
 | **Kubeflow Pipelines**  | Self-managed K8s | Multi-cloud, full control                              |
 | **Cloud Composer**      | Managed Airflow  | Complex DAGs, cross-system orchestration               |
 
-**EXAM TIP:** Questions about "workflow orchestration" → think **DAG** (Directed Acyclic Graph), **scheduling** (cron, interval, event-driven), **retries and idempotence**, **separate environments**. Questions about "GCP orchestration" → think **Vertex AI Pipelines** (managed Kubeflow), **Cloud Composer** (managed Airflow). Questions about "Prefect" → think **Pythonic**, **dynamic workflows**, **implicit DAGs**, **agent/worker model**.
+**Note on terminology:** In orchestration tools, “agent” usually means a **worker process** that polls for work. This is **not** an “AI agent”.
+
+**EXAM TIP:** Questions about "workflow orchestration" → think **DAG** (Directed Acyclic Graph), **scheduling** (cron, interval, event-driven), **retries and idempotence**, **separate environments**. Questions about "GCP orchestration" → think **Vertex AI Pipelines** (managed Kubeflow), **Cloud Composer** (managed Airflow). Questions about "Prefect" → think **Pythonic**, **dynamic workflows**, **implicit DAGs**, **worker model**.
 
 **2. Model Training and Experimentation**
 

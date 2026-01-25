@@ -373,15 +373,13 @@ When data science teams need to track experiments and query metrics programmatic
 **EXAM TIP:** Self-managed experiment tracking with API → Kubeflow Pipelines API.  
 **COMMON TRAP:** Don't use Google Sheets for experiment tracking in production.
 
-#### Vertex AI Generative AI + agents (service mapping)
+#### Note: Generative AI & agents live in Part VI (avoid mixing scopes)
 
-GenAI questions often look like “how do we make outputs reliable/actionable with enterprise data?” The platform mapping is:
+This Part focuses on **predictive ML services** (BQML, Vertex AI training/serving, AutoML, pre-trained APIs, DLP, etc.).
 
-- **Vertex AI Search**: managed retrieval / “out-of-the-box RAG” over your content
-- **Vertex AI RAG Engine**: framework for context-augmented LLM applications (RAG pipelines / context management)
-- **Vertex AI Studio**: prototyping + built-in safety controls (content filtering / safety attribute scoring) to set confidence thresholds per use case
-- **Vertex AI Endpoints**: managed online serving (low latency + traffic splitting) when the model is not “just a chat UI”
-- **Gen AI evaluation service (Vertex AI)**: evaluate/benchmark genAI apps/models against criteria (not only manual prompt testing)
+If you’re looking for **GenAI / agentic** service mapping (e.g., **Vertex AI Search**, **Vertex AI RAG Engine**, **GenAI evaluation**, **Agent/Tooling patterns**) see:
+
+- Part VI: `part-6-generative-ai.md` → **6.5 Building agents on Google Cloud (service mapping)**
 
 **EXAM TIP:** “Need grounded answers over internal docs quickly” → **Vertex AI Search** (and/or **Vertex AI RAG Engine**), not fine-tuning.  
 **COMMON TRAP:** Vector storage (embeddings DB) is only one part of RAG; managed **search/retrieval** is usually what the question is asking for.

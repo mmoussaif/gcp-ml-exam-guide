@@ -2,20 +2,25 @@
 
 This folder contains a **source-faithful** Markdown conversion of the study guide content you provided (originally authored as a `docx` generator script).
 
-### Table of contents
+### How to read this guide (recommended paths)
+
+- **Predictive ML (exam core)**: Read **Parts I → V** in order. This is the classic ML track (data → training → deployment → monitoring).
+- **GenAI / Agentic AI (exam + practical)**: Read **Part VI**, then use **Part VII** as a tooling map.
+
+### Table of contents (book order)
 
 - **Part I**: [`part-1-ml-fundamentals.md`](./part-1-ml-fundamentals.md)
 - **Part II**: [`part-2-tensorflow-ecosystem.md`](./part-2-tensorflow-ecosystem.md)
-- **Part III**: [`part-3-gcp-ml-services.md`](./part-3-gcp-ml-services.md)
-- **Part IV**: [`part-4-pipelines-and-architecture.md`](./part-4-pipelines-and-architecture.md)
-- **Part V**: [`part-5-infrastructure-and-deployment.md`](./part-5-infrastructure-and-deployment.md)
-- **Part VI**: [`part-6-generative-ai.md`](./part-6-generative-ai.md)
-- **Part VII**: [`part-7-ai-tools-and-frameworks.md`](./part-7-ai-tools-and-frameworks.md)
+- **Part III (Predictive ML on GCP)**: [`part-3-gcp-ml-services.md`](./part-3-gcp-ml-services.md)
+- **Part IV (Predictive ML systems: pipelines + MLOps)**: [`part-4-pipelines-and-architecture.md`](./part-4-pipelines-and-architecture.md)
+- **Part V (Infrastructure & deployment)**: [`part-5-infrastructure-and-deployment.md`](./part-5-infrastructure-and-deployment.md)
+- **Part VI (GenAI & agentic systems)**: [`part-6-generative-ai.md`](./part-6-generative-ai.md)
+- **Part VII (AI tools & frameworks — LLM apps/agents)**: [`part-7-ai-tools-and-frameworks.md`](./part-7-ai-tools-and-frameworks.md)
 - **Quick Reference + Common Exam Traps**: [`quick-reference.md`](./quick-reference.md)
 - **BigQuery SQL Cheat Sheet**: [`bigquery-sql-cheat-sheet.md`](./bigquery-sql-cheat-sheet.md)
 - **Google AI News & Updates**: [`google-ai-news.md`](./google-ai-news.md)
 
-**Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam guide/scope. It's included as an author-curated "tooling + ecosystem" reference to capture additional details and practical knowledge.
+**Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam scope. It's an author-curated tooling/ecosystem map to make the “build it in practice” path clearer.
 
 **Note on News:** The `google-ai-news.md` file tracks recent Google AI announcements from [blog.google](https://blog.google/) and [Innovation & AI](https://blog.google/innovation-and-ai/). Not exam content — just for staying current with the ecosystem.
 
