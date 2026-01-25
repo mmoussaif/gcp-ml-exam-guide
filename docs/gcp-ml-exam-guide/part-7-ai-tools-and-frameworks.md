@@ -109,6 +109,119 @@ Example table: core model frameworks
 | Probabilistic | Stan, PyMC, Turing.jl                        |
 | Legacy DL     | MXNet, PaddlePaddle, CNTK                    |
 
+## 7.2 Agent Taxonomy: Level 0-4 (Foundational Framework)
+
+Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
+
+Understanding agent capabilities helps architects and product leaders scope what kind of agent to build. Agents can be classified into five levels, each building on the capabilities of the last:
+
+| Level | Name                          | Capabilities                                                                                                                  | Example Use Case                                                   |
+| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **0** | **Core Reasoning System**     | LM operates in isolation; responds based on pre-trained knowledge only; no tools, memory, or real-time interaction            | Explaining concepts, planning approaches (but can't execute)       |
+| **1** | **Connected Problem-Solver**  | LM + tools; can access real-time information via APIs, databases, RAG; answers questions requiring current data               | Weather agent, flight booking agent, RAG-powered Q&A               |
+| **2** | **Strategic Problem-Solver**  | Level 1 + context engineering; actively selects/manages relevant information; creates multi-step plans; proactive assistance  | Travel planning agent, research assistant, document analysis agent |
+| **3** | **Collaborative Multi-Agent** | Multiple specialized agents work together; coordinator delegates tasks; agents treat other agents as tools; division of labor | Project management agent team, enterprise workflow automation      |
+| **4** | **Self-Evolving System**      | Level 3 + autonomous creation; agents can create new tools/agents dynamically; system expands capabilities on the fly         | Research frontier (not yet production-ready)                       |
+
+#### Level 0: The Core Reasoning System
+
+**What it is**: The LM in its most basic form—a reasoning engine without tools, memory, or real-time awareness.
+
+**Strengths**:
+
+- Extensive pre-trained knowledge
+- Can explain concepts and plan problem-solving approaches
+- Fast, no external dependencies
+
+**Limitations**:
+
+- No access to real-time information
+- Cannot answer questions about events after training cutoff
+- Cannot interact with external systems
+
+**Example**: Asking "What was the Yankees game score last night?" → Cannot answer (game happened after training data).
+
+**EXAM TIP:** Questions about "static knowledge" or "pre-trained only" → think **Level 0**.
+
+#### Level 1: The Connected Problem-Solver
+
+**What it is**: Level 0 + tools. The agent can now access real-time information and interact with external systems.
+
+**Key capability**: Uses the 5-step loop (Get Mission → Scan Scene → Think → Act → Observe) to answer questions requiring current data.
+
+**Example**: Same Yankees question → Agent uses Google Search API → Retrieves score → Answers correctly.
+
+**Common tools**:
+
+- **RAG**: Query vector databases or knowledge bases
+- **APIs**: Weather, flights, databases
+- **NL2SQL**: Query structured databases
+
+**EXAM TIP:** Questions about "real-time data" or "external APIs" → think **Level 1**.
+
+#### Level 2: The Strategic Problem-Solver
+
+**What it is**: Level 1 + context engineering. The agent actively manages information, creates multi-step plans, and provides proactive assistance.
+
+**Key capability**: **Context engineering**—selecting, packaging, and managing the most relevant information for each step.
+
+**Example**: "Find a coffee shop halfway between my office and my client's office"
+
+1. **Think**: "I need the halfway point"
+   - **Act**: Call Maps API with both addresses
+   - **Observe**: "Halfway point is Millbrae, CA"
+2. **Think**: "Now find coffee shops in Millbrae with 4+ stars"
+   - **Act**: Call Places API with refined query
+   - **Observe**: "Millbrae Coffee, The Daily Grind"
+3. **Think**: "Synthesize and present results"
+
+**Strategic planning enables**:
+
+- Multi-step task decomposition
+- Proactive assistance (e.g., reading email → adding calendar event)
+- Context-aware tool selection
+
+**EXAM TIP:** Questions about "multi-step planning" or "proactive assistance" → think **Level 2**.
+
+#### Level 3: The Collaborative Multi-Agent System
+
+**What it is**: Multiple specialized agents working together. Agents treat other agents as tools.
+
+**Key pattern**: **Division of labor**—complex tasks segmented into sub-tasks, each handled by a specialist.
+
+**Example**: "Launch our new 'Solaris' headphones"
+
+- **Project Manager Agent** delegates to:
+  - **MarketResearchAgent**: "Analyze competitor pricing"
+  - **MarketingAgent**: "Draft press release"
+  - **WebDevAgent**: "Generate product page HTML"
+
+**Benefits**:
+
+- Each agent is simpler, focused, easier to build/test/maintain
+- Ideal for dynamic or long-running business processes
+- Mirrors human organizational structures
+
+**EXAM TIP:** Questions about "specialized agents" or "agent teams" → think **Level 3**.
+
+#### Level 4: The Self-Evolving System
+
+**What it is**: Level 3 + autonomous creation. Agents can dynamically create new tools or agents to fill capability gaps.
+
+**Key capability**: **Meta-reasoning**—agents identify gaps and create solutions autonomously.
+
+**Example**: Project Manager Agent realizes it needs social media monitoring but no such tool exists:
+
+1. **Think (Meta-Reasoning)**: "I need to track 'Solaris' social media buzz, but I lack the capability"
+2. **Act (Autonomous Creation)**: Invokes `AgentCreator` tool with mission: "Build agent that monitors social media for 'Solaris headphones', performs sentiment analysis, reports daily summary"
+3. **Observe**: New `SentimentAnalysisAgent` created, tested, added to team
+
+**Status**: Research frontier; not yet production-ready.
+
+**EXAM TIP:** Questions about "agents creating agents" or "autonomous capability expansion" → think **Level 4** (likely research/experimental).
+
+---
+
 ### 7.3 Google's Official Agent Whitepapers (Kaggle Course)
 
 Google has published comprehensive whitepapers on GenAI and agents as part of the **5-Day GenAI Intensive Course** on Kaggle. These are **critical authoritative sources** for understanding Google's official approach to agent development and production deployment.
@@ -841,119 +954,6 @@ Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-in
 **Use case**: Agent pays for API access or digital content on a per-use basis.
 
 **EXAM TIP:** Questions about "micropayments" or "pay-per-use agent services" → think **x402** protocol.
-
----
-
-## 7.2 Agent Taxonomy: Level 0-4 (Foundational Framework)
-
-Source: [Introduction to Agents Whitepaper](https://www.kaggle.com/whitepaper-introduction-to-agents)
-
-Understanding agent capabilities helps architects and product leaders scope what kind of agent to build. Agents can be classified into five levels, each building on the capabilities of the last:
-
-| Level | Name                          | Capabilities                                                                                                                  | Example Use Case                                                   |
-| ----- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| **0** | **Core Reasoning System**     | LM operates in isolation; responds based on pre-trained knowledge only; no tools, memory, or real-time interaction            | Explaining concepts, planning approaches (but can't execute)       |
-| **1** | **Connected Problem-Solver**  | LM + tools; can access real-time information via APIs, databases, RAG; answers questions requiring current data               | Weather agent, flight booking agent, RAG-powered Q&A               |
-| **2** | **Strategic Problem-Solver**  | Level 1 + context engineering; actively selects/manages relevant information; creates multi-step plans; proactive assistance  | Travel planning agent, research assistant, document analysis agent |
-| **3** | **Collaborative Multi-Agent** | Multiple specialized agents work together; coordinator delegates tasks; agents treat other agents as tools; division of labor | Project management agent team, enterprise workflow automation      |
-| **4** | **Self-Evolving System**      | Level 3 + autonomous creation; agents can create new tools/agents dynamically; system expands capabilities on the fly         | Research frontier (not yet production-ready)                       |
-
-#### Level 0: The Core Reasoning System
-
-**What it is**: The LM in its most basic form—a reasoning engine without tools, memory, or real-time awareness.
-
-**Strengths**:
-
-- Extensive pre-trained knowledge
-- Can explain concepts and plan problem-solving approaches
-- Fast, no external dependencies
-
-**Limitations**:
-
-- No access to real-time information
-- Cannot answer questions about events after training cutoff
-- Cannot interact with external systems
-
-**Example**: Asking "What was the Yankees game score last night?" → Cannot answer (game happened after training data).
-
-**EXAM TIP:** Questions about "static knowledge" or "pre-trained only" → think **Level 0**.
-
-#### Level 1: The Connected Problem-Solver
-
-**What it is**: Level 0 + tools. The agent can now access real-time information and interact with external systems.
-
-**Key capability**: Uses the 5-step loop (Get Mission → Scan Scene → Think → Act → Observe) to answer questions requiring current data.
-
-**Example**: Same Yankees question → Agent uses Google Search API → Retrieves score → Answers correctly.
-
-**Common tools**:
-
-- **RAG**: Query vector databases or knowledge bases
-- **APIs**: Weather, flights, databases
-- **NL2SQL**: Query structured databases
-
-**EXAM TIP:** Questions about "real-time data" or "external APIs" → think **Level 1**.
-
-#### Level 2: The Strategic Problem-Solver
-
-**What it is**: Level 1 + context engineering. The agent actively manages information, creates multi-step plans, and provides proactive assistance.
-
-**Key capability**: **Context engineering**—selecting, packaging, and managing the most relevant information for each step.
-
-**Example**: "Find a coffee shop halfway between my office and my client's office"
-
-1. **Think**: "I need the halfway point"
-   - **Act**: Call Maps API with both addresses
-   - **Observe**: "Halfway point is Millbrae, CA"
-2. **Think**: "Now find coffee shops in Millbrae with 4+ stars"
-   - **Act**: Call Places API with refined query
-   - **Observe**: "Millbrae Coffee, The Daily Grind"
-3. **Think**: "Synthesize and present results"
-
-**Strategic planning enables**:
-
-- Multi-step task decomposition
-- Proactive assistance (e.g., reading email → adding calendar event)
-- Context-aware tool selection
-
-**EXAM TIP:** Questions about "multi-step planning" or "proactive assistance" → think **Level 2**.
-
-#### Level 3: The Collaborative Multi-Agent System
-
-**What it is**: Multiple specialized agents working together. Agents treat other agents as tools.
-
-**Key pattern**: **Division of labor**—complex tasks segmented into sub-tasks, each handled by a specialist.
-
-**Example**: "Launch our new 'Solaris' headphones"
-
-- **Project Manager Agent** delegates to:
-  - **MarketResearchAgent**: "Analyze competitor pricing"
-  - **MarketingAgent**: "Draft press release"
-  - **WebDevAgent**: "Generate product page HTML"
-
-**Benefits**:
-
-- Each agent is simpler, focused, easier to build/test/maintain
-- Ideal for dynamic or long-running business processes
-- Mirrors human organizational structures
-
-**EXAM TIP:** Questions about "specialized agents" or "agent teams" → think **Level 3**.
-
-#### Level 4: The Self-Evolving System
-
-**What it is**: Level 3 + autonomous creation. Agents can dynamically create new tools or agents to fill capability gaps.
-
-**Key capability**: **Meta-reasoning**—agents identify gaps and create solutions autonomously.
-
-**Example**: Project Manager Agent realizes it needs social media monitoring but no such tool exists:
-
-1. **Think (Meta-Reasoning)**: "I need to track 'Solaris' social media buzz, but I lack the capability"
-2. **Act (Autonomous Creation)**: Invokes `AgentCreator` tool with mission: "Build agent that monitors social media for 'Solaris headphones', performs sentiment analysis, reports daily summary"
-3. **Observe**: New `SentimentAnalysisAgent` created, tested, added to team
-
-**Status**: Research frontier; not yet production-ready.
-
-**EXAM TIP:** Questions about "agents creating agents" or "autonomous capability expansion" → think **Level 4** (likely research/experimental).
 
 ---
 
