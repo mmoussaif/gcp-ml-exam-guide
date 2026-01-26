@@ -19,6 +19,7 @@ This folder contains a **source-faithful** Markdown conversion of the study guid
 - **Quick Reference + Common Exam Traps**: [`quick-reference.md`](./quick-reference.md)
 - **BigQuery SQL Cheat Sheet**: [`bigquery-sql-cheat-sheet.md`](./bigquery-sql-cheat-sheet.md)
 - **Google AI News & Updates**: [`google-ai-news.md`](./google-ai-news.md)
+- **System Design Guide**: [`system-design-guide.md`](./system-design-guide.md) - Use cases, examples, and how to tackle system design problems
 
 **Note on Part VII:** Part VII is **not** part of the official Professional Machine Learning Engineer exam scope. It's an author-curated tooling/ecosystem map to make the “build it in practice” path clearer.
 
