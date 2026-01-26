@@ -549,30 +549,19 @@ Client → Local DNS → Root DNS → .com DNS → google.com DNS → IP Address
 
 **Example: Social Network Friend Suggestions**
 
-```python
-def suggest_friends(user_id, max_depth=2):
-    """
-    Find friends of friends using BFS.
-    Time: O(V + E) where V = users, E = friendships
-    """
-    visited = set()
-    queue = deque([(user_id, 0)])  # (user, depth)
-    suggestions = []
+**Architecture:**
 
-    while queue:
-        current_user, depth = queue.popleft()
-        if depth > max_depth:
-            break
+- Use BFS (Breadth-First Search) to traverse friendship graph
+- Start from user, explore friends at depth 1, then friends of friends at depth 2
+- Time complexity: O(V + E) where V = users, E = friendships
+- Space complexity: O(V) for visited set and queue
+  if depth == max_depth:
+  suggestions.append(friend)
+  else:
+  queue.append((friend, depth + 1))
 
-        for friend in get_friends(current_user):
-            if friend not in visited and friend != user_id:
-                visited.add(friend)
-                if depth == max_depth:
-                    suggestions.append(friend)
-                else:
-                    queue.append((friend, depth + 1))
+  return suggestions
 
-    return suggestions
 ```
 
 #### Distributed Hash Tables (DHT)
@@ -594,12 +583,14 @@ def suggest_friends(user_id, max_depth=2):
 **Visual: DHT Ring**
 
 ```
+
 Hash Ring (0 to 2^160):
-    Node A (hash: 100)
-    Node B (hash: 500)
-    Node C (hash: 900)
+Node A (hash: 100)
+Node B (hash: 500)
+Node C (hash: 900)
 
 Key "file:123" → hash: 350 → maps to Node B
+
 ```
 
 #### Binary Trees in System Design
@@ -613,16 +604,18 @@ Key "file:123" → hash: 350 → maps to Node B
 **Example: Database Index (B-Tree)**
 
 ```
+
 B-Tree Structure:
-        [50]
-       /    \
-    [20]    [80]
-   /  |  \  /  \
+[50]
+/ \
+ [20] [80]
+/ | \ / \
 [10][30][40][60][90]
 
 - O(log n) search time
 - Supports range queries
 - Optimized for disk I/O
+
 ```
 
 ---
@@ -669,9 +662,11 @@ B-Tree Structure:
 **Visual: Event-Driven System**
 
 ```
+
 Service A → Event Bus → Service B
-                      → Service C
-                      → Service D
+→ Service C
+→ Service D
+
 ```
 
 ### API Gateway Pattern
@@ -688,9 +683,11 @@ Service A → Event Bus → Service B
 **Visual: API Gateway**
 
 ```
+
 Clients → API Gateway → Service A
-                      → Service B
-                      → Service C
+→ Service B
+→ Service C
+
 ```
 
 ---
@@ -718,11 +715,13 @@ Clients → API Gateway → Service A
 **Calculation:**
 
 ```
+
 Daily storage: 100M × 500 bytes = 50GB/day
 Yearly storage: 50GB × 365 = 18.25TB/year
 5-year storage: 18.25TB × 5 = 91.25TB
 
 With 3x replication: 91.25TB × 3 = 273.75TB
+
 ```
 
 **Example: Estimate QPS for Chat App**
@@ -736,6 +735,7 @@ With 3x replication: 91.25TB × 3 = 273.75TB
 **Calculation:**
 
 ```
+
 Average messages/day: 10M × 10 = 100M messages/day
 Average QPS: 100M / (24 × 3600) = ~1,157 QPS
 Peak QPS: 1,157 × 3 = ~3,471 QPS
@@ -743,6 +743,7 @@ Peak QPS: 1,157 × 3 = ~3,471 QPS
 With 10:1 read/write ratio:
 Write QPS: ~315 QPS
 Read QPS: ~3,156 QPS
+
 ```
 
 ### Server Capacity Estimation
@@ -756,11 +757,13 @@ Read QPS: ~3,156 QPS
 **Calculation:**
 
 ```
+
 Theoretical QPS: 4 cores × 10 requests/second/core = 40 QPS/core
 With 70% utilization: 40 × 0.7 = 28 QPS/core
 Total per server: 28 × 4 = 112 QPS/server
 
 For 3,471 QPS: 3,471 / 112 = ~31 servers needed
+
 ```
 
 ---
@@ -974,30 +977,32 @@ Generative AI applications introduce unique challenges:
 **High-Level Design:**
 
 ```
+
 ┌─────────────┐
-│   Clients   │
-│  (Web/API)  │
+│ Clients │
+│ (Web/API) │
 └──────┬──────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  API Gateway    │  ← Authentication, rate limiting
-│  (Cloud Endpoints)│
+│ API Gateway │ ← Authentication, rate limiting
+│ (Cloud Endpoints)│
 └──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Request Router │      │   Cache       │
-│  (Load Balancer)│◄────►│  (Redis)     │
-└──────┬──────────┘      └──────────────┘
-       │
-       ▼
+│
+▼
+┌─────────────────┐ ┌──────────────┐
+│ Request Router │ │ Cache │
+│ (Load Balancer)│◄────►│ (Redis) │
+└──────┬──────────┘ └──────────────┘
+│
+▼
 ┌─────────────────┐
-│  LLM Serving    │  ← Continuous batching, KV cache
-│  Infrastructure │
-│  (Vertex AI /   │
-│   SageMaker)    │
+│ LLM Serving │ ← Continuous batching, KV cache
+│ Infrastructure │
+│ (Vertex AI / │
+│ SageMaker) │
 └─────────────────┘
+
 ```
 
 **Key Design Decisions:**
@@ -1035,10 +1040,12 @@ Generative AI applications introduce unique challenges:
 **Visual: Continuous Batching**
 
 ```
+
 Time 0: [Request A (100 tokens)]
-Time 1: [Request A (50 tokens), Request B (100 tokens)]  ← Added B
-Time 2: [Request B (50 tokens), Request C (100 tokens)]  ← A finished, added C
-Time 3: [Request C (50 tokens), Request D (100 tokens)]  ← B finished, added D
+Time 1: [Request A (50 tokens), Request B (100 tokens)] ← Added B
+Time 2: [Request B (50 tokens), Request C (100 tokens)] ← A finished, added C
+Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
+
 ```
 
 **Detailed Trade-offs Analysis:**
@@ -1139,41 +1146,43 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)]  ← B finished, added D
 **High-Level Design:**
 
 ```
+
 ┌─────────────┐
-│   User      │
-│  Query      │
+│ User │
+│ Query │
 └──────┬──────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Query          │  ← Query understanding, rewriting
-│  Processor      │
+│ Query │ ← Query understanding, rewriting
+│ Processor │
 └──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Vector Store   │      │  Metadata     │
-│  (Embeddings)   │◄────►│  Database     │
-└──────┬──────────┘      └──────────────┘
-       │
-       ▼
+│
+▼
+┌─────────────────┐ ┌──────────────┐
+│ Vector Store │ │ Metadata │
+│ (Embeddings) │◄────►│ Database │
+└──────┬──────────┘ └──────────────┘
+│
+▼
 ┌─────────────────┐
-│  Retrieval      │  ← Top-K similar documents
-│  (Similarity    │
-│   Search)       │
+│ Retrieval │ ← Top-K similar documents
+│ (Similarity │
+│ Search) │
 └──────┬──────────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Reranking      │  ← Improve relevance
-│  (Optional)     │
+│ Reranking │ ← Improve relevance
+│ (Optional) │
 └──────┬──────────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  LLM            │  ← Generate answer with context
-│  (Gemini/GPT)   │
+│ LLM │ ← Generate answer with context
+│ (Gemini/GPT) │
 └─────────────────┘
+
 ```
 
 **Key Components:**
@@ -1198,9 +1207,11 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)]  ← B finished, added D
 **Visual: RAG Pipeline**
 
 ```
+
 Documents → Chunking → Embedding → Vector Store
-                                    │
+│
 Query → Embedding → Similarity Search → Top-K Docs → LLM → Answer
+
 ```
 
 **Design Decisions:**
@@ -1433,27 +1444,29 @@ Query → Embedding → Similarity Search → Top-K Docs → LLM → Answer
 **High-Level Design:**
 
 ```
+
 ┌─────────────┐
-│   User      │
-│  Message    │
+│ User │
+│ Message │
 └──────┬──────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Agent          │  ← LLM with tool-calling capability
-│  Orchestrator   │
+│ Agent │ ← LLM with tool-calling capability
+│ Orchestrator │
 └──────┬──────────┘
-       │
-       ├──► Tool 1: Search Knowledge Base
-       ├──► Tool 2: Query Order Status
-       ├──► Tool 3: Create Support Ticket
-       └──► Tool 4: Check Account Balance
-       │
-       ▼
+│
+├──► Tool 1: Search Knowledge Base
+├──► Tool 2: Query Order Status
+├──► Tool 3: Create Support Ticket
+└──► Tool 4: Check Account Balance
+│
+▼
 ┌─────────────────┐
-│  Response       │  ← Generate natural language response
-│  Generator      │
+│ Response │ ← Generate natural language response
+│ Generator │
 └─────────────────┘
+
 ```
 
 **Key Components:**
@@ -1478,9 +1491,11 @@ Query → Embedding → Similarity Search → Top-K Docs → LLM → Answer
 **Visual: Agent Execution Flow**
 
 ```
+
 User: "What's my order status for #12345?"
 
 Agent Reasoning:
+
 1. Need to call "get_order_status" tool
 2. Parameter: order_id = "12345"
 3. Call tool → Get result
@@ -1489,10 +1504,12 @@ Agent Reasoning:
 User: "Can I cancel it?"
 
 Agent Reasoning:
+
 1. Need to check if order can be cancelled (business logic)
 2. Call "check_cancellation_policy" tool
 3. If allowed, call "cancel_order" tool
 4. Generate response: "I've cancelled your order. Refund will process in 3-5 days."
+
 ```
 
 **Design Patterns with Detailed Trade-offs:**
@@ -1535,13 +1552,14 @@ Agent Reasoning:
    - **When to use**: Complex domains, multiple expertise areas
    - **Example**: Customer support (billing agent, technical agent, sales agent)
 
-3. **Hierarchical Pattern**:
-   - **Architecture**: Supervisor agent delegates to specialist agents
+3. **Hierarchical Pattern (Supervisor/Manager)**:
+   - **Architecture**: Supervisor agent delegates to specialist agents, tracks progress
    - ✅ **Pros**:
      - Scalable (easy to add new specialists)
      - Organized (clear hierarchy)
      - Handles complex workflows well
      - Good separation of concerns
+     - Natural design (mirrors human teams)
    - ❌ **Cons**:
      - Higher latency (supervisor → specialist → response)
      - More complex (multiple layers)
@@ -1549,6 +1567,55 @@ Agent Reasoning:
      - Potential for cascading failures
    - **When to use**: Large-scale systems, complex workflows, enterprise applications
    - **Example**: Enterprise assistant (supervisor → research agent → writing agent → review agent)
+
+4. **Additional Multi-Agent Patterns** (from production systems):
+
+   **Sequential Pipeline Pattern**:
+   - **Architecture**: Agent A → Agent B → Agent C (linear handoff)
+   - **Use case**: Content creation workflows, review processes
+   - **Example**: Research agent → Writer agent → Editor agent → Publisher agent
+   - **Why it works**: Each agent builds on previous work, clear data flow
+
+   **Parallel Fan-out Pattern**:
+   - **Architecture**: Query sent to multiple agents simultaneously, results aggregated
+   - **Use case**: Research tasks, multi-perspective analysis
+   - **Example**: Send research question to 3 specialist agents, combine insights
+   - **Why it's faster**: Parallel execution reduces total latency (max instead of sum)
+
+   **Diamond Pattern**:
+   - **Architecture**: Coordinator delegates to multiple agents in parallel, responses converge to single output
+   - **Use case**: Research teams, competitive analysis
+   - **Example**: Coordinator → [Market Research Agent, Competitor Analysis Agent, User Research Agent] → Synthesizer
+   - **Why it's effective**: Multiple perspectives improve quality, parallel execution improves speed
+
+   **Debate/Adversarial Pattern**:
+   - **Architecture**: Agents argue opposing views, judge decides
+   - **Use case**: High-stakes decisions, red teaming, critical analysis
+   - **Example**: Pro agent vs Con agent debate a proposal, Judge agent makes decision
+   - **Why it works**: Forces consideration of multiple perspectives, reduces bias
+
+   **Peer-to-Peer Pattern**:
+   - **Architecture**: Agents communicate directly without central coordinator
+   - **Use case**: Swarm intelligence, distributed problem-solving
+   - **Why it's different**: Decentralized coordination, no single point of failure
+   - **Trade-off**: More complex coordination but more resilient
+
+**Multi-Agent vs Single-Agent Trade-offs:**
+
+| Aspect              | Single-Agent                                | Multi-Agent                           |
+| ------------------- | ------------------------------------------- | ------------------------------------- |
+| **Complexity**      | One agent handles everything                | Multiple specialized agents           |
+| **Modularity**      | Monolithic, harder to debug                 | Modular, easier to isolate issues     |
+| **Specialization**  | Generalist, may struggle with complex tasks | Specialists, each master of one trade |
+| **Transparency**    | Single opaque reasoning chain               | Clear structure, traceable per agent  |
+| **Error isolation** | Hard to pinpoint failures                   | Easy to identify responsible agent    |
+| **Scalability**     | Limited by single agent's capacity          | Scales by adding more specialists     |
+
+**Why Multi-Agent Systems Scale Better:**
+- **Independent scaling**: Scale billing agent separately from technical agent based on load
+- **Fault isolation**: If one agent fails, others continue working
+- **Development velocity**: Teams can work on different agents independently
+- **Cost optimization**: Use smaller models for simple agents, larger models for complex ones
 
 **Additional Trade-offs for Agent Systems:**
 
@@ -1598,6 +1665,91 @@ Agent Reasoning:
    - ❌ **Cons**: Complex, retrieval latency, privacy concerns
    - **Best for**: Personal assistants, learning systems
 
+---
+
+#### Context Engineering: The Scaling Bottleneck
+
+**The Problem:**
+
+As agents run longer, the information they track—chat history, tool outputs, documents, reasoning—**explodes**. Simply using larger context windows is not a scaling strategy.
+
+**The Three-Way Pressure on Context:**
+
+| Pressure                                      | Problem                                                                                                            |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| **Cost & latency spirals**                    | Model cost and time-to-first-token grow with context size; "shoveling" raw history makes agents slow and expensive |
+| **Signal degradation ("lost in the middle")** | Irrelevant logs, stale tool outputs distract the model from the immediate instruction                              |
+| **Physical limits**                           | RAG results, artifacts, and conversation traces eventually overflow even the largest windows                       |
+
+**Why Context Explosion Happens:**
+
+- **Conversation history**: Every turn adds to context
+- **Tool outputs**: Each tool call adds results to context
+- **RAG results**: Retrieved documents add to context
+- **Reasoning traces**: Chain-of-thought adds tokens
+- **Multi-agent coordination**: Each agent handoff adds context
+
+**The Solution: Context as a Compiled View**
+
+Instead of treating context as a mutable string buffer, treat **context as a compiled view over a richer stateful system**:
+
+```
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ CONTEXT COMPILATION PIPELINE │
+├─────────────────────────────────────────────────────────────────────┤
+│ │
+│ SOURCES COMPILER OUTPUT │
+│ ─────── ──────── ────── │
+│ Session (events) → Flows & → Working Context │
+│ Memory (long-term) → Processors → (per-call view) │
+│ Artifacts (files) → (ordered list) → │
+│ │
+└─────────────────────────────────────────────────────────────────────┘
+
+```
+
+**Three Design Principles:**
+
+1. **Separate storage from presentation**: Durable state (Sessions) vs per-call views (Working Context) evolve independently
+2. **Explicit transformations**: Context is built through named, ordered processors—observable and testable
+3. **Scope by default**: Every model call sees the **minimum context required**; agents reach for more via tools
+
+**The Tiered Context Model:**
+
+| Layer               | Purpose                                                       | Lifecycle                             |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------- |
+| **Working Context** | Immediate prompt for this model call                          | Ephemeral (thrown away after call)    |
+| **Session**         | Durable log of events (messages, tool calls, results)         | Per-conversation                      |
+| **Memory**          | Long-lived searchable knowledge (preferences, past decisions) | Cross-session                         |
+| **Artifacts**       | Large binary/text data (files, logs, images)                  | Addressed by name/version, not pasted |
+
+**Why This Architecture Works:**
+
+- **Working Context**: Only what's needed for current call - reduces tokens, improves focus
+- **Session**: Durable log for debugging and continuity - not sent to every call
+- **Memory**: Long-term knowledge retrieved on-demand - avoids context bloat
+- **Artifacts**: Large files referenced, not embedded - prevents overflow
+
+**Multi-Agent Context Scoping:**
+
+When a root agent invokes sub-agents, prevent **context explosion**:
+
+| Pattern             | Description                                                   | Context Scope                                                |
+| ------------------- | ------------------------------------------------------------- | ------------------------------------------------------------ |
+| **Agents as Tools** | Sub-agent is a function: call with focused prompt, get result | Callee sees only specific instructions + necessary artifacts |
+| **Agent Transfer**  | Control handed off to sub-agent to continue conversation      | Sub-agent inherits a configurable view over the Session      |
+
+**Handoff Modes:**
+- **Full mode**: Pass full contents of caller's working context (useful when sub-agent needs entire history)
+- **None mode**: Sub-agent sees no prior history; only receives new prompt you construct
+
+**Why Context Scoping Matters:**
+- **Cost reduction**: Smaller contexts = lower token costs
+- **Latency reduction**: Less context = faster processing
+- **Quality improvement**: Focused context = better model performance
+- **Scalability**: Prevents context from growing unbounded
+
 6. **Error Handling & Fallbacks**:
 
    **Tool Failure Handling**:
@@ -1645,35 +1797,37 @@ Agent Reasoning:
 **High-Level Design:**
 
 ```
+
 ┌─────────────┐
-│  LLM        │
-│  Predictions│
+│ LLM │
+│ Predictions│
 └──────┬──────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Event Stream   │  ← Pub/Sub / Kinesis
-│  (Predictions)  │
+│ Event Stream │ ← Pub/Sub / Kinesis
+│ (Predictions) │
 └──────┬──────────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Stream         │  ← Real-time processing
-│  Processor      │
-│  (Dataflow /    │
-│   Kinesis Analytics)│
+│ Stream │ ← Real-time processing
+│ Processor │
+│ (Dataflow / │
+│ Kinesis Analytics)│
 └──────┬──────────┘
-       │
-       ├──► Evaluation Metrics
-       ├──► Cost Tracking
-       ├──► Latency Monitoring
-       └──► Safety Checks
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Time-Series DB │      │  Alerting    │
-│  (Monitoring)   │◄────►│  System      │
-└─────────────────┘      └──────────────┘
+│
+├──► Evaluation Metrics
+├──► Cost Tracking
+├──► Latency Monitoring
+└──► Safety Checks
+│
+▼
+┌─────────────────┐ ┌──────────────┐
+│ Time-Series DB │ │ Alerting │
+│ (Monitoring) │◄────►│ System │
+└─────────────────┘ └──────────────┘
+
 ```
 
 **Key Components:**
@@ -1705,26 +1859,29 @@ Agent Reasoning:
 **Visual: Evaluation Pipeline**
 
 ```
+
 Prediction Event:
 {
-  "request_id": "abc123",
-  "model": "gemini-pro",
-  "prompt": "...",
-  "response": "...",
-  "tokens_input": 150,
-  "tokens_output": 200,
-  "latency_ms": 1200,
-  "timestamp": "2024-01-26T10:00:00Z"
+"request_id": "abc123",
+"model": "gemini-pro",
+"prompt": "...",
+"response": "...",
+"tokens_input": 150,
+"tokens_output": 200,
+"latency_ms": 1200,
+"timestamp": "2024-01-26T10:00:00Z"
 }
 
 ↓ Stream Processing ↓
 
 Metrics:
+
 - Model: gemini-pro
 - Time: 2024-01-26 10:00
 - Avg latency: 1150ms
 - Avg cost: $0.002
 - Requests: 1000
+
 ```
 
 **Detailed Design Decisions & Trade-offs:**
@@ -1916,38 +2073,40 @@ Metrics:
 **High-Level Design:**
 
 ```
+
 ┌─────────────┐
-│  User       │
-│  Interactions│
+│ User │
+│ Interactions│
 └──────┬──────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Event          │  ← Capture prompts, responses, ratings
-│  Collection     │
-│  (Pub/Sub)      │
+│ Event │ ← Capture prompts, responses, ratings
+│ Collection │
+│ (Pub/Sub) │
 └──────┬──────────┘
-       │
-       ▼
+│
+▼
 ┌─────────────────┐
-│  Data           │  ← Filter, deduplicate, validate
-│  Processing     │
-│  (Dataflow)     │
+│ Data │ ← Filter, deduplicate, validate
+│ Processing │
+│ (Dataflow) │
 └──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Data Lake      │      │  Feature     │
-│  (Cloud Storage)│◄────►│  Store       │
-└──────┬──────────┘      └──────────────┘
-       │
-       ▼
+│
+▼
+┌─────────────────┐ ┌──────────────┐
+│ Data Lake │ │ Feature │
+│ (Cloud Storage)│◄────►│ Store │
+└──────┬──────────┘ └──────────────┘
+│
+▼
 ┌─────────────────┐
-│  Training       │  ← Prepare datasets for fine-tuning
-│  Data Prep      │
-│  (BigQuery /    │
-│   Spark)        │
+│ Training │ ← Prepare datasets for fine-tuning
+│ Data Prep │
+│ (BigQuery / │
+│ Spark) │
 └─────────────────┘
+
 ```
 
 **Google Cloud Services:**
@@ -2015,19 +2174,22 @@ Metrics:
 **Example Calculation:**
 
 ```
+
 Model: Gemini Pro
 Input: $0.000125 per 1K tokens
 Output: $0.0005 per 1K tokens
 
 Request:
+
 - Input: 1,000 tokens
 - Output: 500 tokens
 
 Cost = (1,000 / 1,000) × $0.000125 + (500 / 1,000) × $0.0005
-     = $0.000125 + $0.00025
-     = $0.000375 per request
+= $0.000125 + $0.00025
+= $0.000375 per request
 
 At 1M requests/day: $375/day = $11,250/month
+
 ```
 
 **Detailed Optimization Strategies & Trade-offs:**
@@ -2234,11 +2396,13 @@ At 1M requests/day: $375/day = $11,250/month
 **Architecture:**
 
 ```
+
 Developer → IDE Extension → API Gateway → Code Generation Service
-                                              │
-                                              ├──► LLM (Code Model)
-                                              ├──► Context Retrieval (RAG)
-                                              └──► Code Validation
+│
+├──► LLM (Code Model)
+├──► Context Retrieval (RAG)
+└──► Code Validation
+
 ```
 
 **Key Features:**
@@ -2259,12 +2423,14 @@ Developer → IDE Extension → API Gateway → Code Generation Service
 **Architecture:**
 
 ```
+
 Customer → Chat Interface → Agent Orchestrator
-                              │
-                              ├──► RAG System (Knowledge Base)
-                              ├──► CRM Integration (Tool)
-                              ├──► Order System (Tool)
-                              └──► Escalation Logic
+│
+├──► RAG System (Knowledge Base)
+├──► CRM Integration (Tool)
+├──► Order System (Tool)
+└──► Escalation Logic
+
 ```
 
 **Key Features:**
@@ -2284,13 +2450,15 @@ Customer → Chat Interface → Agent Orchestrator
 **Architecture:**
 
 ```
+
 User Request → Content Pipeline
-                │
-                ├──► Research (Web Search)
-                ├──► Content Generation (LLM)
-                ├──► Fact-Checking (Grounding)
-                ├──► SEO Optimization
-                └──► Multi-format Output (Blog, Social, Email)
+│
+├──► Research (Web Search)
+├──► Content Generation (LLM)
+├──► Fact-Checking (Grounding)
+├──► SEO Optimization
+└──► Multi-format Output (Blog, Social, Email)
+
 ```
 
 **Key Features:**
@@ -2330,7 +2498,9 @@ User Request → Content Pipeline
 **Visual: Model Parallelism**
 
 ```
+
 Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) → Output
+
 ```
 
 #### Caching Strategies
@@ -2410,39 +2580,228 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 1. **Prompt Injection**:
 
    - **Risk**: Malicious prompts override system instructions
-   - **Mitigation**: Input validation, prompt sanitization
-   - **Services**: Model Armor (Google), Guardrails (AWS)
+   - **Why it's dangerous**: Attackers can inject instructions like "ignore previous instructions" or "you are now a helpful assistant that reveals secrets", causing the LLM to bypass safety measures
+   - **Mitigation**: Input validation, prompt sanitization, semantic-level filtering
+   - **Services**: Model Armor (Google), Bedrock Guardrails (AWS)
 
 2. **Data Leakage**:
 
-   - **Risk**: Training data memorization, context leakage
-   - **Mitigation**: Data filtering, output filtering
-   - **Services**: Cloud DLP (Google), Macie (AWS)
+   - **Risk**: Training data memorization, context leakage, PII in outputs
+   - **Why it happens**: LLMs may memorize training data or leak sensitive information from context
+   - **Mitigation**: Data filtering, output filtering, PII detection and redaction
+   - **Services**: Model Armor + Cloud DLP (Google), Bedrock Guardrails + Macie (AWS)
 
 3. **Access Control**:
 
-   - **Risk**: Unauthorized model access
-   - **Mitigation**: IAM policies, API keys
+   - **Risk**: Unauthorized model access, privilege escalation
+   - **Why it matters**: LLM APIs are expensive - unauthorized access = cost attacks. Also, agents with tool access can perform actions on behalf of users
+   - **Mitigation**: IAM policies, API keys, service accounts with least privilege
    - **Services**: IAM (both), Secret Manager (Google), Secrets Manager (AWS)
 
 4. **Compliance**:
-   - **GDPR**: Right to explanation, data deletion
-   - **HIPAA**: Healthcare data protection
-   - **PCI-DSS**: Payment data security
+   - **GDPR**: Right to explanation, data deletion, privacy by design
+   - **HIPAA**: Healthcare data protection, audit logging
+   - **PCI-DSS**: Payment data security, no storage of card numbers
+   - **Why compliance matters**: Legal requirements vary by industry and region. GenAI systems must comply or face fines and legal action
 
-**Google Cloud Security:**
+---
 
-- **Model Armor**: Prompt injection protection
-- **Cloud DLP**: Data loss prevention
-- **Secret Manager**: API key management
-- **VPC Service Controls**: Network isolation
+#### Model Armor: LLM-Specific Security (Google Cloud)
 
-**AWS Security:**
+**What is Model Armor?**
 
-- **Bedrock Guardrails**: Content filtering
+Model Armor is Google Cloud's service for real-time input/output filtering on agent and LLM traffic. It addresses threats that traditional WAFs (like Cloud Armor) can't catch — specifically **prompt injection** and **sensitive data disclosure** at the semantic level.
+
+**Why Model Armor is Needed:**
+
+Traditional security tools (Cloud Armor, WAFs) operate at the HTTP/network layer. They can't understand LLM semantics. A prompt injection attack like "ignore previous instructions" looks like normal text to a WAF but is dangerous to an LLM. Model Armor operates at the semantic level, understanding LLM-specific threats.
+
+**Model Armor Defense Layers:**
+
+```
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│ MODEL ARMOR DEFENSE LAYERS │
+├────────────────────────────────────────────────────────────────────────────┤
+│ │
+│ Layer 1: RUNTIME POLICY ENFORCEMENT │
+│ ├── Model Armor templates for input/output validation │
+│ ├── Block prompt injection patterns │
+│ └── Prevent sensitive data disclosure │
+│ │
+│ Layer 2: REASONING-BASED DEFENSES │
+│ ├── Model hardening (adversarial training) │
+│ ├── Classifier guards │
+│ └── Intent verification │
+│ │
+│ Layer 3: CONTINUOUS ASSURANCE │
+│ ├── Red teaming / attack scenario testing │
+│ ├── Regression testing on guardrails │
+│ └── Variant analysis │
+│ │
+└────────────────────────────────────────────────────────────────────────────┘
+
+```
+
+**What Model Armor Catches vs Cloud Armor:**
+
+| Threat                   | Cloud Armor | Model Armor      | Why the Difference?                                               |
+| ------------------------ | ----------- | ---------------- | ----------------------------------------------------------------- |
+| SQL injection in HTTP    | ✅          | ❌ (not its job) | Cloud Armor operates at HTTP layer, catches SQLi in URLs/headers  |
+| DDoS / rate limiting     | ✅          | ❌               | Network-level attack, handled by Cloud Armor                      |
+| **Prompt injection**     | ❌          | ✅               | Semantic attack - requires LLM understanding                      |
+| **Jailbreak attempts**   | ❌          | ✅               | "Ignore previous instructions" looks normal to HTTP layer         |
+| **PII in LLM output**    | ❌          | ✅               | Requires semantic understanding to detect PII in natural language |
+| **Malicious tool calls** | ❌          | ✅               | Agent-specific threat - tool calls are LLM-generated              |
+
+**Why Both Are Needed:**
+
+- **Cloud Armor**: Protects against HTTP-level attacks (XSS, SQLi, DDoS, bot traffic)
+- **Model Armor**: Protects against LLM-specific attacks (prompt injection, jailbreaks, PII leakage)
+
+Use **both** for production deployments — they protect different attack surfaces.
+
+**Model Armor Integration Architecture:**
+
+Model Armor integrates into the agent pipeline at two critical points:
+
+1. **Input Guardrail (Before LLM Processing)**:
+   - User input is sent to Model Armor for sanitization
+   - Model Armor checks for prompt injection, jailbreak attempts, and PII
+   - If blocked: Request is rejected with reason (e.g., "PROMPT_INJECTION detected")
+   - If allowed: Sanitized content (with redactions if needed) is passed to LLM
+   - Metadata (session_id, user_id) is included for context-aware filtering
+
+2. **Output Guardrail (After LLM Processing)**:
+   - LLM response is sent to Model Armor for validation
+   - Model Armor checks for harmful content, sensitive data leakage, and grounding issues
+   - If blocked: Fallback response is returned (e.g., "I can't provide that information")
+   - If allowed: Sanitized content is returned to user
+
+**Why Input + Output Filtering:**
+
+- **Input filtering**: Prevents malicious prompts from reaching the LLM. If prompt injection is detected, block it before processing.
+- **Output filtering**: Even if input passes, LLM might generate harmful content or leak PII. Output filtering catches this before it reaches users.
+- **Defense in depth**: Multiple layers of protection reduce risk. If one layer fails, others catch the threat.
+
+**Model Armor Template Configuration:**
+
+Security templates define policies for input and output filtering:
+
+**Input Filters:**
+- **PROMPT_INJECTION**: Block attempts to override system instructions (HIGH sensitivity)
+- **JAILBREAK_ATTEMPT**: Block patterns like "ignore previous instructions", "you are now", "pretend you are"
+- **PII_DETECTION**: Redact sensitive data (EMAIL, PHONE, SSN, CREDIT_CARD) before processing
+
+**Output Filters:**
+- **SENSITIVE_DATA**: Redact internal credentials, API keys, database queries from responses
+- **HARMFUL_CONTENT**: Block hate speech, violence, illegal activity
+- **GROUNDING_VERIFICATION**: Warn if responses lack source citations (important for RAG systems)
+
+**Logging Configuration:**
+- Enable logging to Cloud Logging
+- Log all blocked requests with reasons
+- Log all redacted content for audit trail
+- Destination: `projects/{project-id}/logs/model-armor`
+
+**Why Templates Matter:**
+
+- **Centralized configuration**: Define security policies once, apply to all agents
+- **Version control**: Track changes to security policies
+- **Environment-specific**: Different templates for dev/staging/prod
+- **Audit trail**: Logging shows what was blocked/redacted and why
+
+**Trade-offs:**
+
+- **Latency**: Model Armor adds ~10-50ms per request (input + output checks)
+- **Cost**: Additional API calls for sanitization
+- **False positives**: May block legitimate requests that look suspicious
+- **Configuration complexity**: Need to tune templates for your use case
+
+**Best Practices:**
+
+1. **Start with strict policies**: Better to block too much initially, then relax
+2. **Monitor logs**: Review blocked requests to tune policies
+3. **Test with red teaming**: Actively try to break your security
+4. **Combine with Cloud Armor**: Use both for comprehensive protection
+5. **Regular updates**: Update templates as new attack patterns emerge
+
+---
+
+#### Comprehensive Security Architecture
+
+**Google Cloud Security Stack:**
+
+- **Model Armor**: LLM-specific guardrails (prompt injection, PII, jailbreaks)
+- **Cloud Armor**: HTTP-level protection (DDoS, XSS, SQLi, rate limiting)
+- **Cloud DLP**: Data loss prevention (PII detection, redaction)
+- **Secret Manager**: API key and credential management (no hardcoded secrets)
+- **VPC Service Controls**: Network isolation (data perimeter, prevent exfiltration)
+- **IAM**: Access control (least privilege, service accounts)
+- **Cloud Audit Logs**: Audit trail (who did what, when)
+
+**AWS Security Stack:**
+
+- **Bedrock Guardrails**: Content filtering and safety controls
+- **WAF**: Web application firewall (HTTP-level protection)
 - **Amazon Macie**: Data discovery and protection
 - **Secrets Manager**: Credential management
 - **VPC**: Network isolation
+- **IAM**: Access control
+- **CloudTrail**: Audit logging
+
+**Why Layered Security:**
+
+- **No single solution**: Each tool protects a different layer
+- **Defense in depth**: If one layer fails, others catch threats
+- **Compliance**: Multiple controls satisfy regulatory requirements
+- **Risk reduction**: Each layer reduces overall risk
+
+**Example: Secure Agent Architecture**
+
+```
+
+User Request
+│
+▼
+┌─────────────────┐
+│ Cloud Armor │ ← HTTP-level protection (DDoS, rate limiting)
+└────────┬────────┘
+│
+▼
+┌─────────────────┐
+│ API Gateway │ ← Authentication, authorization (IAM)
+│ (Apigee) │
+└────────┬────────┘
+│
+▼
+┌─────────────────┐
+│ Model Armor │ ← Input filtering (prompt injection, PII)
+│ (Input) │
+└────────┬────────┘
+│
+▼
+┌─────────────────┐
+│ LLM / Agent │ ← Process request
+└────────┬────────┘
+│
+▼
+┌─────────────────┐
+│ Model Armor │ ← Output filtering (harmful content, PII)
+│ (Output) │
+└────────┬────────┘
+│
+▼
+┌─────────────────┐
+│ Cloud DLP │ ← Additional PII redaction if needed
+└────────┬────────┘
+│
+▼
+User Response
+
+```
+
+**EXAM TIP:** When questions mention "secure agent deployment" or "enterprise agent architecture" → think **Model Armor (prompt injection defense) + IAM (least privilege) + Secret Manager (no hardcoded creds) + Cloud Armor (WAF/rate limits) + VPC Service Controls (data perimeter) + audit logging**.
 
 ---
 
@@ -2509,3 +2868,4 @@ System design interviews test your ability to think about systems holistically. 
 6. **Think about failures** - What can go wrong?
 
 **Good luck with your interviews!** 🚀
+```
