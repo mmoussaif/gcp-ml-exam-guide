@@ -47,7 +47,7 @@ plain English. Full runnable code lives in `code/`.
 - [23) Heap Properties](#23-heap-properties)
 - [24) Hash Usage](#24-hash-usage)
 - [25) Introduction to Graphs](#25-introduction-to-graphs)
-- [26) Dynamic Programming](#26-dynamic-programming)
+- [26) 1-Dimension Dynamic Programming](#26-1-dimension-dynamic-programming)
 - [27) Bit Manipulation](#27-bit-manipulation)
 
 ---
@@ -4908,45 +4908,1149 @@ See `code/graphs.py` for matrix BFS implementation.
 
 ---
 
-### 26) Dynamic Programming
+**Adjacency List Traversal**
 
 **Concept in plain English**
-_Placeholder - Details to be added_
+Adjacency lists are the easiest graph format to traverse. We can easily find all neighbors of a
+vertex without worrying about bounds. We can build adjacency lists from edge lists, then traverse
+using DFS (count paths) or BFS (shortest path).
 
-**Key concepts**
+**Building Adjacency List from Edges**
 
-- Memoization
-- Tabulation
-- Overlapping subproblems
-- Optimal substructure
+**Visual: Directed Edges to Adjacency List**
 
-**Common problems**
+```
+Given edges:
+["A", "B"] → A → B
+["B", "C"] → B → C
+["B", "E"] → B → E
+["C", "E"] → C → E
+["E", "D"] → E → D
 
-- Climbing Stairs
-- House Robber
-- Longest Common Subsequence
+Graph:
+A → B → C
+     ↓   ↓
+     E → D
+
+Adjacency List:
+A: [B]
+B: [C, E]
+C: [E]
+D: []
+E: [D]
+```
+
+**Code snippet: Building Adjacency List**
+
+```python
+# Given directed edges, build adjacency list
+edges = [["A", "B"], ["B", "C"], ["B", "E"], ["C", "E"], ["E", "D"]]
+
+adjList = {}
+
+for src, dst in edges:
+    if src not in adjList:
+        adjList[src] = []  # Initialize if not exists
+    if dst not in adjList:
+        adjList[dst] = []  # Initialize destination too
+    adjList[src].append(dst)  # Add edge
+
+# Result:
+# adjList = {
+#     "A": ["B"],
+#     "B": ["C", "E"],
+#     "C": ["E"],
+#     "D": [],
+#     "E": ["D"]
+# }
+```
+
+**DFS on Adjacency List**
+
+**Problem: Count paths from source to target**
+
+Count number of paths from source node to target node using backtracking.
+
+**Visual: DFS Traversal**
+
+```
+Graph:
+A → B → C
+     ↓   ↓
+     E → D
+
+Count paths from A to D:
+
+Path 1: A → B → C → E → D ✓
+Path 2: A → B → E → D ✓
+
+Total: 2 paths
+```
+
+**Code snippet: DFS Count Paths**
+
+```python
+def dfs(node, target, adjList, visit):
+    """
+    Count paths from node to target using DFS with backtracking.
+
+    Algorithm:
+    1. If node already visited → return 0 (avoid cycles)
+    2. If node == target → return 1 (found path!)
+    3. Mark node as visited
+    4. Recursively explore all neighbors
+    5. Sum results from all neighbors
+    6. Unmark node (backtrack)
+    7. Return total count
+
+    Time: O(V^V) - exponential, worst case
+    Space: O(V) - recursion stack + visited set
+    """
+    if node in visit:
+        return 0  # Already visited (cycle detected)
+
+    if node == target:
+        return 1  # Found target! Count this path
+
+    count = 0
+    visit.add(node)  # Mark as visited
+
+    # Explore all neighbors
+    for neighbor in adjList[node]:
+        count += dfs(neighbor, target, adjList, visit)
+
+    visit.remove(node)  # Backtrack: unmark
+    return count
+```
+
+**Visual: DFS Backtracking Process**
+
+```
+Start: A, target: D
+Visit set: {}
+
+Step 1: Visit A → {A}
+  Explore B → Visit B → {A, B}
+    Explore C → Visit C → {A, B, C}
+      Explore E → Visit E → {A, B, C, E}
+        Explore D → Found! Return 1
+      Backtrack: Remove E → {A, B, C}
+    Backtrack: Remove C → {A, B}
+    Explore E → Visit E → {A, B, E}
+      Explore D → Found! Return 1
+    Backtrack: Remove E → {A, B}
+  Backtrack: Remove B → {A}
+Backtrack: Remove A → {}
+
+Total: 2 paths
+```
+
+**Time Complexity: DFS**
+
+- **Worst case**: O(V^V) - exponential
+  - Each vertex can have up to V neighbors
+  - Decision tree with branching factor V
+  - Height = V (worst case path length)
+  - Total: V^V operations
+
+**BFS on Adjacency List**
+
+**Problem: Shortest path from node to target**
+
+Find shortest path length (fewest vertices) from source to target.
+
+**Visual: BFS Level-by-Level**
+
+```
+Graph:
+A → B → C
+     ↓   ↓
+     E → D
+
+BFS from A to D:
+
+Level 0: A (length 0)
+Level 1: B (length 1)
+Level 2: C, E (length 2)
+Level 3: D (length 3) ✓
+
+Shortest path length: 3
+```
+
+**Code snippet: BFS Shortest Path**
+
+```python
+from collections import deque
+
+def bfs(node, target, adjList):
+    """
+    Find shortest path length from node to target using BFS.
+
+    Algorithm:
+    1. Initialize queue with start node, mark as visited
+    2. Process level by level:
+       a. Process all nodes at current level
+       b. Check if target reached
+       c. Add unvisited neighbors to queue
+       d. Mark neighbors as visited immediately
+    3. Increment length after each level
+    4. Return length when target found
+
+    Time: O(V + E) - visit each vertex once, traverse each edge once
+    Space: O(V) - queue + visited set
+    """
+    length = 0
+    visit = set()
+    visit.add(node)
+    queue = deque()
+    queue.append(node)
+
+    while queue:
+        # Process all nodes at current level
+        for _ in range(len(queue)):
+            curr = queue.popleft()
+
+            if curr == target:
+                return length  # Shortest path found!
+
+            # Add unvisited neighbors
+            for neighbor in adjList[curr]:
+                if neighbor not in visit:
+                    visit.add(neighbor)
+                    queue.append(neighbor)
+
+        length += 1  # Move to next level
+
+    return -1  # Target not reachable
+```
+
+**Visual: BFS Process**
+
+```
+Queue state at each level:
+
+Level 0: [A]
+  Process A → Add B
+  Queue: [B]
+  length = 1
+
+Level 1: [B]
+  Process B → Add C, E
+  Queue: [C, E]
+  length = 2
+
+Level 2: [C, E]
+  Process C → Add E (already visited, skip)
+  Process E → Add D
+  Queue: [D]
+  length = 3
+
+Level 3: [D]
+  Process D → Found target! ✓
+  Return length = 3
+```
+
+**Time Complexity: BFS**
+
+- **Time**: O(V + E)
+  - Visit each vertex once: O(V)
+  - Traverse each edge once: O(E)
+  - Total: O(V + E)
+- **Space**: O(V)
+  - Queue: O(V) worst case
+  - Visited set: O(V)
+
+**Key insight**
+BFS is more efficient than DFS for shortest path: O(V + E) vs O(V^V). BFS guarantees shortest
+path because it explores level by level (by distance).
+
+**DFS vs BFS on Adjacency List**
+
+| Aspect    | DFS                  | BFS                  |
+| --------- | -------------------- | -------------------- |
+| Use case  | Count paths, explore | Shortest path        |
+| Time      | O(V^V) exponential   | O(V + E) linear      |
+| Space     | O(V) recursion       | O(V) queue           |
+| Guarantee | Finds all paths      | Finds shortest first |
+
+**Interview narrative**
+"For adjacency lists, I build from edges using a hash map mapping vertices to neighbor lists.
+For counting paths, I use DFS with backtracking - mark visited, explore neighbors, unmark when
+backtracking. Time is exponential O(V^V) worst case. For shortest path, I use BFS - process level
+by level, mark visited when adding to queue. Time is O(V + E) since we visit each vertex and edge
+once. BFS is much more efficient for shortest path problems."
 
 **Full runnable code**
-See `code/dynamic_programming.py` (placeholder).
+See `code/graphs.py` for adjacency list DFS and BFS implementations.
+
+---
+
+### 26) 1-Dimension Dynamic Programming
+
+**Concept in plain English**
+Dynamic Programming (DP) is optimized recursion. It breaks big problems into smaller subproblems
+and stores results to avoid recomputation. Instead of recalculating the same subproblem multiple
+times (exponential time), we cache results and reuse them (linear time).
+
+**Visual: What is DP?**
+
+```
+Recursion (Brute Force):
+  Calculate F(5)
+  → Calculate F(4) and F(3)
+  → Calculate F(3) and F(2) [F(3) calculated twice!]
+  → Calculate F(2) and F(1) [F(2) calculated three times!]
+  → Exponential time O(2^n) ❌
+
+Dynamic Programming:
+  Calculate F(5)
+  → Calculate F(4) and F(3) [store results]
+  → Calculate F(3) [reuse from cache!]
+  → Calculate F(2) [reuse from cache!]
+  → Linear time O(n) ✓
+```
+
+**Dynamic Programming vs Recursion**
+
+**Visual: Repeated Calculations in Recursion**
+
+```
+Fibonacci tree for F(5):
+
+        F(5)
+       /    \
+    F(4)    F(3)
+    /  \    /  \
+  F(3) F(2) F(2) F(1)
+  / \  / \  / \
+F(2)F(1)F(1)F(0) ...
+
+F(2) calculated 3 times! ❌
+F(3) calculated 2 times! ❌
+
+Wasteful recomputation!
+```
+
+**Key insight**
+DP avoids repeated work by caching results. Once we compute F(3), we store it and reuse it
+instead of recalculating. This transforms exponential O(2^n) into linear O(n).
+
+**Top-Down Approach (Memoization)**
+
+Memoization = recursion + caching. We traverse top-down (root to base cases) and cache results
+as we compute them.
+
+**Visual: Memoization Process**
+
+```
+Calculate F(5):
+1. Check cache → Not found
+2. Calculate F(4) + F(3)
+   a. Calculate F(4):
+      - Check cache → Not found
+      - Calculate F(3) + F(2)
+        - Calculate F(3): Store in cache {3: 2}
+        - Calculate F(2): Store in cache {2: 1}
+      - Store F(4) in cache {4: 3}
+   b. Calculate F(3):
+      - Check cache → Found! Return 2 ✓
+3. Store F(5) in cache {5: 5}
+
+Cache: {2: 1, 3: 2, 4: 3, 5: 5}
+```
+
+**Code snippet: Memoization**
+
+```python
+def memoization(n, cache):
+    """
+    Fibonacci using top-down DP (memoization).
+
+    Algorithm:
+    1. Base case: n <= 1 → return n
+    2. Check cache: if n in cache → return cached value
+    3. Compute: F(n) = F(n-1) + F(n-2)
+    4. Store in cache before returning
+
+    Time: O(n) - each subproblem computed once
+    Space: O(n) - cache + recursion stack
+    """
+    if n <= 1:
+        return n
+
+    # Check cache (memoization)
+    if n in cache:
+        return cache[n]
+
+    # Compute and store in cache
+    cache[n] = memoization(n - 1, cache) + memoization(n - 2, cache)
+    return cache[n]
+
+# Usage
+cache = {}
+result = memoization(5, cache)  # O(n) time!
+```
+
+**Key insight**
+Memoization adds a cache check before recursion. If result exists, return it. Otherwise,
+compute, store, then return. This eliminates repeated calculations.
+
+**Bottom-Up Approach (Tabulation)**
+
+Tabulation = build table from base cases upward. We compute F(0), F(1), F(2), ... F(n) in order,
+storing results in an array.
+
+**Visual: Tabulation Process**
+
+```
+Array: [0, 1, ?, ?, ?, ?]
+Index:  0  1  2  3  4  5
+
+Step 1: F(2) = F(1) + F(0) = 1 + 0 = 1
+Array: [0, 1, 1, ?, ?, ?]
+
+Step 2: F(3) = F(2) + F(1) = 1 + 1 = 2
+Array: [0, 1, 1, 2, ?, ?]
+
+Step 3: F(4) = F(3) + F(2) = 2 + 1 = 3
+Array: [0, 1, 1, 2, 3, ?]
+
+Step 4: F(5) = F(4) + F(3) = 3 + 2 = 5
+Array: [0, 1, 1, 2, 3, 5] ✓
+```
+
+**Code snippet: Tabulation (Full Array)**
+
+```python
+def tabulation_full(n):
+    """
+    Fibonacci using bottom-up DP (tabulation) with full array.
+
+    Algorithm:
+    1. Create array of size n+1
+    2. Initialize base cases: dp[0] = 0, dp[1] = 1
+    3. Fill array from 2 to n: dp[i] = dp[i-1] + dp[i-2]
+    4. Return dp[n]
+
+    Time: O(n)
+    Space: O(n) - array of size n+1
+    """
+    if n < 2:
+        return n
+
+    dp = [0] * (n + 1)
+    dp[0] = 0
+    dp[1] = 1
+
+    for i in range(2, n + 1):
+        dp[i] = dp[i - 1] + dp[i - 2]
+
+    return dp[n]
+```
+
+**Space Optimization: O(1) Space**
+
+We only need the last two values to compute the next! Instead of storing all values, we can
+use just two variables.
+
+**Visual: Space Optimization**
+
+```
+Full array: [0, 1, 1, 2, 3, 5]
+              ↑  ↑
+            Only need these two!
+
+Optimized: Use two variables
+  prev2 = 0  (F(i-2))
+  prev1 = 1  (F(i-1))
+
+  For F(2):
+    curr = prev1 + prev2 = 1 + 0 = 1
+    prev2 = prev1 = 1
+    prev1 = curr = 1
+
+  For F(3):
+    curr = prev1 + prev2 = 1 + 1 = 2
+    prev2 = prev1 = 1
+    prev1 = curr = 2
+
+  Continue...
+```
+
+**Code snippet: Space-Optimized Tabulation**
+
+```python
+def dp_optimized(n):
+    """
+    Fibonacci using bottom-up DP with O(1) space.
+
+    Algorithm:
+    1. Base case: n < 2 → return n
+    2. Use two variables: prev2 (F(i-2)), prev1 (F(i-1))
+    3. Iterate from 2 to n:
+       a. Calculate curr = prev1 + prev2
+       b. Update: prev2 = prev1, prev1 = curr
+    4. Return prev1 (or curr)
+
+    Time: O(n)
+    Space: O(1) - only two variables!
+    """
+    if n < 2:
+        return n
+
+    # Only need last two values
+    prev2 = 0  # F(i-2)
+    prev1 = 1  # F(i-1)
+
+    for i in range(2, n + 1):
+        curr = prev1 + prev2
+        prev2 = prev1  # Move prev1 to prev2
+        prev1 = curr  # Move curr to prev1
+
+    return prev1
+```
+
+**Visual: Space Optimization Process**
+
+```
+n = 5
+
+i=2: prev2=0, prev1=1
+     curr = 1 + 0 = 1
+     prev2 = 1, prev1 = 1
+
+i=3: prev2=1, prev1=1
+     curr = 1 + 1 = 2
+     prev2 = 1, prev1 = 2
+
+i=4: prev2=1, prev1=2
+     curr = 2 + 1 = 3
+     prev2 = 2, prev1 = 3
+
+i=5: prev2=2, prev1=3
+     curr = 3 + 2 = 5
+     prev2 = 3, prev1 = 5
+
+Return: 5 ✓
+```
+
+**Key insight**
+For 1-D DP, we often only need the last k values (k=2 for Fibonacci). Instead of storing all
+n values, we can use k variables and achieve O(1) space.
+
+**Comparison: All Approaches**
+
+| Approach        | Time   | Space | Notes                    |
+| --------------- | ------ | ----- | ------------------------ |
+| Brute Force     | O(2^n) | O(n)  | Repeated calculations ❌ |
+| Memoization     | O(n)   | O(n)  | Top-down, recursion      |
+| Tabulation      | O(n)   | O(n)  | Bottom-up, iterative     |
+| Space-Optimized | O(n)   | O(1)  | Bottom-up, two variables |
+
+**Time and space**
+
+- **Brute Force**: O(2^n) time, O(n) space
+- **Memoization**: O(n) time, O(n) space (cache + stack)
+- **Tabulation**: O(n) time, O(n) space (array)
+- **Space-Optimized**: O(n) time, O(1) space (two variables)
+
+**Interview narrative**
+"Dynamic Programming optimizes recursion by caching results. For Fibonacci, brute force is O(2^n)
+due to repeated calculations. With memoization (top-down), I cache results as I compute them,
+reducing to O(n). With tabulation (bottom-up), I build an array from base cases upward, also O(n).
+For space optimization, I only need the last two values, so I use two variables instead of an array,
+achieving O(1) space while keeping O(n) time."
+
+**Full runnable code**
+See `code/dynamic_programming.py`.
+
+---
+
+**2-Dimension Dynamic Programming**
+
+**Concept in plain English**
+When subproblems depend on two variables (like row and column), we use 2-D DP. We cache results
+in a 2D array instead of 1D. For space optimization, we often only need the previous row/column,
+reducing space from O(n\*m) to O(m) or O(n).
+
+**Problem: Unique Paths**
+
+Count unique paths from top-left (0,0) to bottom-right (m-1,n-1). You can only move down or right.
+
+**Visual: Problem Setup**
+
+```
+Grid (3x3):
+[0, 0, 0]
+[0, 0, 0]
+[0, 0, 0]
+
+Start: (0,0) 🔴
+End: (2,2) 🔵
+
+Allowed moves: Down (↓) or Right (→)
+
+Example path:
+(0,0) → (0,1) → (0,2) → (1,2) → (2,2)
+```
+
+**Brute Force Approach**
+
+**Visual: Brute Force Recursion Tree**
+
+```
+Calculate paths from (0,0):
+
+        (0,0)
+       /      \
+    (1,0)    (0,1)
+    /  \      /  \
+(2,0) (1,1) (1,1) (0,2)
+       ...   ...   ...
+
+(1,1) calculated twice! ❌
+Same coordinate visited multiple times!
+```
+
+**Code snippet: Brute Force**
+
+```python
+def brute_force(r, c, rows, cols):
+    """
+    Count unique paths using brute force recursion.
+
+    Algorithm:
+    1. Base case: Out of bounds → return 0
+    2. Base case: Reached destination → return 1
+    3. Sum paths from moving down + moving right
+
+    Time: O(2^(n+m)) - exponential
+          Each cell has 2 choices, depth = n+m
+    Space: O(n+m) - recursion stack depth
+    """
+    if r == rows or c == cols:
+        return 0  # Out of bounds
+
+    if r == rows - 1 and c == cols - 1:
+        return 1  # Reached destination!
+
+    # Sum paths from both directions
+    return (brute_force(r + 1, c, rows, cols) +  # Move down
+            brute_force(r, c + 1, rows, cols))    # Move right
+```
+
+**The Issue**
+
+**Visual: Repeated Calculations**
+
+```
+Calculate paths from (0,0):
+  → Calculate (1,0) and (0,1)
+  → Calculate (1,1) from (1,0)
+  → Calculate (1,1) from (0,1) [recalculated!] ❌
+
+Same coordinate (1,1) calculated multiple times!
+As grid grows, exponential work!
+```
+
+**Key insight**
+Brute force recalculates the same coordinates multiple times. We can cache results in a 2D
+array to avoid recomputation, reducing time from O(2^(n+m)) to O(n\*m).
+
+**Top-Down Approach (Memoization)**
+
+**Visual: Memoization Process**
+
+```
+Cache: 2D array cache[r][c] = paths from (r,c) to destination
+
+Calculate (0,0):
+  → Calculate (1,0) → Store in cache[1][0]
+  → Calculate (0,1) → Store in cache[0][1]
+  → Calculate (1,1) → Store in cache[1][1]
+
+Later, when calculating (0,1):
+  → Need (1,1) → Check cache → Found! Return ✓
+  → No recalculation needed!
+```
+
+**Code snippet: Memoization**
+
+```python
+def memoization(r, c, rows, cols, cache):
+    """
+    Count unique paths using top-down DP (memoization).
+
+    Algorithm:
+    1. Base case: Out of bounds → return 0
+    2. Check cache: if computed → return cached value
+    3. Base case: Reached destination → return 1
+    4. Compute: paths = paths_down + paths_right
+    5. Store in cache before returning
+
+    Time: O(n*m) - each cell computed once
+    Space: O(n*m) - 2D cache array + recursion stack
+    """
+    if r == rows or c == cols:
+        return 0
+
+    # Check cache (memoization)
+    if cache[r][c] > 0:
+        return cache[r][c]
+
+    if r == rows - 1 and c == cols - 1:
+        return 1
+
+    # Compute and store in cache
+    cache[r][c] = (memoization(r + 1, c, rows, cols, cache) +
+                   memoization(r, c + 1, rows, cols, cache))
+    return cache[r][c]
+
+# Usage
+rows, cols = 3, 3
+cache = [[0] * cols for _ in range(rows)]
+result = memoization(0, 0, rows, cols, cache)
+```
+
+**Bottom-Up Approach (Tabulation)**
+
+**Visual: Building Table Bottom-Up**
+
+```
+Start from destination (2,2) and work backwards:
+
+Step 1: Initialize bottom row and right column
+[?, ?, 1]
+[?, ?, 1]
+[1, 1, 1]  ← Destination = 1
+
+Step 2: Fill from bottom-right to top-left
+[6, 3, 1]
+[3, 2, 1]
+[1, 1, 1]
+
+Formula: paths[r][c] = paths[r+1][c] + paths[r][c+1]
+```
+
+**Code snippet: Tabulation (Full 2D Array)**
+
+```python
+def tabulation_full(rows, cols):
+    """
+    Count unique paths using bottom-up DP (tabulation) with full 2D array.
+
+    Algorithm:
+    1. Create 2D array dp[rows][cols]
+    2. Initialize: dp[rows-1][cols-1] = 1 (destination)
+    3. Fill from bottom-right to top-left:
+       dp[r][c] = dp[r+1][c] + dp[r][c+1]
+    4. Return dp[0][0]
+
+    Time: O(n*m)
+    Space: O(n*m) - full 2D array
+    """
+    dp = [[0] * cols for _ in range(rows)]
+    dp[rows - 1][cols - 1] = 1  # Destination
+
+    # Fill from bottom-right to top-left
+    for r in range(rows - 1, -1, -1):
+        for c in range(cols - 1, -1, -1):
+            if r == rows - 1 and c == cols - 1:
+                continue  # Already set
+            down = dp[r + 1][c] if r + 1 < rows else 0
+            right = dp[r][c + 1] if c + 1 < cols else 0
+            dp[r][c] = down + right
+
+    return dp[0][0]
+```
+
+**Space Optimization: O(m) Space**
+
+We only need the previous row to calculate the current row! Instead of storing all rows, we
+can use just two rows (or even one with careful ordering).
+
+**Visual: Space Optimization**
+
+```
+Full 2D array:
+[6, 3, 1]
+[3, 2, 1]  ← prevRow
+[1, 1, 1]
+
+To calculate row above:
+[?, ?, 1]  ← curRow
+[3, 2, 1]  ← prevRow (needed)
+
+Only need prevRow! Can reuse space.
+```
+
+**Code snippet: Space-Optimized Tabulation**
+
+```python
+def dp_optimized(rows, cols):
+    """
+    Count unique paths using bottom-up DP with O(m) space.
+
+    Key insight: To calculate row r, we only need row r+1.
+    We can use just one previous row instead of full 2D array.
+
+    Algorithm:
+    1. Initialize prevRow with all 0s (or 1s for bottom row)
+    2. For each row from bottom to top:
+       a. Initialize curRow
+       b. Set rightmost column = 1
+       c. Fill from right to left: curRow[c] = curRow[c+1] + prevRow[c]
+       d. Update prevRow = curRow
+    3. Return prevRow[0]
+
+    Time: O(n*m)
+    Space: O(m) - only two rows (prevRow and curRow)
+    """
+    prevRow = [0] * cols
+
+    # Process from bottom row to top row
+    for r in range(rows - 1, -1, -1):
+        curRow = [0] * cols
+        curRow[cols - 1] = 1  # Rightmost column always 1
+
+        # Fill from right to left
+        for c in range(cols - 2, -1, -1):
+            curRow[c] = curRow[c + 1] + prevRow[c]
+
+        prevRow = curRow  # Move to next row
+
+    return prevRow[0]
+```
+
+**Visual: Space Optimization Process**
+
+```
+rows=3, cols=3
+
+r=2 (bottom row):
+  prevRow = [0, 0, 0]
+  curRow = [1, 1, 1]  (rightmost = 1, fill right to left)
+  prevRow = [1, 1, 1]
+
+r=1 (middle row):
+  prevRow = [1, 1, 1]
+  curRow[2] = 1
+  curRow[1] = curRow[2] + prevRow[1] = 1 + 1 = 2
+  curRow[0] = curRow[1] + prevRow[0] = 2 + 1 = 3
+  curRow = [3, 2, 1]
+  prevRow = [3, 2, 1]
+
+r=0 (top row):
+  prevRow = [3, 2, 1]
+  curRow[2] = 1
+  curRow[1] = curRow[2] + prevRow[1] = 1 + 2 = 3
+  curRow[0] = curRow[1] + prevRow[0] = 3 + 3 = 6
+  prevRow = [6, 3, 1]
+
+Return prevRow[0] = 6 ✓
+```
+
+**Key insight**
+For 2-D DP, we often only need the previous row/column. By processing row by row and reusing
+space, we reduce space from O(n\*m) to O(m) while keeping O(n\*m) time.
+
+**Comparison: All Approaches**
+
+| Approach        | Time       | Space   | Notes                    |
+| --------------- | ---------- | ------- | ------------------------ |
+| Brute Force     | O(2^(n+m)) | O(n+m)  | Repeated calculations ❌ |
+| Memoization     | O(n\*m)    | O(n\*m) | Top-down, 2D cache       |
+| Tabulation      | O(n\*m)    | O(n\*m) | Bottom-up, full 2D array |
+| Space-Optimized | O(n\*m)    | O(m)    | Bottom-up, one row       |
+
+**Time and space**
+
+- **Brute Force**: O(2^(n+m)) time, O(n+m) space
+- **Memoization**: O(n\*m) time, O(n\*m) space (2D cache + stack)
+- **Tabulation**: O(n\*m) time, O(n\*m) space (full 2D array)
+- **Space-Optimized**: O(n\*m) time, O(m) space (one row)
+
+**Interview narrative**
+"For 2-D DP problems like unique paths, brute force is O(2^(n+m)) due to repeated calculations.
+With memoization, I cache results in a 2D array, reducing to O(n\*m) time. With tabulation, I
+build the table bottom-up from destination to start. For space optimization, I only need the
+previous row to calculate the current row, reducing space from O(n\*m) to O(m) while keeping
+O(n\*m) time."
+
+**Full runnable code**
+See `code/dynamic_programming.py` for 2-D DP implementations.
 
 ---
 
 ### 27) Bit Manipulation
 
 **Concept in plain English**
-_Placeholder - Details to be added_
+Bit manipulation uses operations on individual bits to solve problems efficiently. It's not an
+algorithm or data structure, but a technique for optimization and low-level operations. Less
+common in interviews but valuable for optimization. Bits are the fundamental unit computers use
+to represent data.
 
-**Key concepts**
+**Visual: What are Bits?**
 
-- Bitwise operations
-- Masks
-- Optimization tricks
+```
+Decimal: 23
+Binary:  10111
 
-**Common problems**
+Position: 4 3 2 1 0
+Bits:     1 0 1 1 1
+Value:    16 + 0 + 4 + 2 + 1 = 23
 
-- Number of 1 Bits
-- Single Number
-- Power of Two
+Each bit position represents a power of 2:
+- Position 0: 2^0 = 1
+- Position 1: 2^1 = 2
+- Position 2: 2^2 = 4
+- Position 3: 2^3 = 8
+- Position 4: 2^4 = 16
+```
+
+**Truth Tables and Bit Operations**
+
+**1. AND (&)**
+
+**Visual: AND Operation**
+
+```
+Truth Table:
+A | B | A & B
+--|---|------
+0 | 0 |   0
+0 | 1 |   0
+1 | 0 |   0
+1 | 1 |   1  ✓
+
+Both bits must be 1 to get 1.
+```
+
+**2. OR (|)**
+
+**Visual: OR Operation**
+
+```
+Truth Table:
+A | B | A | B
+--|---|------
+0 | 0 |   0
+0 | 1 |   1  ✓
+1 | 0 |   1  ✓
+1 | 1 |   1  ✓
+
+At least one bit must be 1 to get 1.
+```
+
+**3. XOR (^)**
+
+**Visual: XOR Operation**
+
+```
+Truth Table:
+A | B | A ^ B
+--|---|------
+0 | 0 |   0
+0 | 1 |   1  ✓
+1 | 0 |   1  ✓
+1 | 1 |   0
+
+Exactly one bit must be 1 to get 1.
+```
+
+**4. NOT (~)**
+
+**Visual: NOT Operation**
+
+```
+Truth Table:
+A | ~A
+--|----
+0 |  1  (flip)
+1 |  0  (flip)
+
+Negation flips the bit.
+```
+
+**5. Bit Shifting**
+
+**Visual: Left Shift (<<)**
+
+```
+Left shift = Multiply by 2
+
+001 (1) << 1 = 010 (2)
+010 (2) << 1 = 100 (4)
+100 (4) << 1 = 1000 (8)
+
+Each left shift multiplies by 2.
+```
+
+**Visual: Right Shift (>>)**
+
+```
+Right shift = Divide by 2
+
+1000 (8) >> 1 = 0100 (4)
+0100 (4) >> 1 = 0010 (2)
+0010 (2) >> 1 = 0001 (1)
+
+Each right shift divides by 2.
+```
+
+**Visual: Left Shift Example**
+
+```
+Start: 001 (1)
+
+001 << 1 = 010 (2)
+010 << 1 = 100 (4)
+100 << 1 = 1000 (8) [if we had 4 bits]
+100 << 1 = 0000 (0) [truncated, overflow]
+
+Left shift multiplies by 2 each time.
+```
+
+**Code snippet: Bit Operations**
+
+```python
+# AND
+n = 1 & 1  # Result: 1
+
+# OR
+n = 1 | 0  # Result: 1
+
+# XOR
+n = 0 ^ 1  # Result: 1
+
+# NOT (negation)
+n = ~1     # Result: -2 (in Python, uses two's complement)
+
+# Bit shifting
+n = 1
+n = n << 1  # Left shift: 1 * 2 = 2
+n = n >> 1  # Right shift: 2 / 2 = 1
+```
+
+**Demonstration: Counting 1 Bits**
+
+**Problem**: Count the number of 1 bits in binary representation of integer.
+
+**Visual: Counting Bits Process**
+
+```
+n = 23 = 10111 (binary)
+
+Step 1: Check rightmost bit
+  10111 & 00001 = 00001 → 1 bit found! ✓
+  Count = 1
+  Shift right: 10111 >> 1 = 01011
+
+Step 2: Check rightmost bit
+  01011 & 00001 = 00001 → 1 bit found! ✓
+  Count = 2
+  Shift right: 01011 >> 1 = 00101
+
+Step 3: Check rightmost bit
+  00101 & 00001 = 00001 → 1 bit found! ✓
+  Count = 3
+  Shift right: 00101 >> 1 = 00010
+
+Step 4: Check rightmost bit
+  00010 & 00001 = 00000 → 0 bit (no increment)
+  Count = 3
+  Shift right: 00010 >> 1 = 00001
+
+Step 5: Check rightmost bit
+  00001 & 00001 = 00001 → 1 bit found! ✓
+  Count = 4
+  Shift right: 00001 >> 1 = 00000
+
+Step 6: n == 0 → Stop!
+
+Result: 4 bits set to 1
+```
+
+**Key insight**
+Use `n & 1` to check if rightmost bit is 1. Then shift right (`n >> 1`) to process next bit.
+Repeat until n becomes 0.
+
+**Code snippet: Count Bits**
+
+```python
+def count_bits(n):
+    """
+    Count number of 1 bits in binary representation.
+
+    Algorithm:
+    1. While n > 0:
+       a. Check rightmost bit: if n & 1 == 1, increment count
+       b. Shift right: n = n >> 1 (same as n // 2)
+    2. Return count
+
+    Time: O(log n) - number of bits in n
+    Space: O(1)
+    """
+    count = 0
+    while n > 0:
+        if n & 1 == 1:  # Check if rightmost bit is 1
+            count += 1
+        n = n >> 1  # Shift right (divide by 2)
+    return count
+
+# Example: count_bits(23)
+# 23 = 10111 (binary)
+# Result: 4 bits set to 1
+```
+
+**Visual: Binary to Decimal Conversion**
+
+```
+Binary: 10111
+
+Position: 4 3 2 1 0
+Bits:     1 0 1 1 1
+
+Decimal = 1*2^4 + 0*2^3 + 1*2^2 + 1*2^1 + 1*2^0
+        = 16 + 0 + 4 + 2 + 1
+        = 23 ✓
+```
+
+**Common Bit Tricks**
+
+**Visual: Useful Patterns**
+
+```
+Check if even/odd:
+  n & 1 == 0 → even
+  n & 1 == 1 → odd
+
+Multiply by 2:
+  n << 1
+
+Divide by 2:
+  n >> 1
+
+Check if power of 2:
+  n & (n - 1) == 0 → power of 2
+```
+
+**Time and space**
+
+- **Bit operations**: O(1) - single operation
+- **Count bits**: O(log n) - process each bit once
+- **Space**: O(1) - constant space
+
+**Interview narrative**
+"Bit manipulation uses operations on individual bits. AND checks if both bits are 1, OR checks
+if at least one is 1, XOR checks if exactly one is 1. Left shift multiplies by 2, right shift
+divides by 2. To count 1 bits, I check the rightmost bit with `n & 1`, increment count if it's
+1, then shift right. Repeat until n becomes 0. Time is O(log n) for the number of bits."
+
+**Closing notes**
+Bit manipulation is a technique, not an algorithm. It's useful for optimization and low-level
+operations. Many bit manipulation problems require knowing specific tricks, so practice helps.
+This completes the basics - there's much more in advanced algorithms!
 
 **Full runnable code**
-See `code/bit_manipulation.py` (placeholder).
+See `code/bit_manipulation.py`.

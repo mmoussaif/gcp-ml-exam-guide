@@ -453,9 +453,187 @@ def demo_matrix_bfs():
     print("  - Visited set: O(n*m) worst case")
 
 
+# ============================================================================
+# Adjacency List Traversal (DFS and BFS)
+# ============================================================================
+
+def build_adjacency_list(edges):
+    """
+    Build adjacency list from list of directed edges.
+    
+    Input: [["A", "B"], ["B", "C"], ["B", "E"], ...]
+    Output: {"A": ["B"], "B": ["C", "E"], ...}
+    
+    Time: O(E) where E is number of edges
+    Space: O(V + E) for adjacency list
+    """
+    adjList = {}
+    
+    for src, dst in edges:
+        # Initialize source if not exists
+        if src not in adjList:
+            adjList[src] = []
+        # Initialize destination if not exists
+        if dst not in adjList:
+            adjList[dst] = []
+        # Add edge: src → dst
+        adjList[src].append(dst)
+    
+    return adjList
+
+
+def dfs_adjacency_list(node, target, adjList, visit):
+    """
+    Count paths from node to target using DFS with backtracking.
+    
+    Algorithm:
+    1. If node already visited → return 0 (avoid cycles)
+    2. If node == target → return 1 (found path!)
+    3. Mark node as visited
+    4. Recursively explore all neighbors
+    5. Sum results from all neighbors
+    6. Unmark node (backtrack)
+    7. Return total count
+    
+    Time: O(V^V) - exponential, worst case
+          Each vertex can have up to V neighbors
+          Decision tree with branching factor V, height V
+    Space: O(V) - recursion stack + visited set
+    """
+    if node in visit:
+        return 0  # Already visited (cycle detected)
+    
+    if node == target:
+        return 1  # Found target! Count this path
+    
+    count = 0
+    visit.add(node)  # Mark as visited
+    
+    # Explore all neighbors recursively
+    for neighbor in adjList[node]:
+        count += dfs_adjacency_list(neighbor, target, adjList, visit)
+    
+    visit.remove(node)  # Backtrack: unmark to explore other paths
+    return count
+
+
+def bfs_adjacency_list(node, target, adjList):
+    """
+    Find shortest path length from node to target using BFS.
+    
+    Algorithm:
+    1. Initialize queue with start node, mark as visited
+    2. Process level by level:
+       a. Process all nodes at current level
+       b. Check if target reached
+       c. Add unvisited neighbors to queue
+       d. Mark neighbors as visited immediately
+    3. Increment length after each level
+    4. Return length when target found
+    
+    Time: O(V + E) - visit each vertex once, traverse each edge once
+    Space: O(V) - queue + visited set
+    """
+    length = 0
+    visit = set()
+    visit.add(node)
+    queue = deque()
+    queue.append(node)
+    
+    while queue:
+        # Process all nodes at current level
+        for _ in range(len(queue)):
+            curr = queue.popleft()
+            
+            if curr == target:
+                return length  # Shortest path found!
+            
+            # Add unvisited neighbors to queue
+            for neighbor in adjList[curr]:
+                if neighbor not in visit:
+                    visit.add(neighbor)  # Mark immediately (prevents duplicates)
+                    queue.append(neighbor)
+        
+        length += 1  # Move to next level
+    
+    return -1  # Target not reachable
+
+
+def demo_adjacency_list():
+    """
+    Demonstrate adjacency list traversal (DFS and BFS).
+    """
+    print("=== Adjacency List Traversal Demo ===\n")
+    
+    # Example: Build adjacency list from edges
+    edges = [["A", "B"], ["B", "C"], ["B", "E"], ["C", "E"], ["E", "D"]]
+    print("Given edges:")
+    for edge in edges:
+        print(f"  {edge[0]} → {edge[1]}")
+    print()
+    
+    adjList = build_adjacency_list(edges)
+    print("Adjacency List:")
+    for node, neighbors in sorted(adjList.items()):
+        print(f"  {node}: {neighbors}")
+    print()
+    
+    # Graph visualization
+    print("Graph structure:")
+    print("  A → B → C")
+    print("       ↓   ↓")
+    print("       E → D")
+    print()
+    
+    # DFS: Count paths
+    print("=== DFS: Count Paths ===")
+    print("Problem: Count paths from A to D")
+    visit = set()
+    path_count = dfs_adjacency_list("A", "D", adjList, visit)
+    print(f"Result: {path_count} paths")
+    print()
+    print("Paths:")
+    print("  1. A → B → C → E → D")
+    print("  2. A → B → E → D")
+    print()
+    
+    # BFS: Shortest path
+    print("=== BFS: Shortest Path ===")
+    print("Problem: Find shortest path length from A to D")
+    shortest_length = bfs_adjacency_list("A", "D", adjList)
+    print(f"Result: Shortest path length = {shortest_length}")
+    print()
+    print("Shortest path:")
+    print("  A → B → E → D (length 3)")
+    print()
+    
+    print("=== DFS vs BFS Comparison ===")
+    print("Aspect       | DFS                    | BFS")
+    print("-------------|------------------------|----------------")
+    print("Use case     | Count paths, explore   | Shortest path")
+    print("Time         | O(V^V) exponential     | O(V + E) linear")
+    print("Space        | O(V) recursion         | O(V) queue")
+    print("Guarantee    | Finds all paths        | Finds shortest first")
+    print()
+    
+    print("=== Time Complexity ===")
+    print("DFS:")
+    print("  - Worst case: O(V^V) - exponential")
+    print("  - Each vertex can have up to V neighbors")
+    print("  - Decision tree: branching factor V, height V")
+    print()
+    print("BFS:")
+    print("  - Time: O(V + E) - linear")
+    print("  - Visit each vertex once: O(V)")
+    print("  - Traverse each edge once: O(E)")
+    print("  - Much more efficient for shortest path!")
+
+
 if __name__ == "__main__":
     demo()
     print("\n" + "="*50 + "\n")
     demo_matrix_dfs()
     print("\n" + "="*50 + "\n")
     demo_matrix_bfs()
+    print("\n" + "="*50 + "\n")
+    demo_adjacency_list()
