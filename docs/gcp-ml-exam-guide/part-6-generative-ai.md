@@ -3183,6 +3183,34 @@ Conceptual comparison:
 
 **No-code entry point**: **NotebookLM** is a practical way to get “RAG-like” behavior without building a vector DB—upload/select sources, then ask questions grounded in those sources. See: <a href="https://notebooklm.google/">https://notebooklm.google/</a>
 
+#### NotebookLM (grounded, no-code research assistant)
+
+**NotebookLM** is an AI-first notebook that’s **grounded in your own sources**. Think of it as a “virtual research assistant” powered by Gemini models, designed for **learning and synthesis** rather than general chat.
+
+How it works:
+
+- **Notebook = container** for a topic/project.
+- You add **sources** (docs, slides, PDFs, notes, links, etc.).
+- You ask questions, summarize, and generate artifacts that stay **grounded in those sources** (with citations).
+
+Why it’s different from Gemini / Gems:
+
+- **Gems** are best for reusable *workflows and personas* (how the assistant behaves).
+- **NotebookLM** is best for **deep understanding of a specific corpus** (what the assistant is allowed to use).
+- **Key behavior**: if the answer is not in your sources, a well-grounded workflow should say “I don’t know from the provided material” instead of guessing.
+
+Common outputs/workflows (high-signal):
+
+- **Source-based Q&A with citations**
+- **Concise summaries** and “briefing docs”
+- **Study artifacts** (study guide, FAQ, timeline-style outputs) from your uploaded materials
+- **Audio-style overview** generated from the sources (useful for learning/revision)
+
+Plans (high level):
+
+- Some environments offer **NotebookLM Plus** (more capacity/customization/usage analytics) and **NotebookLM Enterprise** (enterprise governance/admin controls and additional privacy/security expectations).
+- Official entry point + plan info: <a href="https://notebooklm.google/#plan">https://notebooklm.google/#plan</a>
+
 #### Why grounding matters (foundation model limitations)
 
 Foundation models are powerful, but they have predictable limitations. Grounding is the "reality check" that ties outputs back to trusted sources.
