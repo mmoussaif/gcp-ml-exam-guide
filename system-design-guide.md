@@ -142,27 +142,12 @@ Follow this structured approach for any system design problem:
 
 **High-Level Design:**
 
-```
-┌─────────────┐
-│   Client    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│  Load Balancer  │
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  API Servers    │◄────►│   Cache      │
-│  (Stateless)    │      │  (Redis)     │
-└──────┬──────────┘      └──────────────┘
-       │
-       ▼
-┌─────────────────┐
-│   Database      │
-│  (Sharded)      │
-└─────────────────┘
+```mermaid
+graph TD
+    A[Client] --> B[Load Balancer]
+    B --> C[API Servers<br/>Stateless]
+    C <--> D[Cache<br/>Redis]
+    C --> E[Database<br/>Sharded]
 ```
 
 **Key Design Decisions:**
@@ -224,28 +209,13 @@ Key "user:123" → hash → maps to Node B
 
 **High-Level Design:**
 
-```
-┌─────────────┐
-│   Servers   │
-│  (10,000)   │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│  Message Queue  │  ← Buffering, decoupling
-│  (Pub/Sub)      │
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐
-│  Log Processors │  ← Parse, transform
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Time-Series DB │      │   Index      │
-│  (InfluxDB)     │◄────►│  (Elastic)   │
-└─────────────────┘      └──────────────┘
+```mermaid
+graph TD
+    A[Servers<br/>10,000] --> B[Message Queue<br/>Pub/Sub<br/>Buffering, decoupling]
+    B --> C[Log Processors<br/>Parse, transform]
+    C --> D[Time-Series DB<br/>InfluxDB]
+    C --> E[Index<br/>Elastic]
+    D <--> E
 ```
 
 **Key Design Decisions:**
@@ -279,22 +249,10 @@ Key "user:123" → hash → maps to Node B
 
 **Visual: Data Warehouse Architecture**
 
-```
-┌─────────────┐
-│  Data       │
-│  Sources    │
-└──────┬──────┘
-       │
-       ▼
-┌─────────────────┐
-│   ETL Pipeline  │  ← Transform, clean
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐
-│  Data Warehouse │
-│  (BigQuery)     │  ← Columnar storage
-└─────────────────┘
+```mermaid
+graph TD
+    A[Data Sources] --> B[ETL Pipeline<br/>Transform, clean]
+    B --> C[Data Warehouse<br/>BigQuery<br/>Columnar storage]
 ```
 
 ---
@@ -314,23 +272,12 @@ Key "user:123" → hash → maps to Node B
 
 **High-Level Design:**
 
-```
-┌─────────────┐
-│   Clients   │
-│  (Mobile)   │
-└──────┬──────┘
-       │ WebSocket
-       ▼
-┌─────────────────┐
-│  Connection     │  ← Maintain persistent connections
-│  Manager        │
-└──────┬──────────┘
-       │
-       ▼
-┌─────────────────┐      ┌──────────────┐
-│  Message Queue  │      │   Database   │
-│  (Pub/Sub)      │◄────►│  (Messages)  │
-└─────────────────┘      └──────────────┘
+```mermaid
+graph TD
+    A[Clients<br/>Mobile] -->|WebSocket| B[Connection Manager<br/>Maintain persistent connections]
+    B --> C[Message Queue<br/>Pub/Sub]
+    B --> D[Database<br/>Messages]
+    C <--> D
 ```
 
 **Key Design Decisions:**
@@ -764,7 +711,7 @@ Total per server: 28 × 4 = 112 QPS/server
 
 For 3,471 QPS: 3,471 / 112 = ~31 servers needed
 
-```
+````
 
 ---
 
@@ -976,34 +923,13 @@ Generative AI applications introduce unique challenges:
 
 **High-Level Design:**
 
-```
-
-┌─────────────┐
-│ Clients │
-│ (Web/API) │
-└──────┬──────┘
-│
-▼
-┌─────────────────┐
-│ API Gateway │ ← Authentication, rate limiting
-│ (Cloud Endpoints)│
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐ ┌──────────────┐
-│ Request Router │ │ Cache │
-│ (Load Balancer)│◄────►│ (Redis) │
-└──────┬──────────┘ └──────────────┘
-│
-▼
-┌─────────────────┐
-│ LLM Serving │ ← Continuous batching, KV cache
-│ Infrastructure │
-│ (Vertex AI / │
-│ SageMaker) │
-└─────────────────┘
-
-```
+```mermaid
+graph TD
+    A[Clients<br/>Web/API] --> B[API Gateway<br/>Cloud Endpoints<br/>Authentication, rate limiting]
+    B --> C[Request Router<br/>Load Balancer]
+    C <--> D[Cache<br/>Redis]
+    C --> E[LLM Serving Infrastructure<br/>Vertex AI / SageMaker<br/>Continuous batching, KV cache]
+````
 
 **Key Design Decisions:**
 
@@ -1145,44 +1071,14 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **High-Level Design:**
 
-```
-
-┌─────────────┐
-│ User │
-│ Query │
-└──────┬──────┘
-│
-▼
-┌─────────────────┐
-│ Query │ ← Query understanding, rewriting
-│ Processor │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐ ┌──────────────┐
-│ Vector Store │ │ Metadata │
-│ (Embeddings) │◄────►│ Database │
-└──────┬──────────┘ └──────────────┘
-│
-▼
-┌─────────────────┐
-│ Retrieval │ ← Top-K similar documents
-│ (Similarity │
-│ Search) │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐
-│ Reranking │ ← Improve relevance
-│ (Optional) │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐
-│ LLM │ ← Generate answer with context
-│ (Gemini/GPT) │
-└─────────────────┘
-
+```mermaid
+graph TD
+    A[User Query] --> B[Query Processor<br/>Query understanding, rewriting]
+    B --> C[Vector Store<br/>Embeddings]
+    C <--> D[Metadata Database]
+    C --> E[Retrieval<br/>Similarity Search<br/>Top-K similar documents]
+    E --> F[Reranking<br/>Optional<br/>Improve relevance]
+    F --> G[LLM<br/>Gemini/GPT<br/>Generate answer with context]
 ```
 
 **Key Components:**
@@ -1443,30 +1339,17 @@ Query → Embedding → Similarity Search → Top-K Docs → LLM → Answer
 
 **High-Level Design:**
 
-```
-
-┌─────────────┐
-│ User │
-│ Message │
-└──────┬──────┘
-│
-▼
-┌─────────────────┐
-│ Agent │ ← LLM with tool-calling capability
-│ Orchestrator │
-└──────┬──────────┘
-│
-├──► Tool 1: Search Knowledge Base
-├──► Tool 2: Query Order Status
-├──► Tool 3: Create Support Ticket
-└──► Tool 4: Check Account Balance
-│
-▼
-┌─────────────────┐
-│ Response │ ← Generate natural language response
-│ Generator │
-└─────────────────┘
-
+```mermaid
+graph TD
+    A[User Message] --> B[Agent Orchestrator<br/>LLM with tool-calling capability]
+    B --> C1[Tool 1: Search Knowledge Base]
+    B --> C2[Tool 2: Query Order Status]
+    B --> C3[Tool 3: Create Support Ticket]
+    B --> C4[Tool 4: Check Account Balance]
+    C1 --> D[Response Generator<br/>Generate natural language response]
+    C2 --> D
+    C3 --> D
+    C4 --> D
 ```
 
 **Key Components:**
@@ -1553,6 +1436,7 @@ Agent Reasoning:
    - **Example**: Customer support (billing agent, technical agent, sales agent)
 
 3. **Hierarchical Pattern (Supervisor/Manager)**:
+
    - **Architecture**: Supervisor agent delegates to specialist agents, tracks progress
    - ✅ **Pros**:
      - Scalable (easy to add new specialists)
@@ -1571,30 +1455,35 @@ Agent Reasoning:
 4. **Additional Multi-Agent Patterns** (from production systems):
 
    **Sequential Pipeline Pattern**:
+
    - **Architecture**: Agent A → Agent B → Agent C (linear handoff)
    - **Use case**: Content creation workflows, review processes
    - **Example**: Research agent → Writer agent → Editor agent → Publisher agent
    - **Why it works**: Each agent builds on previous work, clear data flow
 
    **Parallel Fan-out Pattern**:
+
    - **Architecture**: Query sent to multiple agents simultaneously, results aggregated
    - **Use case**: Research tasks, multi-perspective analysis
    - **Example**: Send research question to 3 specialist agents, combine insights
    - **Why it's faster**: Parallel execution reduces total latency (max instead of sum)
 
    **Diamond Pattern**:
+
    - **Architecture**: Coordinator delegates to multiple agents in parallel, responses converge to single output
    - **Use case**: Research teams, competitive analysis
    - **Example**: Coordinator → [Market Research Agent, Competitor Analysis Agent, User Research Agent] → Synthesizer
    - **Why it's effective**: Multiple perspectives improve quality, parallel execution improves speed
 
    **Debate/Adversarial Pattern**:
+
    - **Architecture**: Agents argue opposing views, judge decides
    - **Use case**: High-stakes decisions, red teaming, critical analysis
    - **Example**: Pro agent vs Con agent debate a proposal, Judge agent makes decision
    - **Why it works**: Forces consideration of multiple perspectives, reduces bias
 
    **Peer-to-Peer Pattern**:
+
    - **Architecture**: Agents communicate directly without central coordinator
    - **Use case**: Swarm intelligence, distributed problem-solving
    - **Why it's different**: Decentralized coordination, no single point of failure
@@ -1612,6 +1501,7 @@ Agent Reasoning:
 | **Scalability**     | Limited by single agent's capacity          | Scales by adding more specialists     |
 
 **Why Multi-Agent Systems Scale Better:**
+
 - **Independent scaling**: Scale billing agent separately from technical agent based on load
 - **Fault isolation**: If one agent fails, others continue working
 - **Development velocity**: Teams can work on different agents independently
@@ -1741,10 +1631,12 @@ When a root agent invokes sub-agents, prevent **context explosion**:
 | **Agent Transfer**  | Control handed off to sub-agent to continue conversation      | Sub-agent inherits a configurable view over the Session      |
 
 **Handoff Modes:**
+
 - **Full mode**: Pass full contents of caller's working context (useful when sub-agent needs entire history)
 - **None mode**: Sub-agent sees no prior history; only receives new prompt you construct
 
 **Why Context Scoping Matters:**
+
 - **Cost reduction**: Smaller contexts = lower token costs
 - **Latency reduction**: Less context = faster processing
 - **Quality improvement**: Focused context = better model performance
@@ -1796,38 +1688,19 @@ When a root agent invokes sub-agents, prevent **context explosion**:
 
 **High-Level Design:**
 
-```
-
-┌─────────────┐
-│ LLM │
-│ Predictions│
-└──────┬──────┘
-│
-▼
-┌─────────────────┐
-│ Event Stream │ ← Pub/Sub / Kinesis
-│ (Predictions) │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐
-│ Stream │ ← Real-time processing
-│ Processor │
-│ (Dataflow / │
-│ Kinesis Analytics)│
-└──────┬──────────┘
-│
-├──► Evaluation Metrics
-├──► Cost Tracking
-├──► Latency Monitoring
-└──► Safety Checks
-│
-▼
-┌─────────────────┐ ┌──────────────┐
-│ Time-Series DB │ │ Alerting │
-│ (Monitoring) │◄────►│ System │
-└─────────────────┘ └──────────────┘
-
+```mermaid
+graph TD
+    A[LLM Predictions] --> B[Event Stream<br/>Pub/Sub / Kinesis]
+    B --> C[Stream Processor<br/>Dataflow / Kinesis Analytics<br/>Real-time processing]
+    C --> D1[Evaluation Metrics]
+    C --> D2[Cost Tracking]
+    C --> D3[Latency Monitoring]
+    C --> D4[Safety Checks]
+    D1 --> E[Time-Series DB<br/>Monitoring]
+    D2 --> E
+    D3 --> E
+    D4 --> E
+    E <--> F[Alerting System]
 ```
 
 **Key Components:**
@@ -2072,41 +1945,14 @@ Metrics:
 
 **High-Level Design:**
 
-```
-
-┌─────────────┐
-│ User │
-│ Interactions│
-└──────┬──────┘
-│
-▼
-┌─────────────────┐
-│ Event │ ← Capture prompts, responses, ratings
-│ Collection │
-│ (Pub/Sub) │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐
-│ Data │ ← Filter, deduplicate, validate
-│ Processing │
-│ (Dataflow) │
-└──────┬──────────┘
-│
-▼
-┌─────────────────┐ ┌──────────────┐
-│ Data Lake │ │ Feature │
-│ (Cloud Storage)│◄────►│ Store │
-└──────┬──────────┘ └──────────────┘
-│
-▼
-┌─────────────────┐
-│ Training │ ← Prepare datasets for fine-tuning
-│ Data Prep │
-│ (BigQuery / │
-│ Spark) │
-└─────────────────┘
-
+```mermaid
+graph TD
+    A[User Interactions] --> B[Event Collection<br/>Pub/Sub<br/>Capture prompts, responses, ratings]
+    B --> C[Data Processing<br/>Dataflow<br/>Filter, deduplicate, validate]
+    C --> D[Data Lake<br/>Cloud Storage]
+    C --> E[Feature Store]
+    D <--> E
+    D --> F[Training Data Prep<br/>BigQuery / Spark<br/>Prepare datasets for fine-tuning]
 ```
 
 **Google Cloud Services:**
@@ -2618,29 +2464,23 @@ Traditional security tools (Cloud Armor, WAFs) operate at the HTTP/network layer
 
 **Model Armor Defense Layers:**
 
-```
+```mermaid
+graph TD
+    A[Model Armor Defense Layers] --> B[Layer 1: Runtime Policy Enforcement]
+    A --> C[Layer 2: Reasoning-Based Defenses]
+    A --> D[Layer 3: Continuous Assurance]
 
-┌────────────────────────────────────────────────────────────────────────────┐
-│ MODEL ARMOR DEFENSE LAYERS │
-├────────────────────────────────────────────────────────────────────────────┤
-│ │
-│ Layer 1: RUNTIME POLICY ENFORCEMENT │
-│ ├── Model Armor templates for input/output validation │
-│ ├── Block prompt injection patterns │
-│ └── Prevent sensitive data disclosure │
-│ │
-│ Layer 2: REASONING-BASED DEFENSES │
-│ ├── Model hardening (adversarial training) │
-│ ├── Classifier guards │
-│ └── Intent verification │
-│ │
-│ Layer 3: CONTINUOUS ASSURANCE │
-│ ├── Red teaming / attack scenario testing │
-│ ├── Regression testing on guardrails │
-│ └── Variant analysis │
-│ │
-└────────────────────────────────────────────────────────────────────────────┘
+    B --> B1[Model Armor templates<br/>input/output validation]
+    B --> B2[Block prompt injection patterns]
+    B --> B3[Prevent sensitive data disclosure]
 
+    C --> C1[Model hardening<br/>adversarial training]
+    C --> C2[Classifier guards]
+    C --> C3[Intent verification]
+
+    D --> D1[Red teaming<br/>attack scenario testing]
+    D --> D2[Regression testing<br/>on guardrails]
+    D --> D3[Variant analysis]
 ```
 
 **What Model Armor Catches vs Cloud Armor:**
@@ -2666,6 +2506,7 @@ Use **both** for production deployments — they protect different attack surfac
 Model Armor integrates into the agent pipeline at two critical points:
 
 1. **Input Guardrail (Before LLM Processing)**:
+
    - User input is sent to Model Armor for sanitization
    - Model Armor checks for prompt injection, jailbreak attempts, and PII
    - If blocked: Request is rejected with reason (e.g., "PROMPT_INJECTION detected")
@@ -2689,16 +2530,19 @@ Model Armor integrates into the agent pipeline at two critical points:
 Security templates define policies for input and output filtering:
 
 **Input Filters:**
+
 - **PROMPT_INJECTION**: Block attempts to override system instructions (HIGH sensitivity)
 - **JAILBREAK_ATTEMPT**: Block patterns like "ignore previous instructions", "you are now", "pretend you are"
 - **PII_DETECTION**: Redact sensitive data (EMAIL, PHONE, SSN, CREDIT_CARD) before processing
 
 **Output Filters:**
+
 - **SENSITIVE_DATA**: Redact internal credentials, API keys, database queries from responses
 - **HARMFUL_CONTENT**: Block hate speech, violence, illegal activity
 - **GROUNDING_VERIFICATION**: Warn if responses lack source citations (important for RAG systems)
 
 **Logging Configuration:**
+
 - Enable logging to Cloud Logging
 - Log all blocked requests with reasons
 - Log all redacted content for audit trail
@@ -2759,46 +2603,15 @@ Security templates define policies for input and output filtering:
 
 **Example: Secure Agent Architecture**
 
-```
-
-User Request
-│
-▼
-┌─────────────────┐
-│ Cloud Armor │ ← HTTP-level protection (DDoS, rate limiting)
-└────────┬────────┘
-│
-▼
-┌─────────────────┐
-│ API Gateway │ ← Authentication, authorization (IAM)
-│ (Apigee) │
-└────────┬────────┘
-│
-▼
-┌─────────────────┐
-│ Model Armor │ ← Input filtering (prompt injection, PII)
-│ (Input) │
-└────────┬────────┘
-│
-▼
-┌─────────────────┐
-│ LLM / Agent │ ← Process request
-└────────┬────────┘
-│
-▼
-┌─────────────────┐
-│ Model Armor │ ← Output filtering (harmful content, PII)
-│ (Output) │
-└────────┬────────┘
-│
-▼
-┌─────────────────┐
-│ Cloud DLP │ ← Additional PII redaction if needed
-└────────┬────────┘
-│
-▼
-User Response
-
+```mermaid
+graph TD
+    A[User Request] --> B[Cloud Armor<br/>HTTP-level protection<br/>DDoS, rate limiting]
+    B --> C[API Gateway<br/>Apigee<br/>Authentication, authorization IAM]
+    C --> D[Model Armor Input<br/>Input filtering<br/>prompt injection, PII]
+    D --> E[LLM / Agent<br/>Process request]
+    E --> F[Model Armor Output<br/>Output filtering<br/>harmful content, PII]
+    F --> G[Cloud DLP<br/>Additional PII redaction if needed]
+    G --> H[User Response]
 ```
 
 **EXAM TIP:** When questions mention "secure agent deployment" or "enterprise agent architecture" → think **Model Armor (prompt injection defense) + IAM (least privilege) + Secret Manager (no hardcoded creds) + Cloud Armor (WAF/rate limits) + VPC Service Controls (data perimeter) + audit logging**.
@@ -2868,4 +2681,7 @@ System design interviews test your ability to think about systems holistically. 
 6. **Think about failures** - What can go wrong?
 
 **Good luck with your interviews!** 🚀
+
+```
+
 ```
