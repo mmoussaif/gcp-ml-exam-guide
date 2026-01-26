@@ -11,7 +11,9 @@ __pycache__/
 *.pyc
 
 # Keep PDFs/text exports out of the public repo unless you explicitly want them shared
-docs/gcp-ml-exam-guide/pdfs/
-docs/gcp-ml-exam-guide/pdfs_txt/
-docs/gcp-ml-exam-guide/pdfs_links/
+gcp-ml-exam-guide/pdfs/
+gcp-ml-exam-guide/pdfs_txt/
+gcp-ml-exam-guide/pdfs_links/
 
+# Separate repository - coding interview guide
+coding-interview-guide/
