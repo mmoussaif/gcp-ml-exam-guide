@@ -1439,16 +1439,54 @@ graph TD
 
 2. **Tool Integration**:
 
-   - **Function Calling**: LLM decides which tools to call
-   - **API Integration**: REST APIs, GraphQL, gRPC
+   **Why tools matter**: Language models process information well but can't directly interact with the real world. Tools act as a **bridge between the agent and external systems**, enabling agents to perform actions with greater accuracy and reliability (smart home control, calendar updates, database queries, email sending, travel booking, etc.).
+
+   **Four Key Tool Types:**
+
+   | Tool Type | Execution | Description | Best For |
+   |-----------|-----------|-------------|----------|
+   | **Extensions (APIs)** | Agent-side | Standardized bridges to external APIs; agent selects and invokes at runtime | Simplified API access across multiple services |
+   | **Function Calling** | Client-side | Model outputs function name + args; your app executes | Security constraints, audit needs, human-in-the-loop |
+   | **Data Stores** | Agent-side | Connect to dynamic data sources (vector DBs, knowledge bases) | RAG, real-time info, avoiding retraining |
+   | **Plugins** | Typically agent-side | Pre-built integrations (calendar, CRM, scheduling) | Rapid capability addition |
+
+   **Example - Travel Booking Agent**:
+   - Uses an **extension** to interact with airline API (handles communication complexities)
+   - Uses **function calling** for payment processing (client controls auth, audit)
+   - Uses **data store** to query customer preferences (vector DB)
+   - Uses **scheduling plugin** to check calendar availability
+
+   **Tool Selection Trade-off**: Extensions simplify multi-API access; function calling provides security/control. Choose based on trust boundaries and audit requirements.
+
+   **Protocol Standards**:
    - **MCP (Model Context Protocol)**: Standardized tool connections
+   - **REST/GraphQL/gRPC**: API integration patterns
 
 3. **Orchestration**:
+
    - **Reasoning Loop**: The core iterative process where the agent processes information, performs internal reasoning, and decides on the next action.
    - **Reasoning Frameworks**:
      - **Chain-of-Thought (CoT)**: Focuses on internal logic by generating intermediate reasoning steps ("think step-by-step").
      - **ReAct (Reason + Act)**: Combines reasoning with external tool use in a "Thought-Action-Observation" loop.
-   - **ReAct Pattern**: Reason → Act → Observe loop (a common reasoning framework).
+
+   **How the Reasoning Loop Works with Tools (ReAct Cycle)**:
+
+   | Phase | What Happens | Agent's Role |
+   |-------|--------------|--------------|
+   | **1. Reasoning (Tool Selection)** | Agent analyzes task, determines which tools are needed | Considers available extensions, functions, data stores; chooses appropriate resources |
+   | **2. Acting (Tool Execution)** | Agent executes selected tool | Calls API via extension, invokes function, or queries data store; provides inputs |
+   | **3. Observation** | Agent receives tool output | Output becomes "observation" that informs next steps |
+   | **4. Iteration** | Based on observation, agent reasons about next steps | May select different tools, refine approach, or gather more info; cycle repeats until complete |
+
+   **Practical Example - Scheduling a Consultation**:
+
+   | Phase | Agent Activity |
+   |-------|----------------|
+   | Reasoning | Agent needs available time slot → selects scheduling plugin |
+   | Acting | Checks calendar availability, accesses customer database for contact info |
+   | Observation | Plugin returns available slots |
+   | Iteration | Presents slots to user; if unavailable, suggests alternatives; books when confirmed; sends confirmation email |
+
    - **Planning**: Break complex tasks into steps.
    - **Memory**: Maintain conversation context.
 
