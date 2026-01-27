@@ -906,6 +906,43 @@ Generative AI applications introduce unique challenges:
 | **Memory**     | Model weights        | Model + KV cache (grows with sequence) |
 | **Batching**   | Static batches       | Dynamic/continuous batching            |
 | **Cost**       | Per-request          | Per-token (input + output)             |
+| **Control**    | Fixed weights        | Sampling parameters (temp, top-p)      |
+
+---
+
+### Using Models & Sampling Parameters
+
+Generative AI agents are powered by models that act as the "brains" of the operation. While models are pre-trained, their behavior during inference can be customized using **sampling parameters**—the "knobs and dials" of the model.
+
+#### Common Sampling Parameters
+
+1.  **Temperature**:
+    *   **Definition**: Controls the "creativity" or randomness of the output.
+    *   **Why it matters**: It adjusts the randomness of word choices.
+    *   **High Temperature**: More random, diverse, and unpredictable output.
+    *   **Low Temperature**: More focused, deterministic, and repeatable output.
+
+2.  **Top-p (Nucleus Sampling)**:
+    *   **Definition**: The cumulative probability threshold for considering the most likely tokens.
+    *   **Why it matters**: It concentrates probability on the most likely tokens, making output more coherent and relevant.
+    *   **High Top-p**: Allows for more diversity by extending to lower probability tokens.
+    *   **Low Top-p**: Leads to more focused responses by only considering the most probable tokens.
+
+3.  **Token Count / Output Length**:
+    *   **Definition**: Determines the maximum length of the generated text.
+    *   **Why it matters**: Prevents runaway generation and controls costs. You can set a specific limit or let the model reach a natural stopping point.
+
+4.  **Safety Settings**:
+    *   **Definition**: Filters that block potentially harmful or inappropriate content.
+    *   **Why it matters**: Essential for enterprise applications to ensure outputs align with safety policies and preferences.
+
+#### Accessing Parameters via APIs
+
+Most generative AI models are accessed via **APIs (Application Programming Interfaces)**. The API acts as a messenger:
+1.  Your application sends a **Prompt** + **Sampling Parameters**.
+2.  The API delivers these to the model.
+3.  The model generates a response based on those specific "knobs and dials".
+4.  The API returns the response to your application.
 
 ---
 
