@@ -47,6 +47,8 @@ Generative AI applications introduce unique challenges that differ significantly
 
 This guide covers how to design, build, and operate GenAI systems at scale.
 
+**Aha:** GenAI system design is different because you're optimizing for **non-determinism** (same prompt → different outputs), **token economics** (cost and latency scale with length), and **orchestration** (models + retrieval + tools), not just throughput of identical requests.
+
 ---
 
 ## GenAI vs Traditional ML
@@ -68,6 +70,8 @@ Understanding the fundamental differences between traditional ML systems and **G
 - **KV cache growth** means memory requirements increase with context length, limiting how many concurrent requests you can serve.
 - **Per-token pricing** means prompt engineering and response length directly impact costs.
 
+**Aha:** Traditional ML is "one input → one prediction." GenAI is "one prompt → a stream of tokens, each depending on the last." That shifts bottlenecks from GPU compute to memory (KV cache), latency (time-to-first-token vs total time), and cost (every token billed).
+
 ---
 
 ## Using Models & Sampling Parameters
@@ -86,6 +90,8 @@ Controls the "creativity" or randomness of the output by rescaling logits before
 
 *Use low temperature (0.1-0.3) for factual tasks, higher (0.7-1.0) for creative tasks.*
 
+**Aha:** Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
+
 **2. Top-p (Nucleus Sampling)**
 
 Selects the smallest set of tokens whose cumulative probability mass reaches threshold *p*.
@@ -93,6 +99,8 @@ Selects the smallest set of tokens whose cumulative probability mass reaches thr
 - **High Top-p (0.9-1.0)**: Allows for more diversity by extending to lower probability tokens.
 - **Low Top-p (0.1-0.5)**: Leads to more focused responses.
 - **Adaptive**: Unlike Top-K, adapts to the distribution's shape—in confident contexts, the "nucleus" is small.
+
+**Aha:** Top-p says "consider only tokens that together account for probability mass *p*." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
 
 **3. Top-K**
 
@@ -222,31 +230,33 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Benefit**: 2-3x higher throughput because GPU utilization increases from ~40% to ~85%.
 
+**Aha:** With static batching, one long answer blocks the whole batch. Continuous batching **refills** the batch as soon as any request completes, so the GPU rarely idles. The "aha" is: treat the batch as a **queue**, not a fixed group.
+
 **3. KV Cache Management**
 
-**What**: Cache attention key-value pairs to avoid recomputation.
+**What**: Store the **Key** and **Value** matrices produced by each attention head so they are not recomputed. In standard attention, the score matrix has shape `[batch, heads, sequence_length, sequence_length]`; each new token would require recomputing scores over all previous tokens.
 
-**Why KV cache is needed**: In transformer attention, each token needs to attend to all previous tokens. Without caching, we'd recompute attention for all previous tokens at each step, leading to O(n²) complexity per token.
+**Why KV cache is needed**: Autoregressive decoding feeds all prior tokens into the next step. Without caching, every generation step recomputes keys and values for the entire prefix, giving O(n²) work per token. Caching lets you compute K and V only for the new token and reuse the rest, reducing to O(n) per token. Reported speedups from KV caching are on the order of ~30–40% in standard implementations.
 
-**How it works**: During generation, we compute K and V for each new token, but reuse cached K/V from previous tokens. This reduces complexity to O(n) per token.
+**How it works**: For each new token, compute and store its K and V; look up cached K/V for all previous positions when computing attention. Only the new token’s key/value are written each step.
 
-**Challenge**: Memory grows linearly with sequence length. For a 32-layer model with 768-dim embeddings, each token requires ~50KB of cache. A 2000-token sequence needs ~100MB just for KV cache.
+**Challenge**: Cache size grows linearly with sequence length (and with layers × heads × head_dim). For a 32-layer model with 768-dim embeddings, each token can use on the order of ~50KB of cache; a 2K-token sequence can need ~100MB of KV cache. Long contexts and many concurrent requests make this the main memory bottleneck.
 
-**Solution**: Paged attention (vLLM) uses non-contiguous memory pages for better utilization and longer sequences.
+**Solution — PagedAttention (vLLM)**: Inspired by OS virtual memory and paging. The KV cache is split into **fixed-size blocks** and stored in non-contiguous memory. That reduces fragmentation and allows sharing (e.g. shared prompt prefix across requests). vLLM reports near-zero wasted KV memory and roughly **2–4× throughput** versus non-paged systems on long sequences and large models.
 
 **5. Speculative Decoding**
 
-**Problem**: Token-by-token autoregressive generation is slow because each token requires a full forward pass.
+**Problem**: Token-by-token autoregressive generation is slow because each new token requires a full forward pass of the large model.
 
-**Solution**: Use a smaller "draft" model to generate multiple candidate tokens, then verify them in parallel with the large model. Accepted tokens skip individual forward passes.
+**Solution**: A small **draft** model proposes several candidate tokens in a row. The **target** (large) model does a single forward pass over the whole candidate sequence and accepts tokens that match its predictions; the first mismatch stops the run and the rest are discarded. Accepted tokens advance the sequence without extra target-model steps. Typical reported speedups are **2–2.5×**; variants (multiple draft models, tree-based decoding) can reach ~3–4× or more at the cost of extra memory and complexity.
 
 | Technique | Speedup | Trade-off |
 |-----------|---------|-----------|
-| **Standard Speculative** | 2-3x | Requires draft model |
-| **Self-Speculative** | 2.5x | Uses quantized version of same model |
-| **Tree-based** | Up to 6x | Memory overhead for tree search |
+| **Standard Speculative** | 2–2.5× (often up to ~3×) | Needs a separate draft model |
+| **Self-Speculative** | ~2.5× | Uses smaller/quantized version of same model |
+| **Tree-based** | Up to ~4–6× | More memory and logic for tree search |
 
-**Why it works**: Verification is cheaper than generation. The large model can verify N tokens in roughly the same time as generating 1 token.
+**Why it works**: The target model verifies **N** candidates in one forward pass (over a sequence of length N). That cost is similar to generating a single token, so you effectively get several tokens per large-model step when the draft is accurate. **Draft latency** (how fast the draft runs) usually matters more for end-to-end speedup than the draft’s raw language quality.
 
 **4. Caching Strategy**
 
@@ -298,6 +308,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Aha:** RAG doesn't cram everything into the model's weights. It keeps the LLM general and **fetches** relevant knowledge at query time. That gives you updatable knowledge, smaller models, and citations—but you must design retrieval and chunking well or the model "makes it up."
+
 ### Key Components
 
 **1. Document Ingestion Pipeline**
@@ -317,7 +329,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 - **Google**: text-embedding-004 (Vertex AI)
 - **AWS**: Amazon Titan Embeddings (Bedrock)
-- **Open Source**: sentence-transformers, BGE models
+- **Open Source**: sentence-transformers, **BGE** (BAAI General Embeddings)—embedding models from BAAI (Beijing Academy of Artificial Intelligence), e.g. bge-base, BGE-M3 for multilingual
 
 ### Chunking Strategy Trade-offs
 
@@ -329,6 +341,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Why chunking matters**: LLMs have context windows. Documents often exceed this, so we must break them into chunks. Smaller chunks improve retrieval precision—a query about "Python loops" matches better to a 500-token chunk about loops than a 5000-token document about Python.
 
+**Aha:** Chunk size is a **precision vs context** trade-off. Too small → you retrieve the right idea but maybe miss surrounding explanation. Too large → you get more context but dilute relevance. Overlap and semantic boundaries help keep "one concept per chunk."
+
 ### Retrieval Strategy Trade-offs
 
 | Strategy | Latency | Semantic | Keywords | Best For |
@@ -337,7 +351,11 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | **Sparse (BM25)** | 1-5ms | ✗ | ✓ | Exact matches |
 | **Hybrid** | 15-60ms | ✓ | ✓ | Production (recommended) |
 
+**BM25** = keyword-based ranking using term frequency and inverse document frequency; no embeddings, just lexical match.
+
 **Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via **RRF (Reciprocal Rank Fusion)** gives best results.
+
+**Aha:** **Dense** = "these two *mean* the same thing" (embedding similarity). **Sparse** = "these two *contain* the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
 
 ### Reranking Trade-offs
 
@@ -347,53 +365,149 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Best practice**: Retrieve K=20, rerank to top 5. The two-stage approach combines speed (bi-encoder retrieval) with accuracy (cross-encoder reranking).
 
+**Aha:** **Bi-encoder** = query and doc are embedded *separately*; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the *pair* and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
+
 ### Advanced RAG Techniques
 
-| Technique | Description | When to Use |
-|-----------|-------------|-------------|
-| **Graph RAG** | Combine vector search with knowledge graphs | Complex entity relationships, multi-hop reasoning |
-| **Adaptive Retrieval** | Dynamically adjust number of retrieved docs based on query | Variable query complexity |
-| **Query Decomposition** | Break complex queries into sub-queries | Multi-part questions |
-| **HyDE** | Generate hypothetical answer, embed that for retrieval | Queries with vocabulary mismatch |
+These techniques improve retrieval when plain “embed query → top‑k chunks” is not enough: when answers span multiple hops, when queries vary in difficulty, or when user wording doesn’t match document wording.
+
+---
+
+**1. Graph RAG**
+
+**What it is:** You build a **knowledge graph** from your corpus (entities as nodes, relations as edges) and combine it with vector search. Retrieval can follow *links* (e.g. “this person → worked at → this company”) as well as semantic similarity.
+
+**How it helps:** Many questions need **multi-hop** reasoning: “Who was the CEO of the company that acquired X?” requires (X → acquired by → company → CEO → person). Flat vector search often returns only one hop. Graph RAG retrieves **subgraphs** (e.g. k-hop neighborhoods) so the LLM sees not just similar text but explicit *who–what–where* structure.
+
+**When to use:** Strong fit for domains rich in **entities and relations** (people, orgs, products, events) and questions that chain them. Overkill for unstructured long-form text with few named relations.
+
+**Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things *connected*?” so the model can follow paths, not only similarity.
+
+---
+
+**2. Adaptive Retrieval**
+
+**What it is:** Instead of always retrieving the same number of documents (e.g. k=10), you **change k per query**. Simple factoid questions get fewer docs; broad or multi-fact questions get more.
+
+**How it helps:** With a **fixed k**, easy questions get unnecessary context (wasted tokens, more noise) and hard questions may get too few (missing evidence). Adaptive retrieval uses a small classifier, heuristics (e.g. query length, question type), or the **shape of similarity scores** (e.g. “biggest drop” between consecutive docs) to choose k. Some methods need no extra model—e.g. set k at the largest score gap in the ranked list.
+
+**When to use:** When your traffic mixes **simple lookups** and **complex / multi-document** questions. Saves tokens and latency on easy queries and improves recall on hard ones.
+
+**Aha:** One size doesn’t fit all: “What is the capital of France?” needs 1–2 chunks; “Compare the economic policies of France and Germany in the 1980s” needs many. Adaptive k tunes retrieval to each question.
+
+---
+
+**3. Query Decomposition**
+
+**What it is:** Before retrieval, an LLM **splits** the user question into 2–5 **sub-questions** that are answered by different parts of the corpus. You run retrieval once per sub-question, then merge and deduplicate the chunks and pass that combined context to the final answer model.
+
+**How it helps:** Questions like “How does X differ from Y?” or “Which of A, B, C had the highest Z?” don’t match one passage—they need **several**. One query embedding often misses some of them. Decomposing into “What is X?”, “What is Y?”, “How do they differ?” (or “What is Z for A?”, “What is Z for B?”, …) yields focused sub-queries and better coverage.
+
+**When to use:** **Multi-part** or **comparison** questions, and whenever a single embedding tends to retrieve only one “side” of the answer. Adds latency (one LLM call to decompose, then multiple retrievals) but can significantly improve accuracy.
+
+**Aha:** One query → one vector → one retrieval set often undersamples. Decomposing “How does A differ from B?” into “What is A?” and “What is B?” (and optionally “How do they differ?”) pulls in the right evidence for each piece, then the model synthesizes.
+
+---
+
+**4. HyDE (Hypothetical Document Embeddings)**
+
+**What it is:** You **don’t** embed the user query directly. Instead, you ask an LLM: “Write a short passage that would answer this question.” You get 1–5 such **hypothetical** passages, embed *those*, and (often) **average** their vectors. That single vector is used to search the real document index.
+
+**How it helps:** Query and documents often use **different words** for the same idea (e.g. user: “loop,” docs: “iteration construct”). The query embedding can sit in a different region of the embedding space than the best-matching docs. Hypothetical answers “translate” the question into **passage-like** text, so their embeddings sit closer to real relevant passages. Averaging smooths noise from any one generation.
+
+**When to use:** When **vocabulary mismatch** hurts recall (e.g. lay users vs technical docs, or one language vs translated corpus) and when you can afford one extra LLM call before retrieval. Less useful when queries already look like document sentences.
+
+**Aha:** You’re searching with “what an answer would look like” instead of “what the question looks like.” The hypothetical doc is in the same “language” as your corpus, so similarity search works better.
+
+---
+
+**Quick reference**
+
+| Technique | Main idea | Best for |
+|-----------|-----------|----------|
+| **Graph RAG** | Vector search + graph structure (entities, relations); retrieve subgraphs for multi-hop | Entity-heavy domains, “who/what/where” chains |
+| **Adaptive Retrieval** | Vary number of retrieved docs (k) by query complexity | Mix of simple and complex questions |
+| **Query Decomposition** | Split question into sub-questions; retrieve per sub-question; merge context | Multi-part, comparison, “A vs B” style questions |
+| **HyDE** | Generate hypothetical answer(s), embed those, search with that vector | Vocabulary mismatch between user and corpus |
 
 ---
 
 ## 3. RAG vs Fine-Tuning Decision Framework
 
-**Key Insight**: This is not binary—use as a spectrum of adaptation techniques.
+**Key insight:** This is not a binary choice. Think of it as a **spectrum of adaptation**: RAG and fine-tuning solve different problems and are often used **together**. The right question is not "RAG or fine-tuning?" but "What does the model lack—**knowledge** or **behavior**?"
 
-### When to Use Each
+- **"The model doesn't *know* X"** → Add knowledge via RAG (or long context, or caching).
+- **"The model doesn't *behave* like Y"** → Change behavior via fine-tuning (tone, format, schema, jargon).
+- **"We need both fresh facts and consistent style"** → Use both: RAG for what to say, fine-tuning for how to say it.
+
+---
+
+### When to Use RAG
+
+**What RAG fixes:** Gaps in **knowledge** and **freshness**. The model is good at reasoning and language but hasn't seen your data (policies, tickets, docs, logs). RAG injects that at query time: you retrieve relevant chunks and put them in the prompt, so the model "reads" your corpus on demand.
+
+**Use RAG when:** The model **lacks knowledge** about your domain (e.g. internal docs, product specs, support history). Your **data changes often** (e.g. daily reports, new releases, tickets)—RAG lets you update the index without retraining. You want to **reduce hallucinations** by **grounding** answers in retrieved text and to **cite sources** (chunk or doc IDs).
+
+**RAG does *not* fix:** Tone, format, or jargon. If the base model is too informal or ignores your schema, RAG alone won't change that—you need behavior change (prompts or fine-tuning).
+
+---
+
+### When to Use Fine-Tuning
+
+**What fine-tuning fixes:** **Behavior** and **style**. The model "knows" enough from pretraining, but its outputs don't match how you want it to answer: tone (formal vs casual), structure (e.g. JSON with fixed keys), or vocabulary (your domain terms). Fine-tuning adjusts the model's weights so it reliably produces that style.
+
+**Use fine-tuning when:** You need a **specific tone or voice** (e.g. brand guidelines, compliance-friendly wording). You need **strict output format** (e.g. JSON, bullet lists, section headings)—fine-tuning helps the model adhere to schemas. The model **misuses or avoids domain jargon**; training on in-domain examples teaches it to use your terms correctly.
+
+**Fine-tuning does *not* fix:** Missing or outdated facts. Weights are fixed until the next train run. For fast-changing knowledge, use RAG (or both).
+
+---
+
+### When to Use Both
+
+**Use RAG + fine-tuning when** you need **accurate, up-to-date content** *and* **consistent presentation**: RAG supplies the **facts** (from docs, KB, logs); fine-tuning shapes **how** those facts are expressed (tone, format, terminology). Example: A support bot that answers from your knowledge base (RAG) but must always respond in a compliant, on-brand style (fine-tuned). Or a report generator that pulls from live data (RAG) and always outputs the same JSON schema (fine-tuned).
+
+---
+
+### Scenario Cheat Sheet
 
 | Scenario | RAG | Fine-Tuning | Both |
-|----------|-----|-------------|------|
-| Model lacks knowledge | ✅ | ❌ | |
-| Data changes frequently | ✅ | ❌ | |
-| Need specific tone/style | ❌ | ✅ | |
-| Domain-specific jargon | | ✅ | |
-| Reduce hallucinations with grounding | ✅ | | |
-| Change output format/schema | | ✅ | |
-| High accuracy + fresh data | | | ✅ |
+|----------|:---:|:-----------:|:----:|
+| Model lacks knowledge about your domain | ✅ | ❌ | |
+| Data changes frequently (docs, tickets, metrics) | ✅ | ❌ | |
+| Need specific tone, style, or brand voice | ❌ | ✅ | |
+| Domain-specific jargon or terminology | ❌ | ✅ | |
+| Reduce hallucinations by grounding in retrieved text | ✅ | | |
+| Change output format or schema (e.g. JSON, sections) | ❌ | ✅ | |
+| High accuracy *and* fresh data *and* consistent style | | | ✅ |
 
 ### Cost Comparison
 
-| Approach | Cost Model | Example |
-|----------|------------|---------|
-| **RAG** | Per-query ($0.01-0.05) | 1M queries/month = $10-50K |
-| **Fine-Tuning** | One-time ($500-2,000 for **LoRA**, Low-Rank Adaptation) | Amortizes over usage |
-| **Full Fine-Tune** | $10,000-100,000+ | Large datasets, custom models |
+Cost structure is different, not just "cheaper vs more expensive":
+
+| Approach | Cost model | What you pay for | Example ballpark |
+|----------|------------|------------------|------------------|
+| **RAG** | **Per query** | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ~$0.01-0.05 per query; 1M queries/month ≈ $10-50K |
+| **Fine-tuning (e.g. LoRA)** | **One-time** | Training compute + data prep; then inference cost as usual | ~$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
+| **Full fine-tune** | **One-time, large** | Full training run on your data | $10K-100K+ depending on model size and data |
+
+**How to think about it:** RAG cost grows with **usage** (every query pays). Fine-tuning cost is **upfront**; after that, marginal cost per request is similar to the base model (or lower if you use a smaller fine-tuned model). Break-even depends on volume: at very high QPS, RAG can exceed the amortized cost of a one-time fine-tune; at low QPS, RAG is often cheaper than investing in fine-tuning.
 
 ### Decision Flow
+
+Start with the **cheapest, fastest** lever (prompts and few-shot examples). Only add RAG or fine-tuning when you've identified a clear gap: knowledge vs behavior.
 
 ```
 Start with: System prompt + few-shot examples
         │
         ▼
-Does model lack knowledge about your domain?
+Does the model lack KNOWLEDGE about your domain?
+(e.g. your docs, products, policies, tickets)
         │
     Yes ─┴─ No
         │     │
         ▼     ▼
-    Add RAG   Does model need behavior change?
+   Add RAG   Does the model need BEHAVIOR change?
+            (e.g. tone, format, schema, jargon)
                     │
                Yes ─┴─ No
                     │     │
@@ -401,11 +515,53 @@ Does model lack knowledge about your domain?
             Fine-tune   Done
 ```
 
-**Best Practice**: Start simple (prompt engineering), add RAG for knowledge, fine-tune only when behavior change is needed. Many production systems combine all three.
+You can **add RAG and then fine-tune** (or the reverse) if you need both knowledge and behavior. Many production systems use prompts + RAG + fine-tuning together.
+
+---
+
+### Best Practice
+
+1. **Start simple:** Prompt engineering + a few examples. Ship and measure.
+2. **Add RAG** when the main gap is "model doesn't know our content" or "content changes often."
+3. **Add fine-tuning** when the main gap is "model doesn't answer in our tone/format/terms."
+4. **Combine** when you need both correct, up-to-date content and consistent presentation.
+
+**Aha:** RAG = **external memory** you can change without retraining (add docs, edit, delete). Fine-tuning = **internalized behavior** (tone, format, jargon) that’s fixed until the next train run. Use RAG when the world changes; use fine-tuning when you want the model itself to change how it answers.
 
 ---
 
 ## 4. Agentic AI Systems
+
+### What Is an Agent? Why Do We Need One?
+
+**Definition:** An **agent** is an LLM that **repeatedly** decides, acts, and observes until a task is done. It has access to **tools** (APIs, databases, search, code) and runs in a **loop**: perceive the current state → decide the next step → call a tool → observe the result → repeat. That loop is what makes it an agent, not "one prompt → one answer."
+
+**Why we need agents:** A single LLM call is stateless and one-shot. It can't look up live data, call your CRM, or run multi-step workflows. **RAG** adds retrieval at query time but still produces one answer from one retrieved context—no tool calls, no iterative refinement. **Agents** add the ability to *use the world*: query systems, run code, search, then decide what to do next from the results. So you need an agent when the task requires **multiple steps**, **live data** (orders, DB, APIs), or **decisions that depend on tool outputs** (e.g. "if order status is X, do Y").
+
+**When to use agents vs. not:**
+
+| Use an agent when… | Use a single call or RAG when… |
+|-------------------|-------------------------------|
+| The task needs **multiple tool calls** or steps (e.g. check order → update CRM → create ticket) | The task is **one question → one answer** (e.g. "what is our return policy?") |
+| The **next step depends on live results** (e.g. "if refund approved, then…") | The pipeline is **fixed** (e.g. embed query → retrieve → generate) |
+| You need **orchestration across systems** (APIs, DBs, search) | You only need **retrieval + generation** (RAG) or pure generation |
+| Decisions are **context-sensitive** and hard to encode as rules | The flow is **deterministic** and easy to script |
+
+**Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must *use* external systems and *iterate* based on what it sees.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│            SINGLE CALL / RAG vs AGENT                                        │
+│                                                                              │
+│   SINGLE CALL or RAG                    AGENT                               │
+│   ────────────────────                  ─────                               │
+│   User → Prompt (+ RAG?) → LLM → Answer  User → Prompt → LLM → Thought       │
+│   (one shot)                                  │                              │
+│                                         Tool call → Observation → (repeat)   │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ### Use Case: Design a Customer Support Agent
 
@@ -415,6 +571,8 @@ Does model lack knowledge about your domain?
 - Support multi-turn conversations
 - Escalate to human when needed
 - Handle 10,000 conversations/day
+
+**Why an agent fits here:** Support often needs *multi-step* actions (look up order → check policy → create ticket or escalate) and *live data* (order status, account history). One LLM call or RAG-only can't do that; you need a loop + tools.
 
 **High-Level Design:**
 
@@ -450,14 +608,22 @@ Does model lack knowledge about your domain?
 └─────────────────────────────────────────────────────────────────┘
 ```
 
+**Aha:** An agent is an LLM in a **loop** with tools. The model doesn’t just answer once; it *reasons → acts (calls a tool) → observes (gets result) → reasons again* until it can respond. That turns the LLM into a controller over APIs, DBs, and search—so the "aha" is: the value is in the **loop + tools**, not in a bigger model.
+
 ### Agent Frameworks
+
+Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to configure agents in a UI with minimal code. Choose **programmatic** (ADK, LangChain, LlamaIndex) when you need custom logic, complex workflows, or fine-grained control.
 
 | Platform | Google Cloud | AWS | Open Source |
 |----------|--------------|-----|-------------|
 | No-code | Vertex AI Agent Builder | Bedrock Agents | - |
 | Programmatic | Agent Development Kit (ADK) | AgentCore | LangChain, LlamaIndex, AutoGen |
 
+---
+
 ### Tool Types
+
+**Tools** are how the agent interacts with the world: APIs, DBs, search, code. The agent chooses *which* tool to call and *with what arguments*; the tool runs and returns a result, which the agent uses for the next step.
 
 | Tool Type | Execution | Description | Best For |
 |-----------|-----------|-------------|----------|
@@ -466,53 +632,144 @@ Does model lack knowledge about your domain?
 | **Data Stores** | Agent-side | Connect to vector DBs, knowledge bases | RAG, real-time info |
 | **Plugins** | Agent-side | Pre-built integrations (calendar, CRM) | Rapid capability addition |
 
+**Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and *your app* decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
+
+---
+
+### Agent Protocols: MCP and A2A
+
+**MCP (Model Context Protocol)** and **A2A (Agent-to-Agent / Agent2Agent)** are open standards that define how agents get **tools and context** (MCP) and how **agents talk to other agents** (A2A). Both matter when you build multi-tool or multi-agent systems.
+
+**MCP (Model Context Protocol)**
+
+**MCP** is an open protocol (Anthropic, 2024) that standardizes how applications provide **tools and context** to LLMs. It acts as a universal connector: an LLM or agent connects to **MCP servers**, which expose tools, prompts, and resources (files, DBs, APIs) in a consistent way. So instead of each vendor defining its own tool format, you run or connect to MCP servers and the model gets a uniform interface.
+
+| Aspect | Description |
+|--------|-------------|
+| **Purpose** | Standardize how models get tools, prompts, and resources from external systems |
+| **Adoption** | Anthropic (Claude), OpenAI (Agents SDK), Microsoft (Agent Framework) |
+| **Use cases** | AI-powered IDEs, custom workflows, connecting agents to Slack, Figma, databases, etc. |
+
+**When it matters:** Use MCP when you want **portable tooling**—the same MCP server can back multiple agents or products. It also helps when you integrate many external systems (CRMs, docs, search) without writing custom glue per vendor.
+
+**A2A (Agent-to-Agent / Agent2Agent Protocol)**
+
+**A2A** is an open standard (Google, 2025) for **communication and collaboration between AI agents** built by different vendors and frameworks. It addresses interoperability: agents from different stacks (e.g. Vertex AI, LangChain, Salesforce) can discover each other, negotiate UX, and exchange tasks and state **without** sharing internal memory, resources, or tools.
+
+| Aspect | Description |
+|--------|-------------|
+| **Purpose** | Enable agent-to-agent collaboration across vendors and frameworks |
+| **Mechanisms** | **Agent Cards** (JSON metadata: identity, capabilities), capability discovery, task/state management, UX negotiation |
+| **Transport** | JSON-RPC 2.0 over HTTP(S) |
+| **Relationship to MCP** | A2A handles **agent ↔ agent**; MCP handles **model ↔ tools/context**. They complement each other. |
+
+**When it matters:** Use A2A when you run **multi-agent** or **cross-vendor** workflows (e.g. your agent hands off to a partner’s agent, or you compose agents from different platforms). It gives you a shared protocol for discovery, tasks, and security instead of one-off integrations.
+
+**Aha:** **MCP** = “how does *this* agent get its tools and context?” **A2A** = “how do *multiple* agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
+
+---
+
 ### Reasoning Frameworks
 
-**Chain-of-Thought (CoT)**: Focuses on internal logic by generating intermediate reasoning steps ("think step-by-step").
+**Chain-of-Thought (CoT):** The model generates **intermediate reasoning steps** ("think step-by-step") before the final answer. No tool use—just internal logic. Use when you need interpretability or multi-step reasoning without external data.
 
-**ReAct (Reason + Act)**: Combines reasoning with external tool use in a "Thought-Action-Observation" loop:
+**ReAct (Reason + Act):** Combines **reasoning** with **tool use** in a loop. Each turn is either a *Thought* (what to do next), an *Action* (tool name + args), or an *Observation* (tool result). The model keeps going until it can give a final answer.
 
 | Phase | What Happens |
 |-------|--------------|
 | **1. Reasoning** | Agent analyzes task, selects tools |
 | **2. Acting** | Agent executes selected tool |
 | **3. Observation** | Agent receives tool output |
-| **4. Iteration** | Based on observation, agent reasons about next steps |
+| **4. Repeat** | Agent reasons from the observation, then next Thought/Action or final answer |
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ReAct LOOP (example)                           │
+│   User: "What's the status of order #123? Can I get a refund?"   │
+│      Thought: I need to look up order #123 first.                 │
+│      Action: get_order_status(order_id="123")                    │
+│      Observation: { "status": "delivered", "date": "2024-01-15" }│
+│      Thought: Delivered. User asked about refund. Check policy.   │
+│      Action: search_knowledge_base(query="refund policy")         │
+│      Observation: "Refunds within 30 days of delivery..."         │
+│      Thought: I have enough. Compose answer.                      │
+│      Answer: "Order #123 was delivered Jan 15. Our policy..."     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Aha:** ReAct makes the reasoning **visible** (Thought) and **grounded** (Action → Observation). The model can’t wander off; each step is either "I think…" or "I do X" followed by real tool output. That reduces hallucination in tool use because the next thought is conditioned on actual observations.
 
 ### Agent Design Patterns
 
+**When to use which:** Start with **Single Agent** (one LLM + all tools). Add **Multi-Agent** or **Hierarchical** when one agent can't handle the diversity of tasks or when you want specialists (e.g. research vs writing vs coding) or clearer separation of concerns.
+
+---
+
 **1. Single Agent Pattern**
 
-- One LLM handles entire conversation with all tools
+One LLM handles the entire conversation and has access to all tools. The model decides when to call which tool.
+
+```
+   User ──► LLM (orchestrator) ──► Tool A, Tool B, Tool C
+              ▲         │
+              └─────────┘  (loop until done)
+```
+
 - ✅ Simple, low latency, easy to debug
-- ❌ Limited capabilities, may struggle with complex tasks
-- *Best for*: Simple use cases, single domain
+- ❌ Limited capabilities, may struggle with very complex or diverse tasks
+- *Best for*: Simple use cases, single domain (e.g. support bot with KB + CRM + ticketing)
+
+---
 
 **2. Multi-Agent Pattern**
 
-- Multiple specialized agents, each with specific tools
-- ✅ Better performance (specialists), parallel execution, modular
-- ❌ Coordination complexity, higher latency
-- *Best for*: Complex domains, multiple expertise areas
+Multiple specialized agents, each with its own tools. Agents can hand off to each other or work in parallel; there is no single "boss."
+
+```
+   User ──► [Agent A] [Agent B] [Agent C] ──► combined result
+              │         │         │
+           Tools A   Tools B   Tools C
+```
+
+- ✅ Specialists, parallel execution, modular
+- ❌ Coordination complexity, higher latency, need handoff logic
+- *Best for*: Complex domains with distinct expertise (e.g. research agent + writing agent + fact-check agent)
+
+---
 
 **3. Hierarchical Pattern (Supervisor/Manager)**
 
-- Supervisor agent delegates to specialist agents
-- ✅ Scalable, organized, handles complex workflows
-- ❌ Higher latency, more complex
-- *Best for*: Enterprise applications, complex workflows
+A **supervisor** agent receives the user request, plans steps, and delegates to **specialist** agents. Specialists do the work and return results; the supervisor decides next steps or synthesizes the final answer.
+
+```
+   User ──► Supervisor (LLM) ──► "Do step 1" ──► Specialist A ──► result
+                    │
+                    ├──► "Do step 2" ──► Specialist B ──► result
+                    │
+                    └──► synthesize ──► Answer
+```
+
+- ✅ Scalable, organized, clear workflow
+- ❌ Higher latency, more moving parts
+- *Best for*: Enterprise workflows (e.g. research → draft → review → publish)
+
+---
 
 **4. Additional Patterns**
 
 | Pattern | Architecture | Use Case |
 |---------|--------------|----------|
-| **Sequential Pipeline** | A → B → C | Content creation workflows |
+| **Sequential Pipeline** | A → B → C (fixed order) | Content creation (outline → draft → edit) |
 | **Parallel Fan-out** | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis |
 | **Debate/Adversarial** | Pro vs Con → Judge | High-stakes decisions, red teaming |
+
+**Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
 
 ### Context Engineering
 
 **The Problem**: As agents run longer, context (chat history, tool outputs, documents) **explodes**. Simply using larger context windows is not a scaling strategy.
+
+**Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale *usage* of context without scaling *size* of every call.
 
 **The Three-Way Pressure on Context:**
 
@@ -524,6 +781,20 @@ Does model lack knowledge about your domain?
 
 **The Solution: Tiered Context Model**
 
+Keep **working context** (the prompt for this turn) small and focused. Push durable state into **Session** (conversation log), **Memory** (searchable, cross-session), and **Artifacts** (large files by reference, not pasted). Put the most important instructions and retrieval at the **start and end** of the prompt.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    TIERED CONTEXT                                 │
+│   WORKING (this turn)   Session (this convo)   Memory (long-term) │
+│   ┌──────────────┐      ┌──────────────────┐  ┌──────────────┐  │
+│   │ System + key │      │ Chat history      │  │ Searchable   │  │
+│   │ docs + query │      │ + tool I/O        │  │ facts, prefs │  │
+│   └──────────────┘      └──────────────────┘  └──────────────┘  │
+│   ARTIFACTS: Large files addressed by name, not pasted           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
 | Layer | Purpose | Lifecycle |
 |-------|---------|-----------|
 | **Working Context** | Immediate prompt for this call | Ephemeral |
@@ -531,12 +802,12 @@ Does model lack knowledge about your domain?
 | **Memory** | Long-lived searchable knowledge | Cross-session |
 | **Artifacts** | Large files | Addressed by name, not pasted |
 
-**Multi-Agent Context Scoping:**
+**Multi-Agent Context Scoping:** When one agent delegates to another, control what the sub-agent sees. **Agents as Tools** = sub-agent gets only the instructions and inputs you pass. **Agent Transfer** = sub-agent gets a configurable view over Session (e.g. last N turns).
 
 | Pattern | Description |
 |---------|-------------|
-| **Agents as Tools** | Sub-agent sees only specific instructions |
-| **Agent Transfer** | Sub-agent inherits configurable view over Session |
+| **Agents as Tools** | Sub-agent sees only specific instructions and inputs |
+| **Agent Transfer** | Sub-agent inherits a configurable view over Session |
 
 ---
 
@@ -588,6 +859,8 @@ Does model lack knowledge about your domain?
 ```
 
 **Key Insight**: Not all metrics run on all requests. Use tiered evaluation—fast checks inline, expensive checks sampled/async.
+
+**Aha:** With LLMs you often don’t have gold labels for every request. **Reference-free** metrics (e.g. RAGAS faithfulness, relevancy) ask "is this claim supported by the context?" and "does this answer fit the question?" without human annotations. You’re measuring "did we build the right thing?" in the wild, then using a small human-labeled set to calibrate.
 
 ---
 
@@ -720,6 +993,8 @@ Does model lack knowledge about your domain?
 - **Output tokens**: Generated tokens (typically 2-4x more expensive)
 - **Model tier**: Different models have different costs
 
+**Aha:** GenAI cost scales with **length**, not just request count. A 10× longer prompt or answer can mean ~10× cost per call. So trimming context, caching prefixes, and routing easy queries to smaller models all directly lower spend.
+
 **Example Calculation:**
 
 ```
@@ -788,6 +1063,8 @@ Query → Small Model → Confident? → Return
 
 **Quality Estimation**: The key to routing—use a small classifier or confidence scores to predict which model can handle the query.
 
+**Aha:** Routing and cascading both assume "hard" and "easy" queries. If you can **predict** hardness (e.g. by query length, intent, or a tiny classifier), you send easy ones to small/cheap models and reserve the big model for the rest. The leverage comes from that prediction being cheap and reasonably accurate.
+
 **4. Fine-tuning ROI**
 
 - **Upfront cost**: $100-1000s
@@ -805,6 +1082,8 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 | INT8 → INT4 | 8x | Significant |
 
 **Why FP16 is safe**: Modern **GPUs** (graphics processing units) have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
+
+**Aha:** Weights don’t need 32-bit precision for good answers; most signal lives in a smaller range. Quantization **compresses** that range (FP32→FP16→INT8→INT4). You trade a little quality for large memory and speed gains. FP16 is the first step almost everyone takes because hardware is built for it and the drop is tiny.
 
 **6. Continuous Batching**
 
@@ -929,6 +1208,8 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 ## 12. Security & Guardrails
 
 ### Key Security Concerns
+
+**Aha:** LLMs take natural language as input, so **any** user text can be an attempt to override instructions ("Ignore previous instructions…"). Guardrails and defense-in-depth exist because you can't whitelist "good" prompts—you have to detect and constrain *malicious* or out-of-scope intent at the boundary.
 
 | Threat | Risk | Mitigation |
 |--------|------|------------|
@@ -1082,6 +1363,8 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 - [LangChain Documentation](https://docs.langchain.com/)
 - [LlamaIndex Documentation](https://docs.llamaindex.ai/)
 - [OpenAI Guardrails](https://openai.github.io/openai-guardrails-python/)
+- [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) - Standard for tools and context to LLMs
+- [A2A (Agent-to-Agent Protocol)](https://google.github.io/A2A/) - Standard for agent-to-agent communication
 
 ### Google Cloud Documentation
 
