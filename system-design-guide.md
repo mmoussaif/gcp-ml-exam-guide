@@ -1444,9 +1444,10 @@ graph TD
    - **MCP (Model Context Protocol)**: Standardized tool connections
 
 3. **Orchestration**:
-   - **ReAct Pattern**: Reason → Act → Observe loop
-   - **Planning**: Break complex tasks into steps
-   - **Memory**: Maintain conversation context
+   - **Reasoning Loop**: The core iterative process where the agent processes information, performs internal reasoning, and decides on the next action.
+   - **ReAct Pattern**: Reason → Act → Observe loop (a common reasoning framework).
+   - **Planning**: Break complex tasks into steps.
+   - **Memory**: Maintain conversation context.
 
 **Visual: Agent Execution Flow**
 

@@ -86,6 +86,7 @@ The process of generating text follows a specific lifecycle:
 ---
 - [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
 - [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
+  - [6.4.1 The Reasoning Loop](#641-the-reasoning-loop)
 - [6.5 Building agents on Google Cloud](#65-building-agents-on-google-cloud-service-mapping)
 - [6.6 AgentOps](#66-agentops-reliability-safety-and-operating-in-production)
 - [6.7 GenAI evaluation](#67-genai-evaluation-beyond-is-it-correct)
@@ -2763,6 +2764,12 @@ If you’re new, the fastest way to build intuition is to treat the prompt box l
 
 **Together**: These techniques enable us to build reliable and efficient LLM-powered applications.
 
+**Adding Prompt Engineering to Reasoning Loops**:
+In the context of agents, prompt engineering is about building a **logic layer** before the end-user application. Instead of the user providing complex instructions, the developer "engineers" the agent's internal logic using prompting techniques. This allows for scalable, organization-transforming products where the end-user only provides the core input (e.g., a script) and the agent handles the rest (e.g., generating a summary with specific role and style).
+
+**Metaprompting**:
+A "secret" of prompt engineering pros is that they often don't write the final prompts themselves. They use generative AI to generate their prompts—prompting to get a prompt. This is known as **metaprompting**.
+
 **Note**: Prompt engineering should not be seen as unrelated to context engineering. Prompt engineering is a subset of context engineering, since prompts are one way (to a certain extent) of shaping the model's context. We mentioned prompt engineering separately because it is a large and mature discipline in its own and has been widely practiced for much longer, even before context engineering was popularized as a unified concept.
 
 **Fundamentals of Prompting**:
@@ -2817,6 +2824,9 @@ Example prompts:
 
 - **Customer support**: “You are a customer service agent for a telecommunications company with ten years of experience. A customer is inquiring about their latest bill, which is higher than expected. Ask clarifying questions, explain likely causes, and propose next steps.”
 - **Marketing**: “You are a marketing copywriter for a new line of athletic wear. Write a product description for running shoes emphasizing comfort and performance-enhancing features.”
+
+**Few-Shot Prompting in Agents**:
+By providing clear directions and examples (few-shot), you ensure the agent's internal reasoning loop stays on track and follows the desired pattern without the user needing to provide those examples every time.
 
 **EXAM TIP:** Role prompting is great when the question is about **controlling tone/format** or aligning outputs to a job function (support, sales, analyst). It does **not** replace grounding: for factual answers over enterprise data, pair it with **RAG/grounding** and cite sources.
 
@@ -3789,6 +3799,19 @@ Query → Bi-encoder → Vector DB search → Top 100 candidates
 - **Multi-agent framework**: Multiple specialized agents working together, each backed by optimal LLM for its task
 
 **EXAM TIP:** Questions about "autonomous task completion" or "multi-step workflows without constant user input" → think **AI Agents** (not just RAG or single LLM calls).
+
+#### 6.4.1 The Reasoning Loop
+
+The **reasoning loop** is the central engine of a generative AI agent. it governs how the agent processes information, performs internal reasoning, and decides on its next action.
+
+**Key Aspects of the Reasoning Loop**:
+
+1.  **Iterative Process**: It is not a single pass. The agent continuously loops through information intake and reasoning until the goal is achieved or a stopping point is reached.
+2.  **Internal Reasoning**: The agent uses its underlying LLM to "think through" the steps. The model provides the logical capabilities to decompose a task.
+3.  **Decision Making**: Based on its reasoning, the agent makes choices—whether to call a tool, ask for more information, or provide a final answer.
+4.  **Reasoning Frameworks**: Agents often use specific frameworks (like ReAct: Reason + Act) to structure this loop, making the process more transparent and reliable.
+
+**Key Takeaway**: By understanding and "engineering" this loop via prompting, you can add sophisticated logic to your agents, making them far more powerful than basic chatbots.
 
 #### Six Essential Building Blocks of AI Agents
 
