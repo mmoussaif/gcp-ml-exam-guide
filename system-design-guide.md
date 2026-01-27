@@ -20,6 +20,8 @@ A comprehensive guide to system design interviews, covering use cases, examples,
 - [Resource Estimation](#resource-estimation)
 - [Trade-offs & Decision Making](#trade-offs--decision-making)
 - [GenAI & Agentic AI System Design](#genai--agentic-ai-system-design)
+  - [Using Models & Sampling Parameters](#using-models--sampling-parameters)
+  - [Google Generative AI Development Tools](#google-generative-ai-development-tools)
   - [LLM Serving Architecture](#1-llm-serving-architecture-at-scale)
   - [RAG Systems](#2-rag-retrieval-augmented-generation-system)
   - [Agentic AI Systems](#3-agentic-ai-systems)
@@ -30,6 +32,8 @@ A comprehensive guide to system design interviews, covering use cases, examples,
   - [Scalability Patterns](#8-scalability-patterns-for-genai)
   - [Monitoring & Observability](#9-monitoring--observability-for-genai)
   - [Security & Compliance](#10-security--compliance-for-genai)
+- [Resources](#resources)
+- [Conclusion](#conclusion)
 
 ---
 
@@ -906,7 +910,7 @@ Generative AI applications introduce unique challenges:
 | **Memory**     | Model weights        | Model + KV cache (grows with sequence) |
 | **Batching**   | Static batches       | Dynamic/continuous batching            |
 | **Cost**       | Per-request          | Per-token (input + output)             |
-| **Control**    | Fixed weights        | Sampling parameters (temp, top-p)      |
+| **Control**    | Fixed weights        | Sampling parameters (temp, top-p, top-k) |
 
 ---
 
@@ -917,24 +921,34 @@ Generative AI agents are powered by models that act as the "brains" of the opera
 #### Common Sampling Parameters
 
 1.  **Temperature**:
-    *   **Definition**: Controls the "creativity" or randomness of the output.
+    *   **Definition**: Controls the "creativity" or randomness of the output by rescaling logits before softmax.
     *   **Why it matters**: It adjusts the randomness of word choices.
-    *   **High Temperature**: More random, diverse, and unpredictable output.
-    *   **Low Temperature**: More focused, deterministic, and repeatable output.
+    *   **High Temperature (T > 1)**: Flattens the distribution, making output more random, diverse, and unpredictable. Increases risk of incoherence.
+    *   **Low Temperature (T < 1)**: Sharpens the distribution, making it more focused, deterministic, and repeatable.
+    *   **Extreme (T → 0)**: Collapses into greedy decoding (always picks the highest probability token).
 
 2.  **Top-p (Nucleus Sampling)**:
-    *   **Definition**: The cumulative probability threshold for considering the most likely tokens.
-    *   **Why it matters**: It concentrates probability on the most likely tokens, making output more coherent and relevant.
+    *   **Definition**: Selects the smallest set of tokens whose cumulative probability mass reaches threshold *p*.
+    *   **Why it matters**: It provides **adaptivity**. In confident contexts, the "nucleus" is small (greedy-like); in uncertain contexts, it grows to allow diversity.
     *   **High Top-p**: Allows for more diversity by extending to lower probability tokens.
-    *   **Low Top-p**: Leads to more focused responses by only considering the most probable tokens.
+    *   **Low Top-p**: Leads to more focused responses.
 
-3.  **Token Count / Output Length**:
-    *   **Definition**: Determines the maximum length of the generated text.
-    *   **Why it matters**: Prevents runaway generation and controls costs. You can set a specific limit or let the model reach a natural stopping point.
+3.  **Top-K**:
+    *   **Definition**: Restricts the model's choice to only the *k* most probable tokens at each step.
+    *   **Why it matters**: It improves output stability by eliminating the "long tail" of extremely unlikely (and often nonsensical) tokens.
+    *   **Limitation**: Unlike Top-p, it is not adaptive to the distribution's shape.
 
-4.  **Safety Settings**:
-    *   **Definition**: Filters that block potentially harmful or inappropriate content.
-    *   **Why it matters**: Essential for enterprise applications to ensure outputs align with safety policies and preferences.
+4.  **Maximum Length (Max New Tokens)**:
+    *   **Definition**: Determines the maximum number of tokens to generate before stopping.
+    *   **Why it matters**: Prevents runaway generation ("rambling") and controls compute costs. Models stop early if they hit an `<EOS>` token.
+
+5.  **Repetition Penalty**:
+    *   **Definition**: A factor (usually > 1.0) used to discount the probability of tokens that have already appeared in the output.
+    *   **Why it matters**: Prevents the model from getting stuck in repetitive loops (e.g., "I'm not sure. I'm not sure.").
+
+6.  **Safety Settings**:
+    *   **Definition**: Filters that block potentially harmful or inappropriate content (hate speech, harassment, etc.).
+    *   **Why it matters**: Essential for enterprise-grade applications to ensure outputs align with safety policies.
 
 #### Accessing Parameters via APIs
 
@@ -943,6 +957,32 @@ Most generative AI models are accessed via **APIs (Application Programming Inter
 2.  The API delivers these to the model.
 3.  The model generates a response based on those specific "knobs and dials".
 4.  The API returns the response to your application.
+
+---
+
+### Google Generative AI Development Tools
+
+Google provides two primary environments for experimenting with and deploying Gemini models: **Google AI Studio** and **Vertex AI Studio**.
+
+| Attribute | Google AI Studio | Vertex AI Studio |
+| :--- | :--- | :--- |
+| **Focus** | Streamlined, easy-to-use interface for rapid prototyping and exploring Gemini's capabilities. | Comprehensive, robust environment for building, training, and deploying ML models within the Google Cloud platform. |
+| **Target Users** | Beginners, hobbyists, and developers in the initial stages of a project. | Professionals, researchers, and enterprise developers. |
+| **Access** | Standard Google Account login. | Google Cloud Console (Enterprise account). |
+| **Limitations** | Usage limits (QPM, RPM, TPM); intended for small-scale projects. | Service charges based on usage; enterprise-grade quotas. |
+| **Advantages** | Simplified interface; easy to get started without deep ML expertise. | Enterprise-grade security, compliance, and flexible quotas. |
+
+**Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications that require robust security, scalability, and integration with the broader Vertex AI platform.
+
+---
+
+### Google's Generative AI APIs
+
+Google’s generative AI APIs offer pre-trained foundation models that can be fine-tuned for specific tasks. These APIs include capabilities for:
+*   **Text Completion**: Generating long-form content or completing snippets.
+*   **Multi-turn Chat**: Maintaining state across several turns of conversation.
+*   **Code Generation**: Specialized models for writing and debugging code.
+*   **Image Generation**: Using the Imagen API to create and customize images.
 
 ---
 

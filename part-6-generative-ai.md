@@ -19,12 +19,71 @@ The October 2024 exam version includes Generative AI topics.
   - [6.1.5 Pretraining and Fine-Tuning](#615-pretraining-and-fine-tuning)
   - [6.1.6 Tokenization](#616-tokenization-how-text-becomes-numbers-for-llms)
 - [6.2 Prompting & Inference Controls](#62-prompting--inference-controls-fastest-customization)
-  - [6.2.1 Decoding Strategies](#621-decoding-strategies)
-  - [6.2.2 Generation Parameters](#622-generation-parameters)
-  - [6.2.3 How LLMs Function (End-to-End)](#623-how-llms-function-end-to-end)
-  - [6.2.4 Hands-On: LLM Decoding and Generation Parameters](#624-hands-on-llm-decoding-and-generation-parameters)
-  - [6.2.5 LLM Application Lifecycle](#625-llm-application-lifecycle)
-  - [6.2.6 Prompt Engineering Fundamentals](#626-prompt-engineering-fundamentals)
+- **6.2.1 Decoding Strategies**: Greedy vs. Beam Search vs. Sampling.
+- **6.2.2 Generation Parameters**: Temperature, Top-K, Top-P, Max Length, and Repetition Penalties.
+- **6.2.3 How LLMs Function (End-to-End)**: The journey from prompt to generated text.
+- **6.2.4 Hands-On: LLM Decoding and Generation Parameters**: Practical experimentation.
+- **6.2.5 LLM Application Lifecycle**: From prototyping to production maintenance.
+- **6.2.6 Prompt Engineering Fundamentals**: System instructions, few-shot, and chain-of-thought.
+
+### 6.2.1 Decoding Strategies
+
+LLMs generate text token-by-token. The method used to select the next token is called a **Decoding Strategy**.
+
+#### 1. Greedy Decoding
+*   **What it is**: Always selects the token with the highest probability.
+*   **Why it matters**: It is deterministic and fast.
+*   **Limitation**: Often leads to repetitive or dull outputs because it ignores the long-term structure of the sentence.
+
+#### 2. Beam Search
+*   **What it is**: Keeps track of multiple (*num_beams*) candidate sequences in parallel and selects the one with the highest overall probability.
+*   **Why it matters**: Produces more coherent and high-probability sequences than greedy decoding.
+*   **Limitation**: Can be computationally expensive and may still produce generic text.
+
+#### 3. Sampling
+*   **What it is**: Randomly selects the next token based on the probability distribution.
+*   **Why it matters**: Introduces variety and "creativity." It is the foundation for parameters like Temperature and Top-P.
+
+---
+
+#### 6.2.2 Generation Parameters (Knobs and Dials)
+
+When using an LLM, you have a set of knobs to control output style, creativity, and coherence without retraining the model.
+
+**1. Temperature (T)**
+*   **Mechanism**: Rescales logits before softmax ($logits_{scaled} = logits / T$).
+*   **T < 1.0**: Sharper distribution. Conservative, predictable, and coherent.
+*   **T > 1.0**: Flatter distribution. Random, diverse, and "creative."
+*   **Rule of thumb**: 0.7 to 0.8 is the "sweet spot" for most creative tasks.
+
+**2. Top-K**
+*   **Mechanism**: Limits choices to the top *k* most probable tokens.
+*   **Effect**: Acts as a quality filter, preventing the model from picking nonsensical "long-tail" tokens.
+
+**3. Top-P (Nucleus Sampling)**
+*   **Mechanism**: Selects the smallest set of tokens whose cumulative probability mass $\geq p$.
+*   **Effect**: **Adaptive**. In confident contexts, it behaves like greedy decoding; in uncertain contexts, it expands to allow diversity.
+
+**4. Maximum Length (Max New Tokens)**
+*   **Effect**: Straightforward truncation. Prevents rambling and controls compute cost.
+
+**5. Repetition Penalty**
+*   **Mechanism**: Divides the logits of previously generated tokens by a penalty factor (> 1.0).
+*   **Effect**: Forces the model to move on to new ideas rather than looping.
+
+---
+
+### 6.2.3 How LLMs Function (End-to-End)
+
+The process of generating text follows a specific lifecycle:
+1.  **Input Processing**: Text is converted into numerical tokens.
+2.  **Context Analysis**: The model processes the prompt + existing history.
+3.  **Logit Generation**: The model predicts scores for every possible next token in its vocabulary.
+4.  **Parameter Application**: Temperature, Top-P, etc., are applied to the logits.
+5.  **Sampling/Selection**: A token is chosen based on the decoding strategy.
+6.  **Looping**: The chosen token is appended to the input, and the process repeats until an `<EOS>` or Max Length is reached.
+
+---
 - [6.3 RAG & Grounding](#63-rag--grounding-retrieval-augmented-generation)
 - [6.4 AI Agents](#64-ai-agents-beyond-chatbots)
 - [6.5 Building agents on Google Cloud](#65-building-agents-on-google-cloud-service-mapping)
