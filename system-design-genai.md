@@ -20,14 +20,16 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 - [Google Generative AI Development Tools](#google-generative-ai-development-tools)
 - [1. LLM Serving Architecture](#1-llm-serving-architecture-at-scale)
 - [2. RAG Systems](#2-rag-retrieval-augmented-generation-system)
-- [3. Agentic AI Systems](#3-agentic-ai-systems)
-- [4. LLM Ops Data Pipeline](#4-llm-ops-data-pipeline-at-scale)
-- [5. GenAI Data Pipeline](#5-genai-data-pipeline-architecture)
-- [6. Cost Optimization](#6-cost-optimization-for-genai-systems)
-- [7. Real-World Examples](#7-real-world-genai-system-examples)
-- [8. Scalability Patterns](#8-scalability-patterns-for-genai)
-- [9. Monitoring & Observability](#9-monitoring--observability-for-genai)
-- [10. Security & Compliance](#10-security--compliance-for-genai)
+- [3. RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework)
+- [4. Agentic AI Systems](#4-agentic-ai-systems)
+- [5. LLM Evaluation & Quality](#5-llm-evaluation--quality)
+- [6. LLM Ops Data Pipeline](#6-llm-ops-data-pipeline-at-scale)
+- [7. GenAI Data Pipeline](#7-genai-data-pipeline-architecture)
+- [8. Cost Optimization & Model Routing](#8-cost-optimization-for-genai-systems)
+- [9. Real-World Examples](#9-real-world-genai-system-examples)
+- [10. Scalability Patterns](#10-scalability-patterns-for-genai)
+- [11. Monitoring & Observability](#11-monitoring--observability-for-genai)
+- [12. Security & Guardrails](#12-security--compliance-for-genai)
 - [Resources](#resources)
 
 ---
@@ -232,6 +234,20 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Solution**: Paged attention (vLLM) uses non-contiguous memory pages for better utilization and longer sequences.
 
+**5. Speculative Decoding**
+
+**Problem**: Token-by-token autoregressive generation is slow because each token requires a full forward pass.
+
+**Solution**: Use a smaller "draft" model to generate multiple candidate tokens, then verify them in parallel with the large model. Accepted tokens skip individual forward passes.
+
+| Technique | Speedup | Trade-off |
+|-----------|---------|-----------|
+| **Standard Speculative** | 2-3x | Requires draft model |
+| **Self-Speculative** | 2.5x | Uses quantized version of same model |
+| **Tree-based** | Up to 6x | Memory overhead for tree search |
+
+**Why it works**: Verification is cheaper than generation. The large model can verify N tokens in roughly the same time as generating 1 token.
+
 **4. Caching Strategy**
 
 | Strategy | Hit Rate | Latency | Best For |
@@ -331,9 +347,65 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Best practice**: Retrieve K=20, rerank to top 5. The two-stage approach combines speed (bi-encoder retrieval) with accuracy (cross-encoder reranking).
 
+### Advanced RAG Techniques
+
+| Technique | Description | When to Use |
+|-----------|-------------|-------------|
+| **Graph RAG** | Combine vector search with knowledge graphs | Complex entity relationships, multi-hop reasoning |
+| **Adaptive Retrieval** | Dynamically adjust number of retrieved docs based on query | Variable query complexity |
+| **Query Decomposition** | Break complex queries into sub-queries | Multi-part questions |
+| **HyDE** | Generate hypothetical answer, embed that for retrieval | Queries with vocabulary mismatch |
+
 ---
 
-## 3. Agentic AI Systems
+## 3. RAG vs Fine-Tuning Decision Framework
+
+**Key Insight**: This is not binary—use as a spectrum of adaptation techniques.
+
+### When to Use Each
+
+| Scenario | RAG | Fine-Tuning | Both |
+|----------|-----|-------------|------|
+| Model lacks knowledge | ✅ | ❌ | |
+| Data changes frequently | ✅ | ❌ | |
+| Need specific tone/style | ❌ | ✅ | |
+| Domain-specific jargon | | ✅ | |
+| Reduce hallucinations with grounding | ✅ | | |
+| Change output format/schema | | ✅ | |
+| High accuracy + fresh data | | | ✅ |
+
+### Cost Comparison
+
+| Approach | Cost Model | Example |
+|----------|------------|---------|
+| **RAG** | Per-query ($0.01-0.05) | 1M queries/month = $10-50K |
+| **Fine-Tuning** | One-time ($500-2,000 for LoRA) | Amortizes over usage |
+| **Full Fine-Tune** | $10,000-100,000+ | Large datasets, custom models |
+
+### Decision Flow
+
+```
+Start with: System prompt + few-shot examples
+        │
+        ▼
+Does model lack knowledge about your domain?
+        │
+    Yes ─┴─ No
+        │     │
+        ▼     ▼
+    Add RAG   Does model need behavior change?
+                    │
+               Yes ─┴─ No
+                    │     │
+                    ▼     ▼
+            Fine-tune   Done
+```
+
+**Best Practice**: Start simple (prompt engineering), add RAG for knowledge, fine-tune only when behavior change is needed. Many production systems combine all three.
+
+---
+
+## 4. Agentic AI Systems
 
 ### Use Case: Design a Customer Support Agent
 
@@ -468,7 +540,58 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ---
 
-## 4. LLM Ops Data Pipeline at Scale
+## 5. LLM Evaluation & Quality
+
+### Evaluation Frameworks
+
+**RAGAS** (Retrieval Augmented Generation Assessment) provides reference-free evaluation for RAG systems:
+
+| Metric | What It Measures | How |
+|--------|------------------|-----|
+| **Faithfulness** | Is response grounded in context? | % of claims verifiable from retrieved docs |
+| **Answer Relevancy** | Does answer address the question? | Semantic similarity to question |
+| **Context Relevancy** | Is retrieved context useful? | % of context used in answer |
+| **Context Recall** | Did we retrieve needed info? | Overlap with ground truth |
+
+### Hallucination Detection
+
+| Approach | Accuracy | Latency | Best For |
+|----------|----------|---------|----------|
+| **Self-consistency** | Moderate | High (multiple calls) | Quick checks |
+| **Cross-encoder verification** | High | +50-100ms | Production |
+| **LLM-as-Judge** | High | +100-200ms | Complex evaluation |
+| **Specialized models (FaithJudge)** | Highest | +50ms | High-stakes applications |
+
+### Production Evaluation Strategy
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                 EVALUATION PIPELINE                             │
+│                                                                 │
+│   Request → LLM Response                                        │
+│                │                                                │
+│                ├──► Real-time checks (< 50ms budget)           │
+│                │    • Toxicity scoring                         │
+│                │    • Format validation                        │
+│                │    • Length limits                            │
+│                │                                                │
+│                ├──► Async evaluation (sampled)                 │
+│                │    • Faithfulness (RAGAS)                     │
+│                │    • Hallucination detection                  │
+│                │    • Task-specific metrics                    │
+│                │                                                │
+│                └──► Human evaluation (subset)                  │
+│                     • Quality ratings                          │
+│                     • Error categorization                     │
+│                     • Training data for judges                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Key Insight**: Not all metrics run on all requests. Use tiered evaluation—fast checks inline, expensive checks sampled/async.
+
+---
+
+## 6. LLM Ops Data Pipeline at Scale
 
 ### Use Case: Design a Production LLM Evaluation System
 
@@ -535,7 +658,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ---
 
-## 5. GenAI Data Pipeline Architecture
+## 7. GenAI Data Pipeline Architecture
 
 ### Use Case: Design a Training Data Pipeline for Fine-Tuning
 
@@ -588,7 +711,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ---
 
-## 6. Cost Optimization for GenAI Systems
+## 8. Cost Optimization for GenAI Systems
 
 ### Token-Based Cost Model
 
@@ -643,7 +766,27 @@ At 1M requests/day: $375/day = $11,250/month
 | **Medium (GPT-3.5, Gemini Pro)** | ~$0.002/1K output | Good | Most production tasks |
 | **Small (Gemini Flash)** | ~$0.001/1K output | Basic | Simple, high-volume |
 
-**Routing strategy**: Route complex queries to large model, use small model with fallback to large if confidence is low. Savings: 50-80%.
+**Model Routing Strategies:**
+
+| Strategy | How It Works | Savings |
+|----------|--------------|---------|
+| **Routing** | Classify query → send to single optimal model | 40-60% |
+| **Cascading** | Start small → escalate to larger if low confidence | 50-80% |
+| **Cascade Routing** | Combines both: route + escalation | Best cost/quality |
+
+```
+Query → Classifier → Simple? → Small Model → Done
+                         │
+                         └──► Complex? → Large Model → Done
+
+OR (Cascading):
+
+Query → Small Model → Confident? → Return
+              │
+              └──► Low confidence → Large Model → Return
+```
+
+**Quality Estimation**: The key to routing—use a small classifier or confidence scores to predict which model can handle the query.
 
 **4. Fine-tuning ROI**
 
@@ -669,7 +812,7 @@ At 1M requests/day: $375/day = $11,250/month
 
 ---
 
-## 7. Real-World GenAI System Examples
+## 9. Real-World GenAI System Examples
 
 ### Example 1: Code Generation Assistant (like GitHub Copilot)
 
@@ -728,7 +871,7 @@ User Request → Content Pipeline
 
 ---
 
-## 8. Scalability Patterns for GenAI
+## 10. Scalability Patterns for GenAI
 
 ### Horizontal Scaling
 
@@ -758,7 +901,7 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ---
 
-## 9. Monitoring & Observability for GenAI
+## 11. Monitoring & Observability for GenAI
 
 ### Key Metrics to Track
 
@@ -781,15 +924,68 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ---
 
-## 10. Security & Compliance for GenAI
+## 12. Security & Guardrails
 
 ### Key Security Concerns
 
 | Threat | Risk | Mitigation |
 |--------|------|------------|
-| **Prompt Injection** | Malicious prompts override system instructions | Input validation, Model Armor |
+| **Direct Prompt Injection** | User injects malicious instructions | Input validation, guardrails |
+| **Indirect Prompt Injection** | Hidden instructions in external content | Content isolation, spotlighting |
 | **Data Leakage** | Training data memorization, PII in outputs | Output filtering, DLP |
+| **Jailbreaking** | Bypassing safety controls | Multi-layer defense, red teaming |
 | **Access Control** | Unauthorized model access | IAM, API keys, least privilege |
+
+### Prompt Injection Defense-in-Depth
+
+| Layer | Technique | Description |
+|-------|-----------|-------------|
+| **Input** | Spotlighting | Clearly delimit user input vs system prompt |
+| **Input** | Input validation | Regex, blocklists, encoding detection |
+| **Input** | Guardrails check | Detect injection attempts before LLM |
+| **Processing** | Least privilege | Limit tools/data agent can access |
+| **Output** | Guardrails check | Validate output aligns with user intent |
+| **Output** | PII filtering | Detect/redact sensitive data |
+
+### Guardrails Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   GUARDRAILS PIPELINE                           │
+│                                                                 │
+│   User Input                                                    │
+│       │                                                         │
+│       ▼                                                         │
+│   ┌────────────────┐                                           │
+│   │ INPUT GUARDRAIL│  • Prompt injection detection             │
+│   │                │  • Jailbreak detection                    │
+│   │                │  • PII detection                          │
+│   │                │  • Content policy check                   │
+│   └───────┬────────┘                                           │
+│           │                                                     │
+│     Block ├──► Return error                                    │
+│           │                                                     │
+│           ▼                                                     │
+│   ┌────────────────┐                                           │
+│   │      LLM       │                                           │
+│   └───────┬────────┘                                           │
+│           │                                                     │
+│           ▼                                                     │
+│   ┌────────────────┐                                           │
+│   │OUTPUT GUARDRAIL│  • Hallucination check                    │
+│   │                │  • Response relevancy                     │
+│   │                │  • PII in output                          │
+│   │                │  • Harmful content                        │
+│   └───────┬────────┘                                           │
+│           │                                                     │
+│           ▼                                                     │
+│   User Response                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Tool Call Validation** (for agents):
+- **Pre-flight**: Validate tool call aligns with user's request before execution
+- **Post-flight**: Validate returned data before showing to user
 
 ### Model Armor (Google Cloud)
 
@@ -879,9 +1075,11 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 ### Online
 
-- [LLM Ops Guide](https://llm-ops.com/)
-- [Hugging Face Documentation](https://huggingface.co/docs)
+- [vLLM Documentation](https://docs.vllm.ai/) - High-throughput LLM serving
+- [RAGAS Documentation](https://docs.ragas.io/) - RAG evaluation framework
 - [LangChain Documentation](https://docs.langchain.com/)
+- [LlamaIndex Documentation](https://docs.llamaindex.ai/)
+- [OpenAI Guardrails](https://openai.github.io/openai-guardrails-python/)
 
 ### Google Cloud Documentation
 
@@ -907,31 +1105,50 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 ## Quick Reference
 
-### Interview Tips for ML/GenAI System Design
+### What FAANG Interviewers Evaluate
 
-1. **Clarify the GenAI-specific requirements**:
-   - Expected latency (streaming vs batch?)
-   - Quality requirements (accuracy, hallucination tolerance)
-   - Cost constraints (per-token, budget caps)
-   - Safety requirements (content filtering, compliance)
+| Dimension | What They Test |
+|-----------|----------------|
+| **LLM Awareness** | Token limits, context windows, model types, pricing models |
+| **Architectural Reasoning** | How retrieval, prompt logic, post-processing connect |
+| **Cost-Latency Tradeoffs** | Balancing inference cost, response latency, quality |
+| **Safety & Governance** | Reliable outputs, guardrails, compliance |
+| **Observability** | Handling non-deterministic outputs, failure modes |
 
-2. **Consider GenAI-specific components**:
-   - Model selection (size vs quality vs cost)
-   - Batching strategy (continuous for throughput)
-   - Caching (prompt, response, semantic)
-   - RAG vs fine-tuning decision
+### Interview Framework (45-min structure)
 
-3. **Address unique challenges**:
-   - KV cache memory management
-   - Token-based cost optimization
-   - Prompt injection security
-   - Hallucination mitigation
+**1. Clarify Requirements (5-10 min)**
+- Token budget and latency targets
+- Quality requirements (hallucination tolerance)
+- Cost constraints (per-token, monthly budget)
+- Safety requirements (compliance, content filtering)
 
-4. **Discuss trade-offs specific to GenAI**:
-   - Quality vs cost (model size)
-   - Latency vs throughput (batching)
-   - Context length vs accuracy (RAG chunking)
-   - Complexity vs reliability (single vs multi-agent)
+**2. High-Level Architecture (10-15 min)**
+- Draw components: API gateway → orchestration → LLM → post-processing
+- Show data flow and identify APIs
+- Include: RAG, caching, model routing
+
+**3. Deep Dive (15-20 min)**
+- RAG design: chunking, embedding, retrieval, reranking
+- Model selection and routing strategy
+- Evaluation and observability approach
+- Security layers (guardrails, Model Armor)
+
+**4. Bottlenecks & Trade-offs (5-10 min)**
+- KV cache memory management
+- Quality vs cost (model size, routing)
+- Latency vs throughput (batching)
+- Single vs multi-agent complexity
+
+### Key Trade-offs to Articulate
+
+| Decision | Option A | Option B |
+|----------|----------|----------|
+| RAG vs Fine-tuning | Fresh data, per-query cost | Behavioral change, upfront cost |
+| Large vs Small Model | Higher quality | Lower cost, faster |
+| Dense vs Hybrid Search | Semantic matching | + Keyword precision |
+| Single vs Multi-Agent | Simpler, faster | More capable, modular |
+| Sync vs Async Eval | Immediate | Cost-effective |
 
 ---
 

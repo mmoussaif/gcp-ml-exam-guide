@@ -23,6 +23,7 @@ For **ML and GenAI system design** (LLM serving, RAG systems, agents, MLOps), se
 - [Message Queues & Pub/Sub](#message-queues--pubsub)
 - [Storage](#storage)
 - [Scalability Patterns](#scalability-patterns)
+- [Distributed System Patterns](#distributed-system-patterns)
 - [Capacity Estimation](#capacity-estimation)
 - [Common Design Examples](#common-design-examples)
 - [Quick Reference](#quick-reference)
@@ -1564,6 +1565,146 @@ Route 53 (DNS) handles failover by directing traffic to the healthy region based
 
 ---
 
+## Distributed System Patterns
+
+### Consistent Hashing
+
+Standard hashing (hash(key) % N) has a major problem: when you add or remove a node, almost all keys need to move. Consistent hashing solves this by mapping both keys and nodes onto a ring.
+
+**How it works**: Imagine a ring representing the full hash space (0 to 2^32-1). Nodes are placed on the ring at positions determined by hashing their identifiers. Keys are also hashed to positions. Each key belongs to the first node encountered when moving clockwise from the key's position.
+
+**Why it's better**: When a node joins or leaves, only keys between it and its predecessor need to move—roughly 1/N of the keys instead of nearly all of them. This minimizes disruption during scaling or failures.
+
+**Virtual nodes** improve distribution. Instead of each physical node having one position, give it many "virtual" positions. This ensures more even distribution of keys, especially with heterogeneous node capacities.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                  CONSISTENT HASHING                             │
+│                                                                 │
+│   Standard hashing: hash(key) % N                               │
+│   Problem: If N changes, almost ALL keys move!                 │
+│                                                                 │
+│   Consistent hashing: Both keys and nodes on a ring            │
+│                                                                 │
+│                        0                                        │
+│                        │                                        │
+│              ┌─────────┴─────────┐                              │
+│             /                     \                             │
+│            /      Node A           \                            │
+│           │         ● (hash: 100)   │                           │
+│           │    ★ key1 (hash: 80)    │  key1 → clockwise → A    │
+│    270 ───┤                         ├─── 90                     │
+│           │                         │                           │
+│           │    ●                 ●  │                           │
+│           │  Node C          Node B │                           │
+│            \  (240)           (180) /                           │
+│             \                     /                             │
+│              └─────────┬─────────┘                              │
+│                        │                                        │
+│                       180                                       │
+│                                                                 │
+│   When Node B leaves: Only keys between C and B move to A      │
+│   When Node D joins: Only keys in its range move to D          │
+│                                                                 │
+│   Virtual nodes: Each physical node → multiple ring positions  │
+│   Benefits: More even distribution, handle capacity differences│
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Quorum
+
+Quorum-based systems balance consistency and availability by requiring a minimum number of nodes to participate in reads and writes. This ensures that reads and writes have at least one node in common.
+
+**The formula**: For N replicas, configure W (write quorum) and R (read quorum). If W + R > N, every read will see at least one node that participated in the most recent write, ensuring strong consistency.
+
+**Common configurations**:
+- **W=N, R=1**: Strong consistency on writes, fast reads. But writes fail if any node is down.
+- **W=1, R=N**: Fast writes, but reads are slow and must query all nodes.
+- **W=majority, R=majority**: Balanced. For N=3, W=2, R=2 allows one node failure while maintaining consistency.
+
+**Eventual consistency** (W=1, R=1): Fastest but no consistency guarantee. The write might go to node A while the read goes to node B, which hasn't replicated yet.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                      QUORUM                                     │
+│                                                                 │
+│   N = Total replicas                                           │
+│   W = Write quorum (nodes acknowledging write)                 │
+│   R = Read quorum (nodes responding to read)                   │
+│                                                                 │
+│   RULE: W + R > N  →  Guarantees overlap (strong consistency)  │
+│                                                                 │
+│   Example: N=3, W=2, R=2  →  2+2=4 > 3 ✓                       │
+│                                                                 │
+│   WRITE (W=2 must ACK)          READ (R=2 must respond)        │
+│   ┌───┐ ┌───┐ ┌───┐              ┌───┐ ┌───┐ ┌───┐            │
+│   │ ✓ │ │ ✓ │ │   │              │ ✓ │ │ ✓ │ │   │            │
+│   │N1 │ │N2 │ │N3 │              │N1 │ │N2 │ │N3 │            │
+│   └───┘ └───┘ └───┘              └───┘ └───┘ └───┘            │
+│     │     │                        │     │                     │
+│     └──┬──┘                        └──┬──┘                     │
+│        │                              │                        │
+│    W=2 ✓                          R=2 ✓                        │
+│                                                                 │
+│   N1 and N2 overlap → Read sees latest write!                  │
+│                                                                 │
+│   Configurations:                                               │
+│   • W=N, R=1: Strong write, one node down blocks writes       │
+│   • W=1, R=N: Fast writes, must read all nodes                │
+│   • W=majority, R=majority: Balanced (recommended)             │
+│   • W=1, R=1: Eventual consistency (no guarantee)              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Leader Election
+
+Many distributed systems need a single "leader" to coordinate activities—processing writes, assigning work, or making decisions. Leader election algorithms ensure exactly one leader is chosen, even as nodes fail and recover.
+
+**Why it's hard**: In a distributed system, nodes can't see each other's state directly. Network partitions might make it appear a leader is dead when it's actually fine. Having two leaders (split-brain) can cause data corruption.
+
+**Raft** is a popular consensus algorithm that's easier to understand than Paxos. Nodes are either leaders, followers, or candidates. Leaders send heartbeats; if followers don't hear from the leader, they become candidates and request votes. The candidate with majority votes becomes the new leader.
+
+**Coordination services** like ZooKeeper and etcd implement leader election so you don't have to. They provide strongly consistent key-value storage with features like ephemeral nodes (disappear when client disconnects) and watches (notify when data changes). Use these rather than implementing consensus yourself!
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   LEADER ELECTION                               │
+│                                                                 │
+│   Why: Coordinate writes, assign work, make decisions          │
+│   Challenge: Network partitions can cause "split brain"        │
+│                                                                 │
+│   ┌───────┐     ┌───────┐     ┌───────┐                        │
+│   │Node A │     │Node B │     │Node C │                        │
+│   │Follower│    │Follower│    │Follower│                       │
+│   └───┬───┘     └───┬───┘     └───┬───┘                        │
+│       │             │             │                             │
+│       │   Leader timeout!         │                             │
+│       │   A becomes candidate     │                             │
+│       │             │             │                             │
+│       │──Request vote────────────►│                             │
+│       │◄─Vote yes─────────────────│                             │
+│       │──Request vote───►│        │                             │
+│       │◄─Vote yes────────│        │                             │
+│       │             │             │                             │
+│       │   Majority! A is leader   │                             │
+│       │             │             │                             │
+│       ▼             ▼             ▼                             │
+│   ┌───────┐     ┌───────┐     ┌───────┐                        │
+│   │ LEADER│     │Follower│    │Follower│                        │
+│   └───────┘     └───────┘     └───────┘                        │
+│       │             │             │                             │
+│       │──Heartbeat──────────────►│  Leader sends heartbeats    │
+│       │──Heartbeat───►│          │  Followers reset timeout    │
+│                                                                 │
+│   Don't implement yourself! Use:                               │
+│   • ZooKeeper: Mature, battle-tested                           │
+│   • etcd: Simpler, Kubernetes uses it                          │
+│   • Consul: Also provides service discovery                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
 ## Capacity Estimation
 
 ### Key Latencies & QPS
@@ -1858,146 +1999,6 @@ A chat application requires real-time bidirectional communication—fundamentall
 │                                                                 │
 │   There's no universally "right" choice—it depends on your    │
 │   specific requirements, constraints, and priorities.          │
-└─────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Distributed System Patterns
-
-### Consistent Hashing
-
-Standard hashing (hash(key) % N) has a major problem: when you add or remove a node, almost all keys need to move. Consistent hashing solves this by mapping both keys and nodes onto a ring.
-
-**How it works**: Imagine a ring representing the full hash space (0 to 2^32-1). Nodes are placed on the ring at positions determined by hashing their identifiers. Keys are also hashed to positions. Each key belongs to the first node encountered when moving clockwise from the key's position.
-
-**Why it's better**: When a node joins or leaves, only keys between it and its predecessor need to move—roughly 1/N of the keys instead of nearly all of them. This minimizes disruption during scaling or failures.
-
-**Virtual nodes** improve distribution. Instead of each physical node having one position, give it many "virtual" positions. This ensures more even distribution of keys, especially with heterogeneous node capacities.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  CONSISTENT HASHING                             │
-│                                                                 │
-│   Standard hashing: hash(key) % N                               │
-│   Problem: If N changes, almost ALL keys move!                 │
-│                                                                 │
-│   Consistent hashing: Both keys and nodes on a ring            │
-│                                                                 │
-│                        0                                        │
-│                        │                                        │
-│              ┌─────────┴─────────┐                              │
-│             /                     \                             │
-│            /      Node A           \                            │
-│           │         ● (hash: 100)   │                           │
-│           │    ★ key1 (hash: 80)    │  key1 → clockwise → A    │
-│    270 ───┤                         ├─── 90                     │
-│           │                         │                           │
-│           │    ●                 ●  │                           │
-│           │  Node C          Node B │                           │
-│            \  (240)           (180) /                           │
-│             \                     /                             │
-│              └─────────┬─────────┘                              │
-│                        │                                        │
-│                       180                                       │
-│                                                                 │
-│   When Node B leaves: Only keys between C and B move to A      │
-│   When Node D joins: Only keys in its range move to D          │
-│                                                                 │
-│   Virtual nodes: Each physical node → multiple ring positions  │
-│   Benefits: More even distribution, handle capacity differences│
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Quorum
-
-Quorum-based systems balance consistency and availability by requiring a minimum number of nodes to participate in reads and writes. This ensures that reads and writes have at least one node in common.
-
-**The formula**: For N replicas, configure W (write quorum) and R (read quorum). If W + R > N, every read will see at least one node that participated in the most recent write, ensuring strong consistency.
-
-**Common configurations**:
-- **W=N, R=1**: Strong consistency on writes, fast reads. But writes fail if any node is down.
-- **W=1, R=N**: Fast writes, but reads are slow and must query all nodes.
-- **W=majority, R=majority**: Balanced. For N=3, W=2, R=2 allows one node failure while maintaining consistency.
-
-**Eventual consistency** (W=1, R=1): Fastest but no consistency guarantee. The write might go to node A while the read goes to node B, which hasn't replicated yet.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      QUORUM                                     │
-│                                                                 │
-│   N = Total replicas                                           │
-│   W = Write quorum (nodes acknowledging write)                 │
-│   R = Read quorum (nodes responding to read)                   │
-│                                                                 │
-│   RULE: W + R > N  →  Guarantees overlap (strong consistency)  │
-│                                                                 │
-│   Example: N=3, W=2, R=2  →  2+2=4 > 3 ✓                       │
-│                                                                 │
-│   WRITE (W=2 must ACK)          READ (R=2 must respond)        │
-│   ┌───┐ ┌───┐ ┌───┐              ┌───┐ ┌───┐ ┌───┐            │
-│   │ ✓ │ │ ✓ │ │   │              │ ✓ │ │ ✓ │ │   │            │
-│   │N1 │ │N2 │ │N3 │              │N1 │ │N2 │ │N3 │            │
-│   └───┘ └───┘ └───┘              └───┘ └───┘ └───┘            │
-│     │     │                        │     │                     │
-│     └──┬──┘                        └──┬──┘                     │
-│        │                              │                        │
-│    W=2 ✓                          R=2 ✓                        │
-│                                                                 │
-│   N1 and N2 overlap → Read sees latest write!                  │
-│                                                                 │
-│   Configurations:                                               │
-│   • W=N, R=1: Strong write, one node down blocks writes       │
-│   • W=1, R=N: Fast writes, must read all nodes                │
-│   • W=majority, R=majority: Balanced (recommended)             │
-│   • W=1, R=1: Eventual consistency (no guarantee)              │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-### Leader Election
-
-Many distributed systems need a single "leader" to coordinate activities—processing writes, assigning work, or making decisions. Leader election algorithms ensure exactly one leader is chosen, even as nodes fail and recover.
-
-**Why it's hard**: In a distributed system, nodes can't see each other's state directly. Network partitions might make it appear a leader is dead when it's actually fine. Having two leaders (split-brain) can cause data corruption.
-
-**Raft** is a popular consensus algorithm that's easier to understand than Paxos. Nodes are either leaders, followers, or candidates. Leaders send heartbeats; if followers don't hear from the leader, they become candidates and request votes. The candidate with majority votes becomes the new leader.
-
-**Coordination services** like ZooKeeper and etcd implement leader election so you don't have to. They provide strongly consistent key-value storage with features like ephemeral nodes (disappear when client disconnects) and watches (notify when data changes). Use these rather than implementing consensus yourself!
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                   LEADER ELECTION                               │
-│                                                                 │
-│   Why: Coordinate writes, assign work, make decisions          │
-│   Challenge: Network partitions can cause "split brain"        │
-│                                                                 │
-│   ┌───────┐     ┌───────┐     ┌───────┐                        │
-│   │Node A │     │Node B │     │Node C │                        │
-│   │Follower│    │Follower│    │Follower│                       │
-│   └───┬───┘     └───┬───┘     └───┬───┘                        │
-│       │             │             │                             │
-│       │   Leader timeout!         │                             │
-│       │   A becomes candidate     │                             │
-│       │             │             │                             │
-│       │──Request vote────────────►│                             │
-│       │◄─Vote yes─────────────────│                             │
-│       │──Request vote───►│        │                             │
-│       │◄─Vote yes────────│        │                             │
-│       │             │             │                             │
-│       │   Majority! A is leader   │                             │
-│       │             │             │                             │
-│       ▼             ▼             ▼                             │
-│   ┌───────┐     ┌───────┐     ┌───────┐                        │
-│   │ LEADER│     │Follower│    │Follower│                        │
-│   └───────┘     └───────┘     └───────┘                        │
-│       │             │             │                             │
-│       │──Heartbeat──────────────►│  Leader sends heartbeats    │
-│       │──Heartbeat───►│          │  Followers reset timeout    │
-│                                                                 │
-│   Don't implement yourself! Use:                               │
-│   • ZooKeeper: Mature, battle-tested                           │
-│   • etcd: Simpler, Kubernetes uses it                          │
-│   • Consul: Also provides service discovery                    │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
