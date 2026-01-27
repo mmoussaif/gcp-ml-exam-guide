@@ -25,6 +25,7 @@ The October 2024 exam version includes Generative AI topics.
 - **6.2.4 Hands-On: LLM Decoding and Generation Parameters**: Practical experimentation.
 - **6.2.5 LLM Application Lifecycle**: From prototyping to production maintenance.
 - **6.2.6 Prompt Engineering Fundamentals**: System instructions, few-shot, and chain-of-thought.
+- **6.2.7 Advanced Prompting Techniques**: ReAct and Chain-of-Thought (CoT).
 
 ### 6.2.1 Decoding Strategies
 
@@ -2850,6 +2851,62 @@ Simple chain template (practical):
 **COMMON TRAP:** Because chat history carries over, errors (wrong assumptions, wrong definitions, sensitive data pasted earlier) can propagate. When the conversation gets long, prefer: (a) **summarize and restate constraints**, (b) use a clean new thread, or (c) store key facts externally and re-inject only what you need (context engineering).
 
 **EXAM TIP:** If a scenario mentions “multi-step refinement” or “iterating with the model” → think **prompt chaining**. If it mentions “the model keeps using earlier wrong context” → think **session/context management** (reset, summarize, or constrain inputs).
+
+#### 6.2.7 Advanced Prompting Techniques
+
+While basic prompting involves simple instructions, advanced techniques like **Chain-of-Thought (CoT)** and **ReAct** enable models to handle complex reasoning and real-world interactions.
+
+---
+
+### 1. Chain-of-Thought (CoT) Prompting
+
+**What it is**: A technique where you guide the model to generate intermediate reasoning steps before providing a final answer. It is like teaching the model to "think out loud."
+
+**Why it matters**:
+*   **Improved Reasoning**: Helps models solve complex problems (math, logic) that require multiple steps.
+*   **Better Accuracy**: Breaking problems down reduces the chance of logical errors.
+*   **Enhanced Explainability**: Makes the model's decision-making process transparent.
+
+**Key Components/Variations**:
+*   **Zero-shot CoT**: Adding the phrase "Let's think step by step" to a prompt.
+*   **Few-shot CoT**: Providing examples that include both the problem and the intermediate reasoning steps leading to the solution.
+*   **Self-consistency**: Generating multiple reasoning paths and choosing the most frequent final answer.
+
+**Best for**: Internal reasoning, complex logic, and tasks where the process is as important as the result.
+
+---
+
+### 2. ReAct Prompting (Reason + Act)
+
+**What it is**: A framework that combines reasoning with action-taking. It allows the model to "think" about a problem and then "act" by using external tools (web search, APIs, databases).
+
+**The "Thought-Action-Observation" Loop**:
+1.  **Think**: The model reasons about the current state.
+2.  **Act**: The model decides on an action (e.g., "Search Google for X").
+3.  **Observe**: The model receives feedback from the tool (e.g., search results).
+4.  **Respond**: The model either iterates (new Thought) or provides a final response.
+
+**Why it matters**:
+*   **Dynamic Problem Solving**: Interacts with the real world to get up-to-date information.
+*   **Reduced Hallucination**: Grounds reasoning in real-world data/observations.
+*   **Increased Trustworthiness**: Users can see the steps the agent took to find information.
+
+**Best for**: External interactions, fact verification, and multi-step tasks requiring real-time data.
+
+---
+
+### CoT vs. ReAct: Which to choose?
+
+| Feature | Chain-of-Thought (CoT) | ReAct |
+| :--- | :--- | :--- |
+| **Primary Focus** | Internal reasoning and logic. | External interaction and tool use. |
+| **Mechanism** | Intermediate reasoning steps. | Thought-Action-Observation loop. |
+| **Real-world Data** | Limited to training data. | Can fetch real-time data via tools. |
+| **Best Use Case** | Math, logic puzzles, summarization. | Customer support, research, booking. |
+
+**Note**: These techniques are often combined. An agent might use CoT to plan its strategy and then use ReAct to execute that plan using external tools.
+
+---
 
 #### Reusing prompts in Gemini (templates, pinned chats, Saved info, Gems)
 

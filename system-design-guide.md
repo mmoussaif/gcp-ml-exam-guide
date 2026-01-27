@@ -1445,6 +1445,9 @@ graph TD
 
 3. **Orchestration**:
    - **Reasoning Loop**: The core iterative process where the agent processes information, performs internal reasoning, and decides on the next action.
+   - **Reasoning Frameworks**:
+     - **Chain-of-Thought (CoT)**: Focuses on internal logic by generating intermediate reasoning steps ("think step-by-step").
+     - **ReAct (Reason + Act)**: Combines reasoning with external tool use in a "Thought-Action-Observation" loop.
    - **ReAct Pattern**: Reason → Act → Observe loop (a common reasoning framework).
    - **Planning**: Break complex tasks into steps.
    - **Memory**: Maintain conversation context.
