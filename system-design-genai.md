@@ -15,6 +15,7 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 ## Table of Contents
 
 - [Introduction](#introduction)
+- [GenAI System: Big Picture (Frontend to Backend)](#genai-system-big-picture-frontend-to-backend)
 - [GenAI vs Traditional ML](#genai-vs-traditional-ml)
 - [Using Models & Sampling Parameters](#using-models--sampling-parameters)
 - [Google Generative AI Development Tools](#google-generative-ai-development-tools)
@@ -23,13 +24,12 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 - [3. RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework)
 - [4. Agentic AI Systems](#4-agentic-ai-systems)
 - [5. LLM Evaluation & Quality](#5-llm-evaluation--quality)
-- [6. LLM Ops Data Pipeline](#6-llm-ops-data-pipeline-at-scale)
-- [7. GenAI Data Pipeline](#7-genai-data-pipeline-architecture)
-- [8. Cost Optimization & Model Routing](#8-cost-optimization-for-genai-systems)
-- [9. Real-World Examples](#9-real-world-genai-system-examples)
-- [10. Scalability Patterns](#10-scalability-patterns-for-genai)
-- [11. Monitoring & Observability](#11-monitoring--observability-for-genai)
-- [12. Security & Guardrails](#12-security--compliance-for-genai)
+- [6. GenAI Data Pipeline](#6-genai-data-pipeline-architecture)
+- [7. Cost Optimization & Model Routing](#7-cost-optimization-for-genai-systems)
+- [8. Scalability Patterns](#8-scalability-patterns-for-genai)
+- [9. Monitoring & Observability](#9-monitoring--observability-for-genai)
+- [10. Security & Guardrails](#10-security--guardrails)
+- [11. Real-World Examples](#11-real-world-examples-applying-the-stack)
 - [Resources](#resources)
 
 ---
@@ -48,6 +48,53 @@ Generative AI applications introduce unique challenges that differ significantly
 This guide covers how to design, build, and operate GenAI systems at scale.
 
 **Aha:** GenAI system design is different because you're optimizing for **non-determinism** (same prompt → different outputs), **token economics** (cost and latency scale with length), and **orchestration** (models + retrieval + tools), not just throughput of identical requests.
+
+---
+
+## GenAI System: Big Picture (Frontend to Backend)
+
+Before diving into components, here is the end-to-end shape of a GenAI system. The **request path** runs from frontend to backend; **supporting systems** (data pipelines, evaluation, monitoring, security) surround that path. Each numbered section later in this guide is a T-shaped deep dive on one layer or concern: broad role in this picture first, then detail.
+
+**Request path (frontend → backend):**
+
+```
+  User / Frontend
+        │
+        ▼
+  ┌─────────────────┐
+  │  API Gateway    │  Auth, rate limit, route
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │  Orchestration  │  Agent, RAG, tools (sections 2, 4)
+  │  (Agent / RAG)  │
+  └────────┬────────┘
+           │
+           ▼
+  ┌─────────────────┐
+  │  LLM(s)         │  Inference, model routing (section 1)
+  └────────┬────────┘
+           │
+           ▼
+  Response (→ user, or → tools, then back into orchestration)
+```
+
+**Supporting systems (around the request path):**
+
+| System | Role in the big picture | Deep dive |
+|--------|--------------------------|-----------|
+| **Evaluation** | "Did we build the right thing?" — quality, grounding, safety on a sample of requests | §5 Evaluation & Quality (metrics + eval *data* pipeline at scale) |
+| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | §6 GenAI Data Pipeline |
+| **Cost** | "How do we keep inference affordable?" — tokens, caching, model routing, quantization | §7 Cost Optimization |
+| **Scale** | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache | §8 Scalability |
+| **Monitoring** | "How do we observe the system?" — metrics, traces, drift | §9 Monitoring & Observability |
+| **Security** | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM | §10 Security & Guardrails |
+| **Real-world examples** | "How do I build this with real tools?" — apply §1–§10 with LangChain, AWS, Google, open source | §11 Real-World Examples |
+
+**Rationale in one line:** The **request path** (gateway → orchestration → LLM) is what users hit. **Evaluation** and **training data** are two different data flows: eval = "log predictions → run quality metrics" (§5); training = "log interactions → clean → fine-tune" (§6). **Cost** (§7) is *spend per request*; **scale** (§8) is *throughput and capacity*. **Monitoring** (§9) and **security** (§10) are cross-cutting. **Examples** (§11) come last so you can apply everything with concrete stacks.
+
+**Logical flow of this guide:** Big Picture → foundations (GenAI vs ML, sampling, Google tools) → **request path** (§1 Serving, §2 RAG, §3 RAG vs FT, §4 Agents) → **evaluation** (§5: what to measure + eval data pipeline at scale; *consolidated* so "evaluation" is one place) → **training data** (§6) → **efficiency** (§7 Cost, §8 Scale) → **operations** (§9 Monitoring, §10 Security) → **§11 Real-World Examples** (apply §1–§10 with LangChain, AWS, Google, open source). Examples are last so every concept is already defined when you see concrete solutioning.
 
 ---
 
@@ -723,45 +770,127 @@ One LLM handles the entire conversation and has access to all tools. The model d
 
 **2. Multi-Agent Pattern**
 
-Multiple specialized agents, each with its own tools. Agents can hand off to each other or work in parallel; there is no single "boss."
+Multiple specialized agents, each with its own tools. **There is no single "boss."** Agents can **hand off** to each other (e.g. Agent A finishes and passes to B), **work in parallel** (A, B, C run at once and someone aggregates), or **negotiate** who does what. Control and flow are **distributed**—each agent or a lightweight router decides the next step, not one central planner.
 
 ```
-   User ──► [Agent A] [Agent B] [Agent C] ──► combined result
-              │         │         │
-           Tools A   Tools B   Tools C
+   User ──► [Agent A] ←──► [Agent B] ←──► [Agent C] ──► combined result
+              │               │               │
+           Tools A        Tools B        Tools C
+        (peer-to-peer handoffs or parallel, then aggregate)
 ```
 
-- ✅ Specialists, parallel execution, modular
-- ❌ Coordination complexity, higher latency, need handoff logic
-- *Best for*: Complex domains with distinct expertise (e.g. research agent + writing agent + fact-check agent)
+- ✅ Specialists, parallel execution, modular, flexible routing
+- ❌ Coordination logic lives in handoffs/aggregation; can be harder to reason about
+- *Best for*: Domains where agents **collaborate as peers** (e.g. research agent + writing agent + fact-check agent that hand off or run in parallel; no one agent "owns" the plan)
 
 ---
 
 **3. Hierarchical Pattern (Supervisor/Manager)**
 
-A **supervisor** agent receives the user request, plans steps, and delegates to **specialist** agents. Specialists do the work and return results; the supervisor decides next steps or synthesizes the final answer.
+**One supervisor** agent receives the user request, **owns the plan**, and **delegates** to specialist agents. Specialists do the work and **report back only to the supervisor**; they do **not** talk to each other. The supervisor decides the next step, assigns it, waits for the result, then repeats or synthesizes the final answer. Control and flow are **centralized** in the supervisor.
 
 ```
-   User ──► Supervisor (LLM) ──► "Do step 1" ──► Specialist A ──► result
+   User ──► Supervisor (LLM) ──► "Do step 1" ──► Specialist A ──► result ──► Supervisor
                     │
-                    ├──► "Do step 2" ──► Specialist B ──► result
+                    ├──► "Do step 2" ──► Specialist B ──► result ──► Supervisor
                     │
                     └──► synthesize ──► Answer
 ```
 
-- ✅ Scalable, organized, clear workflow
-- ❌ Higher latency, more moving parts
-- *Best for*: Enterprise workflows (e.g. research → draft → review → publish)
+- ✅ Clear ownership of the plan, easier to debug and reason about, scalable workflow
+- ❌ Supervisor is a bottleneck; more latency than flat handoffs when steps are independent
+- *Best for*: Workflows with a **fixed or predictable sequence** (e.g. research → draft → review → publish) where one "conductor" should own the plan
+
+---
+
+**Multi-Agent vs Hierarchical: Clear distinction**
+
+| Aspect | Multi-Agent | Hierarchical |
+|--------|-------------|--------------|
+| **Who decides the plan?** | Distributed: agents hand off, or a router chooses; no single owner | **One supervisor** owns the plan and assigns steps |
+| **Who do specialists talk to?** | Each other (handoffs) or an aggregator; flow is peer-to-peer or fan-out | **Only the supervisor**; specialists do not talk to each other |
+| **Control shape** | **Flat** or **peer-to-peer**: many agents, shared or emergent coordination | **Tree**: one node (supervisor) at the top, specialists as children |
+| **Flow** | Emergent (handoffs, parallel, negotiate) | **Top-down**: Supervisor → assign step → Specialist → result → Supervisor |
+| **When to use** | You want **peers** that hand off or run in parallel and someone (or the group) aggregates | You want **one conductor** that plans and delegates in sequence or in a clear DAG |
+
+**Aha:** **Multi-agent** = "several agents, no single boss; they hand off or run in parallel." **Hierarchical** = "one boss (supervisor) that assigns tasks to specialists and gets results back; specialists don’t talk to each other." Use multi-agent when control should be shared or emergent; use hierarchical when one agent should own the plan and delegate.
 
 ---
 
 **4. Additional Patterns**
 
+Beyond single-, multi-, and hierarchical agents, three common *orchestration shapes* show up in production: stages in a fixed order, independent experts run in parallel, and adversarial roles that argue before a judge. Use these when the task has a natural flow (sequence), benefits from multiple viewpoints (fan-out), or must be stress-tested (debate).
+
+---
+
+**1. Sequential Pipeline**
+
+**What it is:** A fixed chain of steps, A → B → C. Each stage consumes the prior stage's output and produces input for the next. No parallelism within the pipeline; order is part of the design (e.g. outline before draft, draft before edit).
+
+**How it works:** One agent or model run handles each step. Outputs are passed as context or artifacts to the next. Handoffs are explicit (e.g. "outline," "draft," "edited_draft"). Failures or rewinds usually mean restarting from the failing step or the beginning, depending on your design.
+
+**When to use:** **Content creation** (outline → draft → edit), **ETL-style** flows (extract → transform → load), or any process where step N truly depends on step N−1 and there's no benefit from running steps in parallel.
+
+```
+  ┌─────────┐     ┌─────────┐     ┌─────────┐
+  │Outline  │ ──▶ │ Draft   │ ──▶ │ Edit    │ ──▶ output
+  └─────────┘     └─────────┘     └─────────┘
+       A               B               C
+```
+
+---
+
+**2. Parallel Fan-out**
+
+**What it is:** One query (or task) is sent to **multiple agents or tools** at once; each runs independently. A separate **aggregator** (or router) collects their outputs and merges them into one answer or decision.
+
+**How it works:** Fan-out: duplicate the request to A, B, C (and optionally more). No agent waits on another during the parallel phase. Aggregate: combine results via another LLM call (e.g. "synthesize these three analyses") or a rule (e.g. majority vote, weighted average). Latency is dominated by the slowest branch plus aggregation, not the sum of all branches.
+
+**When to use:** **Research** or **multi-perspective analysis** (e.g. legal, market, technical views in parallel), **ensemble** answers (e.g. multiple retrieval strategies or models), or whenever you want **diversity** then **reconciliation** in one round.
+
+```
+       Query
+          │
+    ┌─────┼─────┐
+    ▼     ▼     ▼
+  ┌───┐ ┌───┐ ┌───┐
+  │ A │ │ B │ │ C │   (parallel)
+  └─┬─┘ └─┬─┘ └─┬─┘
+    └─────┼─────┘
+          ▼
+     Aggregate ──▶ final answer
+```
+
+---
+
+**3. Debate / Adversarial**
+
+**What it is:** Two (or more) **adversarial roles** argue opposite sides (e.g. Pro vs Con, attacker vs defender). A **judge** (or meta-agent) reads the debate and produces the final decision or output. The goal is to surface objections and reduce overconfidence.
+
+**How it works:** Pro and Con (or Red / Blue) each get the same task and constraints; they may see each other's replies in one or more rounds. The judge receives the full transcript and possibly the original query, then outputs the chosen stance, a synthesis, or a "no decision" with reasons. You can cap rounds (e.g. 1–2) to control cost and latency.
+
+**When to use:** **High-stakes decisions** (e.g. approvals, audits, policy), **red teaming** (stress-test an idea or policy before release), or when you want the system to **explicitly consider counterarguments** instead of one-shot answers.
+
+```
+  ┌─────┐                    ┌─────┐
+  │ Pro │ ──── argue ───────▶│Judge│
+  └─────┘                    └──┬──┘
+       ▲                        │
+       └── argue ──────────────┘
+  ┌─────┐
+  │ Con │
+  └─────┘
+```
+
+---
+
+**Quick reference**
+
 | Pattern | Architecture | Use Case |
 |---------|--------------|----------|
-| **Sequential Pipeline** | A → B → C (fixed order) | Content creation (outline → draft → edit) |
-| **Parallel Fan-out** | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis |
-| **Debate/Adversarial** | Pro vs Con → Judge | High-stakes decisions, red teaming |
+| **Sequential Pipeline** | A → B → C (fixed order) | Content creation (outline → draft → edit), ETL-style flows |
+| **Parallel Fan-out** | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis, ensembles |
+| **Debate/Adversarial** | Pro vs Con → Judge | High-stakes decisions, red teaming, counterargument stress-test |
 
 **Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
 
@@ -813,25 +942,66 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 ## 5. LLM Evaluation & Quality
 
-### Evaluation Frameworks
+**What "knowledge quality" means here:** For LLM and RAG systems, quality is **groundedness** (is the answer supported by the context?), **relevance** (does it address the question?), and **retrieval quality** (did we fetch the right chunks?). You rarely have gold labels for every request, so evaluation mixes **reference-free** automated metrics (e.g. faithfulness, relevancy) with **sampled human review** to calibrate and catch edge cases. This section is tool-first: each concept is tied to frameworks you can run today.
 
-**RAGAS** (Retrieval Augmented Generation Assessment) provides reference-free evaluation for RAG systems:
+---
 
-| Metric | What It Measures | How |
-|--------|------------------|-----|
-| **Faithfulness** | Is response grounded in context? | % of claims verifiable from retrieved docs |
-| **Answer Relevancy** | Does answer address the question? | Semantic similarity to question |
-| **Context Relevancy** | Is retrieved context useful? | % of context used in answer |
-| **Context Recall** | Did we retrieve needed info? | Overlap with ground truth |
+### Evaluation Frameworks & Metrics
 
-### Hallucination Detection
+**RAGAS** (Python: `pip install ragas`) is the de facto open-source choice for **reference-free** RAG evaluation. You pass a dataset of `(user_input, retrieved_contexts, response)` plus optional `reference`; RAGAS runs LLM-as-judge and embedding-based metrics and returns scores. Used by LangChain, LlamaIndex, and LangSmith integrations.
 
-| Approach | Accuracy | Latency | Best For |
-|----------|----------|---------|----------|
-| **Self-consistency** | Moderate | High (multiple calls) | Quick checks |
-| **Cross-encoder verification** | High | +50-100ms | Production |
-| **LLM-as-Judge** | High | +100-200ms | Complex evaluation |
-| **Specialized models (FaithJudge)** | Highest | +50ms | High-stakes applications |
+| Metric | What It Measures | How (in RAGAS) | Tool |
+|--------|------------------|----------------|------|
+| **Faithfulness** | Is response grounded in context? | LLM extracts claims → checks each against retrieved docs | `ragas.metrics.Faithfulness` |
+| **Answer Relevancy** | Does answer address the question? | Inverse of LLM-generated “counterfactual” questions needed to recover answer | `ragas.metrics.AnswerRelevancy` |
+| **Context Precision** | Are relevant docs ranked above noise? | Ground-truth relevant items ranked high → higher score | `ragas.metrics.ContextPrecision` (needs ground truth) |
+| **Context Recall** | Did we retrieve what we need? | Overlap between answer-supporting context and retrieved context; or vs. reference | `ragas.metrics.ContextRecall` / `LLMContextRecall` |
+
+**Practical RAGAS workflow:** Build a list of dicts with `user_input`, `retrieved_contexts`, `response`, and optionally `reference`. Load into `EvaluationDataset.from_list(dataset)`, then call `evaluate(dataset=..., metrics=[Faithfulness(), AnswerRelevancy(), ...], llm=evaluator_llm)`. Use a **different** LLM for evaluation than for generation to reduce self-consistency bias. See [RAGAS docs](https://docs.ragas.io/en/stable/getstarted/rag_eval/).
+
+**Other tools:**
+
+- **LangSmith** (LangChain): Predefined RAG evaluators (correctness, relevance, groundedness), dataset runs, human annotation queues, and online feedback. Use `client.run_evaluator` or the LangSmith UI to run evals on logged runs. Strong when your stack is already LangChain.
+- **Giskard** (Python: `pip install giskard`): RAG Evaluation Toolkit (RAGET)—testset generation, knowledge-base–aware tests, and scalar metrics. Good for “test-suite” style regression and CI.
+- **Arize Phoenix** (Python: `pip install arize-phoenix`): Open-source LLM tracing + evals. Phoenix Evals include **hallucination**, relevance, toxicity; they run over OpenTelemetry traces. Use for production monitoring and “eval on sampled traffic.”
+- **Braintrust** (Python: `braintrust`): `Eval()` / `EvalAsync()` over datasets; you define **scorers** (functions that score outputs). Fits custom logic and proprietary benchmarks.
+- **TruLens**: Focus on “RAG triad” (context relevance, grounding, relevance) with minimal config; integrates with LlamaIndex and other frameworks.
+
+---
+
+### Hallucination Detection: Approaches & Tools
+
+| Approach | What It Does | Accuracy | Latency | Tools / How |
+|----------|--------------|----------|---------|-------------|
+| **Self-consistency** | Sample N answers, check agreement | Moderate | High (N× calls) | Custom loop or Braintrust/Phoenix over multiple runs |
+| **NLI / cross-encoder** | Entailment model: premise = context, hypothesis = claim | High | +50–100 ms | Sentence-transformers NLI, or Phoenix “groundedness”–style evals |
+| **LLM-as-Judge** | “Is this claim supported by the context?” | High | +100–200 ms | **RAGAS** `Faithfulness`, **LangSmith** groundedness, **Phoenix** hallucination template, **Braintrust** custom scorer |
+| **Specialized faithfulness models** | Fine-tuned “faithfulness vs. hallucination” judge | Highest | ~+50 ms | **Vectara FaithJudge** ([GitHub](https://github.com/vectara/FaithJudge)): benchmark + model for RAG QA/summarization; use when you need max agreement with human judgment |
+
+**Practical tip:** In production, run **fast** checks inline (format, length, toxicity if you have a small classifier), and push **faithfulness / hallucination** to async jobs on a sample (e.g. 5–10%) using RAGAS or Phoenix so cost and latency stay bounded.
+
+---
+
+### How to Run Evaluation in Practice
+
+1. **Offline / batch (before release or in CI)**  
+   - **Data:** List of `(query, retrieved_contexts, response)` or `(query, response)`; optional `reference` for reference-based metrics.  
+   - **Run:** RAGAS `evaluate()` on a dataset; or LangSmith “evaluate dataset”; or Braintrust `Eval(dataset, scorers=...)`.  
+   - **Use:** Regressions, A/B on prompts or retrievers, and calibration of thresholds.
+
+2. **Online / production (sampled)**  
+   - **Data:** Log requests and responses (and retrieved contexts if RAG) to **LangSmith**, **Phoenix**, or your own store.  
+   - **Run:** Periodic jobs (e.g. cron or queue) that pull a sample (e.g. 5%), run RAGAS or Phoenix evals, and write scores to a dashboard or alerting.  
+   - **Use:** Drift detection, “did we build the right thing?” in the wild.
+
+3. **Human loop**  
+   - **Data:** Subset of production or offline examples (e.g. 100–500) with labels (good/bad, error type, etc.).  
+   - **Tools:** **LangSmith** annotation queue, Label Studio, or internal tooling.  
+   - **Use:** Calibrate automated metrics (“at what faithfulness score do humans usually approve?”), build training data for task-specific judges, and categorize failure modes.
+
+**Aha:** You don’t need gold labels for every request. **Reference-free** metrics (RAGAS faithfulness, answer relevancy, Phoenix hallucination) answer “is this grounded?” and “does this match the question?” without human annotations. Use them on a sample in production, then a **small human-labeled set** to set thresholds and sanity-check.
+
+---
 
 ### Production Evaluation Strategy
 
@@ -841,97 +1011,84 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 │                                                                 │
 │   Request → LLM Response                                        │
 │                │                                                │
-│                ├──► Real-time checks (< 50ms budget)           │
-│                │    • Toxicity scoring                         │
-│                │    • Format validation                        │
-│                │    • Length limits                            │
+│                ├──► Real-time checks (< 50ms budget)             │
+│                │    • Toxicity (e.g. Perspective API, small      │
+│                │      classifier, or rule-based filters)         │
+│                │    • Format validation (schema, length)         │
+│                │    • Length limits                             │
+│                │    Tools: in-process code, light model or API  │
 │                │                                                │
-│                ├──► Async evaluation (sampled)                 │
-│                │    • Faithfulness (RAGAS)                     │
-│                │    • Hallucination detection                  │
-│                │    • Task-specific metrics                    │
+│                ├──► Async evaluation (sampled, e.g. 5–10%)      │
+│                │    • Faithfulness / grounding → RAGAS, Phoenix  │
+│                │    • Hallucination → Phoenix evals, FaithJudge │
+│                │    • Task-specific metrics → Braintrust, custom │
+│                │    Tools: RAGAS, Phoenix, LangSmith, Braintrust  │
 │                │                                                │
-│                └──► Human evaluation (subset)                  │
-│                     • Quality ratings                          │
-│                     • Error categorization                     │
-│                     • Training data for judges                 │
+│                └──► Human evaluation (subset of async or batch) │
+│                     • Quality ratings, error taxonomy            │
+│                     • Calibrate automated score thresholds       │
+│                     Tools: LangSmith annotation, Label Studio   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Key Insight**: Not all metrics run on all requests. Use tiered evaluation—fast checks inline, expensive checks sampled/async.
-
-**Aha:** With LLMs you often don’t have gold labels for every request. **Reference-free** metrics (e.g. RAGAS faithfulness, relevancy) ask "is this claim supported by the context?" and "does this answer fit the question?" without human annotations. You’re measuring "did we build the right thing?" in the wild, then using a small human-labeled set to calibrate.
+**Key Insight:** Not every request gets every metric. Use **tiered evaluation**—cheap checks inline, expensive ones (RAGAS, hallucination, custom scorers) on a **sample** and/or async, so latency and cost stay under control.
 
 ---
 
-## 6. LLM Ops Data Pipeline at Scale
+### Tools Quick Reference
 
-### Use Case: Design a Production LLM Evaluation System
+| Tool | What It Does | When to Use |
+|------|----------------|-------------|
+| **RAGAS** | Reference-free RAG metrics (faithfulness, relevancy, context precision/recall) | Batch RAG evals, CI, offline benchmarks; Python-first |
+| **LangSmith** | Evaluators, datasets, runs, human annotation | LangChain-based apps; need UI + queues + feedback |
+| **Phoenix** | Tracing + evals (hallucination, relevance, toxicity) over OTLP | Production monitoring, eval-on-sampled-traffic |
+| **Giskard** | RAG test suite, testset generation, scalar metrics | Regression and “test suite” style RAG evaluation |
+| **Braintrust** | Custom scorers, `Eval`/`EvalAsync`, experiments | Proprietary benchmarks, custom logic, experiments |
+| **FaithJudge** (Vectara) | Faithfulness/hallucination benchmark + model | High-stakes RAG; max agreement with human judgment |
 
-**Requirements:**
-- Evaluate model performance continuously
-- Track 100+ metrics (accuracy, latency, cost, safety)
-- Process 1M predictions/day
-- Alert on degradation
-- Support A/B testing
+---
 
-**High-Level Design:**
+### Evaluation data pipeline at scale
+
+The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the *evaluation* pipeline (log predictions, run quality/safety/cost metrics); the *training* pipeline (user interactions → fine-tuning data) is §6.
+
+**Use case: Production LLM evaluation system**
+
+**Requirements:** Evaluate model performance continuously; track 100+ metrics (accuracy, latency, cost, safety); process 1M predictions/day; alert on degradation; support A/B testing.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                  LLM OPS PIPELINE                               │
-│                                                                 │
+│                  EVAL DATA PIPELINE (at scale)                  │
 │   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
 │   │    LLM       │────►│ Event Stream │────►│   Stream     │   │
 │   │ Predictions  │     │ Pub/Sub or   │     │ Processor    │   │
-│   │              │     │ Kinesis      │     │              │   │
-│   └──────────────┘     └──────────────┘     └──────┬───────┘   │
-│                                                     │           │
-│                    ┌────────────────────────────────┼───────┐   │
-│                    │                                │       │   │
-│                    ▼                                ▼       ▼   │
+│   └──────────────┘     │ Kinesis      │     └──────┬───────┘   │
+│                        └──────────────┘            │           │
+│                    ┌───────────────────────────────┼───────┐    │
+│                    ▼                               ▼       ▼    │
 │              ┌───────────┐                   ┌───────────────┐ │
-│              │ Evaluation│                   │  Time-Series  │ │
-│              │  Metrics  │                   │      DB       │ │
-│              │           │                   │               │ │
-│              │• Quality  │                   │ • Dashboards  │ │
-│              │• Latency  │                   │ • Alerting    │ │
-│              │• Cost     │                   │ • A/B Testing │ │
-│              │• Safety   │                   │               │ │
+│              │ Evaluation│                   │  Time-Series   │ │
+│              │ (RAGAS,   │                   │  DB → Dashboards│
+│              │ Phoenix…) │                   │  Alerting, A/B │ │
 │              └───────────┘                   └───────────────┘ │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Sampling Strategy Trade-offs
+**Sampling:** Full (100%) = complete visibility but costly; sampled (e.g. 10%) = cheaper, may miss rare errors; **smart (100% errors + sample successes)** = recommended—capture all failures, sample successes for stats.
 
-| Strategy | Pros | Cons | Cost Estimate |
-|----------|------|------|---------------|
-| **Full (100%)** | Complete visibility, no bias | Very high cost, privacy concerns | $500-2000/month for 1M/day |
-| **Sampled (10%)** | 10x cost reduction | May miss rare errors | $50-200/month |
-| **Smart (100% errors + sample successes)** | Captures all failures, cost-effective | More complex | Recommended |
+**Frequency:** Real-time for latency/errors (user-facing); batch (hourly/daily) for quality/cost (expensive metrics); **hybrid** for most production.
 
-**Why smart sampling works**: Errors are rare but critical—missing one could mean missing a production issue. Successes are common—sampling gives statistical representation without cost.
-
-### Evaluation Frequency Trade-offs
-
-| Strategy | Pros | Cons | Best For |
-|----------|------|------|----------|
-| **Real-time** | Immediate alerts | High cost, +10-50ms latency | Critical systems, safety |
-| **Batch (hourly/daily)** | 10-100x cheaper | Delayed detection | Analytics, reporting |
-| **Hybrid** | Balanced | More complex | Most production systems |
-
-**Recommended**: Real-time for latency/errors (user-facing), batch for quality/cost analysis (expensive metrics).
-
-### Key Metrics to Track
-
-- **Quality**: Task-specific accuracy, **ROUGE** / **BLEU** (automatic text similarity metrics), human evaluation
-- **Latency**: **P50, P95, P99** (50th, 95th, 99th percentile) response times
-- **Cost**: Tokens used, cost per request, model tier breakdown
-- **Safety**: Toxicity score, jailbreak attempts, bias detection
+**What to track:** Quality (task accuracy, ROUGE/BLEU, human eval), latency (P50/P95/P99), cost (tokens, model tier), safety (toxicity, jailbreak, bias).
 
 ---
 
-## 7. GenAI Data Pipeline Architecture
+## 6. GenAI Data Pipeline Architecture
+
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." It is *distinct* from the evaluation pipeline (§5), which moves *prediction* data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
+
+**T-shaped summary:** User interactions → event stream (Pub/Sub, Kinesis) → stream processor (Dataflow, etc.) → data lake and optionally feature store → training data prep (filter, dedupe, validate, format for fine-tuning). Deep dive below.
+
+---
 
 ### Use Case: Design a Training Data Pipeline for Fine-Tuning
 
@@ -984,7 +1141,13 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 ---
 
-## 8. Cost Optimization for GenAI Systems
+## 7. Cost Optimization for GenAI Systems
+
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**: cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. *Throughput* and *capacity* are in §8 Scalability; here we focus on *cost per request*.
+
+**T-shaped summary:** Cost = f(tokens, model). Levers: prompt optimization, response/prompt caching, routing easy queries to smaller models, quantization, and continuous batching (better GPU use → same throughput with fewer machines). Deep dive below.
+
+---
 
 ### Token-Based Cost Model
 
@@ -1087,72 +1250,19 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 **6. Continuous Batching**
 
-- Static batching: 40-60% GPU utilization
-- Continuous batching: 80-95% GPU utilization
-- **Result**: 2-3x higher throughput
+- Static batching: 40–60% GPU utilization
+- Continuous batching: 80–95% GPU utilization
+- **Result**: 2–3× higher throughput → fewer machines for the same load (cost and scale). Throughput/parallelism patterns (model parallelism, pipeline parallelism) are in §8.
 
 ---
 
-## 9. Real-World GenAI System Examples
+## 8. Scalability Patterns for GenAI
 
-### Example 1: Code Generation Assistant (like GitHub Copilot)
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. *Cost per request* is in §7; here we focus on *requests per second* and *utilization*.
 
-```
-Developer → IDE Extension → API Gateway → Code Generation Service
-                                              │
-                                    ├──► LLM (Code Model)
-                                    ├──► Context Retrieval (RAG)
-                                    └──► Code Validation
-```
-
-**Key Features:**
-- Context-aware (understands codebase)
-- Multi-file support
-- Real-time generation
-- Privacy (code stays private)
-
-**Services**: Vertex AI Codey API, Amazon CodeWhisperer, CodeLlama
-
-### Example 2: Customer Service Chatbot with RAG
-
-```
-Customer → Chat Interface → Agent Orchestrator
-                                │
-                      ├──► RAG System (Knowledge Base)
-                      ├──► CRM Integration (Tool)
-                      ├──► Order System (Tool)
-                      └──► Escalation Logic
-```
-
-**Key Features:**
-- Knowledge retrieval from company docs
-- Tool use (check orders, create tickets)
-- Human escalation when needed
-- Multi-language support
-
-**Services**: Vertex AI Agent Builder + RAG Engine, Bedrock Agents + Knowledge Bases
-
-### Example 3: Content Generation Platform
-
-```
-User Request → Content Pipeline
-                    │
-          ├──► Research (Web Search)
-          ├──► Content Generation (LLM)
-          ├──► Fact-Checking (Grounding)
-          ├──► SEO Optimization
-          └──► Multi-format Output
-```
-
-**Key Features:**
-- Multi-step generation
-- Fact grounding against sources
-- Format adaptation (blog, social, email)
-- Brand voice consistency
+**T-shaped summary:** Levers: stateless serving (more replicas), model parallelism (split layers across GPUs), pipeline parallelism (different layers on different GPUs), and caching (KV cache for prefixes, response cache for identical/similar queries). Deep dive below.
 
 ---
-
-## 10. Scalability Patterns for GenAI
 
 ### Horizontal Scaling
 
@@ -1174,15 +1284,23 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Caching Strategies for Scale
 
-| Strategy | Speedup | Best For |
-|----------|---------|----------|
-| Prompt caching (KV cache) | 2-3x | Repeated prefixes |
-| Response caching | Instant | Identical requests |
-| Semantic caching | Higher hit rate | Similar queries |
+*Cost* impact of caching is in §7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
+
+| Strategy | Throughput / latency impact | Best For |
+|----------|-----------------------------|----------|
+| Prompt caching (KV cache) | 2–3× effective throughput for repeated prefixes | System prompts, long context |
+| Response caching | Near-instant for cache hits; frees GPU for other requests | Identical or near-identical queries |
+| Semantic caching | Higher hit rate → more requests served from cache | Similar queries (e.g. Q&A) |
 
 ---
 
-## 11. Monitoring & Observability for GenAI
+## 9. Monitoring & Observability for GenAI
+
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we observe the system**: metrics, traces, and drift detection across the request path and the evaluation/training pipelines. Quality metrics and eval pipeline are in §5; here we focus on **what to track** and **which platform services** support it.
+
+**T-shaped summary:** Track quality (task accuracy, safety), performance (latency, throughput), cost (tokens, model tier), reliability (errors, timeouts), and safety (toxicity, jailbreak). Use Cloud Monitoring / CloudWatch, logging, tracing (Trace / X-Ray), and model monitoring for drift. Deep dive below.
+
+---
 
 ### Key Metrics to Track
 
@@ -1205,7 +1323,13 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ---
 
-## 12. Security & Guardrails
+## 10. Security & Guardrails
+
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit *around* the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
+
+**T-shaped summary:** Threats: direct/indirect prompt injection, data leakage, jailbreaking, unauthorized access. Mitigations: input/output guardrails, spotlighting, least-privilege tools, Model Armor (or Bedrock Guardrails). Use defense-in-depth: gateway → guardrails → LLM → guardrails → response. Deep dive below.
+
+---
 
 ### Key Security Concerns
 
@@ -1348,6 +1472,76 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 ---
 
+## 11. Real-World Examples: Applying the Stack
+
+This section comes **after** all core concepts (§1–§10) so you can apply them. Each example states the **problem**, the **concepts** from this guide that apply, and a **concrete solution** using specific stacks: **LangChain** / **LlamaIndex** (orchestration, RAG, agents), **Google (Vertex AI)** or **AWS (Bedrock)**, and **open source** (vLLM, RAGAS, Phoenix, etc.). Use these as blueprints for "how would I build this with real tools?"
+
+---
+
+### Example 1: Code Generation Assistant (like GitHub Copilot)
+
+**Problem:** In-IDE completions that understand the codebase, respect privacy, and run with low latency.
+
+**Concepts:** §1 (LLM serving / model routing), §2 (RAG for code context), §4 (single agent + tools), §7 (cost: smaller model for completions, routing by complexity).
+
+**Concrete solution:**
+
+- **Orchestration + RAG:** **LangChain** or **LlamaIndex** to build a "code context" pipeline: embed workspace chunks (or AST-based chunks), retrieve on cursor context, format as prefix for the model. Use **LlamaIndex** `CodeIndex` / doc split by language or **LangChain** `RecursiveCharacterTextSplitter` + vector store (e.g. Chroma, open source).
+- **LLM:** **Vertex AI Codey** (Google) or **Amazon CodeWhisperer** / **Bedrock** (AWS) for code-native APIs; or **open source** (**CodeLlama**, **StarCoder**) behind **vLLM** for self-hosted, low-latency completion.
+- **Evaluation:** **RAGAS** or **LangSmith** on a sample of (prompt, context, completion) for relevance and correctness; **Phoenix** for production traces and latency.
+- **Guardrails:** Input/output length limits, optional PII/secret filters (e.g. **Guardrails AI**, **NeMo Guardrails**), or **Bedrock Guardrails** / **Model Armor** if on AWS/Google.
+
+**Stack snapshot:** LangChain/LlamaIndex (RAG + routing) + Vertex Codey or Bedrock + vLLM (optional) + RAGAS/LangSmith/Phoenix (eval) + guardrails.
+
+---
+
+### Example 2: Customer Service Chatbot with RAG and Tools
+
+**Problem:** Chat that answers from internal docs, checks orders/tickets via tools, and escalates to humans when needed.
+
+**Concepts:** §2 (RAG: knowledge base), §4 (agent with tools, escalation as a "tool"), §5 (eval: faithfulness, relevancy), §10 (guardrails, PII).
+
+**Concrete solution:**
+
+- **Orchestration + agent:** **LangChain** `create_react_agent` or **LlamaIndex** `ReActAgent` with tools: RAG retriever (knowledge base), "check order" (API), "create ticket" (CRM API), "escalate" (handoff to human queue). Use **MCP** or custom tool schemas so the agent can call backend APIs.
+- **RAG:** **Vertex AI RAG Engine** (Google) or **Bedrock Knowledge Bases** (AWS) for managed ingestion + retrieval; or **LangChain** + **Chroma** / **Pinecone** + **OpenAI** or **Cohere** embeddings (open / API). Apply chunking and reranking from §2.
+- **LLM:** **Vertex AI** (Gemini) or **Bedrock** (Claude, Llama) for conversation and tool use.
+- **Evaluation:** **RAGAS** (faithfulness, answer relevancy) on logged (query, context, response); **LangSmith** for dataset runs and human annotation queues.
+- **Security:** **Bedrock Guardrails** or **Model Armor** for input/output; scope tools with IAM/least privilege; filter PII in tool *outputs* before they reach the model or user.
+
+**Stack snapshot:** LangChain/LlamaIndex (agent + tools) + Vertex RAG Engine or Bedrock Knowledge Bases + Vertex/Bedrock LLM + RAGAS/LangSmith (eval) + Model Armor/Bedrock Guardrails.
+
+---
+
+### Example 3: Content Generation Platform (research → draft → grounding)
+
+**Problem:** Multi-step content: research from web, generate draft, fact-check against sources, then SEO and multi-format output.
+
+**Concepts:** §4 (sequential pipeline: research → generation → grounding → SEO), §2 (RAG/grounding for fact-check), §5 (faithfulness eval), §7 (cost: model routing for easy vs hard steps).
+
+**Concrete solution:**
+
+- **Orchestration:** **LangChain** `SequentialChain` or a custom DAG: (1) research step = tool to **Google Search** or **Tavily** (or Vertex Search); (2) generation = LLM with research as context; (3) grounding = LLM or **Vertex AI grounding** / **Bedrock** retrieval + NLI-style check; (4) SEO = templates or a small LLM call. This is the "sequential pipeline" from §4 Additional Patterns.
+- **LLM:** **Vertex AI** (Gemini) or **Bedrock** (Claude). Use **routing** (§7): e.g. Gemini Flash for research/summary, Gemini Pro for final draft.
+- **Grounding:** **Vertex AI grounding with Google Search** or **Bedrock** retrieval + cite-check; or **open source**: RAG pipeline + **RAGAS** faithfulness on (claim, source) samples.
+- **Evaluation:** **RAGAS** faithfulness and relevancy on (brief, sources, draft); **LangSmith** or **Braintrust** for A/B on prompts and model choices.
+
+**Stack snapshot:** LangChain (sequential pipeline + tools) + Vertex/Bedrock LLMs + Vertex grounding or RAG + RAGAS (eval) + optional Giskard for regression tests.
+
+---
+
+### Cross-example takeaways
+
+| Concern | Tools to reach for |
+|--------|--------------------|
+| **Orchestration (RAG, agents, pipelines)** | LangChain, LlamaIndex |
+| **Managed RAG / embeddings** | Vertex RAG Engine, Bedrock Knowledge Bases |
+| **LLM hosting** | Vertex AI (Codey, Gemini), Bedrock (Claude, CodeWhisperer, etc.), or vLLM for self-hosted |
+| **Evaluation (reference-free)** | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals) |
+| **Guardrails** | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source) |
+
+---
+
 ## Resources
 
 ### Books
@@ -1359,7 +1553,12 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 ### Online
 
 - [vLLM Documentation](https://docs.vllm.ai/) - High-throughput LLM serving
-- [RAGAS Documentation](https://docs.ragas.io/) - RAG evaluation framework
+- [RAGAS Documentation](https://docs.ragas.io/) - Reference-free RAG evaluation (faithfulness, relevancy, context metrics)
+- [LangSmith Evaluation](https://docs.smith.langchain.com/evaluation) - Evaluators, datasets, human annotation
+- [Arize Phoenix](https://phoenix.arize.com/) - LLM tracing and evals (hallucination, relevance, toxicity)
+- [Giskard RAG Toolkit](https://docs.giskard.ai/en/stable/reference/rag-toolset/) - RAG test suite and testset generation
+- [Braintrust Evaluate](https://www.braintrust.dev/docs/evaluation) - Custom scorers and experiments
+- [Vectara FaithJudge](https://github.com/vectara/FaithJudge) - Faithfulness/hallucination benchmark and model
 - [LangChain Documentation](https://docs.langchain.com/)
 - [LlamaIndex Documentation](https://docs.llamaindex.ai/)
 - [OpenAI Guardrails](https://openai.github.io/openai-guardrails-python/)
