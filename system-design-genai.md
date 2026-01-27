@@ -1,6 +1,6 @@
 # ML & GenAI System Design Guide
 
-A comprehensive guide to designing Machine Learning and Generative AI systems at scale, covering LLM serving, RAG systems, agentic AI, MLOps pipelines, and production considerations.
+A comprehensive guide to designing **ML (Machine Learning)** and **GenAI (Generative AI)** systems at scale, covering **LLM (Large Language Model)** serving, **RAG** (retrieval-augmented generation) systems, agentic AI, **MLOps** (ML operations) pipelines, and production considerations.
 
 ---
 
@@ -40,7 +40,7 @@ Generative AI applications introduce unique challenges that differ significantly
 
 - **Token-by-token generation**: Sequential decoding (unlike batch predictions)
 - **Variable latency**: Generation time depends on output length
-- **High memory requirements**: KV cache for attention mechanisms
+- **High memory requirements**: **KV cache** (key-value cache: stored attention keys and values in transformers) for attention mechanisms
 - **Cost optimization**: Balance between latency and throughput
 - **Hallucination management**: Ensuring factual accuracy
 - **Agent orchestration**: Multi-step reasoning and tool use
@@ -51,7 +51,7 @@ This guide covers how to design, build, and operate GenAI systems at scale.
 
 ## GenAI vs Traditional ML
 
-Understanding the fundamental differences between traditional ML systems and GenAI/LLM systems is crucial for making the right architectural decisions.
+Understanding the fundamental differences between traditional ML systems and **GenAI** / **LLM (Large Language Model)** systems is crucial for making the right architectural decisions.
 
 | Aspect         | Traditional ML       | GenAI/LLM                              |
 | -------------- | -------------------- | -------------------------------------- |
@@ -106,7 +106,7 @@ Restricts the model's choice to only the *k* most probable tokens at each step.
 Determines the maximum number of tokens to generate before stopping.
 
 - Prevents runaway generation ("rambling") and controls compute costs.
-- Models stop early if they hit an `<EOS>` token.
+- Models stop early if they hit an end-of-sequence (`<EOS>`) token.
 
 **5. Repetition Penalty**
 
@@ -140,7 +140,7 @@ Google provides two primary environments for experimenting with and deploying Ge
 | **Focus** | Streamlined, easy-to-use interface for rapid prototyping | Comprehensive environment for building, training, and deploying ML models |
 | **Target Users** | Beginners, hobbyists, initial project stages | Professionals, researchers, enterprise developers |
 | **Access** | Standard Google Account login | Google Cloud Console (Enterprise account) |
-| **Limitations** | Usage limits (QPM, RPM, TPM); small-scale projects | Service charges based on usage; enterprise-grade quotas |
+| **Limitations** | Usage limits (**QPM** queries/min, **RPM** requests/min, **TPM** tokens/min); small-scale projects | Service charges based on usage; enterprise-grade quotas |
 | **Advantages** | Simplified interface; easy to get started | Enterprise-grade security, compliance, flexible quotas |
 
 **Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications.
@@ -265,7 +265,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 **Requirements:**
 - Answer questions from 1M documents
 - Support real-time queries (< 3 seconds)
-- Handle 1,000 QPS
+- Handle 1,000 **QPS** (queries per second)
 - Ensure factual accuracy (grounding)
 
 **High-Level Design:**
@@ -337,7 +337,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | **Sparse (BM25)** | 1-5ms | ✗ | ✓ | Exact matches |
 | **Hybrid** | 15-60ms | ✓ | ✓ | Production (recommended) |
 
-**Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via Reciprocal Rank Fusion (RRF) gives best results.
+**Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via **RRF (Reciprocal Rank Fusion)** gives best results.
 
 ### Reranking Trade-offs
 
@@ -379,7 +379,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | Approach | Cost Model | Example |
 |----------|------------|---------|
 | **RAG** | Per-query ($0.01-0.05) | 1M queries/month = $10-50K |
-| **Fine-Tuning** | One-time ($500-2,000 for LoRA) | Amortizes over usage |
+| **Fine-Tuning** | One-time ($500-2,000 for **LoRA**, Low-Rank Adaptation) | Amortizes over usage |
 | **Full Fine-Tune** | $10,000-100,000+ | Large datasets, custom models |
 
 ### Decision Flow
@@ -651,8 +651,8 @@ Does model lack knowledge about your domain?
 
 ### Key Metrics to Track
 
-- **Quality**: Task-specific accuracy, ROUGE, BLEU, human evaluation
-- **Latency**: P50, P95, P99 response times
+- **Quality**: Task-specific accuracy, **ROUGE** / **BLEU** (automatic text similarity metrics), human evaluation
+- **Latency**: **P50, P95, P99** (50th, 95th, 99th percentile) response times
 - **Cost**: Tokens used, cost per request, model tier breakdown
 - **Safety**: Toxicity score, jailbreak attempts, bias detection
 
@@ -796,13 +796,15 @@ Query → Small Model → Confident? → Return
 
 **5. Quantization**
 
+Reducing numerical precision shrinks model size and speeds inference. **FP32** (32-bit float), **FP16** (16-bit), **INT8** (8-bit integer), **INT4** (4-bit) are common levels.
+
 | Precision | Memory Reduction | Quality Loss |
 |-----------|-----------------|--------------|
 | FP32 → FP16 | 2x | Minimal |
 | FP16 → INT8 | 4x | Some |
 | INT8 → INT4 | 8x | Significant |
 
-**Why FP16 is safe**: Modern GPUs have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
+**Why FP16 is safe**: Modern **GPUs** (graphics processing units) have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
 
 **6. Continuous Batching**
 
@@ -932,9 +934,9 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 |--------|------|------------|
 | **Direct Prompt Injection** | User injects malicious instructions | Input validation, guardrails |
 | **Indirect Prompt Injection** | Hidden instructions in external content | Content isolation, spotlighting |
-| **Data Leakage** | Training data memorization, PII in outputs | Output filtering, DLP |
+| **Data Leakage** | Training data memorization, **PII** (personally identifiable information) in outputs | Output filtering, **DLP** (data loss prevention) |
 | **Jailbreaking** | Bypassing safety controls | Multi-layer defense, red teaming |
-| **Access Control** | Unauthorized model access | IAM, API keys, least privilege |
+| **Access Control** | Unauthorized model access | **IAM** (identity and access management), API keys, least privilege |
 
 ### Prompt Injection Defense-in-Depth
 
@@ -989,7 +991,7 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Model Armor (Google Cloud)
 
-Model Armor is Google Cloud's service for real-time input/output filtering on LLM traffic. It addresses threats that traditional WAFs can't catch—specifically **prompt injection** and **sensitive data disclosure** at the semantic level.
+Model Armor is Google Cloud's service for real-time input/output filtering on LLM traffic. It addresses threats that traditional **WAFs** (web application firewalls) can't catch—specifically **prompt injection** and **sensitive data disclosure** at the semantic level.
 
 **What Model Armor Catches vs Cloud Armor:**
 
@@ -1047,20 +1049,20 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 | Regulation | Key Requirements |
 |------------|------------------|
-| **GDPR** | Right to explanation, data deletion, privacy by design |
-| **HIPAA** | Healthcare data protection, audit logging |
-| **PCI-DSS** | Payment data security, no storage of card numbers |
+| **GDPR** (General Data Protection Regulation) | Right to explanation, data deletion, privacy by design |
+| **HIPAA** (Health Insurance Portability and Accountability Act) | Healthcare data protection, audit logging |
+| **PCI-DSS** (Payment Card Industry Data Security Standard) | Payment data security, no storage of card numbers |
 
 ### Security Stack Summary
 
 | Layer | Google Cloud | AWS |
 |-------|--------------|-----|
 | **LLM Security** | Model Armor | Bedrock Guardrails |
-| **HTTP Security** | Cloud Armor | WAF |
-| **Data Protection** | Cloud DLP | Macie |
+| **HTTP Security** | Cloud Armor | WAF (web application firewall) |
+| **Data Protection** | Cloud DLP (data loss prevention) | Macie |
 | **Secrets** | Secret Manager | Secrets Manager |
-| **Network** | VPC Service Controls | VPC |
-| **Access** | IAM | IAM |
+| **Network** | VPC (virtual private cloud) Service Controls | VPC |
+| **Access** | IAM (identity and access management) | IAM |
 | **Audit** | Cloud Audit Logs | CloudTrail |
 
 ---

@@ -6,7 +6,7 @@ A concise guide to system design fundamentals, components, and patterns for buil
 
 ## Related Guide
 
-For **ML and GenAI system design** (LLM serving, RAG systems, agents, MLOps), see:
+For **ML and GenAI system design** (LLM serving, **RAG** (retrieval-augmented generation) systems, agents, **MLOps** (ML operations)), see:
 
 📖 **[ML & GenAI System Design Guide](./system-design-genai.md)** - Specialized patterns for machine learning and generative AI systems.
 
@@ -34,7 +34,7 @@ For **ML and GenAI system design** (LLM serving, RAG systems, agents, MLOps), se
 
 ### ACID Properties
 
-Database transactions must satisfy four fundamental properties to ensure data integrity, especially in systems handling financial transactions, inventory management, or any scenario where partial updates could lead to inconsistent states.
+**ACID** (Atomicity, Consistency, Isolation, Durability) describes four fundamental properties database transactions must satisfy to ensure data integrity, especially in systems handling financial transactions, inventory management, or any scenario where partial updates could lead to inconsistent states.
 
 **Atomicity** ensures that a transaction is treated as a single, indivisible unit. Consider a bank transfer: if money is debited from Account A but the credit to Account B fails, atomicity guarantees the entire transaction rolls back—you'll never have money disappear into thin air.
 
@@ -191,7 +191,7 @@ The three main service categories are:
 - **Storage**: Object storage (S3), block storage (EBS), or file systems (EFS)
 - **Database**: Managed relational databases (RDS), NoSQL (DynamoDB), or caching (ElastiCache)
 
-All these services communicate through a **networking layer** (VPC) that you configure with your own IP ranges, subnets, and routing rules. This gives you the flexibility of the cloud with the isolation of a private data center.
+All these services communicate through a **networking layer** (**VPC**, virtual private cloud) that you configure with your own IP ranges, subnets, and routing rules. This gives you the flexibility of the cloud with the isolation of a private data center.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -396,7 +396,7 @@ A Virtual Private Cloud (VPC) is your isolated network within the cloud. Think o
 
 ### DNS Resolution Flow
 
-When you type a URL into your browser, a fascinating chain of queries translates that human-readable name into an IP address your computer can connect to. This process typically takes milliseconds but involves multiple servers across the internet.
+**DNS** (Domain Name System) translates domain names to IP addresses. When you type a URL into your browser, a chain of queries performs that translation. This process typically takes milliseconds but involves multiple servers across the internet.
 
 **Step 1-2**: Your browser first checks its cache, then asks your configured DNS resolver (often your ISP's server or a public resolver like 8.8.8.8). If the resolver doesn't have the answer cached, it begins a recursive lookup.
 
@@ -459,7 +459,7 @@ The TCP/IP model describes how data travels across networks in layers, with each
 
 **Network Layer** routes packets across different networks. IP (Internet Protocol) operates here, and routers make forwarding decisions based on IP addresses. This is where logical addressing happens.
 
-**Transport Layer** ensures reliable (TCP) or fast (UDP) delivery between applications. TCP breaks data into segments, handles acknowledgments, retransmissions, and flow control. UDP is simpler and faster but doesn't guarantee delivery—perfect for real-time applications like video calls or gaming where a dropped packet matters less than latency.
+**Transport Layer** ensures reliable (**TCP**, Transmission Control Protocol) or fast (**UDP**, User Datagram Protocol) delivery between applications. TCP breaks data into segments, handles acknowledgments, retransmissions, and flow control. UDP is simpler and faster but doesn't guarantee delivery—perfect for real-time applications like video calls or gaming where a dropped packet matters less than latency.
 
 **Application Layer** is where HTTP, FTP, SMTP, and other protocols live. This is the interface between network communication and your application code.
 
@@ -1709,7 +1709,7 @@ Many distributed systems need a single "leader" to coordinate activities—proce
 
 ### Key Latencies & QPS
 
-Before designing a system, you need rough estimates for capacity planning. These reference numbers help you reason about bottlenecks.
+**QPS** (queries per second) is the standard rate metric. Before designing a system, you need rough estimates for capacity planning. These reference numbers help you reason about bottlenecks.
 
 **Why key-value stores are faster than SQL**: Key-value stores like Redis use simple `GET/PUT` operations with O(1) hash lookups. SQL databases must parse queries, create execution plans, traverse B-tree indexes, and potentially JOIN multiple tables. The overhead adds up—even a simple SELECT has more work than a hash lookup.
 
@@ -1748,7 +1748,7 @@ Before designing a system, you need rough estimates for capacity planning. These
 
 Back-of-the-envelope calculations help you quickly assess whether a design is feasible. The goal isn't precision—it's understanding the order of magnitude.
 
-**QPS (Queries Per Second)**: Start with daily active users (DAU), multiply by average requests per user per day, divide by seconds in a day. Peak traffic is typically 2-3x average.
+**QPS (queries per second)**: Start with **DAU** (daily active users), multiply by average requests per user per day, divide by seconds in a day. Peak traffic is typically 2-3x average.
 
 **Storage**: Multiply records per day by record size. Account for replication (usually 3x for durability) and growth period.
 
@@ -1815,13 +1815,13 @@ A URL shortener converts long URLs into short codes and redirects visitors to th
 
 **Key design decisions**:
 
-1. **Encoding**: Use Base62 (a-z, A-Z, 0-9) for human-readable codes. With 7 characters, you get 62^7 = 3.5 trillion unique codes—plenty for most use cases.
+1. **Encoding**: Use **Base62** (alphanumeric encoding: characters a-z, A-Z, 0-9) for human-readable codes. With 7 characters, you get 62^7 = 3.5 trillion unique codes—plenty for most use cases.
 
 2. **ID Generation**: Use a distributed ID generator (like Snowflake) to create unique numeric IDs, then encode to Base62. Alternatively, generate random strings and check for collisions.
 
 3. **Storage**: A key-value store (DynamoDB, Redis) is perfect—you're doing simple lookups by short code. For durability, persist to disk with in-memory caching.
 
-4. **Caching**: Most URL access follows power-law distribution—a small percentage of URLs get most traffic. Cache popular URLs in Redis with TTL. Expect 80%+ cache hit rate.
+4. **Caching**: Most URL access follows power-law distribution—a small percentage of URLs get most traffic. Cache popular URLs in Redis with **TTL** (time-to-live). Expect 80%+ cache hit rate.
 
 5. **Redirection**: Use 301 (permanent) redirects if SEO matters, 302 (temporary) if you want to track clicks. Include analytics logging asynchronously.
 
