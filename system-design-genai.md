@@ -1474,22 +1474,42 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 ## 11. Real-World Examples: Applying the Stack
 
-This section comes **after** all core concepts (§1–§10) so you can apply them. Each example states the **problem**, the **concepts** from this guide that apply, and a **concrete solution** using specific stacks: **LangChain** / **LlamaIndex** (orchestration, RAG, agents), **Google (Vertex AI)** or **AWS (Bedrock)**, and **open source** (vLLM, RAGAS, Phoenix, etc.). Use these as blueprints for "how would I build this with real tools?"
+This section comes **after** all core concepts (§1–§10) so you can apply them. Each example is **quantified for the exam** using the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure): (1) Clarify Requirements, (2) High-Level Architecture, (3) Deep Dive, (4) Bottlenecks & Trade-offs. Concrete stacks: **LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, and **open source** (vLLM, RAGAS, Phoenix, etc.). Use these as interview-style walkthroughs with numbers and trade-offs.
 
 ---
 
 ### Example 1: Code Generation Assistant (like GitHub Copilot)
 
-**Problem:** In-IDE completions that understand the codebase, respect privacy, and run with low latency.
+**1. Clarify Requirements (5–10 min)**
 
-**Concepts:** §1 (LLM serving / model routing), §2 (RAG for code context), §4 (single agent + tools), §7 (cost: smaller model for completions, routing by complexity).
+| Dimension | Target / constraint |
+|-----------|----------------------|
+| **Token budget** | Input: ~2K tokens (prefix + cursor context); output: 20–100 tokens per completion. Cap total context (e.g. 8K) to control cost and latency. |
+| **Latency** | P95 < 200 ms time-to-first-token for inline completions; batch or background tasks can relax to 1–2 s. |
+| **Quality** | Low hallucination tolerance: completions must compile and match project style; measure with correctness + relevance (e.g. RAGAS, LangSmith). |
+| **Cost** | Per-token pricing; prefer smaller/faster models (Codey, CodeWhisperer, CodeLlama) and routing by complexity (§7). Monthly budget drives model choice and cache policy. |
+| **Safety** | No PII/secrets in prompts or logs; optional filters (Guardrails AI, NeMo); Model Armor / Bedrock Guardrails for cloud. Compliance: data residency if code is sensitive. |
 
-**Concrete solution:**
+**2. High-Level Architecture (10–15 min)**
 
-- **Orchestration + RAG:** **LangChain** or **LlamaIndex** to build a "code context" pipeline: embed workspace chunks (or AST-based chunks), retrieve on cursor context, format as prefix for the model. Use **LlamaIndex** `CodeIndex` / doc split by language or **LangChain** `RecursiveCharacterTextSplitter` + vector store (e.g. Chroma, open source).
-- **LLM:** **Vertex AI Codey** (Google) or **Amazon CodeWhisperer** / **Bedrock** (AWS) for code-native APIs; or **open source** (**CodeLlama**, **StarCoder**) behind **vLLM** for self-hosted, low-latency completion.
-- **Evaluation:** **RAGAS** or **LangSmith** on a sample of (prompt, context, completion) for relevance and correctness; **Phoenix** for production traces and latency.
-- **Guardrails:** Input/output length limits, optional PII/secret filters (e.g. **Guardrails AI**, **NeMo Guardrails**), or **Bedrock Guardrails** / **Model Armor** if on AWS/Google.
+- **Flow:** IDE → API gateway (auth, rate limit) → orchestration (RAG: embed + retrieve code context) → LLM (completion) → post-process (format, length cap) → response.
+- **Components:** API gateway (e.g. Cloud Run / API Gateway); orchestration = **LangChain** or **LlamaIndex** (code context pipeline); RAG = vector store (Chroma, Pinecone) + embeddings; LLM = **Vertex AI Codey** / **Bedrock** CodeWhisperer or **vLLM** (CodeLlama, StarCoder).
+- **APIs:** Completion API (POST /complete with prefix, cursor, options); optional indexing API for workspace sync.
+- **Include:** RAG (retrieve relevant file/class for context), caching (same prefix → reuse completion or KV cache), model routing (simple vs complex context → small vs larger model).
+
+**3. Deep Dive (15–20 min)**
+
+- **RAG design:** Chunking = AST-based or by file/function (**LlamaIndex** CodeIndex, **LangChain** by language); embedding = code-capable model (e.g. Cohere, Vertex); retrieval = top-k on cursor context; optional rerank by relevance. Keep chunks small to stay within token budget.
+- **Model selection & routing:** Small/fast model for short completions; route to larger model when context is large or complexity heuristic triggers (§7).
+- **Evaluation & observability:** **RAGAS** / **LangSmith** on (prompt, context, completion) for relevance and correctness; **Phoenix** for production traces, latency, and failure rates.
+- **Security:** Input/output length limits; PII/secret filters; **Model Armor** / **Bedrock Guardrails**; no raw code in logs for sensitive repos.
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **KV cache:** Short sequences (2–8K) keep memory manageable; limit concurrent requests per GPU or use continuous batching (vLLM).
+- **Quality vs cost:** Smaller model = lower cost and latency, possible quality drop on complex code; routing by complexity balances both.
+- **Latency vs throughput:** Inline completion needs low latency (single request); batch indexing can use batching for throughput.
+- **Single vs multi-agent:** Single “completion + context” path is enough; multi-agent would add complexity without clear gain for this use case.
 
 **Stack snapshot:** LangChain/LlamaIndex (RAG + routing) + Vertex Codey or Bedrock + vLLM (optional) + RAGAS/LangSmith/Phoenix (eval) + guardrails.
 
@@ -1497,17 +1517,36 @@ This section comes **after** all core concepts (§1–§10) so you can apply the
 
 ### Example 2: Customer Service Chatbot with RAG and Tools
 
-**Problem:** Chat that answers from internal docs, checks orders/tickets via tools, and escalates to humans when needed.
+**1. Clarify Requirements (5–10 min)**
 
-**Concepts:** §2 (RAG: knowledge base), §4 (agent with tools, escalation as a "tool"), §5 (eval: faithfulness, relevancy), §10 (guardrails, PII).
+| Dimension | Target / constraint |
+|-----------|----------------------|
+| **Token budget** | Conversation: 4–32K context per turn; RAG: 2–4K retrieved tokens. Cap response length (e.g. 500 tokens) for UX and cost. |
+| **Latency** | P95 < 3–5 s full response (including RAG + tool calls); time-to-first-token < 1 s for perceived responsiveness. |
+| **Quality** | Faithfulness to docs and tool outputs (no hallucinated policies); relevancy of answers. Track with RAGAS faithfulness + answer relevancy; human review on escalation sample. |
+| **Cost** | Per-token (input + output); monthly budget; cache frequent questions; consider smaller model for simple intents (§7). |
+| **Safety** | Compliance (PCI, PII); content filtering; no leaking internal docs or customer data. Guardrails on input/output; PII filtering in tool outputs. |
 
-**Concrete solution:**
+**2. High-Level Architecture (10–15 min)**
 
-- **Orchestration + agent:** **LangChain** `create_react_agent` or **LlamaIndex** `ReActAgent` with tools: RAG retriever (knowledge base), "check order" (API), "create ticket" (CRM API), "escalate" (handoff to human queue). Use **MCP** or custom tool schemas so the agent can call backend APIs.
-- **RAG:** **Vertex AI RAG Engine** (Google) or **Bedrock Knowledge Bases** (AWS) for managed ingestion + retrieval; or **LangChain** + **Chroma** / **Pinecone** + **OpenAI** or **Cohere** embeddings (open / API). Apply chunking and reranking from §2.
-- **LLM:** **Vertex AI** (Gemini) or **Bedrock** (Claude, Llama) for conversation and tool use.
-- **Evaluation:** **RAGAS** (faithfulness, answer relevancy) on logged (query, context, response); **LangSmith** for dataset runs and human annotation queues.
-- **Security:** **Bedrock Guardrails** or **Model Armor** for input/output; scope tools with IAM/least privilege; filter PII in tool *outputs* before they reach the model or user.
+- **Flow:** User → API gateway → orchestration (agent) → [RAG retriever + tool layer (order, ticket, escalate)] → LLM → post-processing (format, guardrails) → response.
+- **Components:** API gateway; orchestration = **LangChain** `create_react_agent` or **LlamaIndex** `ReActAgent`; RAG = **Vertex RAG Engine** or **Bedrock Knowledge Bases** (or LangChain + Chroma/Pinecone); LLM = **Vertex AI** (Gemini) or **Bedrock** (Claude, Llama); tools = MCP or custom APIs (orders, CRM, escalation queue).
+- **Data flow:** Query → agent decides tool vs RAG vs answer → RAG returns top-k chunks; tools return structured data → LLM synthesizes; optional rerank before injection.
+- **Include:** RAG (knowledge base), caching (response cache for frequent Qs, or semantic cache), model routing (simple FAQ vs complex multi-tool).
+
+**3. Deep Dive (15–20 min)**
+
+- **RAG design:** Chunking = semantic (e.g. 512 tokens) + optional by doc/section; embedding = Vertex/Bedrock or Cohere; retrieval = hybrid if needed (keyword + vector); rerank for top-5 before context. Apply §2 chunking and reranking trade-offs.
+- **Model selection & routing:** One model for chat + tool use (Gemini, Claude); optional routing: small model for FAQ-only, larger for multi-step.
+- **Evaluation & observability:** **RAGAS** (faithfulness, answer relevancy) on logged (query, context, response); **LangSmith** for datasets and human annotation; track escalation rate and tool success.
+- **Security:** **Model Armor** / **Bedrock Guardrails** on input/output; IAM and least privilege on tools; filter PII in tool *outputs* before sending to LLM or user (§10).
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **KV cache:** Long conversations (32K) increase memory; summarize or truncate history to control context length.
+- **Quality vs cost:** Larger model = better tool use and coherence; smaller + routing reduces cost for simple queries.
+- **Latency vs throughput:** Tool calls add round-trips; parallel tool calls where possible; async for non-blocking flows (e.g. ticket creation).
+- **Single vs multi-agent:** Single agent with tools (RAG + order + ticket + escalate) is standard; multi-agent (dedicated research + writer) adds complexity—only if you need distinct roles and higher capability.
 
 **Stack snapshot:** LangChain/LlamaIndex (agent + tools) + Vertex RAG Engine or Bedrock Knowledge Bases + Vertex/Bedrock LLM + RAGAS/LangSmith (eval) + Model Armor/Bedrock Guardrails.
 
@@ -1515,16 +1554,36 @@ This section comes **after** all core concepts (§1–§10) so you can apply the
 
 ### Example 3: Content Generation Platform (research → draft → grounding)
 
-**Problem:** Multi-step content: research from web, generate draft, fact-check against sources, then SEO and multi-format output.
+**1. Clarify Requirements (5–10 min)**
 
-**Concepts:** §4 (sequential pipeline: research → generation → grounding → SEO), §2 (RAG/grounding for fact-check), §5 (faithfulness eval), §7 (cost: model routing for easy vs hard steps).
+| Dimension | Target / constraint |
+|-----------|----------------------|
+| **Token budget** | Research: 10–50K tokens (web snippets); draft: 2–4K output; grounding: full draft + sources. Per-step caps to control cost. |
+| **Latency** | End-to-end 30–90 s acceptable (async pipeline); per-step: research ~5–10 s, draft ~15–30 s, grounding ~10–20 s. |
+| **Quality** | High faithfulness: claims must be grounded in sources; measure with RAGAS faithfulness; optional human spot-checks. |
+| **Cost** | Per-token; routing: Flash/small for research/summary, Pro/large for draft (§7); monthly budget and per-article caps. |
+| **Safety** | No harmful or copyrighted content; cite sources; optional guardrails on generated text. |
 
-**Concrete solution:**
+**2. High-Level Architecture (10–15 min)**
 
-- **Orchestration:** **LangChain** `SequentialChain` or a custom DAG: (1) research step = tool to **Google Search** or **Tavily** (or Vertex Search); (2) generation = LLM with research as context; (3) grounding = LLM or **Vertex AI grounding** / **Bedrock** retrieval + NLI-style check; (4) SEO = templates or a small LLM call. This is the "sequential pipeline" from §4 Additional Patterns.
-- **LLM:** **Vertex AI** (Gemini) or **Bedrock** (Claude). Use **routing** (§7): e.g. Gemini Flash for research/summary, Gemini Pro for final draft.
-- **Grounding:** **Vertex AI grounding with Google Search** or **Bedrock** retrieval + cite-check; or **open source**: RAG pipeline + **RAGAS** faithfulness on (claim, source) samples.
-- **Evaluation:** **RAGAS** faithfulness and relevancy on (brief, sources, draft); **LangSmith** or **Braintrust** for A/B on prompts and model choices.
+- **Flow:** Brief → API gateway → orchestration (sequential pipeline) → [research (search tool) → draft (LLM) → grounding (RAG/Vertex grounding) → SEO (template or LLM)] → post-process (citations, format) → output.
+- **Components:** API gateway; orchestration = **LangChain** `SequentialChain` or DAG; research = **Tavily** / **Google Search** / Vertex Search; draft = **Vertex AI** (Gemini) or **Bedrock** (Claude); grounding = **Vertex AI grounding** or **Bedrock** retrieval + cite-check; SEO = small LLM or templates.
+- **Data flow:** Brief → research tool returns snippets → draft LLM with snippets as context → grounding step checks claims vs sources → SEO step → multi-format output.
+- **Include:** RAG/grounding (sources as retrieval), caching (reuse research for similar briefs if TTL ok), model routing (Flash for research/summary, Pro for draft).
+
+**3. Deep Dive (15–20 min)**
+
+- **RAG / grounding design:** Research output = ranked snippets (search API); grounding = retrieve evidence for each claim or use **Vertex grounding with Google Search** / **Bedrock** retrieval; NLI-style or RAGAS faithfulness on (claim, source). Chunking applies to ingested sources if building your own KB.
+- **Model selection & routing:** **Vertex** / **Bedrock**; route: Gemini Flash (or equivalent) for research summarization and SEO; Gemini Pro (or equivalent) for full draft. See §7.
+- **Evaluation & observability:** **RAGAS** faithfulness and relevancy on (brief, sources, draft); **LangSmith** / **Braintrust** for A/B prompts and models; optional **Giskard** for regression.
+- **Security:** Input/output guardrails; source attribution and citation; no unsanctioned web content in final output without citation.
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **KV cache:** Long research context (50K) increases memory per request; truncate or summarize research before draft step.
+- **Quality vs cost:** Pro/large model for draft improves quality; Flash + routing for other steps reduces cost while keeping draft quality.
+- **Latency vs throughput:** Sequential pipeline; parallelize only where independent (e.g. multiple research queries). Batch similar briefs for throughput if doing async.
+- **Single vs multi-agent:** Sequential pipeline (research → draft → grounding → SEO) is one “logical” agent or chain; splitting into multiple agents (researcher vs writer) is a design choice—adds flexibility and complexity.
 
 **Stack snapshot:** LangChain (sequential pipeline + tools) + Vertex/Bedrock LLMs + Vertex grounding or RAG + RAGAS (eval) + optional Giskard for regression tests.
 
@@ -1539,6 +1598,8 @@ This section comes **after** all core concepts (§1–§10) so you can apply the
 | **LLM hosting** | Vertex AI (Codey, Gemini), Bedrock (Claude, CodeWhisperer, etc.), or vLLM for self-hosted |
 | **Evaluation (reference-free)** | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals) |
 | **Guardrails** | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source) |
+
+The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure).
 
 ---
 
