@@ -82,19 +82,19 @@ Before diving into components, here is the end-to-end shape of a GenAI system. T
 
 **Supporting systems (around the request path):**
 
-| System | Role in the big picture | Deep dive |
-|--------|--------------------------|-----------|
-| **Evaluation** | "Did we build the right thing?" — quality, grounding, safety on a sample of requests | §5 Evaluation & Quality (metrics + eval *data* pipeline at scale) |
-| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | §6 GenAI Data Pipeline |
-| **Cost** | "How do we keep inference affordable?" — tokens, caching, model routing, quantization | §7 Cost Optimization |
-| **Scale** | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache | §8 Scalability |
-| **Monitoring** | "How do we observe the system?" — metrics, traces, drift | §9 Monitoring & Observability |
-| **Security** | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM | §10 Security & Guardrails |
-| **Real-world examples** | "How do I build this with real tools?" — apply §1–§10 with LangChain, AWS, Google, open source | §11 Real-World Examples |
+| System                     | Role in the big picture                                                                        | Deep dive                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| **Evaluation**             | "Did we build the right thing?" — quality, grounding, safety on a sample of requests           | §5 Evaluation & Quality (metrics + eval _data_ pipeline at scale) |
+| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | §6 GenAI Data Pipeline                                            |
+| **Cost**                   | "How do we keep inference affordable?" — tokens, caching, model routing, quantization          | §7 Cost Optimization                                              |
+| **Scale**                  | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache        | §8 Scalability                                                    |
+| **Monitoring**             | "How do we observe the system?" — metrics, traces, drift                                       | §9 Monitoring & Observability                                     |
+| **Security**               | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM                | §10 Security & Guardrails                                         |
+| **Real-world examples**    | "How do I build this with real tools?" — apply §1–§10 with LangChain, AWS, Google, open source | §11 Real-World Examples                                           |
 
-**Rationale in one line:** The **request path** (gateway → orchestration → LLM) is what users hit. **Evaluation** and **training data** are two different data flows: eval = "log predictions → run quality metrics" (§5); training = "log interactions → clean → fine-tune" (§6). **Cost** (§7) is *spend per request*; **scale** (§8) is *throughput and capacity*. **Monitoring** (§9) and **security** (§10) are cross-cutting. **Examples** (§11) come last so you can apply everything with concrete stacks.
+**Rationale in one line:** The **request path** (gateway → orchestration → LLM) is what users hit. **Evaluation** and **training data** are two different data flows: eval = "log predictions → run quality metrics" (§5); training = "log interactions → clean → fine-tune" (§6). **Cost** (§7) is _spend per request_; **scale** (§8) is _throughput and capacity_. **Monitoring** (§9) and **security** (§10) are cross-cutting. **Examples** (§11) come last so you can apply everything with concrete stacks.
 
-**Logical flow of this guide:** Big Picture → foundations (GenAI vs ML, sampling, Google tools) → **request path** (§1 Serving, §2 RAG, §3 RAG vs FT, §4 Agents) → **evaluation** (§5: what to measure + eval data pipeline at scale; *consolidated* so "evaluation" is one place) → **training data** (§6) → **efficiency** (§7 Cost, §8 Scale) → **operations** (§9 Monitoring, §10 Security) → **§11 Real-World Examples** (apply §1–§10 with LangChain, AWS, Google, open source). Examples are last so every concept is already defined when you see concrete solutioning.
+**Logical flow of this guide:** Big Picture → foundations (GenAI vs ML, sampling, Google tools) → **request path** (§1 Serving, §2 RAG, §3 RAG vs FT, §4 Agents) → **evaluation** (§5: what to measure + eval data pipeline at scale; _consolidated_ so "evaluation" is one place) → **training data** (§6) → **efficiency** (§7 Cost, §8 Scale) → **operations** (§9 Monitoring, §10 Security) → **§11 Real-World Examples** (apply §1–§10 with LangChain, AWS, Google, open source). Examples are last so every concept is already defined when you see concrete solutioning.
 
 ---
 
@@ -102,13 +102,13 @@ Before diving into components, here is the end-to-end shape of a GenAI system. T
 
 Understanding the fundamental differences between traditional ML systems and **GenAI** / **LLM (Large Language Model)** systems is crucial for making the right architectural decisions.
 
-| Aspect         | Traditional ML       | GenAI/LLM                              |
-| -------------- | -------------------- | -------------------------------------- |
-| **Prediction** | Single forward pass  | Token-by-token generation              |
-| **Latency**    | Fixed (milliseconds) | Variable (seconds to minutes)          |
-| **Memory**     | Model weights        | Model + KV cache (grows with sequence) |
-| **Batching**   | Static batches       | Dynamic/continuous batching            |
-| **Cost**       | Per-request          | Per-token (input + output)             |
+| Aspect         | Traditional ML       | GenAI/LLM                                |
+| -------------- | -------------------- | ---------------------------------------- |
+| **Prediction** | Single forward pass  | Token-by-token generation                |
+| **Latency**    | Fixed (milliseconds) | Variable (seconds to minutes)            |
+| **Memory**     | Model weights        | Model + KV cache (grows with sequence)   |
+| **Batching**   | Static batches       | Dynamic/continuous batching              |
+| **Cost**       | Per-request          | Per-token (input + output)               |
 | **Control**    | Fixed weights        | Sampling parameters (temp, top-p, top-k) |
 
 **Why these differences matter:**
@@ -135,23 +135,23 @@ Controls the "creativity" or randomness of the output by rescaling logits before
 - **Low Temperature (T < 1)**: Sharpens the distribution, making it more focused, deterministic, and repeatable.
 - **Extreme (T → 0)**: Collapses into greedy decoding (always picks the highest probability token).
 
-*Use low temperature (0.1-0.3) for factual tasks, higher (0.7-1.0) for creative tasks.*
+_Use low temperature (0.1-0.3) for factual tasks, higher (0.7-1.0) for creative tasks._
 
 **Aha:** Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
 
 **2. Top-p (Nucleus Sampling)**
 
-Selects the smallest set of tokens whose cumulative probability mass reaches threshold *p*.
+Selects the smallest set of tokens whose cumulative probability mass reaches threshold _p_.
 
 - **High Top-p (0.9-1.0)**: Allows for more diversity by extending to lower probability tokens.
 - **Low Top-p (0.1-0.5)**: Leads to more focused responses.
 - **Adaptive**: Unlike Top-K, adapts to the distribution's shape—in confident contexts, the "nucleus" is small.
 
-**Aha:** Top-p says "consider only tokens that together account for probability mass *p*." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
+**Aha:** Top-p says "consider only tokens that together account for probability mass _p_." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
 
 **3. Top-K**
 
-Restricts the model's choice to only the *k* most probable tokens at each step.
+Restricts the model's choice to only the _k_ most probable tokens at each step.
 
 - Improves output stability by eliminating the "long tail" of extremely unlikely tokens.
 - **Limitation**: Unlike Top-p, it is not adaptive to the distribution's shape.
@@ -190,13 +190,13 @@ Most generative AI models are accessed via **APIs**. The flow:
 
 Google provides two primary environments for experimenting with and deploying Gemini models:
 
-| Attribute | Google AI Studio | Vertex AI Studio |
-| :--- | :--- | :--- |
-| **Focus** | Streamlined, easy-to-use interface for rapid prototyping | Comprehensive environment for building, training, and deploying ML models |
-| **Target Users** | Beginners, hobbyists, initial project stages | Professionals, researchers, enterprise developers |
-| **Access** | Standard Google Account login | Google Cloud Console (Enterprise account) |
-| **Limitations** | Usage limits (**QPM** queries/min, **RPM** requests/min, **TPM** tokens/min); small-scale projects | Service charges based on usage; enterprise-grade quotas |
-| **Advantages** | Simplified interface; easy to get started | Enterprise-grade security, compliance, flexible quotas |
+| Attribute        | Google AI Studio                                                                                   | Vertex AI Studio                                                          |
+| :--------------- | :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
+| **Focus**        | Streamlined, easy-to-use interface for rapid prototyping                                           | Comprehensive environment for building, training, and deploying ML models |
+| **Target Users** | Beginners, hobbyists, initial project stages                                                       | Professionals, researchers, enterprise developers                         |
+| **Access**       | Standard Google Account login                                                                      | Google Cloud Console (Enterprise account)                                 |
+| **Limitations**  | Usage limits (**QPM** queries/min, **RPM** requests/min, **TPM** tokens/min); small-scale projects | Service charges based on usage; enterprise-grade quotas                   |
+| **Advantages**   | Simplified interface; easy to get started                                                          | Enterprise-grade security, compliance, flexible quotas                    |
 
 **Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications.
 
@@ -216,6 +216,7 @@ Google's generative AI APIs offer pre-trained foundation models that can be fine
 ### Use Case: Design a Chatbot Service (like ChatGPT)
 
 **Requirements:**
+
 - Support 1M concurrent users
 - Average response time < 2 seconds
 - Handle 10,000 requests/second
@@ -255,10 +256,10 @@ Google's generative AI APIs offer pre-trained foundation models that can be fine
 
 **1. Model Serving Infrastructure**
 
-| Option | Pros | Cons | Best For |
-|--------|------|------|----------|
-| **Managed (Vertex AI / SageMaker)** | Zero infra management, auto-scaling, built-in monitoring | Less optimization control, vendor lock-in, higher costs at scale | Startups, rapid prototyping, small ops teams |
-| **Self-hosted (vLLM / TensorRT-LLM)** | Full control, better cost efficiency at scale, customizable | Requires ML infra expertise, GPU management complexity | High volume (millions/day), cost-sensitive |
+| Option                                | Pros                                                        | Cons                                                             | Best For                                     |
+| ------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------------------- | -------------------------------------------- |
+| **Managed (Vertex AI / SageMaker)**   | Zero infra management, auto-scaling, built-in monitoring    | Less optimization control, vendor lock-in, higher costs at scale | Startups, rapid prototyping, small ops teams |
+| **Self-hosted (vLLM / TensorRT-LLM)** | Full control, better cost efficiency at scale, customizable | Requires ML infra expertise, GPU management complexity           | High volume (millions/day), cost-sensitive   |
 
 **2. Continuous Batching**
 
@@ -297,21 +298,21 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Solution**: A small **draft** model proposes several candidate tokens in a row. The **target** (large) model does a single forward pass over the whole candidate sequence and accepts tokens that match its predictions; the first mismatch stops the run and the rest are discarded. Accepted tokens advance the sequence without extra target-model steps. Typical reported speedups are **2–2.5×**; variants (multiple draft models, tree-based decoding) can reach ~3–4× or more at the cost of extra memory and complexity.
 
-| Technique | Speedup | Trade-off |
-|-----------|---------|-----------|
-| **Standard Speculative** | 2–2.5× (often up to ~3×) | Needs a separate draft model |
-| **Self-Speculative** | ~2.5× | Uses smaller/quantized version of same model |
-| **Tree-based** | Up to ~4–6× | More memory and logic for tree search |
+| Technique                | Speedup                  | Trade-off                                    |
+| ------------------------ | ------------------------ | -------------------------------------------- |
+| **Standard Speculative** | 2–2.5× (often up to ~3×) | Needs a separate draft model                 |
+| **Self-Speculative**     | ~2.5×                    | Uses smaller/quantized version of same model |
+| **Tree-based**           | Up to ~4–6×              | More memory and logic for tree search        |
 
 **Why it works**: The target model verifies **N** candidates in one forward pass (over a sequence of length N). That cost is similar to generating a single token, so you effectively get several tokens per large-model step when the draft is accurate. **Draft latency** (how fast the draft runs) usually matters more for end-to-end speedup than the draft’s raw language quality.
 
 **4. Caching Strategy**
 
-| Strategy | Hit Rate | Latency | Best For |
-|----------|----------|---------|----------|
-| **Prompt caching** | High for system prompts | 2-5x speedup | Common prefixes, few-shot examples |
-| **Response caching** | 10-30% | Instant | Identical requests |
-| **Semantic caching** | 30-50% | +5-10ms overhead | Paraphrased queries |
+| Strategy             | Hit Rate                | Latency          | Best For                           |
+| -------------------- | ----------------------- | ---------------- | ---------------------------------- |
+| **Prompt caching**   | High for system prompts | 2-5x speedup     | Common prefixes, few-shot examples |
+| **Response caching** | 10-30%                  | Instant          | Identical requests                 |
+| **Semantic caching** | 30-50%                  | +5-10ms overhead | Paraphrased queries                |
 
 ---
 
@@ -320,6 +321,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 ### Use Case: Design a Document Q&A System
 
 **Requirements:**
+
 - Answer questions from 1M documents
 - Support real-time queries (< 3 seconds)
 - Handle 1,000 **QPS** (queries per second)
@@ -361,11 +363,11 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **1. Document Ingestion Pipeline**
 
-| Service | Google Cloud | AWS |
-|---------|--------------|-----|
-| RAG Engine | Vertex AI RAG Engine | Bedrock Knowledge Bases |
-| Vector Search | Vertex AI Vector Search | OpenSearch Serverless |
-| Processing | Dataflow | Glue/EMR |
+| Service       | Google Cloud            | AWS                     |
+| ------------- | ----------------------- | ----------------------- |
+| RAG Engine    | Vertex AI RAG Engine    | Bedrock Knowledge Bases |
+| Vector Search | Vertex AI Vector Search | OpenSearch Serverless   |
+| Processing    | Dataflow                | Glue/EMR                |
 
 **2. Vector Database Options**
 
@@ -380,30 +382,30 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ### Search as RAG: the power of search agents
 
-**Why search matters in system design:** Search is how users navigate digital information—products, docs, internal knowledge. Good search means **relevance** (results that match what they want) and **speed**. Users also expect search to "get" intent: understand what they *mean*, not just the keywords they type. For businesses, poor search means lost customers, wasted time in internal docs, and users leaving for another platform.
+**Why search matters in system design:** Search is how users navigate digital information—products, docs, internal knowledge. Good search means **relevance** (results that match what they want) and **speed**. Users also expect search to "get" intent: understand what they _mean_, not just the keywords they type. For businesses, poor search means lost customers, wasted time in internal docs, and users leaving for another platform.
 
 **Search = RAG + optional GenAI.** A "search agent" in this sense is: connect to your data (structured in BigQuery, unstructured in GCS, or both) → observe the user's query (environment) → **act** by retrieving or recommending (data stores as tools) → return the right information (or an LLM-generated answer grounded in that data). That loop is exactly **RAG**: retrieve first, then optionally generate. **Grounding**—feeding the LLM with your first-party data, curated third-party data, or even a knowledge graph (e.g. **Grounding with Google Search**)—reduces hallucinations and keeps answers trustworthy.
 
 **Vertex AI Search** is Google's managed offering for this. It provides:
 
-| Capability | What it does |
-|------------|--------------|
-| **Data connection** | Index structured (BigQuery) and unstructured (GCS) data; same RAG idea: your data as the source of truth. |
-| **Grounding** | Ground LLM responses in your data and optionally **Google's knowledge graph** (Grounding with Google Search) for public facts. |
-| **Search variants** | **Document search** (docs, media, healthcare); **Search for commerce** (e-commerce catalog, product discovery, product attributes, complex product queries). |
-| **Recommendations** | General-purpose recommendation engine (similar content, user behavior); media and retail recommendations. |
-| **GenAI on top** | **Search summaries** (concise overview of results, doc summary, product comparison); **Answers and follow-ups** (natural-language Q&A over search results, with follow-up questions). |
-| **Enterprise** | Access controls, analytics (search trends, user behavior), scalable APIs/SDKs for customer-facing search or internal knowledge bases. |
+| Capability          | What it does                                                                                                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Data connection** | Index structured (BigQuery) and unstructured (GCS) data; same RAG idea: your data as the source of truth.                                                                             |
+| **Grounding**       | Ground LLM responses in your data and optionally **Google's knowledge graph** (Grounding with Google Search) for public facts.                                                        |
+| **Search variants** | **Document search** (docs, media, healthcare); **Search for commerce** (e-commerce catalog, product discovery, product attributes, complex product queries).                          |
+| **Recommendations** | General-purpose recommendation engine (similar content, user behavior); media and retail recommendations.                                                                             |
+| **GenAI on top**    | **Search summaries** (concise overview of results, doc summary, product comparison); **Answers and follow-ups** (natural-language Q&A over search results, with follow-up questions). |
+| **Enterprise**      | Access controls, analytics (search trends, user behavior), scalable APIs/SDKs for customer-facing search or internal knowledge bases.                                                 |
 
 **Aha:** When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
 
 ### Chunking Strategy Trade-offs
 
-| Strategy | Pros | Cons | Best For |
-|----------|------|------|----------|
-| **Fixed-size (512 tokens)** | Simple, predictable | May split concepts | Uniform documents |
-| **Semantic chunking** | Preserves coherence | Complex, variable sizes | Complex content |
-| **Hybrid (fixed + overlap)** | Balanced | More storage | Most production systems |
+| Strategy                     | Pros                | Cons                    | Best For                |
+| ---------------------------- | ------------------- | ----------------------- | ----------------------- |
+| **Fixed-size (512 tokens)**  | Simple, predictable | May split concepts      | Uniform documents       |
+| **Semantic chunking**        | Preserves coherence | Complex, variable sizes | Complex content         |
+| **Hybrid (fixed + overlap)** | Balanced            | More storage            | Most production systems |
 
 **Why chunking matters**: LLMs have context windows. Documents often exceed this, so we must break them into chunks. Smaller chunks improve retrieval precision—a query about "Python loops" matches better to a 500-token chunk about loops than a 5000-token document about Python.
 
@@ -411,17 +413,17 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ### Retrieval Strategy Trade-offs
 
-| Strategy | Latency | Semantic | Keywords | Best For |
-|----------|---------|----------|----------|----------|
-| **Dense (Vector)** | 10-50ms | ✓ | ✗ | Conceptual queries |
-| **Sparse (BM25)** | 1-5ms | ✗ | ✓ | Exact matches |
-| **Hybrid** | 15-60ms | ✓ | ✓ | Production (recommended) |
+| Strategy           | Latency | Semantic | Keywords | Best For                 |
+| ------------------ | ------- | -------- | -------- | ------------------------ |
+| **Dense (Vector)** | 10-50ms | ✓        | ✗        | Conceptual queries       |
+| **Sparse (BM25)**  | 1-5ms   | ✗        | ✓        | Exact matches            |
+| **Hybrid**         | 15-60ms | ✓        | ✓        | Production (recommended) |
 
 **BM25** = keyword-based ranking using term frequency and inverse document frequency; no embeddings, just lexical match.
 
 **Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via **RRF (Reciprocal Rank Fusion)** gives best results.
 
-**Aha:** **Dense** = "these two *mean* the same thing" (embedding similarity). **Sparse** = "these two *contain* the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
+**Aha:** **Dense** = "these two _mean_ the same thing" (embedding similarity). **Sparse** = "these two _contain_ the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
 
 ### Reranking Trade-offs
 
@@ -431,7 +433,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Best practice**: Retrieve K=20, rerank to top 5. The two-stage approach combines speed (bi-encoder retrieval) with accuracy (cross-encoder reranking).
 
-**Aha:** **Bi-encoder** = query and doc are embedded *separately*; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the *pair* and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
+**Aha:** **Bi-encoder** = query and doc are embedded _separately_; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the _pair_ and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
 
 ### Advanced RAG Techniques
 
@@ -441,13 +443,13 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **1. Graph RAG**
 
-**What it is:** You build a **knowledge graph** from your corpus (entities as nodes, relations as edges) and combine it with vector search. Retrieval can follow *links* (e.g. “this person → worked at → this company”) as well as semantic similarity.
+**What it is:** You build a **knowledge graph** from your corpus (entities as nodes, relations as edges) and combine it with vector search. Retrieval can follow _links_ (e.g. “this person → worked at → this company”) as well as semantic similarity.
 
-**How it helps:** Many questions need **multi-hop** reasoning: “Who was the CEO of the company that acquired X?” requires (X → acquired by → company → CEO → person). Flat vector search often returns only one hop. Graph RAG retrieves **subgraphs** (e.g. k-hop neighborhoods) so the LLM sees not just similar text but explicit *who–what–where* structure.
+**How it helps:** Many questions need **multi-hop** reasoning: “Who was the CEO of the company that acquired X?” requires (X → acquired by → company → CEO → person). Flat vector search often returns only one hop. Graph RAG retrieves **subgraphs** (e.g. k-hop neighborhoods) so the LLM sees not just similar text but explicit _who–what–where_ structure.
 
 **When to use:** Strong fit for domains rich in **entities and relations** (people, orgs, products, events) and questions that chain them. Overkill for unstructured long-form text with few named relations.
 
-**Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things *connected*?” so the model can follow paths, not only similarity.
+**Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things _connected_?” so the model can follow paths, not only similarity.
 
 ---
 
@@ -477,7 +479,7 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **4. HyDE (Hypothetical Document Embeddings)**
 
-**What it is:** You **don’t** embed the user query directly. Instead, you ask an LLM: “Write a short passage that would answer this question.” You get 1–5 such **hypothetical** passages, embed *those*, and (often) **average** their vectors. That single vector is used to search the real document index.
+**What it is:** You **don’t** embed the user query directly. Instead, you ask an LLM: “Write a short passage that would answer this question.” You get 1–5 such **hypothetical** passages, embed _those_, and (often) **average** their vectors. That single vector is used to search the real document index.
 
 **How it helps:** Query and documents often use **different words** for the same idea (e.g. user: “loop,” docs: “iteration construct”). The query embedding can sit in a different region of the embedding space than the best-matching docs. Hypothetical answers “translate” the question into **passage-like** text, so their embeddings sit closer to real relevant passages. Averaging smooths noise from any one generation.
 
@@ -489,12 +491,12 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **Quick reference**
 
-| Technique | Main idea | Best for |
-|-----------|-----------|----------|
-| **Graph RAG** | Vector search + graph structure (entities, relations); retrieve subgraphs for multi-hop | Entity-heavy domains, “who/what/where” chains |
-| **Adaptive Retrieval** | Vary number of retrieved docs (k) by query complexity | Mix of simple and complex questions |
-| **Query Decomposition** | Split question into sub-questions; retrieve per sub-question; merge context | Multi-part, comparison, “A vs B” style questions |
-| **HyDE** | Generate hypothetical answer(s), embed those, search with that vector | Vocabulary mismatch between user and corpus |
+| Technique               | Main idea                                                                               | Best for                                         |
+| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
+| **Graph RAG**           | Vector search + graph structure (entities, relations); retrieve subgraphs for multi-hop | Entity-heavy domains, “who/what/where” chains    |
+| **Adaptive Retrieval**  | Vary number of retrieved docs (k) by query complexity                                   | Mix of simple and complex questions              |
+| **Query Decomposition** | Split question into sub-questions; retrieve per sub-question; merge context             | Multi-part, comparison, “A vs B” style questions |
+| **HyDE**                | Generate hypothetical answer(s), embed those, search with that vector                   | Vocabulary mismatch between user and corpus      |
 
 ---
 
@@ -502,8 +504,8 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **Key insight:** This is not a binary choice. Think of it as a **spectrum of adaptation**: RAG and fine-tuning solve different problems and are often used **together**. The right question is not "RAG or fine-tuning?" but "What does the model lack—**knowledge** or **behavior**?"
 
-- **"The model doesn't *know* X"** → Add knowledge via RAG (or long context, or caching).
-- **"The model doesn't *behave* like Y"** → Change behavior via fine-tuning (tone, format, schema, jargon).
+- **"The model doesn't _know_ X"** → Add knowledge via RAG (or long context, or caching).
+- **"The model doesn't _behave_ like Y"** → Change behavior via fine-tuning (tone, format, schema, jargon).
 - **"We need both fresh facts and consistent style"** → Use both: RAG for what to say, fine-tuning for how to say it.
 
 ---
@@ -514,7 +516,7 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **Use RAG when:** The model **lacks knowledge** about your domain (e.g. internal docs, product specs, support history). Your **data changes often** (e.g. daily reports, new releases, tickets)—RAG lets you update the index without retraining. You want to **reduce hallucinations** by **grounding** answers in retrieved text and to **cite sources** (chunk or doc IDs).
 
-**RAG does *not* fix:** Tone, format, or jargon. If the base model is too informal or ignores your schema, RAG alone won't change that—you need behavior change (prompts or fine-tuning).
+**RAG does _not_ fix:** Tone, format, or jargon. If the base model is too informal or ignores your schema, RAG alone won't change that—you need behavior change (prompts or fine-tuning).
 
 ---
 
@@ -524,37 +526,37 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **Use fine-tuning when:** You need a **specific tone or voice** (e.g. brand guidelines, compliance-friendly wording). You need **strict output format** (e.g. JSON, bullet lists, section headings)—fine-tuning helps the model adhere to schemas. The model **misuses or avoids domain jargon**; training on in-domain examples teaches it to use your terms correctly.
 
-**Fine-tuning does *not* fix:** Missing or outdated facts. Weights are fixed until the next train run. For fast-changing knowledge, use RAG (or both).
+**Fine-tuning does _not_ fix:** Missing or outdated facts. Weights are fixed until the next train run. For fast-changing knowledge, use RAG (or both).
 
 ---
 
 ### When to Use Both
 
-**Use RAG + fine-tuning when** you need **accurate, up-to-date content** *and* **consistent presentation**: RAG supplies the **facts** (from docs, KB, logs); fine-tuning shapes **how** those facts are expressed (tone, format, terminology). Example: A support bot that answers from your knowledge base (RAG) but must always respond in a compliant, on-brand style (fine-tuned). Or a report generator that pulls from live data (RAG) and always outputs the same JSON schema (fine-tuned).
+**Use RAG + fine-tuning when** you need **accurate, up-to-date content** _and_ **consistent presentation**: RAG supplies the **facts** (from docs, KB, logs); fine-tuning shapes **how** those facts are expressed (tone, format, terminology). Example: A support bot that answers from your knowledge base (RAG) but must always respond in a compliant, on-brand style (fine-tuned). Or a report generator that pulls from live data (RAG) and always outputs the same JSON schema (fine-tuned).
 
 ---
 
 ### Scenario Cheat Sheet
 
-| Scenario | RAG | Fine-Tuning | Both |
-|----------|:---:|:-----------:|:----:|
-| Model lacks knowledge about your domain | ✅ | ❌ | |
-| Data changes frequently (docs, tickets, metrics) | ✅ | ❌ | |
-| Need specific tone, style, or brand voice | ❌ | ✅ | |
-| Domain-specific jargon or terminology | ❌ | ✅ | |
-| Reduce hallucinations by grounding in retrieved text | ✅ | | |
-| Change output format or schema (e.g. JSON, sections) | ❌ | ✅ | |
-| High accuracy *and* fresh data *and* consistent style | | | ✅ |
+| Scenario                                              | RAG | Fine-Tuning | Both |
+| ----------------------------------------------------- | :-: | :---------: | :--: |
+| Model lacks knowledge about your domain               | ✅  |     ❌      |      |
+| Data changes frequently (docs, tickets, metrics)      | ✅  |     ❌      |      |
+| Need specific tone, style, or brand voice             | ❌  |     ✅      |      |
+| Domain-specific jargon or terminology                 | ❌  |     ✅      |      |
+| Reduce hallucinations by grounding in retrieved text  | ✅  |             |      |
+| Change output format or schema (e.g. JSON, sections)  | ❌  |     ✅      |      |
+| High accuracy _and_ fresh data _and_ consistent style |     |             |  ✅  |
 
 ### Cost Comparison
 
 Cost structure is different, not just "cheaper vs more expensive":
 
-| Approach | Cost model | What you pay for | Example ballpark |
-|----------|------------|------------------|------------------|
-| **RAG** | **Per query** | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ~$0.01-0.05 per query; 1M queries/month ≈ $10-50K |
-| **Fine-tuning (e.g. LoRA)** | **One-time** | Training compute + data prep; then inference cost as usual | ~$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
-| **Full fine-tune** | **One-time, large** | Full training run on your data | $10K-100K+ depending on model size and data |
+| Approach                    | Cost model          | What you pay for                                                      | Example ballpark                                                                                  |
+| --------------------------- | ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **RAG**                     | **Per query**       | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ~$0.01-0.05 per query; 1M queries/month ≈ $10-50K                                                 |
+| **Fine-tuning (e.g. LoRA)** | **One-time**        | Training compute + data prep; then inference cost as usual            | ~$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
+| **Full fine-tune**          | **One-time, large** | Full training run on your data                                        | $10K-100K+ depending on model size and data                                                       |
 
 **How to think about it:** RAG cost grows with **usage** (every query pays). Fine-tuning cost is **upfront**; after that, marginal cost per request is similar to the base model (or lower if you use a smaller fine-tuned model). Break-even depends on volume: at very high QPS, RAG can exceed the amortized cost of a one-time fine-tune; at low QPS, RAG is often cheaper than investing in fine-tuning.
 
@@ -602,18 +604,18 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 **Definition:** An **agent** is an LLM that **repeatedly** decides, acts, and observes until a task is done. It has access to **tools** (APIs, databases, search, code) and runs in a **loop**: perceive the current state → decide the next step → call a tool → observe the result → repeat. That loop is what makes it an agent, not "one prompt → one answer."
 
-**Why we need agents:** A single LLM call is stateless and one-shot. It can't look up live data, call your CRM, or run multi-step workflows. **RAG** adds retrieval at query time but still produces one answer from one retrieved context—no tool calls, no iterative refinement. **Agents** add the ability to *use the world*: query systems, run code, search, then decide what to do next from the results. So you need an agent when the task requires **multiple steps**, **live data** (orders, DB, APIs), or **decisions that depend on tool outputs** (e.g. "if order status is X, do Y").
+**Why we need agents:** A single LLM call is stateless and one-shot. It can't look up live data, call your CRM, or run multi-step workflows. **RAG** adds retrieval at query time but still produces one answer from one retrieved context—no tool calls, no iterative refinement. **Agents** add the ability to _use the world_: query systems, run code, search, then decide what to do next from the results. So you need an agent when the task requires **multiple steps**, **live data** (orders, DB, APIs), or **decisions that depend on tool outputs** (e.g. "if order status is X, do Y").
 
 **When to use agents vs. not:**
 
-| Use an agent when… | Use a single call or RAG when… |
-|-------------------|-------------------------------|
+| Use an agent when…                                                                              | Use a single call or RAG when…                                                |
+| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | The task needs **multiple tool calls** or steps (e.g. check order → update CRM → create ticket) | The task is **one question → one answer** (e.g. "what is our return policy?") |
-| The **next step depends on live results** (e.g. "if refund approved, then…") | The pipeline is **fixed** (e.g. embed query → retrieve → generate) |
-| You need **orchestration across systems** (APIs, DBs, search) | You only need **retrieval + generation** (RAG) or pure generation |
-| Decisions are **context-sensitive** and hard to encode as rules | The flow is **deterministic** and easy to script |
+| The **next step depends on live results** (e.g. "if refund approved, then…")                    | The pipeline is **fixed** (e.g. embed query → retrieve → generate)            |
+| You need **orchestration across systems** (APIs, DBs, search)                                   | You only need **retrieval + generation** (RAG) or pure generation             |
+| Decisions are **context-sensitive** and hard to encode as rules                                 | The flow is **deterministic** and easy to script                              |
 
-**Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must *use* external systems and *iterate* based on what it sees.
+**Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must _use_ external systems and _iterate_ based on what it sees.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -632,13 +634,14 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 ### Use Case: Design a Customer Support Agent
 
 **Requirements:**
+
 - Handle customer inquiries autonomously
 - Access multiple tools (CRM, knowledge base, order system)
 - Support multi-turn conversations
 - Escalate to human when needed
 - Handle 10,000 conversations/day
 
-**Why an agent fits here:** Support often needs *multi-step* actions (look up order → check policy → create ticket or escalate) and *live data* (order status, account history). One LLM call or RAG-only can't do that; you need a loop + tools.
+**Why an agent fits here:** Support often needs _multi-step_ actions (look up order → check policy → create ticket or escalate) and _live data_ (order status, account history). One LLM call or RAG-only can't do that; you need a loop + tools.
 
 **High-Level Design:**
 
@@ -674,7 +677,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Aha:** An agent is an LLM in a **loop** with tools. The model doesn’t just answer once; it *reasons → acts (calls a tool) → observes (gets result) → reasons again* until it can respond. That turns the LLM into a controller over APIs, DBs, and search—so the "aha" is: the value is in the **loop + tools**, not in a bigger model.
+**Aha:** An agent is an LLM in a **loop** with tools. The model doesn’t just answer once; it _reasons → acts (calls a tool) → observes (gets result) → reasons again_ until it can respond. That turns the LLM into a controller over APIs, DBs, and search—so the "aha" is: the value is in the **loop + tools**, not in a bigger model.
 
 ### Customer engagement & contact center (Google Customer Engagement Suite)
 
@@ -705,7 +708,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 This is the same "research → draft → grounding" pipeline (§11 Example 3) but with **human-in-the-loop at the plan stage** and **curated sources only**. Useful when the domain is sensitive (e.g. financial, legal) and you need auditability and control.
 
-**Gemini Enterprise vs NotebookLM Enterprise:** **NotebookLM Enterprise** is a **document-focused** tool: upload specific documents and web sources, then ask questions, summarize, and create content *from those sources only*. **Gemini Enterprise** is a **comprehensive enterprise AI assistant**: it uses **agents** and **unified search** to automate tasks and find information **across all connected business systems**, not just uploaded documents. Gemini Enterprise can **connect to** NotebookLM Enterprise (e.g. attach "Client Notes" for personalized advice); the two serve different roles—deep dive into a corpus vs. search and automate across the enterprise.
+**Gemini Enterprise vs NotebookLM Enterprise:** **NotebookLM Enterprise** is a **document-focused** tool: upload specific documents and web sources, then ask questions, summarize, and create content _from those sources only_. **Gemini Enterprise** is a **comprehensive enterprise AI assistant**: it uses **agents** and **unified search** to automate tasks and find information **across all connected business systems**, not just uploaded documents. Gemini Enterprise can **connect to** NotebookLM Enterprise (e.g. attach "Client Notes" for personalized advice); the two serve different roles—deep dive into a corpus vs. search and automate across the enterprise.
 
 **Use case snapshot (advisor):** Retrieve and compare latest investment reports → attach **NotebookLM** client notes for tailored advice → agent evaluates research against client notes (e.g. finds portfolio lacks diversification) → upload spreadsheet, run through company risk calculator → Gemini drafts final client email. Combines **unified search**, **agent reasoning**, **tool use** (risk calculator), and **personalized context** (NotebookLM).
 
@@ -715,23 +718,23 @@ This is the same "research → draft → grounding" pipeline (§11 Example 3) bu
 
 Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to configure agents in a UI with minimal code. Choose **programmatic** (ADK, LangChain, LlamaIndex) when you need custom logic, complex workflows, or fine-grained control.
 
-| Platform | Google Cloud | AWS | Open Source |
-|----------|--------------|-----|-------------|
-| No-code | Vertex AI Agent Builder | Bedrock Agents | - |
-| Programmatic | Agent Development Kit (ADK) | AgentCore | LangChain, LlamaIndex, AutoGen |
+| Platform     | Google Cloud                | AWS            | Open Source                    |
+| ------------ | --------------------------- | -------------- | ------------------------------ |
+| No-code      | Vertex AI Agent Builder     | Bedrock Agents | -                              |
+| Programmatic | Agent Development Kit (ADK) | AgentCore      | LangChain, LlamaIndex, AutoGen |
 
 ### Playbooks and system instructions
 
 **Playbook (Conversational Agents):** When you build a generative AI agent with **Conversational Agents**, you define a **playbook** for how the agent should behave. In the playbook you set the agent’s **goal** (e.g. customer support, answering questions, generating content), **detailed instructions** on how to act, and **rules** to follow. You can also **link to external tools** (e.g. data stores for RAG). Once the playbook is defined, you test and interact with the agent. In system design terms, the playbook is the **system-level configuration** that shapes every turn.
 
-**System instructions (general):** The same idea appears elsewhere as **system instructions**: context, **persona**, and **constraints** provided *before* any user input, so the model’s behavior and responses align with your intent. They help with:
+**System instructions (general):** The same idea appears elsewhere as **system instructions**: context, **persona**, and **constraints** provided _before_ any user input, so the model’s behavior and responses align with your intent. They help with:
 
-| Concern | Role of system instructions |
-|--------|------------------------------|
-| **Consistency** | Keep tone and persona stable across turns |
-| **Accuracy** | Ground the model in specific knowledge; reduce hallucinations |
-| **Relevance** | Keep responses in the intended domain (e.g. product support only) |
-| **Safety** | Avoid inappropriate or unhelpful content; set boundaries (e.g. “don’t guess; admit when you don’t know”) |
+| Concern         | Role of system instructions                                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------- |
+| **Consistency** | Keep tone and persona stable across turns                                                                |
+| **Accuracy**    | Ground the model in specific knowledge; reduce hallucinations                                            |
+| **Relevance**   | Keep responses in the intended domain (e.g. product support only)                                        |
+| **Safety**      | Avoid inappropriate or unhelpful content; set boundaries (e.g. “don’t guess; admit when you don’t know”) |
 
 **Metaprompting:** A useful technique is **metaprompting**—using the LLM to **generate, modify, or interpret other prompts**. For example: one prompt says “You are an expert at building virtual agent assistants; for the given company and role, produce a system prompt a developer can use.” You run that once, get a **system prompt** (goal + instructions + rules), then use that as the system instructions for your actual agent. Metaprompting makes prompt creation more **dynamic and adaptable** and is common when defining playbooks or system instructions from high-level specs (company, use case, scope, constraints).
 
@@ -741,16 +744,16 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 ### Tool Types
 
-**Tools** are how the agent interacts with the world: APIs, DBs, search, code. The agent chooses *which* tool to call and *with what arguments*; the tool runs and returns a result, which the agent uses for the next step.
+**Tools** are how the agent interacts with the world: APIs, DBs, search, code. The agent chooses _which_ tool to call and _with what arguments_; the tool runs and returns a result, which the agent uses for the next step.
 
-| Tool Type | Execution | Description | Best For |
-|-----------|-----------|-------------|----------|
-| **Extensions (APIs)** | Agent-side | Standardized bridges to external APIs | Multi-service access |
-| **Function Calling** | Client-side | Model outputs function name + args; your app executes | Security, audit, human-in-loop |
-| **Data Stores** | Agent-side | Connect to vector DBs, knowledge bases | RAG, real-time info |
-| **Plugins** | Agent-side | Pre-built integrations (calendar, CRM) | Rapid capability addition |
+| Tool Type             | Execution   | Description                                           | Best For                       |
+| --------------------- | ----------- | ----------------------------------------------------- | ------------------------------ |
+| **Extensions (APIs)** | Agent-side  | Standardized bridges to external APIs                 | Multi-service access           |
+| **Function Calling**  | Client-side | Model outputs function name + args; your app executes | Security, audit, human-in-loop |
+| **Data Stores**       | Agent-side  | Connect to vector DBs, knowledge bases                | RAG, real-time info            |
+| **Plugins**           | Agent-side  | Pre-built integrations (calendar, CRM)                | Rapid capability addition      |
 
-**Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and *your app* decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
+**Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and _your app_ decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
 
 ---
 
@@ -762,10 +765,10 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 **MCP** is an open protocol (Anthropic, 2024) that standardizes how applications provide **tools and context** to LLMs. It acts as a universal connector: an LLM or agent connects to **MCP servers**, which expose tools, prompts, and resources (files, DBs, APIs) in a consistent way. So instead of each vendor defining its own tool format, you run or connect to MCP servers and the model gets a uniform interface.
 
-| Aspect | Description |
-|--------|-------------|
-| **Purpose** | Standardize how models get tools, prompts, and resources from external systems |
-| **Adoption** | Anthropic (Claude), OpenAI (Agents SDK), Microsoft (Agent Framework) |
+| Aspect        | Description                                                                           |
+| ------------- | ------------------------------------------------------------------------------------- |
+| **Purpose**   | Standardize how models get tools, prompts, and resources from external systems        |
+| **Adoption**  | Anthropic (Claude), OpenAI (Agents SDK), Microsoft (Agent Framework)                  |
 | **Use cases** | AI-powered IDEs, custom workflows, connecting agents to Slack, Figma, databases, etc. |
 
 **When it matters:** Use MCP when you want **portable tooling**—the same MCP server can back multiple agents or products. It also helps when you integrate many external systems (CRMs, docs, search) without writing custom glue per vendor.
@@ -774,16 +777,16 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 **A2A** is an open standard (Google, 2025) for **communication and collaboration between AI agents** built by different vendors and frameworks. It addresses interoperability: agents from different stacks (e.g. Vertex AI, LangChain, Salesforce) can discover each other, negotiate UX, and exchange tasks and state **without** sharing internal memory, resources, or tools.
 
-| Aspect | Description |
-|--------|-------------|
-| **Purpose** | Enable agent-to-agent collaboration across vendors and frameworks |
-| **Mechanisms** | **Agent Cards** (JSON metadata: identity, capabilities), capability discovery, task/state management, UX negotiation |
-| **Transport** | JSON-RPC 2.0 over HTTP(S) |
-| **Relationship to MCP** | A2A handles **agent ↔ agent**; MCP handles **model ↔ tools/context**. They complement each other. |
+| Aspect                  | Description                                                                                                          |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| **Purpose**             | Enable agent-to-agent collaboration across vendors and frameworks                                                    |
+| **Mechanisms**          | **Agent Cards** (JSON metadata: identity, capabilities), capability discovery, task/state management, UX negotiation |
+| **Transport**           | JSON-RPC 2.0 over HTTP(S)                                                                                            |
+| **Relationship to MCP** | A2A handles **agent ↔ agent**; MCP handles **model ↔ tools/context**. They complement each other.                    |
 
 **When it matters:** Use A2A when you run **multi-agent** or **cross-vendor** workflows (e.g. your agent hands off to a partner’s agent, or you compose agents from different platforms). It gives you a shared protocol for discovery, tasks, and security instead of one-off integrations.
 
-**Aha:** **MCP** = “how does *this* agent get its tools and context?” **A2A** = “how do *multiple* agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
+**Aha:** **MCP** = “how does _this_ agent get its tools and context?” **A2A** = “how do _multiple_ agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
 
 ---
 
@@ -791,14 +794,14 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 **Chain-of-Thought (CoT):** The model generates **intermediate reasoning steps** ("think step-by-step") before the final answer. No tool use—just internal logic. Use when you need interpretability or multi-step reasoning without external data.
 
-**ReAct (Reason + Act):** Combines **reasoning** with **tool use** in a loop. Each turn is either a *Thought* (what to do next), an *Action* (tool name + args), or an *Observation* (tool result). The model keeps going until it can give a final answer.
+**ReAct (Reason + Act):** Combines **reasoning** with **tool use** in a loop. Each turn is either a _Thought_ (what to do next), an _Action_ (tool name + args), or an _Observation_ (tool result). The model keeps going until it can give a final answer.
 
-| Phase | What Happens |
-|-------|--------------|
-| **1. Reasoning** | Agent analyzes task, selects tools |
-| **2. Acting** | Agent executes selected tool |
-| **3. Observation** | Agent receives tool output |
-| **4. Repeat** | Agent reasons from the observation, then next Thought/Action or final answer |
+| Phase              | What Happens                                                                 |
+| ------------------ | ---------------------------------------------------------------------------- |
+| **1. Reasoning**   | Agent analyzes task, selects tools                                           |
+| **2. Acting**      | Agent executes selected tool                                                 |
+| **3. Observation** | Agent receives tool output                                                   |
+| **4. Repeat**      | Agent reasons from the observation, then next Thought/Action or final answer |
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -835,7 +838,7 @@ One LLM handles the entire conversation and has access to all tools. The model d
 
 - ✅ Simple, low latency, easy to debug
 - ❌ Limited capabilities, may struggle with very complex or diverse tasks
-- *Best for*: Simple use cases, single domain (e.g. support bot with KB + CRM + ticketing)
+- _Best for_: Simple use cases, single domain (e.g. support bot with KB + CRM + ticketing)
 
 ---
 
@@ -852,7 +855,7 @@ Multiple specialized agents, each with its own tools. **There is no single "boss
 
 - ✅ Specialists, parallel execution, modular, flexible routing
 - ❌ Coordination logic lives in handoffs/aggregation; can be harder to reason about
-- *Best for*: Domains where agents **collaborate as peers** (e.g. research agent + writing agent + fact-check agent that hand off or run in parallel; no one agent "owns" the plan)
+- _Best for_: Domains where agents **collaborate as peers** (e.g. research agent + writing agent + fact-check agent that hand off or run in parallel; no one agent "owns" the plan)
 
 ---
 
@@ -870,19 +873,19 @@ Multiple specialized agents, each with its own tools. **There is no single "boss
 
 - ✅ Clear ownership of the plan, easier to debug and reason about, scalable workflow
 - ❌ Supervisor is a bottleneck; more latency than flat handoffs when steps are independent
-- *Best for*: Workflows with a **fixed or predictable sequence** (e.g. research → draft → review → publish) where one "conductor" should own the plan
+- _Best for_: Workflows with a **fixed or predictable sequence** (e.g. research → draft → review → publish) where one "conductor" should own the plan
 
 ---
 
 **Multi-Agent vs Hierarchical: Clear distinction**
 
-| Aspect | Multi-Agent | Hierarchical |
-|--------|-------------|--------------|
-| **Who decides the plan?** | Distributed: agents hand off, or a router chooses; no single owner | **One supervisor** owns the plan and assigns steps |
-| **Who do specialists talk to?** | Each other (handoffs) or an aggregator; flow is peer-to-peer or fan-out | **Only the supervisor**; specialists do not talk to each other |
-| **Control shape** | **Flat** or **peer-to-peer**: many agents, shared or emergent coordination | **Tree**: one node (supervisor) at the top, specialists as children |
-| **Flow** | Emergent (handoffs, parallel, negotiate) | **Top-down**: Supervisor → assign step → Specialist → result → Supervisor |
-| **When to use** | You want **peers** that hand off or run in parallel and someone (or the group) aggregates | You want **one conductor** that plans and delegates in sequence or in a clear DAG |
+| Aspect                          | Multi-Agent                                                                               | Hierarchical                                                                      |
+| ------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| **Who decides the plan?**       | Distributed: agents hand off, or a router chooses; no single owner                        | **One supervisor** owns the plan and assigns steps                                |
+| **Who do specialists talk to?** | Each other (handoffs) or an aggregator; flow is peer-to-peer or fan-out                   | **Only the supervisor**; specialists do not talk to each other                    |
+| **Control shape**               | **Flat** or **peer-to-peer**: many agents, shared or emergent coordination                | **Tree**: one node (supervisor) at the top, specialists as children               |
+| **Flow**                        | Emergent (handoffs, parallel, negotiate)                                                  | **Top-down**: Supervisor → assign step → Specialist → result → Supervisor         |
+| **When to use**                 | You want **peers** that hand off or run in parallel and someone (or the group) aggregates | You want **one conductor** that plans and delegates in sequence or in a clear DAG |
 
 **Aha:** **Multi-agent** = "several agents, no single boss; they hand off or run in parallel." **Hierarchical** = "one boss (supervisor) that assigns tasks to specialists and gets results back; specialists don’t talk to each other." Use multi-agent when control should be shared or emergent; use hierarchical when one agent should own the plan and delegate.
 
@@ -890,7 +893,7 @@ Multiple specialized agents, each with its own tools. **There is no single "boss
 
 **4. Additional Patterns**
 
-Beyond single-, multi-, and hierarchical agents, three common *orchestration shapes* show up in production: stages in a fixed order, independent experts run in parallel, and adversarial roles that argue before a judge. Use these when the task has a natural flow (sequence), benefits from multiple viewpoints (fan-out), or must be stress-tested (debate).
+Beyond single-, multi-, and hierarchical agents, three common _orchestration shapes_ show up in production: stages in a fixed order, independent experts run in parallel, and adversarial roles that argue before a judge. Use these when the task has a natural flow (sequence), benefits from multiple viewpoints (fan-out), or must be stress-tested (debate).
 
 ---
 
@@ -957,11 +960,11 @@ Beyond single-, multi-, and hierarchical agents, three common *orchestration sha
 
 **Quick reference**
 
-| Pattern | Architecture | Use Case |
-|---------|--------------|----------|
-| **Sequential Pipeline** | A → B → C (fixed order) | Content creation (outline → draft → edit), ETL-style flows |
-| **Parallel Fan-out** | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis, ensembles |
-| **Debate/Adversarial** | Pro vs Con → Judge | High-stakes decisions, red teaming, counterargument stress-test |
+| Pattern                 | Architecture                  | Use Case                                                        |
+| ----------------------- | ----------------------------- | --------------------------------------------------------------- |
+| **Sequential Pipeline** | A → B → C (fixed order)       | Content creation (outline → draft → edit), ETL-style flows      |
+| **Parallel Fan-out**    | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis, ensembles                 |
+| **Debate/Adversarial**  | Pro vs Con → Judge            | High-stakes decisions, red teaming, counterargument stress-test |
 
 **Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
 
@@ -969,15 +972,15 @@ Beyond single-, multi-, and hierarchical agents, three common *orchestration sha
 
 **The Problem**: As agents run longer, context (chat history, tool outputs, documents) **explodes**. Simply using larger context windows is not a scaling strategy.
 
-**Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale *usage* of context without scaling *size* of every call.
+**Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale _usage_ of context without scaling _size_ of every call.
 
 **The Three-Way Pressure on Context:**
 
-| Pressure | Problem |
-|----------|---------|
-| **Cost & latency spirals** | Cost and time-to-first-token grow with context size |
-| **Signal degradation** | Irrelevant logs distract the model ("lost in the middle") |
-| **Physical limits** | RAG results and traces eventually overflow even largest windows |
+| Pressure                   | Problem                                                         |
+| -------------------------- | --------------------------------------------------------------- |
+| **Cost & latency spirals** | Cost and time-to-first-token grow with context size             |
+| **Signal degradation**     | Irrelevant logs distract the model ("lost in the middle")       |
+| **Physical limits**        | RAG results and traces eventually overflow even largest windows |
 
 **The Solution: Tiered Context Model**
 
@@ -995,19 +998,19 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-| Layer | Purpose | Lifecycle |
-|-------|---------|-----------|
-| **Working Context** | Immediate prompt for this call | Ephemeral |
-| **Session** | Durable log of events | Per-conversation |
-| **Memory** | Long-lived searchable knowledge | Cross-session |
-| **Artifacts** | Large files | Addressed by name, not pasted |
+| Layer               | Purpose                         | Lifecycle                     |
+| ------------------- | ------------------------------- | ----------------------------- |
+| **Working Context** | Immediate prompt for this call  | Ephemeral                     |
+| **Session**         | Durable log of events           | Per-conversation              |
+| **Memory**          | Long-lived searchable knowledge | Cross-session                 |
+| **Artifacts**       | Large files                     | Addressed by name, not pasted |
 
 **Multi-Agent Context Scoping:** When one agent delegates to another, control what the sub-agent sees. **Agents as Tools** = sub-agent gets only the instructions and inputs you pass. **Agent Transfer** = sub-agent gets a configurable view over Session (e.g. last N turns).
 
-| Pattern | Description |
-|---------|-------------|
+| Pattern             | Description                                          |
+| ------------------- | ---------------------------------------------------- |
 | **Agents as Tools** | Sub-agent sees only specific instructions and inputs |
-| **Agent Transfer** | Sub-agent inherits a configurable view over Session |
+| **Agent Transfer**  | Sub-agent inherits a configurable view over Session  |
 
 ---
 
@@ -1021,12 +1024,12 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 **RAGAS** (Python: `pip install ragas`) is the de facto open-source choice for **reference-free** RAG evaluation. You pass a dataset of `(user_input, retrieved_contexts, response)` plus optional `reference`; RAGAS runs LLM-as-judge and embedding-based metrics and returns scores. Used by LangChain, LlamaIndex, and LangSmith integrations.
 
-| Metric | What It Measures | How (in RAGAS) | Tool |
-|--------|------------------|----------------|------|
-| **Faithfulness** | Is response grounded in context? | LLM extracts claims → checks each against retrieved docs | `ragas.metrics.Faithfulness` |
-| **Answer Relevancy** | Does answer address the question? | Inverse of LLM-generated “counterfactual” questions needed to recover answer | `ragas.metrics.AnswerRelevancy` |
-| **Context Precision** | Are relevant docs ranked above noise? | Ground-truth relevant items ranked high → higher score | `ragas.metrics.ContextPrecision` (needs ground truth) |
-| **Context Recall** | Did we retrieve what we need? | Overlap between answer-supporting context and retrieved context; or vs. reference | `ragas.metrics.ContextRecall` / `LLMContextRecall` |
+| Metric                | What It Measures                      | How (in RAGAS)                                                                    | Tool                                                  |
+| --------------------- | ------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| **Faithfulness**      | Is response grounded in context?      | LLM extracts claims → checks each against retrieved docs                          | `ragas.metrics.Faithfulness`                          |
+| **Answer Relevancy**  | Does answer address the question?     | Inverse of LLM-generated “counterfactual” questions needed to recover answer      | `ragas.metrics.AnswerRelevancy`                       |
+| **Context Precision** | Are relevant docs ranked above noise? | Ground-truth relevant items ranked high → higher score                            | `ragas.metrics.ContextPrecision` (needs ground truth) |
+| **Context Recall**    | Did we retrieve what we need?         | Overlap between answer-supporting context and retrieved context; or vs. reference | `ragas.metrics.ContextRecall` / `LLMContextRecall`    |
 
 **Practical RAGAS workflow:** Build a list of dicts with `user_input`, `retrieved_contexts`, `response`, and optionally `reference`. Load into `EvaluationDataset.from_list(dataset)`, then call `evaluate(dataset=..., metrics=[Faithfulness(), AnswerRelevancy(), ...], llm=evaluator_llm)`. Use a **different** LLM for evaluation than for generation to reduce self-consistency bias. See [RAGAS docs](https://docs.ragas.io/en/stable/getstarted/rag_eval/).
 
@@ -1042,12 +1045,12 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 ### Hallucination Detection: Approaches & Tools
 
-| Approach | What It Does | Accuracy | Latency | Tools / How |
-|----------|--------------|----------|---------|-------------|
-| **Self-consistency** | Sample N answers, check agreement | Moderate | High (N× calls) | Custom loop or Braintrust/Phoenix over multiple runs |
-| **NLI / cross-encoder** | Entailment model: premise = context, hypothesis = claim | High | +50–100 ms | Sentence-transformers NLI, or Phoenix “groundedness”–style evals |
-| **LLM-as-Judge** | “Is this claim supported by the context?” | High | +100–200 ms | **RAGAS** `Faithfulness`, **LangSmith** groundedness, **Phoenix** hallucination template, **Braintrust** custom scorer |
-| **Specialized faithfulness models** | Fine-tuned “faithfulness vs. hallucination” judge | Highest | ~+50 ms | **Vectara FaithJudge** ([GitHub](https://github.com/vectara/FaithJudge)): benchmark + model for RAG QA/summarization; use when you need max agreement with human judgment |
+| Approach                            | What It Does                                            | Accuracy | Latency         | Tools / How                                                                                                                                                               |
+| ----------------------------------- | ------------------------------------------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Self-consistency**                | Sample N answers, check agreement                       | Moderate | High (N× calls) | Custom loop or Braintrust/Phoenix over multiple runs                                                                                                                      |
+| **NLI / cross-encoder**             | Entailment model: premise = context, hypothesis = claim | High     | +50–100 ms      | Sentence-transformers NLI, or Phoenix “groundedness”–style evals                                                                                                          |
+| **LLM-as-Judge**                    | “Is this claim supported by the context?”               | High     | +100–200 ms     | **RAGAS** `Faithfulness`, **LangSmith** groundedness, **Phoenix** hallucination template, **Braintrust** custom scorer                                                    |
+| **Specialized faithfulness models** | Fine-tuned “faithfulness vs. hallucination” judge       | Highest  | ~+50 ms         | **Vectara FaithJudge** ([GitHub](https://github.com/vectara/FaithJudge)): benchmark + model for RAG QA/summarization; use when you need max agreement with human judgment |
 
 **Practical tip:** In production, run **fast** checks inline (format, length, toxicity if you have a small classifier), and push **faithfulness / hallucination** to async jobs on a sample (e.g. 5–10%) using RAGAS or Phoenix so cost and latency stay bounded.
 
@@ -1055,19 +1058,21 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 ### How to Run Evaluation in Practice
 
-1. **Offline / batch (before release or in CI)**  
-   - **Data:** List of `(query, retrieved_contexts, response)` or `(query, response)`; optional `reference` for reference-based metrics.  
-   - **Run:** RAGAS `evaluate()` on a dataset; or LangSmith “evaluate dataset”; or Braintrust `Eval(dataset, scorers=...)`.  
+1. **Offline / batch (before release or in CI)**
+
+   - **Data:** List of `(query, retrieved_contexts, response)` or `(query, response)`; optional `reference` for reference-based metrics.
+   - **Run:** RAGAS `evaluate()` on a dataset; or LangSmith “evaluate dataset”; or Braintrust `Eval(dataset, scorers=...)`.
    - **Use:** Regressions, A/B on prompts or retrievers, and calibration of thresholds.
 
-2. **Online / production (sampled)**  
-   - **Data:** Log requests and responses (and retrieved contexts if RAG) to **LangSmith**, **Phoenix**, or your own store.  
-   - **Run:** Periodic jobs (e.g. cron or queue) that pull a sample (e.g. 5%), run RAGAS or Phoenix evals, and write scores to a dashboard or alerting.  
+2. **Online / production (sampled)**
+
+   - **Data:** Log requests and responses (and retrieved contexts if RAG) to **LangSmith**, **Phoenix**, or your own store.
+   - **Run:** Periodic jobs (e.g. cron or queue) that pull a sample (e.g. 5%), run RAGAS or Phoenix evals, and write scores to a dashboard or alerting.
    - **Use:** Drift detection, “did we build the right thing?” in the wild.
 
-3. **Human loop**  
-   - **Data:** Subset of production or offline examples (e.g. 100–500) with labels (good/bad, error type, etc.).  
-   - **Tools:** **LangSmith** annotation queue, Label Studio, or internal tooling.  
+3. **Human loop**
+   - **Data:** Subset of production or offline examples (e.g. 100–500) with labels (good/bad, error type, etc.).
+   - **Tools:** **LangSmith** annotation queue, Label Studio, or internal tooling.
    - **Use:** Calibrate automated metrics (“at what faithfulness score do humans usually approve?”), build training data for task-specific judges, and categorize failure modes.
 
 **Aha:** You don’t need gold labels for every request. **Reference-free** metrics (RAGAS faithfulness, answer relevancy, Phoenix hallucination) answer “is this grounded?” and “does this match the question?” without human annotations. Use them on a sample in production, then a **small human-labeled set** to set thresholds and sanity-check.
@@ -1108,20 +1113,20 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 
 ### Tools Quick Reference
 
-| Tool | What It Does | When to Use |
-|------|----------------|-------------|
-| **RAGAS** | Reference-free RAG metrics (faithfulness, relevancy, context precision/recall) | Batch RAG evals, CI, offline benchmarks; Python-first |
-| **LangSmith** | Evaluators, datasets, runs, human annotation | LangChain-based apps; need UI + queues + feedback |
-| **Phoenix** | Tracing + evals (hallucination, relevance, toxicity) over OTLP | Production monitoring, eval-on-sampled-traffic |
-| **Giskard** | RAG test suite, testset generation, scalar metrics | Regression and “test suite” style RAG evaluation |
-| **Braintrust** | Custom scorers, `Eval`/`EvalAsync`, experiments | Proprietary benchmarks, custom logic, experiments |
-| **FaithJudge** (Vectara) | Faithfulness/hallucination benchmark + model | High-stakes RAG; max agreement with human judgment |
+| Tool                     | What It Does                                                                   | When to Use                                           |
+| ------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
+| **RAGAS**                | Reference-free RAG metrics (faithfulness, relevancy, context precision/recall) | Batch RAG evals, CI, offline benchmarks; Python-first |
+| **LangSmith**            | Evaluators, datasets, runs, human annotation                                   | LangChain-based apps; need UI + queues + feedback     |
+| **Phoenix**              | Tracing + evals (hallucination, relevance, toxicity) over OTLP                 | Production monitoring, eval-on-sampled-traffic        |
+| **Giskard**              | RAG test suite, testset generation, scalar metrics                             | Regression and “test suite” style RAG evaluation      |
+| **Braintrust**           | Custom scorers, `Eval`/`EvalAsync`, experiments                                | Proprietary benchmarks, custom logic, experiments     |
+| **FaithJudge** (Vectara) | Faithfulness/hallucination benchmark + model                                   | High-stakes RAG; max agreement with human judgment    |
 
 ---
 
 ### Evaluation data pipeline at scale
 
-The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the *evaluation* pipeline (log predictions, run quality/safety/cost metrics); the *training* pipeline (user interactions → fine-tuning data) is §6.
+The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the _evaluation_ pipeline (log predictions, run quality/safety/cost metrics); the _training_ pipeline (user interactions → fine-tuning data) is §6.
 
 **Use case: Production LLM evaluation system**
 
@@ -1155,7 +1160,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ## 6. GenAI Data Pipeline Architecture
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." It is *distinct* from the evaluation pipeline (§5), which moves *prediction* data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." It is _distinct_ from the evaluation pipeline (§5), which moves _prediction_ data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
 
 **T-shaped summary:** User interactions → event stream (Pub/Sub, Kinesis) → stream processor (Dataflow, etc.) → data lake and optionally feature store → training data prep (filter, dedupe, validate, format for fine-tuning). Deep dive below.
 
@@ -1164,6 +1169,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 ### Use Case: Design a Training Data Pipeline for Fine-Tuning
 
 **Requirements:**
+
 - Collect user interactions (prompts, responses, feedback)
 - Process 10M examples/day
 - Clean and prepare data for fine-tuning
@@ -1200,21 +1206,21 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ### Service Comparison
 
-| Component | Google Cloud | AWS |
-|-----------|--------------|-----|
-| **Event Streaming** | Pub/Sub | Kinesis Data Streams |
-| **Stream Processing** | Dataflow | Kinesis Analytics |
-| **Data Lake** | Cloud Storage | S3 |
-| **Data Warehouse** | BigQuery | Redshift |
-| **Feature Store** | Vertex AI Feature Store | SageMaker Feature Store |
-| **Training** | Vertex AI Training | SageMaker Training |
-| **Orchestration** | Vertex AI Pipelines | SageMaker Pipelines |
+| Component             | Google Cloud            | AWS                     |
+| --------------------- | ----------------------- | ----------------------- |
+| **Event Streaming**   | Pub/Sub                 | Kinesis Data Streams    |
+| **Stream Processing** | Dataflow                | Kinesis Analytics       |
+| **Data Lake**         | Cloud Storage           | S3                      |
+| **Data Warehouse**    | BigQuery                | Redshift                |
+| **Feature Store**     | Vertex AI Feature Store | SageMaker Feature Store |
+| **Training**          | Vertex AI Training      | SageMaker Training      |
+| **Orchestration**     | Vertex AI Pipelines     | SageMaker Pipelines     |
 
 ---
 
 ## 7. Cost Optimization for GenAI Systems
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**: cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. *Throughput* and *capacity* are in §8 Scalability; here we focus on *cost per request*.
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**: cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. _Throughput_ and _capacity_ are in §8 Scalability; here we focus on _cost per request_.
 
 **T-shaped summary:** Cost = f(tokens, model). Levers: prompt optimization, response/prompt caching, routing easy queries to smaller models, quantization, and continuous batching (better GPU use → same throughput with fewer machines). Deep dive below.
 
@@ -1223,6 +1229,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 ### Token-Based Cost Model
 
 **Cost Components:**
+
 - **Input tokens**: Tokens in prompt (including context)
 - **Output tokens**: Generated tokens (typically 2-4x more expensive)
 - **Model tier**: Different models have different costs
@@ -1251,37 +1258,37 @@ At 1M requests/day: $375/day = $11,250/month
 
 **1. Prompt Optimization**
 
-| Technique | Savings | Trade-off |
-|-----------|---------|-----------|
-| Shorter prompts | 20-40% input tokens | May lose context |
-| Fewer examples | 50-200 tokens/example | May reduce quality |
-| Prompt compression | Variable | Compression cost vs savings |
+| Technique          | Savings               | Trade-off                   |
+| ------------------ | --------------------- | --------------------------- |
+| Shorter prompts    | 20-40% input tokens   | May lose context            |
+| Fewer examples     | 50-200 tokens/example | May reduce quality          |
+| Prompt compression | Variable              | Compression cost vs savings |
 
 **Few-shot sweet spot**: 2-3 examples usually sufficient. Research shows diminishing returns after 3 examples—the model has learned the pattern.
 
 **2. Caching Strategy**
 
-| Strategy | Hit Rate | Savings | Best For |
-|----------|----------|---------|----------|
-| Prompt caching | High for prefixes | 2-5x speedup | System prompts |
-| Response caching | 10-30% | 100% for hits | FAQ systems |
-| Semantic caching | 30-50% | Varies | Q&A systems |
+| Strategy         | Hit Rate          | Savings       | Best For       |
+| ---------------- | ----------------- | ------------- | -------------- |
+| Prompt caching   | High for prefixes | 2-5x speedup  | System prompts |
+| Response caching | 10-30%            | 100% for hits | FAQ systems    |
+| Semantic caching | 30-50%            | Varies        | Q&A systems    |
 
 **3. Model Selection (Tiered Strategy)**
 
-| Model | Cost | Quality | Use For |
-|-------|------|---------|---------|
-| **Large (GPT-4, Gemini Ultra)** | $0.03-0.06/1K output | Best | Complex reasoning |
-| **Medium (GPT-3.5, Gemini Pro)** | ~$0.002/1K output | Good | Most production tasks |
-| **Small (Gemini Flash)** | ~$0.001/1K output | Basic | Simple, high-volume |
+| Model                            | Cost                 | Quality | Use For               |
+| -------------------------------- | -------------------- | ------- | --------------------- |
+| **Large (GPT-4, Gemini Ultra)**  | $0.03-0.06/1K output | Best    | Complex reasoning     |
+| **Medium (GPT-3.5, Gemini Pro)** | ~$0.002/1K output    | Good    | Most production tasks |
+| **Small (Gemini Flash)**         | ~$0.001/1K output    | Basic   | Simple, high-volume   |
 
 **Model Routing Strategies:**
 
-| Strategy | How It Works | Savings |
-|----------|--------------|---------|
-| **Routing** | Classify query → send to single optimal model | 40-60% |
-| **Cascading** | Start small → escalate to larger if low confidence | 50-80% |
-| **Cascade Routing** | Combines both: route + escalation | Best cost/quality |
+| Strategy            | How It Works                                       | Savings           |
+| ------------------- | -------------------------------------------------- | ----------------- |
+| **Routing**         | Classify query → send to single optimal model      | 40-60%            |
+| **Cascading**       | Start small → escalate to larger if low confidence | 50-80%            |
+| **Cascade Routing** | Combines both: route + escalation                  | Best cost/quality |
 
 ```
 Query → Classifier → Simple? → Small Model → Done
@@ -1309,11 +1316,11 @@ Query → Small Model → Confident? → Return
 
 Reducing numerical precision shrinks model size and speeds inference. **FP32** (32-bit float), **FP16** (16-bit), **INT8** (8-bit integer), **INT4** (4-bit) are common levels.
 
-| Precision | Memory Reduction | Quality Loss |
-|-----------|-----------------|--------------|
-| FP32 → FP16 | 2x | Minimal |
-| FP16 → INT8 | 4x | Some |
-| INT8 → INT4 | 8x | Significant |
+| Precision   | Memory Reduction | Quality Loss |
+| ----------- | ---------------- | ------------ |
+| FP32 → FP16 | 2x               | Minimal      |
+| FP16 → INT8 | 4x               | Some         |
+| INT8 → INT4 | 8x               | Significant  |
 
 **Why FP16 is safe**: Modern **GPUs** (graphics processing units) have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
 
@@ -1329,7 +1336,7 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 ## 8. Scalability Patterns for GenAI
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. *Cost per request* is in §7; here we focus on *requests per second* and *utilization*.
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. _Cost per request_ is in §7; here we focus on _requests per second_ and _utilization_.
 
 **T-shaped summary:** Levers: stateless serving (more replicas), model parallelism (split layers across GPUs), pipeline parallelism (different layers on different GPUs), and caching (KV cache for prefixes, response cache for identical/similar queries). Deep dive below.
 
@@ -1341,11 +1348,11 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 **Solutions:**
 
-| Pattern | Description | Trade-off |
-|---------|-------------|-----------|
-| **Stateless Serving** | Load balancer → Multiple LLM servers | Higher memory (each server has full model) |
-| **Model Parallelism** | Split model across GPUs | Communication overhead |
-| **Pipeline Parallelism** | Different GPUs handle different layers | Better utilization |
+| Pattern                  | Description                            | Trade-off                                  |
+| ------------------------ | -------------------------------------- | ------------------------------------------ |
+| **Stateless Serving**    | Load balancer → Multiple LLM servers   | Higher memory (each server has full model) |
+| **Model Parallelism**    | Split model across GPUs                | Communication overhead                     |
+| **Pipeline Parallelism** | Different GPUs handle different layers | Better utilization                         |
 
 **Model Parallelism Visual:**
 
@@ -1355,13 +1362,13 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Caching Strategies for Scale
 
-*Cost* impact of caching is in §7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
+_Cost_ impact of caching is in §7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
 
-| Strategy | Throughput / latency impact | Best For |
-|----------|-----------------------------|----------|
-| Prompt caching (KV cache) | 2–3× effective throughput for repeated prefixes | System prompts, long context |
-| Response caching | Near-instant for cache hits; frees GPU for other requests | Identical or near-identical queries |
-| Semantic caching | Higher hit rate → more requests served from cache | Similar queries (e.g. Q&A) |
+| Strategy                  | Throughput / latency impact                               | Best For                            |
+| ------------------------- | --------------------------------------------------------- | ----------------------------------- |
+| Prompt caching (KV cache) | 2–3× effective throughput for repeated prefixes           | System prompts, long context        |
+| Response caching          | Near-instant for cache hits; frees GPU for other requests | Identical or near-identical queries |
+| Semantic caching          | Higher hit rate → more requests served from cache         | Similar queries (e.g. Q&A)          |
 
 ---
 
@@ -1375,28 +1382,28 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Key Metrics to Track
 
-| Category | Metrics |
-|----------|---------|
-| **Quality** | Task accuracy, ROUGE/BLEU, human evaluation |
-| **Performance** | P50/P95/P99 latency, throughput, tokens/second |
-| **Cost** | Cost per request, token usage, model tier breakdown |
-| **Reliability** | Error rate, timeout rate, availability |
-| **Safety** | Toxicity score, jailbreak attempts, bias detection |
+| Category        | Metrics                                             |
+| --------------- | --------------------------------------------------- |
+| **Quality**     | Task accuracy, ROUGE/BLEU, human evaluation         |
+| **Performance** | P50/P95/P99 latency, throughput, tokens/second      |
+| **Cost**        | Cost per request, token usage, model tier breakdown |
+| **Reliability** | Error rate, timeout rate, availability              |
+| **Safety**      | Toxicity score, jailbreak attempts, bias detection  |
 
 ### Platform Services
 
-| Function | Google Cloud | AWS |
-|----------|--------------|-----|
-| **Metrics** | Cloud Monitoring, Vertex AI Monitoring | CloudWatch |
-| **Logging** | Cloud Logging | CloudWatch Logs |
-| **Tracing** | Cloud Trace | X-Ray |
-| **Drift Detection** | Vertex AI Model Monitoring | SageMaker Model Monitor |
+| Function            | Google Cloud                           | AWS                     |
+| ------------------- | -------------------------------------- | ----------------------- |
+| **Metrics**         | Cloud Monitoring, Vertex AI Monitoring | CloudWatch              |
+| **Logging**         | Cloud Logging                          | CloudWatch Logs         |
+| **Tracing**         | Cloud Trace                            | X-Ray                   |
+| **Drift Detection** | Vertex AI Model Monitoring             | SageMaker Model Monitor |
 
 ---
 
 ## 10. Security & Guardrails
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit *around* the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
+**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit _around_ the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
 
 **T-shaped summary:** Threats: direct/indirect prompt injection, data leakage, jailbreaking, unauthorized access. Mitigations: input/output guardrails, spotlighting, least-privilege tools, Model Armor (or Bedrock Guardrails). Use defense-in-depth: gateway → guardrails → LLM → guardrails → response. Deep dive below.
 
@@ -1404,26 +1411,26 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Key Security Concerns
 
-**Aha:** LLMs take natural language as input, so **any** user text can be an attempt to override instructions ("Ignore previous instructions…"). Guardrails and defense-in-depth exist because you can't whitelist "good" prompts—you have to detect and constrain *malicious* or out-of-scope intent at the boundary.
+**Aha:** LLMs take natural language as input, so **any** user text can be an attempt to override instructions ("Ignore previous instructions…"). Guardrails and defense-in-depth exist because you can't whitelist "good" prompts—you have to detect and constrain _malicious_ or out-of-scope intent at the boundary.
 
-| Threat | Risk | Mitigation |
-|--------|------|------------|
-| **Direct Prompt Injection** | User injects malicious instructions | Input validation, guardrails |
-| **Indirect Prompt Injection** | Hidden instructions in external content | Content isolation, spotlighting |
-| **Data Leakage** | Training data memorization, **PII** (personally identifiable information) in outputs | Output filtering, **DLP** (data loss prevention) |
-| **Jailbreaking** | Bypassing safety controls | Multi-layer defense, red teaming |
-| **Access Control** | Unauthorized model access | **IAM** (identity and access management), API keys, least privilege |
+| Threat                        | Risk                                                                                 | Mitigation                                                          |
+| ----------------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| **Direct Prompt Injection**   | User injects malicious instructions                                                  | Input validation, guardrails                                        |
+| **Indirect Prompt Injection** | Hidden instructions in external content                                              | Content isolation, spotlighting                                     |
+| **Data Leakage**              | Training data memorization, **PII** (personally identifiable information) in outputs | Output filtering, **DLP** (data loss prevention)                    |
+| **Jailbreaking**              | Bypassing safety controls                                                            | Multi-layer defense, red teaming                                    |
+| **Access Control**            | Unauthorized model access                                                            | **IAM** (identity and access management), API keys, least privilege |
 
 ### Prompt Injection Defense-in-Depth
 
-| Layer | Technique | Description |
-|-------|-----------|-------------|
-| **Input** | Spotlighting | Clearly delimit user input vs system prompt |
-| **Input** | Input validation | Regex, blocklists, encoding detection |
-| **Input** | Guardrails check | Detect injection attempts before LLM |
-| **Processing** | Least privilege | Limit tools/data agent can access |
-| **Output** | Guardrails check | Validate output aligns with user intent |
-| **Output** | PII filtering | Detect/redact sensitive data |
+| Layer          | Technique        | Description                                 |
+| -------------- | ---------------- | ------------------------------------------- |
+| **Input**      | Spotlighting     | Clearly delimit user input vs system prompt |
+| **Input**      | Input validation | Regex, blocklists, encoding detection       |
+| **Input**      | Guardrails check | Detect injection attempts before LLM        |
+| **Processing** | Least privilege  | Limit tools/data agent can access           |
+| **Output**     | Guardrails check | Validate output aligns with user intent     |
+| **Output**     | PII filtering    | Detect/redact sensitive data                |
 
 ### Guardrails Architecture
 
@@ -1462,6 +1469,7 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 ```
 
 **Tool Call Validation** (for agents):
+
 - **Pre-flight**: Validate tool call aligns with user's request before execution
 - **Post-flight**: Validate returned data before showing to user
 
@@ -1471,13 +1479,13 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 **What Model Armor Catches vs Cloud Armor:**
 
-| Threat | Cloud Armor | Model Armor |
-|--------|-------------|-------------|
-| SQL injection in HTTP | ✅ | ❌ (not its job) |
-| DDoS / rate limiting | ✅ | ❌ |
-| **Prompt injection** | ❌ | ✅ |
-| **Jailbreak attempts** | ❌ | ✅ |
-| **PII in LLM output** | ❌ | ✅ |
+| Threat                 | Cloud Armor | Model Armor      |
+| ---------------------- | ----------- | ---------------- |
+| SQL injection in HTTP  | ✅          | ❌ (not its job) |
+| DDoS / rate limiting   | ✅          | ❌               |
+| **Prompt injection**   | ❌          | ✅               |
+| **Jailbreak attempts** | ❌          | ✅               |
+| **PII in LLM output**  | ❌          | ✅               |
 
 **Use both for production deployments—they protect different attack surfaces.**
 
@@ -1523,45 +1531,45 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 
 ### Compliance Considerations
 
-| Regulation | Key Requirements |
-|------------|------------------|
-| **GDPR** (General Data Protection Regulation) | Right to explanation, data deletion, privacy by design |
-| **HIPAA** (Health Insurance Portability and Accountability Act) | Healthcare data protection, audit logging |
-| **PCI-DSS** (Payment Card Industry Data Security Standard) | Payment data security, no storage of card numbers |
+| Regulation                                                      | Key Requirements                                       |
+| --------------------------------------------------------------- | ------------------------------------------------------ |
+| **GDPR** (General Data Protection Regulation)                   | Right to explanation, data deletion, privacy by design |
+| **HIPAA** (Health Insurance Portability and Accountability Act) | Healthcare data protection, audit logging              |
+| **PCI-DSS** (Payment Card Industry Data Security Standard)      | Payment data security, no storage of card numbers      |
 
 ### Security Stack Summary
 
-| Layer | Google Cloud | AWS |
-|-------|--------------|-----|
-| **LLM Security** | Model Armor | Bedrock Guardrails |
-| **HTTP Security** | Cloud Armor | WAF (web application firewall) |
-| **Data Protection** | Cloud DLP (data loss prevention) | Macie |
-| **Secrets** | Secret Manager | Secrets Manager |
-| **Network** | VPC (virtual private cloud) Service Controls | VPC |
-| **Access** | IAM (identity and access management) | IAM |
-| **Audit** | Cloud Audit Logs | CloudTrail |
+| Layer               | Google Cloud                                 | AWS                            |
+| ------------------- | -------------------------------------------- | ------------------------------ |
+| **LLM Security**    | Model Armor                                  | Bedrock Guardrails             |
+| **HTTP Security**   | Cloud Armor                                  | WAF (web application firewall) |
+| **Data Protection** | Cloud DLP (data loss prevention)             | Macie                          |
+| **Secrets**         | Secret Manager                               | Secrets Manager                |
+| **Network**         | VPC (virtual private cloud) Service Controls | VPC                            |
+| **Access**          | IAM (identity and access management)         | IAM                            |
+| **Audit**           | Cloud Audit Logs                             | CloudTrail                     |
 
 ---
 
 ## 11. Real-World Examples: Applying the Stack
 
-This section comes **after** all core concepts (§1–§10). Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out *why* each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize.
+This section comes **after** all core concepts (§1–§10). Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out _why_ each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize. For **end-to-end solutioning** (Scope → Design → Deploy → Communicate) with hypotheticals, stakeholder loop-in, and presenting to CxO vs Product vs live customer, see [Quick Reference: End-to-end solutioning](#end-to-end-solutioning-scope--design--deploy--communicate)—it uses §11-style designs inside a full Scope/Design/Deploy/Communicate flow with worked examples.
 
 ---
 
 ### Example 1: Code Generation Assistant (like GitHub Copilot)
 
-*In an interview you’d start by clarifying what “good” looks like: how fast, how accurate, and what we’re willing to pay. Then you’d sketch the path from IDE to model and back.*
+_In an interview you’d start by clarifying what “good” looks like: how fast, how accurate, and what we’re willing to pay. Then you’d sketch the path from IDE to model and back._
 
 **1. Clarify Requirements (5–10 min)**
 
-| Dimension | What to pin down | Why it matters |
-|-----------|------------------|----------------|
-| **Token budget** | Input: ~2K tokens (prefix + cursor context); output: 20–100 tokens per completion. Cap total context at e.g. 8K. | Larger context = higher cost and slower TTFT; you need a hard cap for pricing and latency. |
-| **Latency** | P95 < 200 ms time-to-first-token for inline completions. Batch jobs (e.g. index workspace) can be 1–2 s. | Users feel lag above ~200 ms; the rest of the budget goes to gateway, RAG, and model. |
-| **Quality** | Completions must compile and match project style. Low tolerance for hallucination. | Wrong or irrelevant suggestions hurt trust; you’ll measure correctness and relevance (RAGAS, LangSmith). |
-| **Cost** | Per-token pricing; monthly budget. Prefer smaller/faster models and routing by complexity (§7). | Cost scales with active devs × completions per day × tokens; routing keeps easy cases cheap. |
-| **Safety** | No PII/secrets in prompts or logs; optional filters; Model Armor / Bedrock Guardrails. Data residency if code is sensitive. | Code can contain secrets; compliance may require “data never leaves region.” |
+| Dimension        | What to pin down                                                                                                            | Why it matters                                                                                           |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| **Token budget** | Input: ~2K tokens (prefix + cursor context); output: 20–100 tokens per completion. Cap total context at e.g. 8K.            | Larger context = higher cost and slower TTFT; you need a hard cap for pricing and latency.               |
+| **Latency**      | P95 < 200 ms time-to-first-token for inline completions. Batch jobs (e.g. index workspace) can be 1–2 s.                    | Users feel lag above ~200 ms; the rest of the budget goes to gateway, RAG, and model.                    |
+| **Quality**      | Completions must compile and match project style. Low tolerance for hallucination.                                          | Wrong or irrelevant suggestions hurt trust; you’ll measure correctness and relevance (RAGAS, LangSmith). |
+| **Cost**         | Per-token pricing; monthly budget. Prefer smaller/faster models and routing by complexity (§7).                             | Cost scales with active devs × completions per day × tokens; routing keeps easy cases cheap.             |
+| **Safety**       | No PII/secrets in prompts or logs; optional filters; Model Armor / Bedrock Guardrails. Data residency if code is sensitive. | Code can contain secrets; compliance may require “data never leaves region.”                             |
 
 **Rough estimation (code assistant)**
 
@@ -1596,17 +1604,17 @@ This section comes **after** all core concepts (§1–§10). Each example follow
 
 ### Example 2: Customer Service Chatbot with RAG and Tools
 
-*Here the user expects an answer that’s grounded in your docs and in real data (orders, tickets). You need to clarify how fast answers should be, how much you’re willing to spend per conversation, and what “correct” means (faithful to sources, no made-up policies).*
+_Here the user expects an answer that’s grounded in your docs and in real data (orders, tickets). You need to clarify how fast answers should be, how much you’re willing to spend per conversation, and what “correct” means (faithful to sources, no made-up policies)._
 
 **1. Clarify Requirements (5–10 min)**
 
-| Dimension | What to pin down | Why it matters |
-|-----------|------------------|----------------|
-| **Token budget** | Conversation: 4–32K context per turn; RAG: 2–4K retrieved tokens. Cap response at e.g. 500 tokens. | Long context = higher cost and slower; you need a cap for pricing and latency. |
-| **Latency** | P95 < 3–5 s full response (RAG + tool calls + LLM); TTFT < 1 s so the user sees something quickly. | Users wait for a full answer; TTFT < 1 s keeps the UI feeling responsive. |
-| **Quality** | Faithful to docs and tool outputs; no hallucinated policies. Relevancy of answers. | Wrong or irrelevant answers hurt trust and compliance; RAGAS faithfulness + relevancy + human review on escalations. |
-| **Cost** | Per-token; monthly budget. Cache frequent questions; smaller model for simple intents (§7). | Cost = conversations × turns × tokens; caching and routing cut cost. |
-| **Safety** | Compliance (PCI, PII); no leaking internal docs or customer data. Guardrails; PII filtering in tool outputs. | One leak can be catastrophic; guardrails and least-privilege tools are non-negotiable. |
+| Dimension        | What to pin down                                                                                             | Why it matters                                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------- |
+| **Token budget** | Conversation: 4–32K context per turn; RAG: 2–4K retrieved tokens. Cap response at e.g. 500 tokens.           | Long context = higher cost and slower; you need a cap for pricing and latency.                                       |
+| **Latency**      | P95 < 3–5 s full response (RAG + tool calls + LLM); TTFT < 1 s so the user sees something quickly.           | Users wait for a full answer; TTFT < 1 s keeps the UI feeling responsive.                                            |
+| **Quality**      | Faithful to docs and tool outputs; no hallucinated policies. Relevancy of answers.                           | Wrong or irrelevant answers hurt trust and compliance; RAGAS faithfulness + relevancy + human review on escalations. |
+| **Cost**         | Per-token; monthly budget. Cache frequent questions; smaller model for simple intents (§7).                  | Cost = conversations × turns × tokens; caching and routing cut cost.                                                 |
+| **Safety**       | Compliance (PCI, PII); no leaking internal docs or customer data. Guardrails; PII filtering in tool outputs. | One leak can be catastrophic; guardrails and least-privilege tools are non-negotiable.                               |
 
 **Rough estimation (chatbot)**
 
@@ -1626,7 +1634,7 @@ This section comes **after** all core concepts (§1–§10). Each example follow
 - **RAG:** Chunk by semantic units (e.g. 512 tokens) or doc/section; Vertex/Bedrock or Cohere embeddings; hybrid retrieval if you need keyword + vector; rerank to top-5 before putting in context (§2).
 - **Model & routing:** One model for chat + tool use (Gemini, Claude); optional routing: small model for FAQ-only, larger for multi-step.
 - **Eval & observability:** **RAGAS** (faithfulness, answer relevancy) on logged (query, context, response); **LangSmith** for datasets and human review; track escalation rate and tool success.
-- **Security:** **Model Armor** / **Bedrock Guardrails** on input/output; IAM and least privilege on tools; filter PII in tool *outputs* before they reach the LLM or user (§10).
+- **Security:** **Model Armor** / **Bedrock Guardrails** on input/output; IAM and least privilege on tools; filter PII in tool _outputs_ before they reach the LLM or user (§10).
 
 **4. Bottlenecks & Trade-offs (5–10 min)**
 
@@ -1643,17 +1651,17 @@ This section comes **after** all core concepts (§1–§10). Each example follow
 
 ### Example 3: Content Generation Platform (research → draft → grounding)
 
-*This is a multi-step pipeline: research from the web, then draft, then fact-check against sources, then SEO. Users typically accept 30–90 s end-to-end (async). You need to clarify token caps per step, cost per article, and how strict “faithful to sources” is.*
+_This is a multi-step pipeline: research from the web, then draft, then fact-check against sources, then SEO. Users typically accept 30–90 s end-to-end (async). You need to clarify token caps per step, cost per article, and how strict “faithful to sources” is._
 
 **1. Clarify Requirements (5–10 min)**
 
-| Dimension | What to pin down | Why it matters |
-|-----------|------------------|----------------|
-| **Token budget** | Research: 10–50K tokens (snippets); draft: 2–4K output; grounding: full draft + sources. Per-step caps. | Unbounded research or draft blows cost; caps keep pricing predictable. |
-| **Latency** | End-to-end 30–90 s (async). Per-step: research ~5–10 s, draft ~15–30 s, grounding ~10–20 s. | Users expect “background” generation; per-step times drive capacity planning. |
-| **Quality** | High faithfulness: every claim grounded in sources. RAGAS faithfulness; optional human spot-checks. | Ungrounded claims damage trust; you’ll measure and monitor faithfulness. |
-| **Cost** | Per-token; routing: Flash/small for research + SEO, Pro/large for draft (§7); monthly budget and per-article caps. | Most tokens are in research + draft; routing keeps research/SEO cheap. |
-| **Safety** | No harmful or copyrighted content; cite sources; optional guardrails on output. | Citations and guardrails protect you and the reader. |
+| Dimension        | What to pin down                                                                                                   | Why it matters                                                                |
+| ---------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| **Token budget** | Research: 10–50K tokens (snippets); draft: 2–4K output; grounding: full draft + sources. Per-step caps.            | Unbounded research or draft blows cost; caps keep pricing predictable.        |
+| **Latency**      | End-to-end 30–90 s (async). Per-step: research ~5–10 s, draft ~15–30 s, grounding ~10–20 s.                        | Users expect “background” generation; per-step times drive capacity planning. |
+| **Quality**      | High faithfulness: every claim grounded in sources. RAGAS faithfulness; optional human spot-checks.                | Ungrounded claims damage trust; you’ll measure and monitor faithfulness.      |
+| **Cost**         | Per-token; routing: Flash/small for research + SEO, Pro/large for draft (§7); monthly budget and per-article caps. | Most tokens are in research + draft; routing keeps research/SEO cheap.        |
+| **Safety**       | No harmful or copyrighted content; cite sources; optional guardrails on output.                                    | Citations and guardrails protect you and the reader.                          |
 
 **Rough estimation (content platform)**
 
@@ -1690,16 +1698,16 @@ This section comes **after** all core concepts (§1–§10). Each example follow
 
 ### Cross-example takeaways
 
-| Concern | Tools to reach for |
-|--------|--------------------|
-| **Orchestration (RAG, agents, pipelines)** | LangChain, LlamaIndex |
-| **Managed RAG / embeddings** | Vertex AI RAG Engine, **Vertex AI Search** (website/commerce/internal KB), Bedrock Knowledge Bases |
-| **Internal knowledge workers** | **Gemini Enterprise** (agents + unified search), **NotebookLM Enterprise** (document-focused Q&A, summarize, audio) |
-| **LLM hosting** | Vertex AI (Codey, Gemini), Bedrock (Claude, CodeWhisperer, etc.), or vLLM for self-hosted |
-| **Evaluation (reference-free)** | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals) |
-| **Guardrails** | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source) |
+| Concern                                    | Tools to reach for                                                                                                  |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| **Orchestration (RAG, agents, pipelines)** | LangChain, LlamaIndex                                                                                               |
+| **Managed RAG / embeddings**               | Vertex AI RAG Engine, **Vertex AI Search** (website/commerce/internal KB), Bedrock Knowledge Bases                  |
+| **Internal knowledge workers**             | **Gemini Enterprise** (agents + unified search), **NotebookLM Enterprise** (document-focused Q&A, summarize, audio) |
+| **LLM hosting**                            | Vertex AI (Codey, Gemini), Bedrock (Claude, CodeWhisperer, etc.), or vLLM for self-hosted                           |
+| **Evaluation (reference-free)**            | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals)                                              |
+| **Guardrails**                             | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source)                                  |
 
-The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). *Note:* Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
+The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
 
 ---
 
@@ -1755,7 +1763,7 @@ The full **45-min Interview Framework** (Clarify → High-Level Architecture →
 
 ## Strategy and planning (for integration and impact)
 
-*Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification.*
+_Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification._
 
 **Plan for generative AI integration:** (1) **Establish a clear vision** — align with business goals. (2) **Prioritize high-impact use cases** — start where value is measurable. (3) **Invest in capabilities** — tools, data, skills. (4) **Drive organizational change** — adoption, workflows. (5) **Measure and demonstrate value** — see below. (6) **Champion responsible AI** — safety, fairness, compliance (§10).
 
@@ -1771,34 +1779,38 @@ The full **45-min Interview Framework** (Clarify → High-Level Architecture →
 
 ### What FAANG Interviewers Evaluate
 
-| Dimension | What They Test |
-|-----------|----------------|
-| **LLM Awareness** | Token limits, context windows, model types, pricing models |
-| **Architectural Reasoning** | How retrieval, prompt logic, post-processing connect |
-| **Cost-Latency Tradeoffs** | Balancing inference cost, response latency, quality |
-| **Safety & Governance** | Reliable outputs, guardrails, compliance |
-| **Observability** | Handling non-deterministic outputs, failure modes |
+| Dimension                   | What They Test                                             |
+| --------------------------- | ---------------------------------------------------------- |
+| **LLM Awareness**           | Token limits, context windows, model types, pricing models |
+| **Architectural Reasoning** | How retrieval, prompt logic, post-processing connect       |
+| **Cost-Latency Tradeoffs**  | Balancing inference cost, response latency, quality        |
+| **Safety & Governance**     | Reliable outputs, guardrails, compliance                   |
+| **Observability**           | Handling non-deterministic outputs, failure modes          |
 
 ### Interview Framework (45-min structure)
 
 **1. Clarify Requirements (5-10 min)**
+
 - Token budget and latency targets
 - Quality requirements (hallucination tolerance)
 - Cost constraints (per-token, monthly budget)
 - Safety requirements (compliance, content filtering)
 
 **2. High-Level Architecture (10-15 min)**
+
 - Draw components: API gateway → orchestration → LLM → post-processing
 - Show data flow and identify APIs
 - Include: RAG, caching, model routing
 
 **3. Deep Dive (15-20 min)**
+
 - RAG design: chunking, embedding, retrieval, reranking
 - Model selection and routing strategy
 - Evaluation and observability approach
 - Security layers (guardrails, Model Armor)
 
 **4. Bottlenecks & Trade-offs (5-10 min)**
+
 - KV cache memory management
 - Quality vs cost (model size, routing)
 - Latency vs throughput (batching)
@@ -1806,16 +1818,137 @@ The full **45-min Interview Framework** (Clarify → High-Level Architecture →
 
 ### Key Trade-offs to Articulate
 
-| Decision | Option A | Option B |
-|----------|----------|----------|
-| RAG vs Fine-tuning | Fresh data, per-query cost | Behavioral change, upfront cost |
-| Large vs Small Model | Higher quality | Lower cost, faster |
-| Dense vs Hybrid Search | Semantic matching | + Keyword precision |
-| Single vs Multi-Agent | Simpler, faster | More capable, modular |
-| Sync vs Async Eval | Immediate | Cost-effective |
+| Decision               | Option A                   | Option B                        |
+| ---------------------- | -------------------------- | ------------------------------- |
+| RAG vs Fine-tuning     | Fresh data, per-query cost | Behavioral change, upfront cost |
+| Large vs Small Model   | Higher quality             | Lower cost, faster              |
+| Dense vs Hybrid Search | Semantic matching          | + Keyword precision             |
+| Single vs Multi-Agent  | Simpler, faster            | More capable, modular           |
+| Sync vs Async Eval     | Immediate                  | Cost-effective                  |
+
+### Role Related Knowledge (RRK) interview — structure and prep
+
+_Some roles use a **Role Related Knowledge** round that mixes GenAI system design with hypotheticals and consultative skills. Use this as a checklist; confirm exact format with your recruiter._
+
+**Time split (example):**
+
+| Segment                      | Duration | Focus                                                                                                            |
+| ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
+| **System design (GenAI)**    | ~30 min  | Design a system (RAG, agent, etc.) — use the [Interview Framework](#interview-framework-45-min-structure) above. |
+| **Hypothetical questions**   | ~15 min  | 4–6 scenario-based questions to assess technical ability + **consultative skills**.                              |
+| **Questions to interviewer** | ~15 min  | Your questions about Google, the team, ways of working, other perspectives.                                      |
+
+**Goal of hypotheticals:** Assess **technical ability** and **application development with LLM + consultative skills** — e.g. advising clients, defining scope, leading from conflict, setting strategy, problem troubleshooting, developing partnerships through engagement, looping in stakeholders.
+
+**Answer structure (STAR + future):** Use a structure similar to **STAR** — **S**cenario, **T**ask, **A**ction, **R**esult — and add **future thinking** (what you’d do next, how you’d iterate, risks to watch).
+
+**Adapt to audience:**
+
+- **Non-technical (CxOs):** High-level value, business impact, risk, timeline, cost. Avoid jargon; focus on outcomes and trade-offs in business terms.
+- **Product / technical:** Details are appropriate — e.g. **open-source LLMs** (pros: control, cost, customization; cons: ops, security, updates) vs managed (Vertex, Bedrock). RAG flow, serverless vs microservice, metrics.
+
+**Example hypothetical themes to prepare:**
+
+| Theme                                         | What to be ready for                                                                                                                                                             |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Showcase GenAI to a customer**              | “How would you present a GenAI solution to a live customer in a professional manner?” Consider **timeline** and **budget** — you can ask the interviewer to clarify constraints. |
+| **Loop in stakeholders**                      | How you involve the right people (eng, product, security, legal) and keep them aligned.                                                                                          |
+| **Scope → Design → Deploy**                   | Define clear **business requirements**, **relevant metrics**, and **communicate to stakeholders**.                                                                               |
+| **POC to production**                         | Your approach: validate with POC (use case, success criteria), then production (reliability, scale, guardrails, observability).                                                  |
+| **Design the flow**                           | When to choose **RAG** vs other patterns; **serverless vs microservice** on a specific cloud (e.g. GCP).                                                                         |
+| **Lead a public partner on LLM on GCP/Cloud** | How you guide a partner or customer to adopt an LLM product using GCP or cloud offerings — governance, enablement, rollout.                                                      |
+
+### End-to-end solutioning (Scope → Design → Deploy → Communicate)
+
+Use this flow to answer hypotheticals in a structured way. It matches the recruiter themes: define business requirements and metrics, loop in stakeholders, design the flow (RAG, serverless vs microservice), POC→prod, and communicate to different audiences.
+
+| Phase           | What you do                                                                                                                                                                                                                                                                | Recruiter themes                                                              |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| **Scope**       | Define **business requirements**, **success criteria**, **key metrics**. Identify **stakeholders** (eng, product, security, legal) and what they care about. Ask **clarifying questions**: already on GCP vs first-time migration vs hybrid? Timeline, budget, compliance? | Loop in stakeholders; define clear business requirements and relevant metrics |
+| **Design**      | Choose **architecture** (RAG vs other, agent vs single call); **hosting** (serverless vs microservice on GCP/Cloud); data flow, APIs, guardrails. Tie to §1–§10 (this guide).                                                                                              | Design the flow (RAG); build on serverless vs microservice                    |
+| **Deploy**      | **POC** first: validate use case, success criteria, one clear metric. Then **production**: reliability, scale, guardrails, observability. Call out timeline and budget trade-offs.                                                                                         | POC to prod                                                                   |
+| **Communicate** | **CxO**: high-level value, risk, cost, timeline; no jargon. **Product/technical**: open-source vs managed LLMs, RAG flow, serverless vs microservice, metrics. **Present to live customer**: professional, confirm timeline/budget and constraints.                        | Explain for non-technical (CxO) vs Product; present solution to customer      |
 
 ---
 
-*For foundational system design concepts, see [System Design Essentials](./system-design-essentials.md).*
+**Example A: Customer wants GenAI for support (end-to-end)**
 
-*Last updated: January 2026*
+**Scenario:** A retail customer wants to add an AI chatbot for customer support. They’re considering GCP but haven’t committed.
+
+**Task:** Show how you’d take them from idea to production and present the solution.
+
+**Action (Scope → Design → Deploy → Communicate):**
+
+- **Scope:** I’d ask: Are you already on GCP or first-time migration or hybrid? What’s the timeline and budget? Who owns success — support team, product, eng? I’d define **business requirements**: deflect X% of tier-1 tickets, answer from knowledge base + order lookup, escalate to human when needed. **Metrics**: deflection rate, CSAT, resolution time, cost per conversation. I’d **loop in stakeholders**: eng (architecture), product (scope), security (PII, compliance), legal (terms), support (escalation flow).
+- **Design:** I’d propose **RAG + agent** (knowledge base + order/ticket tools + escalate) on **GCP**: **Vertex AI** (Gemini) + **Vertex RAG Engine** or **Vertex AI Search** for the knowledge base; **Cloud Run** or **GKE** for the API — **serverless** (Cloud Run) if traffic is spiky and we want low ops, **microservices** (GKE) if we need more control and multiple services. Guardrails: **Model Armor**, input/output filters, PII handling. (Details: §11 Example 2.)
+- **Deploy:** **POC** (4–6 weeks): one channel (e.g. web), one knowledge domain, success = deflection rate and CSAT on a pilot. Then **production**: add channels, scale, observability (traces, evals), and runbooks. I’d call out **timeline** (e.g. POC 6 weeks, prod 3 months) and **budget** (LLM cost, infra, labor) so the customer can plan.
+- **Communicate:** For **CxO**: “We’ll reduce tier-1 load by X%, improve CSAT, with clear cost and timeline; we’ll start with a POC to de-risk.” For **Product**: “RAG over your docs + tools for orders/tickets; we can go serverless on Cloud Run or microservices on GKE depending on scale.” For the **live customer**: present the flow (Scope → Design → Deploy), show a simple diagram, confirm timeline and budget, and ask what they’d want to see in a follow-up.
+
+**Result:** Clear requirements, metrics, and stakeholder alignment; a concrete design (RAG + agent, GCP, serverless vs microservice); a POC→prod path with timeline and budget; and messaging that fits CxO vs Product vs customer.
+
+**Future thinking:** I’d plan for **Agent Assist** and **Conversational Insights** when they add live agents; revisit model choice and routing as traffic grows (§7).
+
+---
+
+**Example B: Public partner adopting LLM on GCP (end-to-end)**
+
+**Scenario:** A public-sector or large partner wants to adopt an LLM-based product using GCP. You’re leading the engagement.
+
+**Task:** Describe your approach from first contact to production and how you’d present it.
+
+**Action (Scope → Design → Deploy → Communicate):**
+
+- **Scope:** I’d ask **clarifying questions**: Are they already on GCP or first-time migration or hybrid? What’s the primary use case (internal knowledge search, citizen-facing Q&A, document processing)? Timeline, budget, and **compliance** (data residency, audit)? I’d define **business requirements** and **metrics** (e.g. time to answer, accuracy, cost per query). I’d **loop in stakeholders**: their IT (infra, security), business owners (use case), procurement (budget); our side: solutions, eng, legal. I’d align on **governance** and **responsible AI** (fairness, safety, explainability) early.
+- **Design:** I’d recommend **GCP** (Vertex AI, RAG Engine or Vertex AI Search, optional **Gemini Enterprise** for internal knowledge workers). **Serverless** (Cloud Run + Vertex) for fast time-to-value and lower ops; **microservices** if they need strict isolation, custom pipelines, or multi-region. I’d include **guardrails** (Model Armor), **access control** (IAM, VPC), and **audit** (Cloud Audit Logs). For “design the flow”: RAG for domain data, agent only if they need tools (APIs, DBs).
+- **Deploy:** **POC** (6–8 weeks): one use case, one data source, success = accuracy and user satisfaction. Then **production**: scale, SLAs, monitoring, and handover. I’d be explicit about **timeline** and **budget** (licenses, infra, services) and any dependency on their teams (data, access).
+- **Communicate:** For **CxO**: “We’ll deliver a pilot in X weeks with clear success criteria; then we scale with your governance and compliance in mind.” For **technical**: “Vertex AI + RAG; serverless vs microservice trade-offs; we’ll document the architecture and runbooks.” For the **live customer**: present the end-to-end plan (Scope → Design → Deploy), one-page diagram, timeline and budget, and next steps; ask about their decision process and any blockers.
+
+**Result:** Partner has a clear path (scope, design, deploy) with stakeholder alignment, compliance in mind, and messaging for leadership vs technical; you’ve demonstrated consultative skills and structure.
+
+**Future thinking:** I’d plan for **feedback loops** (evals, user feedback) and **iteration** (model upgrades, new data sources); consider **Gemini Enterprise** or **NotebookLM Enterprise** if they need internal knowledge discovery later.
+
+---
+
+**Aha:** End-to-end solutioning = **Scope** (requirements, metrics, stakeholders, clarifying questions) → **Design** (RAG/agent, serverless vs microservice, GCP/Cloud) → **Deploy** (POC then prod, timeline, budget) → **Communicate** (CxO vs Product vs live customer). Use Examples A and B as templates; swap in your own scenarios and tie to §1–§11.
+
+### How this addresses each question (tangible mapping)
+
+Below, each **recruiter question or theme** is mapped to **where** you answer it in this section and **what you can say** in a concrete way. Use this as a cheat sheet when practicing.
+
+| Question / theme                                                                                  | Where it's addressed                                                                                             | What you can say (tangible)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **"How would you showcase GenAI to a customer?"**                                                 | Example A, **Communicate** (live customer); Example B, **Communicate** (live customer)                           | "I'd present the flow Scope → Design → Deploy, show a one-page diagram, confirm **timeline** and **budget** explicitly, and ask what they'd want to see in a follow-up. I'd ask the interviewer to clarify timeline and budget constraints so I can tailor the proposal."                                                                                                                                                                                                                                                                                                                                                       |
+| **"How would you loop in stakeholders?"**                                                         | Example A, **Scope**; Example B, **Scope**                                                                       | "I'd identify **eng** (architecture), **product** (scope), **security** (PII, compliance), **legal** (terms), **support** (escalation). For a partner I'd add their IT, business owners, procurement and our solutions, eng, legal. I'd align on what each cares about **before** design so we don't surprise anyone."                                                                                                                                                                                                                                                                                                          |
+| **"Explain for non-technical (CxO) vs Product"**                                                  | Example A, **Communicate**; Example B, **Communicate**; **Adapt to audience** (above)                            | "**CxO:** 'We'll reduce tier-1 load by X%, improve CSAT, with clear cost and timeline; we'll start with a POC to de-risk.' **Product:** 'RAG over your docs plus tools for orders/tickets; we can go serverless on Cloud Run or microservices on GKE depending on scale and control.' I avoid jargon with CxO; I go into RAG, serverless vs microservice, and metrics with Product."                                                                                                                                                                                                                                            |
+| **"Open-source LLMs: pros/cons for Product vs high-level for CxO"**                               | **Adapt to audience** (above); Design in both examples                                                           | "**CxO:** high-level value, risk, cost, timeline—no mention of RAG or serverless unless they ask. **Product:** open-source LLMs—**pros:** control, cost, customization; **cons:** ops, security, model updates. I'd recommend **managed** (Vertex, Bedrock) for faster time-to-value and enterprise support unless they have a strong reason to self-host."                                                                                                                                                                                                                                                                     |
+| **"Scope, Design, Deploy; define business requirements, metrics, communicate to stakeholders"**   | End-to-end **table**; Example A and B, **all four phases**                                                       | "I follow **Scope → Design → Deploy → Communicate**. In **Scope** I define business requirements (e.g. deflect X% of tier-1 tickets, answer from knowledge base + order lookup, escalate when needed), **metrics** (deflection rate, CSAT, resolution time, cost per conversation), and **loop in stakeholders** and what they care about. In **Communicate** I tailor the message to CxO vs Product vs live customer."                                                                                                                                                                                                         |
+| **"How would you lead a public partner's use of LLM on GCP?"**                                    | **Example B**, full flow                                                                                         | "I'd ask **clarifying questions** first: already on GCP or first-time migration or hybrid? Primary use case? Timeline, budget, **compliance** (data residency, audit)? I'd **loop in** their IT, business owners, procurement and our solutions, eng, legal. I'd recommend **GCP** (Vertex AI, RAG Engine or Vertex AI Search, optional Gemini Enterprise), **serverless** for fast time-to-value or **microservices** for isolation. **POC** 6–8 weeks, one use case, then production. I'd **present** the plan with a one-page diagram, timeline, budget, and next steps, and ask about their decision process and blockers." |
+| **"What is your approach from POC to production?"**                                               | Example A, **Deploy**; Example B, **Deploy**                                                                     | "**POC first:** one use case, one channel or one data source, **4–8 weeks**, success = **one clear metric** (e.g. deflection rate, CSAT, or accuracy). Then **production:** add channels, scale, guardrails (Model Armor), observability (traces, evals), runbooks. I'd call out **timeline** (e.g. POC 6 weeks, prod 3 months) and **budget** (LLM cost, infra, labor) so the customer can plan."                                                                                                                                                                                                                              |
+| **"Design the flow (RAG) or build the application on serverless vs microservice"**                | Example A, **Design**; Example B, **Design**                                                                     | "**Flow:** I'd choose **RAG** when the model lacks domain knowledge or data changes often; **agent** when we need tools (orders, tickets, APIs). On GCP: Vertex AI + RAG Engine or Vertex AI Search. **Hosting:** **Serverless** (Cloud Run) for spiky traffic and low ops; **microservices** (GKE) when we need more control, multiple services, or strict isolation. I'd state the trade-off so the customer can decide."                                                                                                                                                                                                     |
+| **"Present your solution to a live customer in a professional manner; consider timeline/budget"** | Example A, **Communicate** (live customer); Example B, **Communicate** (live customer); **Clarifying questions** | "I'd present **Scope → Design → Deploy** in order, show a **simple diagram** (e.g. user → gateway → agent/RAG → LLM → response), **confirm timeline and budget** explicitly—and I'd **ask** the interviewer or customer to clarify constraints so the proposal is realistic. I'd ask what they'd want to see in a follow-up and what their decision process looks like."                                                                                                                                                                                                                                                        |
+| **"Structure like STAR + future thinking"**                                                       | **Example A and B** (Scenario, Task, Action, Result, Future thinking)                                            | "I use **Scenario** (who, what they want), **Task** (what I'm being asked to do), **Action** (Scope → Design → Deploy → Communicate with concrete bullets), **Result** (what we get: clear requirements, design, path, messaging), and **Future thinking** (e.g. Agent Assist when they add live agents, or feedback loops and Gemini Enterprise for internal knowledge). I keep each phase to a few sentences so I don't run over time."                                                                                                                                                                                       |
+| **"Ask clarifying questions: e.g. already on GCP or first-time migration or hybrid?"**            | **Scope** in both examples; **Clarifying questions** list (below)                                                | "I'd ask: **Already on GCP or first-time migration or hybrid?** What's the **timeline** and **budget**? Who are the **key stakeholders** and what do they care about? For partners I'd add: **primary use case**, **compliance** (data residency, audit). I'd ask this **before** proposing a design so the solution fits their context."                                                                                                                                                                                                                                                                                       |
+
+**Domain-specific skills (leading from conflict, strategy, troubleshooting, consultative, advise clients, develop partnerships):** These show up in **how** you do Scope and Communicate—e.g. "I'd align stakeholders early to avoid conflict later"; "I'd set a clear strategy: POC first, then prod with defined success criteria"; "If the customer is stuck, I'd troubleshoot by clarifying requirements and constraints first"; "I'd advise the client to start with one use case and one metric"; "I'd develop the partnership by involving their IT and business owners in scope and design so they own the outcome." Use the same Scope → Design → Deploy → Communicate flow and plug in these behaviors.
+
+---
+
+**Clarifying questions you can ask (hypotheticals):**
+
+- Is the customer **already on GCP** or **first-time migration** or **hybrid**?
+- What are the main constraints — **timeline**, **budget**, **compliance**?
+- Who are the key stakeholders and what do they care about?
+
+**Questions to ask the interviewer (your 15 min):**
+
+- About **Google**: team mission, how GenAI is used in the org, culture.
+- About **teamwork**: how teams collaborate, how decisions are made, how conflict is handled.
+- **Other perspectives**: “What do successful candidates do well in this round?” or “What would you want me to know about this role?”
+
+**Aha:** RRK combines **system design** (this guide) with **hypotheticals** (STAR + future, audience-aware) and **consultative skills** (scope, stakeholders, POC→prod, present to customer). Prepare a few concrete stories where you defined requirements, designed or deployed something with LLMs, and communicated to different audiences.
+
+---
+
+_For foundational system design concepts, see [System Design Essentials](./system-design-essentials.md)._
+
+_Last updated: January 2026_
