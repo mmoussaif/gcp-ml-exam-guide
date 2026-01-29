@@ -576,8 +576,8 @@ Cost structure is different, not just "cheaper vs more expensive":
 
 | Approach                    | Cost model          | What you pay for                                                      | Example ballpark                                                                                  |
 | --------------------------- | ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **RAG**                     | **Per query**       | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ~$0.01-0.05 per query; 1M queries/month ≈ $10-50K                                                 |
-| **Fine-tuning (e.g. LoRA)** | **One-time**        | Training compute + data prep; then inference cost as usual            | ~$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
+| **RAG**                     | **Per query**       | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ≈$0.01-0.05 per query; 1M queries/month ≈ $10-50K                                                 |
+| **Fine-tuning (e.g. LoRA)** | **One-time**        | Training compute + data prep; then inference cost as usual            | ≈$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
 | **Full fine-tune**          | **One-time, large** | Full training run on your data                                        | $10K-100K+ depending on model size and data                                                       |
 
 **How to think about it:** RAG cost grows with **usage** (every query pays). Fine-tuning cost is **upfront**; after that, marginal cost per request is similar to the base model (or lower if you use a smaller fine-tuned model). Break-even depends on volume: at very high QPS, RAG can exceed the amortized cost of a one-time fine-tune; at low QPS, RAG is often cheaper than investing in fine-tuning.
@@ -1319,8 +1319,8 @@ At 1M requests/day: $375/day = $11,250/month
 | Model                            | Cost                 | Quality | Use For               |
 | -------------------------------- | -------------------- | ------- | --------------------- |
 | **Large (GPT-4, Gemini Ultra)**  | $0.03-0.06/1K output | Best    | Complex reasoning     |
-| **Medium (GPT-3.5, Gemini Pro)** | ~$0.002/1K output    | Good    | Most production tasks |
-| **Small (Gemini Flash)**         | ~$0.001/1K output    | Basic   | Simple, high-volume   |
+| **Medium (GPT-3.5, Gemini Pro)** | ≈$0.002/1K output    | Good    | Most production tasks |
+| **Small (Gemini Flash)**         | ≈$0.001/1K output    | Basic   | Simple, high-volume   |
 
 **Model Routing Strategies:**
 
@@ -1617,7 +1617,7 @@ _In an interview you’d start by clarifying what “good” looks like: how fas
 📊 **Rough estimation (code assistant)**
 
 - **Volume:** 50 completions per dev per day × 2K input + 50 output ≈ 100K input + 2.5K output tokens per dev/day. For 500 devs: **~50M input + 1.25M output tokens/day**.
-- **Cost (ballpark):** At ~$0.25/1M input and ~$0.50/1M output (small code model): 50 × 0.25 + 1.25 × 0.50 ≈ **$14/day** ≈ **$400/month** for LLM only. Caching and routing can cut this 30–50%.
+- **Cost (ballpark):** At ≈$0.25/1M input and ≈$0.50/1M output (small code model): 50 × 0.25 + 1.25 × 0.50 ≈ **$14/day** ≈ **$400/month** for LLM only. Caching and routing can cut this 30–50%.
 - **Latency budget (200 ms target):** Gateway < 10 ms, RAG (embed + retrieve) < 50 ms, LLM TTFT < 140 ms. So you need a small/fast model and a lean RAG path.
 
 **2. High-Level Architecture (10–15 min)**
@@ -1662,7 +1662,7 @@ _Here the user expects an answer that’s grounded in your docs and in real data
 📊 **Rough estimation (chatbot)**
 
 - **Volume:** 10K conversations/day × 5 turns × (3K input + 200 output) ≈ **150M input + 10M output tokens/day** (order of magnitude; adjust by real usage).
-- **Cost (ballpark):** At ~$0.50/1M input and ~$1.50/1M output (mid-tier chat model): 150 × 0.5 + 10 × 1.5 = 75 + 15 = **$90/day** ≈ **$2.7K/month** for LLM. Response cache (e.g. 20% hit rate) and routing simple queries to a smaller model can cut this 25–40%.
+- **Cost (ballpark):** At ≈$0.50/1M input and ≈$1.50/1M output (mid-tier chat model): 150 × 0.5 + 10 × 1.5 = 75 + 15 = **$90/day** ≈ **$2.7K/month** for LLM. Response cache (e.g. 20% hit rate) and routing simple queries to a smaller model can cut this 25–40%.
 - **Latency budget (4 s target):** Gateway < 50 ms, agent + RAG retrieval < 500 ms, tool calls 1–2 × 200 ms = 200–400 ms, LLM (first token) < 1 s, LLM (full) < 2 s. So RAG and tools must be fast; LLM carries most of the latency.
 
 **2. High-Level Architecture (10–15 min)**
@@ -1709,7 +1709,7 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 📊 **Rough estimation (content platform)**
 
 - **Volume (per article):** Research input ~20K tokens (snippets), draft input ~20K + output ~3K, grounding input ~25K. Total ≈ **68K tokens per article** (input-heavy). At 100 articles/day: **~6.8M tokens/day** (mix of Flash and Pro).
-- **Cost (ballpark):** Assume 70% on Flash (~$0.15/1M input, ~$0.60/1M output) and 30% on Pro (~$0.50/1M input, ~$1.50/1M output). Rough: 100 articles × (≈50K Flash + ≈18K Pro) → **~$15–25/day** ≈ **$500–750/month** for LLM. Caching research for similar briefs can cut 10–20%.
+- **Cost (ballpark):** Assume 70% on Flash (≈$0.15/1M input, ≈$0.60/1M output) and 30% on Pro (≈$0.50/1M input, ≈$1.50/1M output). Rough: 100 articles × (≈50K Flash + ≈18K Pro) → **≈$15–25/day** ≈ **$500–750/month** for LLM. Caching research for similar briefs can cut 10–20%.
 - **Latency (per article, ~60 s target):** Research 5–10 s (search API + optional summarization), draft 15–30 s (depends on length), grounding 10–20 s (retrieval + check), SEO 2–5 s. Bottleneck is usually the draft step; you can parallelize multiple research queries.
 
 **2. High-Level Architecture (10–15 min)**
