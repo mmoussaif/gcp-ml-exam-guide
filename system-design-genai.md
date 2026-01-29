@@ -143,7 +143,8 @@ Controls the "creativity" or randomness of the output by rescaling logits before
 
 _Use low temperature (0.1-0.3) for factual tasks, higher (0.7-1.0) for creative tasks._
 
-💡 **Aha:** Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
+> [!TIP]
+> 💡 **Aha:** Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
 
 **2. Top-p (Nucleus Sampling)**
 
@@ -153,7 +154,8 @@ Selects the smallest set of tokens whose cumulative probability mass reaches thr
 - **Low Top-p (0.1-0.5)**: Leads to more focused responses.
 - **Adaptive**: Unlike Top-K, adapts to the distribution's shape—in confident contexts, the "nucleus" is small.
 
-💡 **Aha:** Top-p says "consider only tokens that together account for probability mass _p_." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
+> [!TIP]
+> 💡 **Aha:** Top-p says "consider only tokens that together account for probability mass _p_." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
 
 **3. Top-K**
 
@@ -284,7 +286,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Benefit**: 2-3x higher throughput because GPU utilization increases from ~40% to ~85%.
 
-💡 **Aha:** With static batching, one long answer blocks the whole batch. Continuous batching **refills** the batch as soon as any request completes, so the GPU rarely idles. The "aha" is: treat the batch as a **queue**, not a fixed group.
+> [!TIP]
+> 💡 **Aha:** With static batching, one long answer blocks the whole batch. Continuous batching **refills** the batch as soon as any request completes, so the GPU rarely idles. The "aha" is: treat the batch as a **queue**, not a fixed group.
 
 **3. KV Cache Management**
 
@@ -406,7 +409,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | **GenAI on top**    | **Search summaries** (concise overview of results, doc summary, product comparison); **Answers and follow-ups** (natural-language Q&A over search results, with follow-up questions). |
 | **Enterprise**      | Access controls, analytics (search trends, user behavior), scalable APIs/SDKs for customer-facing search or internal knowledge bases.                                                 |
 
-💡 **Aha:** When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
+> [!TIP]
+> 💡 **Aha:** When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
 
 ### Chunking Strategy Trade-offs
 
@@ -418,7 +422,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Why chunking matters**: LLMs have context windows. Documents often exceed this, so we must break them into chunks. Smaller chunks improve retrieval precision—a query about "Python loops" matches better to a 500-token chunk about loops than a 5000-token document about Python.
 
-💡 **Aha:** Chunk size is a **precision vs context** trade-off. Too small → you retrieve the right idea but maybe miss surrounding explanation. Too large → you get more context but dilute relevance. Overlap and semantic boundaries help keep "one concept per chunk."
+> [!TIP]
+> 💡 **Aha:** Chunk size is a **precision vs context** trade-off. Too small → you retrieve the right idea but maybe miss surrounding explanation. Too large → you get more context but dilute relevance. Overlap and semantic boundaries help keep "one concept per chunk."
 
 ### Retrieval Strategy Trade-offs
 
@@ -432,7 +437,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via **RRF (Reciprocal Rank Fusion)** gives best results.
 
-💡 **Aha:** **Dense** = "these two _mean_ the same thing" (embedding similarity). **Sparse** = "these two _contain_ the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
+> [!TIP]
+> 💡 **Aha:** **Dense** = "these two _mean_ the same thing" (embedding similarity). **Sparse** = "these two _contain_ the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
 
 ### Reranking Trade-offs
 
@@ -442,7 +448,8 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ✅ **Best practice:** Retrieve K=20, rerank to top 5. The two-stage approach combines speed (bi-encoder retrieval) with accuracy (cross-encoder reranking).
 
-💡 **Aha:** **Bi-encoder** = query and doc are embedded _separately_; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the _pair_ and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
+> [!TIP]
+> 💡 **Aha:** **Bi-encoder** = query and doc are embedded _separately_; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the _pair_ and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
 
 ### Advanced RAG Techniques
 
@@ -458,7 +465,8 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **When to use:** Strong fit for domains rich in **entities and relations** (people, orgs, products, events) and questions that chain them. Overkill for unstructured long-form text with few named relations.
 
-💡 **Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things _connected_?” so the model can follow paths, not only similarity.
+> [!TIP]
+> 💡 **Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things _connected_?” so the model can follow paths, not only similarity.
 
 ---
 
@@ -470,7 +478,8 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **When to use:** When your traffic mixes **simple lookups** and **complex / multi-document** questions. Saves tokens and latency on easy queries and improves recall on hard ones.
 
-💡 **Aha:** One size doesn’t fit all: “What is the capital of France?” needs 1–2 chunks; “Compare the economic policies of France and Germany in the 1980s” needs many. Adaptive k tunes retrieval to each question.
+> [!TIP]
+> 💡 **Aha:** One size doesn’t fit all: “What is the capital of France?” needs 1–2 chunks; “Compare the economic policies of France and Germany in the 1980s” needs many. Adaptive k tunes retrieval to each question.
 
 ---
 
@@ -482,7 +491,8 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **When to use:** **Multi-part** or **comparison** questions, and whenever a single embedding tends to retrieve only one “side” of the answer. Adds latency (one LLM call to decompose, then multiple retrievals) but can significantly improve accuracy.
 
-💡 **Aha:** One query → one vector → one retrieval set often undersamples. Decomposing “How does A differ from B?” into “What is A?” and “What is B?” (and optionally “How do they differ?”) pulls in the right evidence for each piece, then the model synthesizes.
+> [!TIP]
+> 💡 **Aha:** One query → one vector → one retrieval set often undersamples. Decomposing “How does A differ from B?” into “What is A?” and “What is B?” (and optionally “How do they differ?”) pulls in the right evidence for each piece, then the model synthesizes.
 
 ---
 
@@ -494,7 +504,8 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 
 **When to use:** When **vocabulary mismatch** hurts recall (e.g. lay users vs technical docs, or one language vs translated corpus) and when you can afford one extra LLM call before retrieval. Less useful when queries already look like document sentences.
 
-💡 **Aha:** You’re searching with “what an answer would look like” instead of “what the question looks like.” The hypothetical doc is in the same “language” as your corpus, so similarity search works better.
+> [!TIP]
+> 💡 **Aha:** You’re searching with “what an answer would look like” instead of “what the question looks like.” The hypothetical doc is in the same “language” as your corpus, so similarity search works better.
 
 ---
 
@@ -629,7 +640,8 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 | You need **orchestration across systems** (APIs, DBs, search)                                   | You only need **retrieval + generation** (RAG) or pure generation             |
 | Decisions are **context-sensitive** and hard to encode as rules                                 | The flow is **deterministic** and easy to script                              |
 
-💡 **Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must _use_ external systems and _iterate_ based on what it sees.
+> [!TIP]
+> 💡 **Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must _use_ external systems and _iterate_ based on what it sees.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
@@ -706,7 +718,8 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 **CCaaS (Contact Center as a Service):** A full contact center needs 24/7 multichannel (phone, text, email), security and privacy, CRM integration, and **omnichannel** experience (consistent across web, app, phone, text). CCaaS provides the infrastructure: **simultaneous multichannel** communication, **channel switching**, **multimodal** interactions (text, voice, images), and **agent routing**. It integrates with **Conversational Agents** (automated support), **Agent Assist** (live-agent guidance), and **Conversational Insights** (analytics). When an interviewer asks “design a contact center” or “support voice and chat,” CCaaS + agents + Agent Assist + Insights is the product landscape to reference.
 
-💡 **Aha:** “Customer support” in system design often means: **conversational agent** (deterministic + generative hybrid) for self-service, **escalate-to-human** as a tool, and **Agent Assist** + **Insights** for when humans are in the loop. Full contact center = **CCaaS** plus these pieces.
+> [!TIP]
+> 💡 **Aha:** “Customer support” in system design often means: **conversational agent** (deterministic + generative hybrid) for self-service, **escalate-to-human** as a tool, and **Agent Assist** + **Insights** for when humans are in the loop. Full contact center = **CCaaS** plus these pieces.
 
 ### Enterprise knowledge workers (Gemini Enterprise)
 
@@ -727,7 +740,8 @@ This is the same "research → draft → grounding" pipeline (§11 Example 3) bu
 
 **Use case snapshot (advisor):** Retrieve and compare latest investment reports → attach **NotebookLM** client notes for tailored advice → agent evaluates research against client notes (e.g. finds portfolio lacks diversification) → upload spreadsheet, run through company risk calculator → Gemini drafts final client email. Combines **unified search**, **agent reasoning**, **tool use** (risk calculator), and **personalized context** (NotebookLM).
 
-💡 **Aha:** For "design support for internal knowledge workers," think **Gemini Enterprise**-style: agents + unified search across connected systems, **plan-verify-execute** for high-stakes research, **trusted sources only**, output = report + sources + optional audio. For "deep dive into this set of documents," think **NotebookLM Enterprise**.
+> [!TIP]
+> 💡 **Aha:** For "design support for internal knowledge workers," think **Gemini Enterprise**-style: agents + unified search across connected systems, **plan-verify-execute** for high-stakes research, **trusted sources only**, output = report + sources + optional audio. For "deep dive into this set of documents," think **NotebookLM Enterprise**.
 
 ### Agent Frameworks
 
@@ -755,7 +769,8 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 **Production note:** Prototyping in **Google AI Studio** (or similar) with system instructions is a good way to explore behavior. For **enterprise** agents you typically need more: **Conversational Agents** (or equivalent) for adversarial defense, tool wiring, guardrails, and observability.
 
-💡 **Aha:** The playbook (or system instructions) is the **contract** for your agent: goal + rules + optional tools. Define it first; metaprompting can help you generate it from a short brief (company, role, scope, constraints).
+> [!TIP]
+> 💡 **Aha:** The playbook (or system instructions) is the **contract** for your agent: goal + rules + optional tools. Define it first; metaprompting can help you generate it from a short brief (company, role, scope, constraints).
 
 ### Tool Types
 
@@ -768,7 +783,8 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 | **Data Stores**       | Agent-side  | Connect to vector DBs, knowledge bases                | RAG, real-time info            |
 | **Plugins**           | Agent-side  | Pre-built integrations (calendar, CRM)                | Rapid capability addition      |
 
-💡 **Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and _your app_ decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
+> [!TIP]
+> 💡 **Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and _your app_ decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
 
 ---
 
@@ -801,7 +817,8 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 
 **When it matters:** Use A2A when you run **multi-agent** or **cross-vendor** workflows (e.g. your agent hands off to a partner’s agent, or you compose agents from different platforms). It gives you a shared protocol for discovery, tasks, and security instead of one-off integrations.
 
-💡 **Aha:** **MCP** = “how does _this_ agent get its tools and context?” **A2A** = “how do _multiple_ agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
+> [!TIP]
+> 💡 **Aha:** **MCP** = “how does _this_ agent get its tools and context?” **A2A** = “how do _multiple_ agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
 
 ---
 
@@ -833,7 +850,8 @@ Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to co
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-💡 **Aha:** ReAct makes the reasoning **visible** (Thought) and **grounded** (Action → Observation). The model can’t wander off; each step is either "I think…" or "I do X" followed by real tool output. That reduces hallucination in tool use because the next thought is conditioned on actual observations.
+> [!TIP]
+> 💡 **Aha:** ReAct makes the reasoning **visible** (Thought) and **grounded** (Action → Observation). The model can’t wander off; each step is either "I think…" or "I do X" followed by real tool output. That reduces hallucination in tool use because the next thought is conditioned on actual observations.
 
 ### Agent Design Patterns
 
@@ -902,7 +920,8 @@ Multiple specialized agents, each with its own tools. **There is no single "boss
 | **Flow**                        | Emergent (handoffs, parallel, negotiate)                                                  | **Top-down**: Supervisor → assign step → Specialist → result → Supervisor         |
 | **When to use**                 | You want **peers** that hand off or run in parallel and someone (or the group) aggregates | You want **one conductor** that plans and delegates in sequence or in a clear DAG |
 
-💡 **Aha:** **Multi-agent** = "several agents, no single boss; they hand off or run in parallel." **Hierarchical** = "one boss (supervisor) that assigns tasks to specialists and gets results back; specialists don’t talk to each other." Use multi-agent when control should be shared or emergent; use hierarchical when one agent should own the plan and delegate.
+> [!TIP]
+> 💡 **Aha:** **Multi-agent** = "several agents, no single boss; they hand off or run in parallel." **Hierarchical** = "one boss (supervisor) that assigns tasks to specialists and gets results back; specialists don’t talk to each other." Use multi-agent when control should be shared or emergent; use hierarchical when one agent should own the plan and delegate.
 
 ---
 
@@ -981,13 +1000,15 @@ Beyond single-, multi-, and hierarchical agents, three common _orchestration sha
 | **Parallel Fan-out**    | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis, ensembles                 |
 | **Debate/Adversarial**  | Pro vs Con → Judge            | High-stakes decisions, red teaming, counterargument stress-test |
 
-💡 **Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
+> [!TIP]
+> 💡 **Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
 
 ### Context Engineering
 
 **The Problem**: As agents run longer, context (chat history, tool outputs, documents) **explodes**. Simply using larger context windows is not a scaling strategy.
 
-💡 **Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale _usage_ of context without scaling _size_ of every call.
+> [!TIP]
+> 💡 **Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale _usage_ of context without scaling _size_ of every call.
 
 **The Three-Way Pressure on Context:**
 
@@ -1092,7 +1113,8 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
    - **Tools:** **LangSmith** annotation queue, Label Studio, or internal tooling.
    - **Use:** Calibrate automated metrics (“at what faithfulness score do humans usually approve?”), build training data for task-specific judges, and categorize failure modes.
 
-💡 **Aha:** You don’t need gold labels for every request. **Reference-free** metrics (RAGAS faithfulness, answer relevancy, Phoenix hallucination) answer “is this grounded?” and “does this match the question?” without human annotations. Use them on a sample in production, then a **small human-labeled set** to set thresholds and sanity-check.
+> [!TIP]
+> 💡 **Aha:** You don’t need gold labels for every request. **Reference-free** metrics (RAGAS faithfulness, answer relevancy, Phoenix hallucination) answer “is this grounded?” and “does this match the question?” without human annotations. Use them on a sample in production, then a **small human-labeled set** to set thresholds and sanity-check.
 
 ---
 
@@ -1322,7 +1344,8 @@ Query → Small Model → Confident? → Return
 
 **Quality Estimation**: The key to routing—use a small classifier or confidence scores to predict which model can handle the query.
 
-💡 **Aha:** Routing and cascading both assume "hard" and "easy" queries. If you can **predict** hardness (e.g. by query length, intent, or a tiny classifier), you send easy ones to small/cheap models and reserve the big model for the rest. The leverage comes from that prediction being cheap and reasonably accurate.
+> [!TIP]
+> 💡 **Aha:** Routing and cascading both assume "hard" and "easy" queries. If you can **predict** hardness (e.g. by query length, intent, or a tiny classifier), you send easy ones to small/cheap models and reserve the big model for the rest. The leverage comes from that prediction being cheap and reasonably accurate.
 
 **4. Fine-tuning ROI**
 
@@ -1342,7 +1365,8 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 **Why FP16 is safe**: Modern **GPUs** (graphics processing units) have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
 
-💡 **Aha:** Weights don’t need 32-bit precision for good answers; most signal lives in a smaller range. Quantization **compresses** that range (FP32→FP16→INT8→INT4). You trade a little quality for large memory and speed gains. FP16 is the first step almost everyone takes because hardware is built for it and the drop is tiny.
+> [!TIP]
+> 💡 **Aha:** Weights don’t need 32-bit precision for good answers; most signal lives in a smaller range. Quantization **compresses** that range (FP32→FP16→INT8→INT4). You trade a little quality for large memory and speed gains. FP16 is the first step almost everyone takes because hardware is built for it and the drop is tiny.
 
 **6. Continuous Batching**
 
@@ -1790,7 +1814,8 @@ _Gen AI evolves quickly; no one stays an "expert" without adapting. This section
 
 **Plan for change:** Even when solutions work, be prepared to adapt. Technology and models change rapidly; customers and employees expect you to keep up. **Tips:** Regularly review and refine strategy based on latest advancements and org needs; stay informed (industry news, research, expert opinions); engage with the gen AI community (conferences, workshops, forums); invest in training and upskilling; attract and retain talent with a culture of learning and innovation.
 
-💡 **Aha:** Successfully leading with gen AI means **continuous learning and adaptation**. Set a clear strategic vision, stay flexible, refine strategy with data-driven insights, and foster a culture of learning. This guide gives you the technical foundation; strategy and planning help you apply it at scale.
+> [!TIP]
+> 💡 **Aha:** Successfully leading with gen AI means **continuous learning and adaptation**. Set a clear strategic vision, stay flexible, refine strategy with data-driven insights, and foster a culture of learning. This guide gives you the technical foundation; strategy and planning help you apply it at scale.
 
 ---
 
@@ -1883,8 +1908,8 @@ _Some roles use a **Role Related Knowledge** round that mixes GenAI system desig
 
 Use this flow to answer hypotheticals in a structured way. It matches the recruiter themes: define business requirements and metrics, loop in stakeholders, design the flow (RAG, serverless vs microservice), POC→prod, and communicate to different audiences.
 
-| Phase           | What you do                                                                                                                                                                                                                                                                | Recruiter themes                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Phase              | What you do                                                                                                                                                                                                                                                                | Recruiter themes                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | 🔷 **Scope**       | Define **business requirements**, **success criteria**, **key metrics**. Identify **stakeholders** (eng, product, security, legal) and what they care about. Ask **clarifying questions**: already on GCP vs first-time migration vs hybrid? Timeline, budget, compliance? | Loop in stakeholders; define clear business requirements and relevant metrics |
 | 🔷 **Design**      | Choose **architecture** (RAG vs other, agent vs single call); **hosting** (serverless vs microservice on GCP/Cloud); data flow, APIs, guardrails. Tie to §1–§10 (this guide).                                                                                              | Design the flow (RAG); build on serverless vs microservice                    |
 | 🔷 **Deploy**      | **POC** first: validate use case, success criteria, one clear metric. Then **production**: reliability, scale, guardrails, observability. Call out timeline and budget trade-offs.                                                                                         | POC to prod                                                                   |
@@ -1967,7 +1992,8 @@ Below, each **recruiter question or theme** is mapped to **where** you answer it
 - About **teamwork**: how teams collaborate, how decisions are made, how conflict is handled.
 - **Other perspectives**: “What do successful candidates do well in this round?” or “What would you want me to know about this role?”
 
-💡 **Aha:** RRK combines **system design** (this guide) with **hypotheticals** (STAR + future, audience-aware) and **consultative skills** (scope, stakeholders, POC→prod, present to customer). Prepare a few concrete stories where you defined requirements, designed or deployed something with LLMs, and communicated to different audiences.
+> [!TIP]
+> 💡 **Aha:** RRK combines **system design** (this guide) with **hypotheticals** (STAR + future, audience-aware) and **consultative skills** (scope, stakeholders, POC→prod, present to customer). Prepare a few concrete stories where you defined requirements, designed or deployed something with LLMs, and communicated to different audiences.
 
 ---
 
