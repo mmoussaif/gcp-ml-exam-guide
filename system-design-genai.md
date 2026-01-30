@@ -174,6 +174,90 @@ Modern GenAI uses four main algorithm classes. Each has different strengths:
 
 ---
 
+## Multimodal & Vision-Language Models
+
+Many GenAI tasks involve **multiple modalities** (text + image, text + video, etc.). Key architectures:
+
+### Image Encoders
+
+| Architecture | How it works | Pros | Cons | Examples |
+| ------------ | ------------ | ---- | ---- | -------- |
+| **CNN-based** | Convolutional filters detect patterns; output = feature grid | Fast; good for local patterns | Weak on long-range dependencies | ResNet, EfficientNet |
+| **Transformer-based (ViT)** | Patchify image → positional encoding → Transformer | Global attention; scales well | More compute; needs more data | ViT, CLIP, DINOv2 |
+
+**ViT (Vision Transformer) Process:**
+1. **Patchify**: Divide image into fixed patches (e.g., 256×256 → 16 patches of 64×64)
+2. **Flatten + Project**: Each patch → linear projection to embedding vector
+3. **Positional Encoding**: Add position info (1D or 2D)
+4. **Transformer**: Self-attention across patches → sequence of embeddings
+
+**Positional Encoding for Images:**
+
+| Type | How it works | Use case |
+| ---- | ------------ | -------- |
+| **1D** | Position in flattened sequence | Simple; may lose 2D spatial info |
+| **2D** | Row + column position | Preserves spatial structure |
+| **Learnable** | Learned during training | Task-optimized; may overfit |
+| **Fixed** (sine-cosine) | Computed from position | Generalizes to new sizes |
+
+### Encoder Output: Single Token vs Sequence
+
+| Output | Description | Pros | Cons |
+| ------ | ----------- | ---- | ---- |
+| **Single token** | Entire image compressed to one vector | Simple; less compute | Loses local details; generic captions |
+| **Sequence of tokens** | Each token = patch/region of image | Rich detail; works with cross-attention | More tokens; more memory |
+
+> [!TIP]
+> 💡 **Aha:** For **image captioning** and **VQA**, use **sequence output** (one embedding per patch). Cross-attention in the decoder can then focus on relevant image regions for each output word. Single-token outputs work for simple classification but lose detail for generation.
+
+### Vision-Language Models
+
+| Model | Architecture | Use Cases |
+| ----- | ------------ | --------- |
+| **CLIP** | Dual encoder (image + text); contrastive learning | Image-text similarity, zero-shot classification, filtering |
+| **ViT** | Image encoder (patches → Transformer) | Feature extraction, image classification |
+| **BLIP-2/BLIP-3** | Frozen image encoder + LLM + Q-Former bridge | Image captioning, VQA, multimodal chat |
+| **LLaVA** | ViT encoder + LLM decoder | Multimodal chat, image understanding |
+| **Gemini** | Native multimodal (image, text, audio, video) | General-purpose multimodal |
+
+### Image Captioning Architecture
+
+```
+Input Image → Image Encoder (ViT) → Sequence of Embeddings → Text Decoder (GPT-style) → Caption
+                                              ↓
+                                    Cross-Attention (decoder attends to image)
+```
+
+**Key components:**
+1. **Image Encoder**: ViT or CLIP encoder → sequence of patch embeddings
+2. **Text Decoder**: Decoder-only Transformer (GPT-2, LLaMA)
+3. **Cross-Attention**: Decoder attends to image embeddings at each generation step
+
+**Training:**
+1. **Pretrain encoder** (CLIP, ViT) on image classification or contrastive learning
+2. **Pretrain decoder** (GPT) on text
+3. **Finetune together** on image-caption pairs (next-token prediction, cross-entropy loss)
+
+### CIDEr Metric (Image Captioning)
+
+CIDEr (Consensus-based Image Description Evaluation) is designed specifically for image captioning:
+
+1. **TF-IDF representation**: Convert captions to vectors based on word importance
+2. **Cosine similarity**: Compare generated caption to each reference caption
+3. **Average**: Final score = mean similarity across all references
+
+| Metric | Focus | Best For |
+| ------ | ----- | -------- |
+| **BLEU** | N-gram precision | Translation, short text |
+| **ROUGE** | N-gram recall | Summarization |
+| **METEOR** | Precision + recall + synonyms | Translation with paraphrasing |
+| **CIDEr** | Consensus across multiple references | Image captioning |
+
+> [!TIP]
+> 💡 **Aha:** CIDEr rewards captions that match **multiple** reference captions (consensus). BLEU/ROUGE only compare to one reference at a time. For image captioning with 3–5 reference captions per image, CIDEr is the standard metric.
+
+---
+
 ## Using Models & Sampling Parameters
 
 Generative AI agents are powered by models that act as the "brains" of the operation. While models are pre-trained, their behavior during inference can be customized using **sampling parameters**—the "knobs and dials" of the model.
@@ -2459,6 +2543,84 @@ User Message → Safety Filter → Prompt Enhancer → Session Manager (add hist
 - **Meta LLaMA 3**: Open-source; 8B–405B params
 - **Anthropic Claude 3**: Strong safety; API-only
 - **Mistral/Mixtral**: Open-source; MoE architecture
+
+---
+
+### Example 7: Image Captioning System
+
+_Generate descriptive text for images. Multimodal: Image Encoder + Text Decoder with cross-attention. Applications: asset naming, alt-text, content moderation, recommendation cold-start._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Caption style** | Short (2–5 words) for file naming vs detailed (1–2 sentences) for alt-text | Affects training data and model output length |
+| **Image types** | General everyday images vs domain-specific (medical, technical) | Domain-specific needs specialized training data |
+| **Latency** | 1–2 seconds acceptable; not real-time | Can use larger encoder for quality |
+| **Minimum resolution** | 256×256 pixels minimum | Low-res images → unclear captions; reject or warn |
+| **Languages** | English-only or multilingual | Data and model requirements |
+| **Safety** | No biased or offensive captions | Post-processing filter required |
+| **Ambiguous images** | Skip suggestion if confidence low | Avoid bad suggestions; use confidence threshold |
+
+📊 **Rough estimation (image captioning)**
+
+- **Volume:** 10M image uploads/day; 50% trigger captioning = 5M captions/day = ~60 QPS.
+- **Compute per image:** Encoder ~100ms, decoder ~200ms (beam search) = ~300ms/image.
+- **Cost:** Self-hosted: ~$0.001–0.005/image. API (Gemini Vision): ~$0.01–0.05/image depending on size.
+- **Latency budget (1.5s):** Image preprocessing < 100ms, encoding < 300ms, decoding < 800ms, post-processing < 300ms.
+
+**2. High-Level Architecture (10–15 min)**
+
+```
+Input Image → Preprocessing (resize, normalize) → Image Encoder (ViT/CLIP) → Sequence of Embeddings
+                                                                                      ↓
+                                                          Text Decoder (GPT-style) + Cross-Attention
+                                                                                      ↓
+                                                          Beam Search → Confidence Check → Post-Processing → Caption
+```
+
+**Components:**
+
+1. **Image Preprocessing**: Resize to 256×256 (or 224×224), center-crop to preserve aspect ratio, normalize pixel values
+2. **Image Encoder**: ViT or CLIP encoder → sequence of patch embeddings (e.g., 16×16 patches → 256 embeddings)
+3. **Text Decoder**: Decoder-only Transformer with cross-attention to image embeddings
+4. **Beam Search**: Deterministic decoding (beam width 3–5) for consistent, high-quality captions
+5. **Confidence Check**: If cumulative probability < threshold, skip suggestion
+6. **Post-Processing**: Filter offensive words; replace biased terms with neutral alternatives
+
+**3. Deep Dive (15–20 min)**
+
+- **Image Encoder**: ViT-B/16 (16×16 patches); output = sequence of 196 embeddings (for 224×224 image). Pretrained on ImageNet or CLIP.
+- **Text Decoder**: GPT-2 or LLaMA (frozen or finetuned). Cross-attention layers attend to image embeddings.
+- **Training (Two-Stage)**:
+  1. **Pretrain encoder** (CLIP contrastive learning or ViT on ImageNet)
+  2. **Pretrain decoder** (GPT on web text)
+  3. **Finetune together** on image-caption pairs (400M pairs from LAION). ML objective = next-token prediction; loss = cross-entropy.
+- **Data Preparation**:
+  - **Caption**: Remove non-English, deduplicate (CLIP similarity), filter low-relevance (CLIP score < 0.25), summarize long captions (LLaMA), normalize, tokenize (BPE)
+  - **Image**: Remove low-res (<256×256), remove low-quality (LAION Aesthetics), resize + center-crop, normalize pixels
+- **Sampling**: Beam search (not top-p) for consistency and coherence. Stop at `<EOS>` or max 20 tokens.
+- **Evaluation**:
+  - Offline: **CIDEr** (consensus across references), **BLEU-4**, **METEOR**
+  - Online: **Engagement** (click-through on suggested names), **User edit rate** (how often users modify caption)
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Encoder output format**: Single token = fast but generic; sequence = detailed but more memory. Use sequence for quality.
+- **Caption length vs detail**: Short captions (2–5 words) for file naming; longer for alt-text. Train on appropriate data or add length control.
+- **Confidence threshold**: Too high = skip too many; too low = bad suggestions. Tune on validation set.
+- **Domain adaptation**: General model may fail on domain-specific images (medical, technical). Finetune on domain data if needed.
+- **Offensive content**: Model may generate biased or offensive captions. Post-processing filter + blocklist essential.
+- **Beam search vs creativity**: Beam search gives consistent, safe captions. For creative applications, consider top-p sampling.
+
+🛠️ **Stack snapshot:** ViT/CLIP encoder + GPT-2/LLaMA decoder + cross-attention + beam search + CLIP filtering for data + CIDEr/BLEU eval + post-processing filter.
+
+**Models to Consider:**
+- **BLIP-2**: Frozen image encoder + LLM + Q-Former bridge
+- **BLIP-3 (xGen-MM)**: Latest multimodal family; open-source
+- **LLaVA**: ViT + LLaMA; open-source; good for VQA too
+- **Gemini Vision API**: Managed service; easy integration
+- **Vertex AI Vision**: Image captioning as managed service
 
 ---
 
