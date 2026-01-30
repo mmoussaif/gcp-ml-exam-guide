@@ -14,26 +14,69 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 
 ## Table of Contents
 
-- [Introduction](#introduction)
-- [Visual Guide Map](#visual-guide-map) _(mermaid mind-map of the guide)_
-- [Glossary](#glossary) _(quick reference for key terms)_
-- [GenAI System: Big Picture (Frontend to Backend)](#genai-system-big-picture-frontend-to-backend)
-- [GenAI vs Traditional ML](#genai-vs-traditional-ml)
-- [Using Models & Sampling Parameters](#using-models--sampling-parameters)
-- [Google Generative AI Development Tools](#google-generative-ai-development-tools)
-- [1. LLM Serving Architecture](#1-llm-serving-architecture-at-scale)
-- [2. RAG Systems](#2-rag-retrieval-augmented-generation-system)
-- [3. RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework)
-- [4. Agentic AI Systems](#4-agentic-ai-systems) _(includes ADK)_
-- [5. LLM Evaluation & Quality](#5-llm-evaluation--quality)
-- [6. GenAI Data Pipeline](#6-genai-data-pipeline-architecture)
-- [7. Cost Optimization & Model Routing](#7-cost-optimization-for-genai-systems)
-- [8. Scalability Patterns](#8-scalability-patterns-for-genai)
-- [9. Monitoring & Observability](#9-monitoring--observability-for-genai)
-- [10. Security & Guardrails](#10-security--guardrails)
-- [11. Real-World Examples](#11-real-world-examples-applying-the-stack)
-- [Quick Reference](#quick-reference)
-- [Resources](#resources) _(at the end)_
+Use this numbered list to track your progress. Check off sections as you complete them.
+
+### Part A: Foundations (start here)
+
+| # | Section | Description | Status |
+|---|---------|-------------|--------|
+| A.1 | [Introduction](#introduction) | Why GenAI is different; how to use this guide | ☐ |
+| A.2 | [Visual Guide Map](#visual-guide-map) | ASCII diagram showing how sections connect | ☐ |
+| A.3 | [Glossary](#glossary) | 80+ terms organized by category | ☐ |
+| A.4 | [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend) | End-to-end request path and supporting systems | ☐ |
+| A.5 | [GenAI vs Traditional ML](#genai-vs-traditional-ml) | Key differences in architecture and operations | ☐ |
+| A.6 | [Using Models & Sampling](#using-models--sampling-parameters) | Temperature, top-p, top-k, and when to use each | ☐ |
+| A.7 | [Google GenAI Tools](#google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start | ☐ |
+
+### Part B: Core Deep Dives (the main content)
+
+| # | Section | Description | Status |
+|---|---------|-------------|--------|
+| **§1** | [LLM Serving Architecture](#1-llm-serving-architecture-at-scale) | Inference, batching, KV cache, vLLM, parallelism | ☐ |
+| **§2** | [RAG Systems](#2-rag-retrieval-augmented-generation-system) | Chunking, embeddings, vector DB, reranking, hybrid search | ☐ |
+| **§3** | [RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework) | When to use each; LoRA, PEFT, decision tree | ☐ |
+| **§4** | [Agentic AI Systems](#4-agentic-ai-systems) | ReAct, tools, multi-agent, ADK, orchestration | ☐ |
+| **§5** | [LLM Evaluation & Quality](#5-llm-evaluation--quality) | RAGAS, LLM-as-judge, human eval, A/B testing | ☐ |
+| **§6** | [GenAI Data Pipeline](#6-genai-data-pipeline-architecture) | Events, labeling, training data, feedback loops | ☐ |
+| **§7** | [Cost Optimization](#7-cost-optimization-for-genai-systems) | Token economics, model routing, caching strategies | ☐ |
+| **§8** | [Scalability Patterns](#8-scalability-patterns-for-genai) | Batching, parallelism, quantization, autoscaling | ☐ |
+| **§9** | [Monitoring & Observability](#9-monitoring--observability-for-genai) | Traces, metrics, drift detection, alerting | ☐ |
+| **§10** | [Security & Guardrails](#10-security--guardrails) | Model Armor, prompt injection, PII, content filters | ☐ |
+
+### Part C: Application (putting it together)
+
+| # | Section | Description | Status |
+|---|---------|-------------|--------|
+| **§11** | [Real-World Examples](#11-real-world-examples-applying-the-stack) | 11 complete system designs with estimations | ☐ |
+| | — Ex 1: LLM Service | High-throughput inference at scale | ☐ |
+| | — Ex 2: Support Chatbot | RAG + agents for customer service | ☐ |
+| | — Ex 3: Code Assistant | IDE integration, code generation | ☐ |
+| | — Ex 4: RAG Pipeline | Document Q&A with evaluation | ☐ |
+| | — Ex 5: Gmail Smart Compose | Real-time text prediction | ☐ |
+| | — Ex 6: Google Translate | Seq2seq, attention, serving at scale | ☐ |
+| | — Ex 7: ChatGPT Clone | Personal assistant architecture | ☐ |
+| | — Ex 8: Image Captioning | Vision + language models | ☐ |
+| | — Ex 9: RAG Deep Dive | Advanced retrieval patterns | ☐ |
+| | — Ex 10: Text-to-Image | Diffusion, CLIP, CFG, evaluation | ☐ |
+| | — Ex 11: Text-to-Video | LDM, temporal layers, FVD | ☐ |
+
+### Part D: Reference (use as needed)
+
+| # | Section | Description | Status |
+|---|---------|-------------|--------|
+| D.1 | [Strategy & Planning](#strategy-and-planning-for-integration-and-impact) | ROI, metrics, change management | ☐ |
+| D.2 | [Quick Reference](#quick-reference) | 45-min interview framework | ☐ |
+| D.3 | [Interview Checklist](#what-faang-interviewers-evaluate) | What interviewers look for | ☐ |
+| D.4 | [End-to-End Solutioning](#end-to-end-solutioning-and-rrk-skills) | Scope → Design → Deploy → Communicate | ☐ |
+| D.5 | [Resources](#resources) | Books, docs, links | ☐ |
+
+---
+
+**Suggested reading order:**
+1. **First pass (2-3 hours):** A.1–A.7 → skim §1–§10 headers → read §11 examples
+2. **Deep study (8-10 hours):** Work through §1–§10 in order, taking notes
+3. **Interview prep (2-3 hours):** D.2 Quick Reference → practice with §11 examples
+4. **Reference:** Use A.3 Glossary and D.5 Resources as needed
 
 ---
 
