@@ -236,6 +236,147 @@ L = E[log D(x)] + E[log(1 - D(G(z)))]
 > [!TIP]
 > 💡 **Aha:** FID and IS use ImageNet-trained Inception, which can introduce artifacts. **CLIP-based metrics** (e.g., CLIP-FID) often align better with human judgment. For face generation, **human evaluation** (pairwise comparison: "which looks more real?") is still the gold standard.
 
+### Diffusion Model Architecture
+
+Diffusion models iteratively denoise images. Two main architectures:
+
+**U-Net Architecture:**
+```
+Noisy Image → [Downsampling Blocks] → Bottleneck → [Upsampling Blocks] → Predicted Noise
+                      ↓                                    ↑
+              Conv2D → BatchNorm → ReLU            ConvTranspose2D → BatchNorm → ReLU
+              → MaxPool → Cross-Attention          → Cross-Attention (to text)
+```
+
+**DiT (Diffusion Transformer) Architecture:**
+```
+Noisy Image → Patchify → Positional Encoding → Transformer Blocks → Unpatchify → Predicted Noise
+                                    ↑
+                              Text Conditioning
+```
+
+| Architecture | How it works | Pros | Cons | Examples |
+| ------------ | ------------ | ---- | ---- | -------- |
+| **U-Net** | CNN-based; downsampling + upsampling with skip connections | Proven; efficient for images | Limited to fixed resolution | Stable Diffusion, Imagen |
+| **DiT** | Transformer-based; patches like ViT | Scales better; flexible | More compute | Sora, newer models |
+
+**Cross-attention in diffusion:** Queries from image features; keys/values from text embeddings. Allows text to guide noise prediction at each step.
+
+### Diffusion Training Process
+
+**Forward process (noise addition):**
+```
+x_0 (clean) → x_1 → x_2 → ... → x_T (pure noise)
+```
+- Add Gaussian noise at each step according to **noise schedule** (β₁ < β₂ < ... < βₜ)
+- Can compute x_t directly from x_0: `x_t = √(α'_t) * x_0 + √(1-α'_t) * ε`
+
+**Backward process (denoising):**
+```
+x_T (noise) → x_{T-1} → ... → x_1 → x_0 (clean)
+```
+- Model predicts noise ε at each step
+- Subtract predicted noise to get cleaner image
+
+**Loss function:** MSE between true noise and predicted noise:
+```
+L = E[||ε - ε_θ(x_t, t, text)||²]
+```
+
+| Component | Purpose |
+| --------- | ------- |
+| **Noise schedule** | Controls how much noise at each timestep (typically 1000 steps) |
+| **Timestep embedding** | Tells model current noise level |
+| **Text conditioning** | CLIP or T5 encodes prompt; cross-attention injects into model |
+
+### Diffusion Sampling Techniques
+
+| Technique | What it does | Benefit |
+| --------- | ------------ | ------- |
+| **DDPM** (original) | 1000 steps, predict noise at each | High quality; very slow |
+| **DDIM** | Deterministic; skip steps (1000 → 20–50) | Much faster; slight quality loss |
+| **Classifier-Free Guidance (CFG)** | Blend conditioned and unconditioned predictions | Better text alignment |
+
+**CFG formula:**
+```
+ε_guided = ε_uncond + w * (ε_cond - ε_uncond)
+```
+- w = guidance scale (typically 7–15)
+- Higher w = stronger text adherence, less diversity
+- w = 1 = no guidance; w > 1 = amplify text condition
+
+> [!TIP]
+> 💡 **Aha:** **CFG** is why "a cat on a skateboard" actually shows a cat on a skateboard. Without it, diffusion models often ignore parts of the prompt. The guidance scale w trades off **text fidelity** (high w) vs **image diversity** (low w).
+
+### Diffusion Training Challenges & Mitigations
+
+| Challenge | Problem | Mitigations |
+| --------- | ------- | ----------- |
+| **High memory** | Billions of params + high-res images | Mixed precision (FP16/BF16); gradient checkpointing |
+| **Slow training** | Many timesteps; large models | Data/model parallelism (FSDP, DeepSpeed) |
+| **Slow sampling** | 1000 steps per image | DDIM (20–50 steps); consistency models; distillation |
+| **High-res generation** | Directly training at 1024² is expensive | **Latent diffusion**: train in VAE latent space, then decode |
+
+**Latent Diffusion (Stable Diffusion approach):**
+1. Train VAE to compress images to latent space (64×64 instead of 512×512)
+2. Train diffusion model in latent space (much cheaper)
+3. Decode latent → high-res image
+
+**Super-resolution cascade:**
+```
+Prompt → Diffusion (64×64) → SR Model #1 (256×256) → SR Model #2 (1024×1024)
+```
+- Train base model at low resolution
+- Train separate super-resolution models to upscale
+- Faster training; easier to scale
+
+### Text-to-Image Inference Pipeline
+
+```
+User Prompt → [Prompt Safety] → [Prompt Enhancement] → [Text Encoder (CLIP/T5)]
+                    ↓                                           ↓
+               Reject if unsafe                          Text Embeddings
+                                                                ↓
+                                            [Diffusion Model + CFG] → [Harm Detection]
+                                                                           ↓
+                                                                  [Super-Resolution]
+                                                                           ↓
+                                                                     Final Image
+```
+
+| Component | Purpose |
+| --------- | ------- |
+| **Prompt auto-complete** | Suggest completions as user types |
+| **Prompt safety** | Text classifier rejects violence, NSFW, etc. |
+| **Prompt enhancement** | LLM expands "a dog" → "a golden retriever sitting on grass, sunny day..." |
+| **Text encoder** | CLIP or T5 converts text to embeddings |
+| **Diffusion model** | Generates image from noise + text embeddings |
+| **Harm detection** | Image classifier catches unsafe outputs |
+| **Super-resolution** | Upscales low-res output to target resolution |
+
+### CLIPScore for Image-Text Alignment
+
+**CLIP** (Contrastive Language-Image Pretraining):
+- Dual encoder: text encoder + image encoder
+- Trained to bring matching (image, text) pairs close in embedding space
+
+**CLIPScore:**
+```
+CLIPScore = cosine_similarity(CLIP_text(prompt), CLIP_image(generated_image))
+```
+- Higher = better alignment between generated image and prompt
+- Reference-free (no ground-truth image needed)
+- Standard metric for text-to-image evaluation
+
+| Evaluation aspect | Metric |
+| ----------------- | ------ |
+| **Image quality** | FID, IS, human eval |
+| **Image diversity** | IS (class spread), FID |
+| **Text alignment** | CLIPScore, human eval |
+
+> [!TIP]
+> 💡 **Aha:** For text-to-image, you need **both** quality metrics (FID) **and** alignment metrics (CLIPScore). A model could generate beautiful images that ignore the prompt (low CLIPScore, good FID) or follow the prompt but look bad (high CLIPScore, poor FID).
+
 ### Model Capacity: Parameters vs FLOPs
 
 **Model capacity** determines how much a model can learn. Two measures:
@@ -3027,6 +3168,95 @@ Training Data → Preprocess (resize, normalize, augment) → GAN Training Loop
 - **StyleGAN2-ADA**: Adaptive augmentation for limited data
 - **StyleGAN3**: Alias-free, better video generation
 - **NVIDIA pretrained models**: thispersondoesnotexist.com uses StyleGAN
+
+---
+
+### Example 10: Text-to-Image Generation System (like DALL-E, Stable Diffusion)
+
+_Generate images from text prompts. Diffusion-based approach with text conditioning, safety filtering, and super-resolution for high-quality output._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Output resolution** | 1024×1024 target | Train at lower res + super-resolution cascade |
+| **Prompt length** | Max 128 words | Text encoder context limit |
+| **Image types** | Landscapes, portraits, abstract, realistic | Diverse training data needed |
+| **Latency** | < 10 seconds per image | Diffusion steps + super-resolution |
+| **Training data** | 500M image-caption pairs | Quality and diversity; filtering critical |
+| **Languages** | English initially; extensible | Text encoder choice |
+| **Safety** | No violence, NSFW, harmful content | Prompt filter + output filter |
+| **Bias** | Fair across age, race, gender | Balanced training data; evaluation |
+
+📊 **Rough estimation (text-to-image)**
+
+- **Training data:** 500M image-caption pairs after filtering. LAION-style dataset.
+- **Training compute:** Large diffusion model (3B+ params): ~months on 256+ GPUs (A100).
+- **Inference:** 20–50 DDIM steps × ~50ms/step = 1–2.5s base. Super-resolution adds 0.5–1s. Total: ~2–4s on A100.
+- **Serving cost:** ~$0.01–0.05 per image depending on model size and hardware.
+
+**2. High-Level Architecture (10–15 min)**
+
+**Training Pipeline:**
+```
+Raw Data (images + captions) → Filtering (NSFW, quality, dedup) → Caption Enhancement (CLIP, BLIP-3)
+                                                                           ↓
+                                           Text Encoder (T5/CLIP) → Pre-compute + Cache Embeddings
+                                                                           ↓
+                                           Diffusion Training (U-Net or DiT) + Super-Resolution Training
+```
+
+**Inference Pipeline:**
+```
+User Prompt → Prompt Safety → Prompt Enhancement (LLM) → Text Encoder (T5)
+                                                              ↓
+                                   [Noise] + Text Embeddings → Diffusion Model (DDIM + CFG)
+                                                              ↓
+                                              64×64 → Super-Res #1 → 256×256 → Super-Res #2 → 1024×1024
+                                                              ↓
+                                                        Harm Detection → Final Image
+```
+
+**Components:**
+1. **Text Encoder**: T5 or CLIP; converts prompt to embeddings
+2. **Diffusion Model**: U-Net or DiT; predicts noise conditioned on text
+3. **Super-Resolution**: Cascade of 2–3 models to upscale
+4. **Safety Filters**: Prompt classifier + output image classifier
+
+**3. Deep Dive (15–20 min)**
+
+- **Data preparation**:
+  - Images: Remove small (<64×64), deduplicate, filter NSFW/low-aesthetic (LAION Aesthetics), resize + normalize
+  - Captions: Handle missing (generate with BLIP-3), filter low CLIP similarity, enhance short captions
+- **Architecture**: U-Net with cross-attention to text embeddings. Downsampling: Conv2D → BatchNorm → ReLU → MaxPool → Cross-Attention. Upsampling: ConvTranspose2D → BatchNorm → ReLU → Cross-Attention.
+- **Training**: Forward process adds noise; model predicts noise. Loss = MSE(true noise, predicted noise). Timestep embedding tells model noise level.
+- **Sampling**: DDIM (20–50 steps instead of 1000). CFG with guidance scale w=7–15 for text adherence.
+- **Super-resolution**: Train separate models. Base → 256×256 → 1024×1024. Each is a smaller diffusion model conditioned on low-res input.
+- **Evaluation**:
+  - Quality: **FID** (lower = better)
+  - Alignment: **CLIPScore** (higher = better)
+  - Diversity: **IS** (higher = better)
+  - Benchmark: **DrawBench** (curated prompts for comprehensive testing)
+  - Human eval: Pairwise comparison for photorealism and text alignment
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Quality vs speed**: More DDIM steps = higher quality, slower. 20–50 is typical trade-off.
+- **CFG guidance scale**: Higher w = better text adherence, less diversity. w=7–15 typical.
+- **Resolution vs cost**: Training at 1024² is expensive. Latent diffusion (Stable Diffusion) trains at 64×64 latent, decodes to 512×512—much cheaper.
+- **Training data quality**: Garbage in, garbage out. Heavy filtering (CLIP similarity, aesthetics) is critical.
+- **Safety vs usefulness**: Aggressive prompt filtering may block legitimate requests. Tune thresholds.
+- **Prompt enhancement**: Expands "a dog" → detailed description. Improves quality but adds latency.
+- **Latent diffusion trade-off**: Much faster training/inference, but VAE decoder may lose fine details. Pixel-space diffusion (Imagen) is higher quality but slower.
+
+🛠️ **Stack snapshot:** T5/CLIP text encoder + U-Net/DiT diffusion + DDIM sampler + CFG + super-resolution cascade + CLIP filtering (data) + FID/CLIPScore/DrawBench (eval) + prompt safety classifier + output harm detector.
+
+**Models to Consider:**
+- **Stable Diffusion**: Open-source; latent diffusion; 512×512 → 1024×1024
+- **DALL-E 3**: OpenAI; prompt understanding; API-only
+- **Imagen 3**: Google; pixel-space diffusion; high quality
+- **Midjourney**: Closed-source; artistic focus
+- **Adobe Firefly**: Commercial; trained on licensed data
 
 ---
 
