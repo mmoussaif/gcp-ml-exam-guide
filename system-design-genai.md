@@ -309,6 +309,69 @@ The Transformer architecture has three variations, each suited for different tas
 > [!TIP]
 > 💡 **Aha:** For **generation tasks** (chatbots, code completion, Smart Compose), use **decoder-only**. For **understanding tasks** (classification, entity extraction), use **encoder-only**. For **transformation tasks** (translation, summarization), use **encoder-decoder**.
 
+### Encoder-Decoder Architecture (for Seq2Seq)
+
+For tasks where input is **transformed** into output (translation, summarization), encoder-decoder is preferred:
+
+**Why encoder-decoder for translation?**
+1. **Separation of concerns**: Encoder specializes in understanding source language; decoder generates target language
+2. **Bidirectional encoding**: Encoder processes full input with bidirectional attention before generation starts
+3. **Cross-attention**: Decoder can focus on relevant parts of input during each output step
+4. **Variable-length I/O**: Naturally handles input/output of different lengths
+
+**Key difference: Cross-Attention**
+
+In encoder-decoder models, the decoder has an additional **cross-attention** layer that attends to encoder outputs:
+
+```
+Encoder: Input → Self-Attention → Encoder Output (context vectors)
+                                         ↓
+Decoder: Previous Output → Self-Attention → Cross-Attention (to encoder) → Prediction
+```
+
+- **Self-attention in encoder**: Each token attends to ALL tokens (bidirectional)
+- **Self-attention in decoder**: Each token attends only to PREVIOUS tokens (causal/masked)
+- **Cross-attention**: Each decoder token attends to ALL encoder outputs
+
+> [!TIP]
+> 💡 **Aha:** Cross-attention is the "bridge" between encoder and decoder. It lets the decoder ask "which parts of the input should I focus on for this output token?" For translation, generating "bonjour" attends heavily to "hello" in the encoder output.
+
+---
+
+## ML Objectives for Pretraining
+
+Different architectures use different pretraining objectives:
+
+| Architecture | Pretraining Objective | How it works |
+| ------------ | --------------------- | ------------ |
+| **Decoder-only** | Next-token prediction | Predict `x_i` given `x_1...x_{i-1}` |
+| **Encoder-only** | Masked Language Modeling (MLM) | Predict [MASK] tokens given surrounding context |
+| **Encoder-decoder** | MLM or Span Corruption | Mask spans in input; decoder predicts masked spans |
+
+### Masked Language Modeling (MLM)
+
+Used by BERT and encoder-decoder models (T5, BART). Randomly mask 15% of tokens; model predicts the originals.
+
+**Why MLM for encoder-decoder?**
+- Next-token prediction would let encoder "cheat" by encoding the answer
+- MLM forces encoder to build deep understanding without seeing the masked tokens
+- Decoder learns to generate based on incomplete information
+
+**Example:**
+```
+Input:  "Thank [MASK] for inviting [MASK]"
+Target: "you", "me"
+```
+
+**Span Corruption (T5 style):**
+```
+Input:  "Thank <X> inviting <Y>"  (masked spans)
+Target: "<X> you for <Y> me"
+```
+
+> [!TIP]
+> 💡 **Aha:** For **decoder-only** (GPT, Gemini), use **next-token prediction**. For **encoder-only** (BERT), use **MLM**. For **encoder-decoder** (T5), use **span corruption**. The objective shapes what the model learns.
+
 ---
 
 ## Two-Stage Training: Pretraining + Finetuning
@@ -387,6 +450,51 @@ After training, **sampling** generates new text from the model. Two main categor
 | **BLEU** | N-gram precision vs reference text | Geometric mean of n-gram precisions | **Higher** = better |
 | **ROUGE-N** | N-gram recall vs reference text | `(matching n-grams) / (reference n-grams)` | **Higher** = better |
 | **ROUGE-L** | Longest common subsequence with reference | LCS-based F1 score | **Higher** = better |
+| **METEOR** | Precision + recall with synonyms/stemming | Weighted harmonic mean with synonym matching | **Higher** = better |
+
+### Translation Metrics Deep Dive
+
+**BLEU (BiLingual Evaluation Understudy)** — Precision-focused
+
+`BLEU = BP × exp(Σ wn × log(pn))`
+
+- **pn** = n-gram precision (how many candidate n-grams appear in reference)
+- **BP** = Brevity Penalty (penalizes short translations)
+- **wn** = weight for each n-gram size (usually 1/N each)
+
+| Pros | Cons |
+| ---- | ---- |
+| Simple, fast to compute | Penalizes correct but different wording |
+| Widely used benchmark | No semantic understanding |
+| Correlates reasonably with human judgment | Exact match only |
+
+**ROUGE (Recall-Oriented Understudy for Gisting Evaluation)** — Recall-focused
+
+`ROUGE-N Recall = (matching n-grams) / (n-grams in reference)`
+
+- **ROUGE-1**: Unigram overlap
+- **ROUGE-2**: Bigram overlap
+- **ROUGE-L**: Longest Common Subsequence
+
+| Pros | Cons |
+| ---- | ---- |
+| Captures coverage of reference | No semantic understanding |
+| Good for summarization | Exact match only |
+
+**METEOR (Metric for Evaluation of Translation with Explicit ORdering)** — Semantic-aware
+
+- Considers **synonyms** (via WordNet) and **stemming** (run ≈ running)
+- Combines precision and recall with weighted harmonic mean
+- Penalizes fragmented matches
+
+| Pros | Cons |
+| ---- | ---- |
+| Semantic understanding | Computationally expensive |
+| Better correlation with human judgment | Requires linguistic resources |
+| Handles paraphrasing | Language-dependent resources |
+
+> [!TIP]
+> 💡 **Aha:** Use **BLEU** for quick benchmarking (translation). Use **ROUGE** for summarization. Use **METEOR** when you need semantic matching but can afford the compute. In production, **human evaluation** is still the gold standard.
 
 ### Online Metrics
 
@@ -2055,6 +2163,89 @@ User Typing → Triggering Service → Phrase Generator (Beam Search) → Filter
 - **Triggering sensitivity**: Trigger too often = annoying; too rarely = missed opportunities. A/B test threshold.
 
 🛠️ **Stack snapshot:** Small decoder-only Transformer (distilled) + on-device serving (TFLite, Core ML) or edge (Cloud Run, Lambda@Edge) + beam search + rule-based post-processing + Perplexity/ExactMatch@N eval + acceptance rate monitoring.
+
+---
+
+### Example 5: Language Translation Service (like Google Translate)
+
+_Sequence-to-sequence transformation: source language → target language. Uses encoder-decoder architecture with cross-attention. Key decisions: bilingual vs multilingual models, language detection, and handling named entities._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Languages** | How many? Start with 4 (English, Spanish, French, Korean). Plan for 130+. | Bilingual = N×(N-1) models; multilingual = 1 model. Huge difference in complexity. |
+| **Input length** | Up to 1,000 words; longer documents chunked. | Affects context window, memory, latency. |
+| **Language detection** | Auto-detect source language (users may not know). | Need separate language detector component. |
+| **Latency** | P95 < 500 ms for short text; longer for documents. | Real-time for chat; async acceptable for documents. |
+| **Quality** | High accuracy; must handle idioms, grammar, named entities. | BLEU/METEOR benchmarks; user feedback loop. |
+| **Offline support** | Cloud-first; on-device for mobile (optional). | Cloud = larger models; on-device = smaller, quantized. |
+
+📊 **Rough estimation (translation service)**
+
+- **Volume:** 1B users × avg 2 translations/day = **2B translations/day** = ~23K QPS.
+- **Token budget:** Avg 50 words input → ~75 tokens; output similar. ~150 tokens/request.
+- **Cost (if external API):** 2B × 150 tokens = 300B tokens/day. At $0.10/1M = $30K/day. **Self-hosted is essential at this scale.**
+- **Latency budget (500 ms):** Language detection < 50 ms, encoding < 100 ms, decoding < 300 ms (beam search), post-processing < 50 ms.
+
+**2. High-Level Architecture (10–15 min)**
+
+```
+User Input → Language Detector → Translation Service (Encoder-Decoder + Beam Search) → Post-Processing → Output
+```
+
+**Components:**
+
+1. **Language Detector**: Encoder-only Transformer + classification head. Classifies input into N languages.
+2. **Translation Service**: Routes to appropriate model based on (source, target) pair.
+   - Option A: **Bilingual models** — One model per language pair (e.g., EN→FR, EN→ES). Higher quality, but N×(N-1) models.
+   - Option B: **Multilingual model** — Single model for all languages. Simpler, but may sacrifice quality.
+3. **Beam Search**: Deterministic decoding for consistent translations.
+4. **Post-Processing**: Handle named entities (restore placeholders), formatting, punctuation.
+
+**Architecture Choice: Encoder-Decoder**
+
+| Component | Why |
+| --------- | --- |
+| **Encoder** | Bidirectional attention; fully understands source before generating |
+| **Decoder** | Causal attention (masked); generates target one token at a time |
+| **Cross-Attention** | Decoder attends to encoder outputs; aligns source with target |
+
+**3. Deep Dive (15–20 min)**
+
+- **Tokenization**: Subword (BPE or SentencePiece) — handles multiple languages efficiently, ~50K–100K vocab.
+- **Named Entity Handling**: Replace entities (names, places, URLs) with placeholders before translation; restore after.
+  ```
+  Input:  "The California city, Burlingame, is named after Anson Burlingame."
+  Masked: "The ENTITY_1 city, ENTITY_2, is named after ENTITY_3."
+  Translate → then restore ENTITY_1 = California, etc.
+  ```
+- **Training (Two-Stage)**:
+  1. **Pretraining**: MLM (masked language modeling) on multilingual web corpus (C4, Wikipedia in all languages). Creates base model (e.g., T5, mT5, mBART).
+  2. **Finetuning**: Supervised on parallel sentence pairs (source, target). 300M+ pairs. ML objective = next-token prediction; loss = cross-entropy.
+- **Bilingual vs Multilingual**:
+  | Approach | Pros | Cons |
+  | -------- | ---- | ---- |
+  | **Bilingual** | Higher quality; easier to debug/improve per-pair | N×(N-1) models; expensive to maintain |
+  | **Multilingual** | Single model; transfer learning between languages | May sacrifice quality on low-resource pairs |
+- **Evaluation**:
+  - Offline: **BLEU** (precision), **METEOR** (semantic matching), **ROUGE** (recall)
+  - Online: **User feedback** (thumbs up/down), **Suggest edit rate**, **Engagement** (return usage)
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Bilingual vs Multilingual**: For 4 languages, 4×3 = 12 bilingual models is manageable. For 130 languages, multilingual is required (with specialized models for high-traffic pairs).
+- **Language detection accuracy**: Misdetection = wrong model = bad translation. Use high-confidence threshold; fallback to asking user.
+- **Named entities**: Without placeholder approach, model may mistranslate proper nouns ("California" → "Californie"). Placeholder approach adds complexity but improves quality.
+- **Long sequences**: 1,000 words may exceed context window. Chunk by sentence/paragraph, translate, reassemble.
+- **Latency vs quality**: Beam search with beam width 5 is slower but better than greedy. For real-time chat, use beam width 3 or speculative decoding.
+
+🛠️ **Stack snapshot:** Encoder-decoder Transformer (T5, mBART) + SentencePiece tokenization + beam search + language detector (encoder-only) + named entity placeholder system + BLEU/METEOR eval + user feedback loop.
+
+**Base Models to Consider:**
+- **Google T5/mT5**: Text-to-text framework; multilingual
+- **Meta mBART/NLLB (No Language Left Behind)**: Specialized for translation; 200+ languages
+- **Vertex AI Translation API**: Managed service (if not building from scratch)
 
 ---
 
