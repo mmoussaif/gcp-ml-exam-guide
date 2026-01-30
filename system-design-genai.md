@@ -935,6 +935,25 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 > [!TIP]
 > 💡 **Aha:** When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
 
+### Document Parsing
+
+Before chunking, PDFs and other documents must be **parsed** to extract text, tables, and images into a structured format the LLM can understand.
+
+| Approach | How it works | Pros | Cons | Tools |
+| -------- | ------------ | ---- | ---- | ----- |
+| **Rule-based** | Predefined rules based on layout patterns | Simple; fast | Brittle; fails on varied layouts | PyMuPDF, pdfplumber |
+| **AI-based** | Object detection + OCR to identify regions | Handles complex layouts; robust | Slower; needs more compute | Layout-Parser, Dedoc, Nougat |
+
+**AI-based parsing pipeline:**
+1. **Layout detection**: Object detection model identifies regions (paragraphs, tables, figures, headers)
+2. **Text extraction**: OCR extracts text from each region with correct reading order
+3. **Structured output**: Text blocks (coordinates, text, order) + non-text blocks (figure coordinates)
+
+**Managed services:** Google Cloud Document AI, Amazon Textract, PDF.co
+
+> [!TIP]
+> 💡 **Aha:** If your PDFs have **consistent templates** (e.g., invoices, forms), rule-based is faster and cheaper. If layouts **vary widely** (wiki pages, reports, mixed formats), use AI-based parsing—it's worth the extra compute.
+
 ### Chunking Strategy Trade-offs
 
 | Strategy                     | Pros                | Cons                    | Best For                |
@@ -942,6 +961,15 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | **Fixed-size (512 tokens)**  | Simple, predictable | May split concepts      | Uniform documents       |
 | **Semantic chunking**        | Preserves coherence | Complex, variable sizes | Complex content         |
 | **Hybrid (fixed + overlap)** | Balanced            | More storage            | Most production systems |
+
+**Chunking methods in practice:**
+
+| Method | Description | Tool example |
+| ------ | ----------- | ------------ |
+| **Length-based** | Split by character/token count | LangChain `CharacterTextSplitter` |
+| **Recursive** | Split by separators (paragraphs → sentences → words) with overlap | LangChain `RecursiveCharacterTextSplitter` |
+| **Regex-based** | Split on punctuation (., ?, !) for sentence-level chunks | Custom regex splitters |
+| **Structure-aware** | Split at element boundaries (headers, list items, code blocks) | `MarkdownHeaderTextSplitter`, `HTMLHeaderTextSplitter` |
 
 **Why chunking matters**: LLMs have context windows. Documents often exceed this, so we must break them into chunks. Smaller chunks improve retrieval precision—a query about "Python loops" matches better to a 500-token chunk about loops than a 5000-token document about Python.
 
@@ -973,6 +1001,57 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 > [!TIP]
 > 💡 **Aha:** **Bi-encoder** = query and doc are embedded _separately_; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the _pair_ and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
+
+### Approximate Nearest Neighbor (ANN) Algorithms
+
+At scale (millions of chunks), **exact nearest neighbor search** (O(N×D)) is too slow. ANN algorithms trade a small accuracy loss for sublinear search time (O(log N × D) or better).
+
+| Category | How it works | Pros | Cons | Examples |
+| -------- | ------------ | ---- | ---- | -------- |
+| **Tree-based** | Partition space by feature values; search relevant regions | Fast for low dimensions | Degrades in high dimensions (>20) | k-d tree, Annoy |
+| **LSH** (Locality-Sensitive Hashing) | Hash similar points to same bucket | Simple; fast | Lower recall; many hash tables needed | LSH, MinHash |
+| **Clustering-based** | Group vectors into clusters; search by centroid, then within cluster | Balances speed and recall | Cluster quality matters | IVF (FAISS), ScaNN |
+| **Graph-based** | Build proximity graph; navigate from coarse to fine levels | Best recall at high scale | More memory; complex index build | HNSW (Hierarchical Navigable Small World) |
+
+**Clustering-based retrieval (two-step):**
+1. **Inter-cluster**: Compare query to cluster centroids → select closest clusters
+2. **Intra-cluster**: Search only within selected clusters
+
+**HNSW (graph-based):**
+- Nodes = data points; edges = proximity links
+- Hierarchical layers: start at coarse top layer, descend to fine bottom layer
+- Navigate by following edges to closer nodes at each level
+
+**Frameworks:**
+- **FAISS** (Meta): IVF, PQ, HNSW; production-ready, GPU support
+- **ScaNN** (Google): Optimized quantization + HNSW
+- **Annoy** (Spotify): Tree-based; simple, read-only index
+- **Elasticsearch**: Vector similarity search with HNSW
+- **Managed**: Vertex AI Vector Search, Amazon OpenSearch, Pinecone, Weaviate, Qdrant
+
+> [!TIP]
+> 💡 **Aha:** For RAG at scale, **HNSW** (graph-based) is the default choice—best recall-latency trade-off. **IVF** (clustering) is good when you need to control index size. **Tree-based** and **LSH** are faster to build but lower recall for high-dimensional embeddings.
+
+### Query Expansion
+
+**Problem:** User queries are often short, ambiguous, or misspelled. Raw query embedding may not match relevant documents.
+
+**Solution:** Expand the query before embedding to improve retrieval.
+
+| Technique | How it works | When to use |
+| --------- | ------------ | ----------- |
+| **Query rewriting** | LLM rewrites query for clarity, fixes typos, expands acronyms | Always (cheap preprocessing) |
+| **HyDE (Hypothetical Document Embedding)** | LLM generates a hypothetical answer; embed that instead of raw query | Short queries; "what is X" questions |
+| **Query2Doc** | LLM generates pseudo-document with relevant terms | Conceptual queries; improve keyword coverage |
+| **Multi-query** | Generate N query variants; retrieve for each; merge results | High-stakes retrieval; cover more angles |
+
+**Query expansion pipeline:**
+```
+User Query → LLM (rewrite/expand) → Expanded Query → Embedding → Vector Search
+```
+
+> [!TIP]
+> 💡 **Aha:** **HyDE** is counterintuitive: instead of embedding the question "What is RAG?", you embed an LLM-generated answer "RAG is a technique that combines retrieval with generation..." The answer's embedding is often closer to relevant documents than the question's embedding.
 
 ### Advanced RAG Techniques
 
@@ -1040,6 +1119,78 @@ These techniques improve retrieval when plain “embed query → top‑k chunks�
 | **Adaptive Retrieval**  | Vary number of retrieved docs (k) by query complexity                                   | Mix of simple and complex questions              |
 | **Query Decomposition** | Split question into sub-questions; retrieve per sub-question; merge context             | Multi-part, comparison, “A vs B” style questions |
 | **HyDE**                | Generate hypothetical answer(s), embed those, search with that vector                   | Vocabulary mismatch between user and corpus      |
+
+---
+
+### RAFT: Retrieval-Augmented Fine-Tuning
+
+**Problem:** In RAG, retrieval isn't perfect—irrelevant documents (distractors) get included. Standard LLMs may be misled by these distractors and generate incorrect responses.
+
+**Solution:** **RAFT** (Retrieval-Augmented Fine-Tuning) trains the LLM to distinguish relevant ("golden") documents from distractors.
+
+**How it works:**
+1. **Document labeling**: Retrieved documents are labeled as relevant (golden) or irrelevant (distractors)
+2. **Joint training**: Finetune LLM on (query, mixed context, answer) where context includes both golden docs and distractors
+3. **Result**: Model learns to prioritize relevant content and ignore noise
+
+**Training data format:**
+```
+Query: "What year was the company founded?"
+Context: [Golden doc: "Acme Corp was founded in 1995..."] + [Distractor 1] + [Distractor 2]
+Answer: "The company was founded in 1995."
+```
+
+| Approach | Training data | LLM sees distractors | Performance |
+| -------- | ------------- | -------------------- | ----------- |
+| **Standard RAG** | None (use pretrained) | At inference only | Baseline |
+| **Golden-only FT** | Only relevant docs | No | Better on clean retrieval |
+| **RAFT** | Mix of golden + distractors | Yes (during training) | Best on noisy retrieval |
+
+**When to use RAFT:**
+- Retrieval quality is imperfect (often true in production)
+- Domain has many similar-looking documents that confuse the LLM
+- You can afford to finetune (need training data with relevance labels)
+
+> [!TIP]
+> 💡 **Aha:** RAFT is like training a student with "open-book exams" where some pages are irrelevant. The student learns to **find and use** the right pages while ignoring distractions. Standard finetuning is like "closed-book"—the student memorizes everything. RAFT produces LLMs that are robust to real-world noisy retrieval.
+
+---
+
+### RAG Evaluation: The Triad
+
+RAG evaluation has three dimensions—retrieval quality, generation faithfulness, and answer quality:
+
+```
+                    Query
+                   /     \
+                  /       \
+    Context Relevance    Answer Relevance
+          |                    |
+          v                    v
+      Retrieved ─────────── Generated
+       Context   Faithfulness   Response
+```
+
+| Metric | What it measures | How to evaluate |
+| ------ | ---------------- | --------------- |
+| **Context Relevance** | Did retrieval fetch the right documents? | Hit rate, MRR, NDCG, Precision@k |
+| **Faithfulness** | Is the response grounded in retrieved context? | LLM-as-judge ("is this claim in the context?") |
+| **Answer Relevance** | Does the response address the question? | LLM-as-judge ("does this answer the question?") |
+| **Answer Correctness** | Is the response factually correct? | BLEU/ROUGE vs reference; or human eval |
+
+**Faithfulness detection methods:**
+
+| Method | How it works | Accuracy | Latency |
+| ------ | ------------ | -------- | ------- |
+| **Self-consistency** | Sample N answers, check agreement | Moderate | High (N× calls) |
+| **NLI (entailment)** | Check if context entails each claim | High | +50–100ms |
+| **LLM-as-Judge** | "Is this claim supported by context?" | High | +100–200ms |
+| **Specialized models** | Fine-tuned faithfulness classifier | Highest | ~+50ms |
+
+**Tools:** RAGAS (faithfulness, answer relevancy, context precision/recall), TruLens (RAG triad), LangSmith (groundedness), Phoenix (hallucination evals), Vectara FaithJudge (specialized model).
+
+> [!TIP]
+> 💡 **Aha:** A RAG system can fail in three ways: (1) **retrieval failure** (didn't fetch relevant docs), (2) **grounding failure** (LLM made things up), (3) **relevance failure** (answered a different question). Evaluate all three—RAGAS metrics cover them in one framework.
 
 ---
 
@@ -2621,6 +2772,87 @@ Input Image → Preprocessing (resize, normalize) → Image Encoder (ViT/CLIP) �
 - **LLaVA**: ViT + LLaMA; open-source; good for VQA too
 - **Gemini Vision API**: Managed service; easy integration
 - **Vertex AI Vision**: Image captioning as managed service
+
+---
+
+### Example 8: Document Q&A System (like ChatPDF)
+
+_Answer employee questions using internal company documents (Wiki, PDFs, forums). This is the canonical RAG example: retrieve relevant chunks from a large corpus, then generate a grounded answer with citations._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Document types** | PDFs (text, tables, diagrams), Wiki pages, forum posts | Determines parsing strategy (rule-based vs AI-based) |
+| **Corpus size** | 5M pages; 20% annual growth | ANN algorithm choice; index size planning |
+| **Formats** | Single-column, double-column, mixed | AI-based parsing needed for varied layouts |
+| **Languages** | English-only or multilingual | Embedding model and LLM selection |
+| **Latency** | 2–5 seconds acceptable | Can afford reranking and larger models |
+| **Citations** | Must include document references | Need to track chunk provenance |
+| **Follow-ups** | Support multi-turn conversations | Session management in architecture |
+
+📊 **Rough estimation (Document Q&A)**
+
+- **Indexing scale:** 5M pages × 1500 chars/page ÷ (500 chunk - 200 overlap) ≈ 25M text chunks + 15M image chunks = **40M total chunks**.
+- **Volume:** 50K queries/day = ~0.6 QPS (low traffic); peak 10 QPS.
+- **Retrieval:** ANN search over 40M vectors at 768 dimensions. HNSW latency: ~5–20ms.
+- **Cost:** Embedding (one-time): 40M × 0.0001/1K tokens ≈ $4K. LLM per query: ~2K context × $0.001/1K tokens = $0.002/query → **$100/day** for LLM.
+
+**2. High-Level Architecture (10–15 min)**
+
+**Indexing Pipeline:**
+```
+PDF/Wiki → Document Parser (AI-based) → Chunks (text, tables, images)
+                                              ↓
+                                        Embedding Model (CLIP for text+images)
+                                              ↓
+                                        Vector Database (FAISS/Pinecone)
+```
+
+**Query Pipeline:**
+```
+User Query → Safety Filter → Query Expansion (optional)
+                                    ↓
+                              Text Encoder → ANN Search (HNSW) → Top-20 chunks
+                                                                      ↓
+                                                              Cross-Encoder Rerank → Top-5
+                                                                      ↓
+                                                              Prompt Engineering + LLM
+                                                                      ↓
+                                                              Response with Citations
+```
+
+**Components:**
+1. **Document Parser**: Layout-Parser or Google Document AI for varied PDF layouts
+2. **Chunking**: Recursive splitting (500 tokens, 200 overlap); preserve section boundaries
+3. **Embedding**: CLIP (shared text-image space) or text-embedding-004
+4. **Vector DB**: FAISS (self-hosted) or Vertex AI Vector Search (managed); use HNSW for scale
+5. **Reranker**: Cross-encoder (e.g., ms-marco-MiniLM) on top-20 → top-5
+6. **LLM**: Gemini or GPT-4 with retrieved context + citation instructions
+
+**3. Deep Dive (15–20 min)**
+
+- **Document Parsing**: AI-based (Layout-Parser) for mixed layouts. Extract text blocks with coordinates, tables as markdown, images as captions or CLIP embeddings.
+- **Chunking**: RecursiveCharacterTextSplitter with 500 char chunks, 200 overlap. Add metadata: page number, section header, document ID for citations.
+- **Indexing**: CLIP text encoder for text chunks; CLIP image encoder for figures. Store in shared embedding space for cross-modal retrieval.
+- **ANN**: HNSW (FAISS or Pinecone) for 40M vectors. Build time ~hours; query time ~10ms. IVF as fallback if index size is a concern.
+- **Query Expansion**: LLM rewrites query for clarity + generates HyDE hypothetical answer to improve retrieval.
+- **Retrieval**: Hybrid (dense + BM25) → RRF merge → cross-encoder rerank. Return top-5 with source metadata.
+- **Generation**: Prompt = system instructions + top-5 chunks (with doc IDs) + user query + "cite your sources". Top-p sampling, temperature 0.7.
+- **Evaluation**: RAGAS (faithfulness, answer relevancy, context precision/recall). Track citation accuracy manually on sample.
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Parsing accuracy vs speed**: AI-based parsing is slower but handles varied layouts. Batch parse offline; update index incrementally.
+- **Chunk size trade-off**: Smaller = more precise retrieval, less context per chunk. Larger = more context, may dilute relevance. 500 tokens + overlap is a good start.
+- **Index size vs recall**: HNSW has higher memory but best recall. IVF (clustering) uses less memory but requires tuning.
+- **Cross-modal retrieval**: CLIP aligns text and images, but image captions may be more reliable for search. Test both approaches.
+- **Citation accuracy**: LLM may cite wrong source or fabricate. Use structured output (source_id) and validate against retrieved chunks.
+- **Freshness**: Documents change; need incremental re-indexing pipeline. Delta updates or full rebuild on schedule.
+
+🛠️ **Stack snapshot:** Layout-Parser/Document AI + CLIP/text-embedding-004 + FAISS/Pinecone (HNSW) + LangChain RecursiveTextSplitter + cross-encoder rerank + Gemini/GPT-4 + RAGAS eval + citation validation.
+
+**RAFT consideration:** If retrieval is noisy (many similar docs), consider RAFT finetuning—train LLM on (query, mixed golden+distractor context, answer) to ignore irrelevant chunks.
 
 ---
 
