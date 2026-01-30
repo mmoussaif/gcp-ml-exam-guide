@@ -125,6 +125,53 @@ Understanding the fundamental differences between traditional ML systems and **G
 > [!TIP]
 > 💡 **Aha:** Traditional ML is "one input → one prediction." GenAI is "one prompt → a stream of tokens, each depending on the last." That shifts bottlenecks from GPU compute to memory (KV cache), latency (time-to-first-token vs total time), and cost (every token billed).
 
+### Generative Algorithm Classes
+
+Modern GenAI uses four main algorithm classes. Each has different strengths:
+
+| Algorithm | How it works | Strengths | Weaknesses | Best for |
+| --------- | ------------ | --------- | ---------- | -------- |
+| **VAE** (Variational Autoencoder) | Encode to latent space → decode back | Fast sampling, smooth latent space | Blurry outputs | Latent representations, simple generation |
+| **GAN** (Generative Adversarial Network) | Generator vs discriminator compete | Sharp, realistic outputs | Training instability, mode collapse | Face generation, image-to-image |
+| **Diffusion** | Learn to reverse noise → image | Highest quality, stable training | Slow sampling (many steps) | Text-to-image (DALL-E, Stable Diffusion, Imagen) |
+| **Autoregressive** | Predict next token given previous | Handles sequences, scales well | Sequential = slow; can't "look ahead" | LLMs (GPT, Gemini, Claude), text generation |
+
+> [!TIP]
+> 💡 **Aha:** In interviews, when asked "design a text-to-image system," diffusion is the default choice (quality). For LLMs/chatbots, autoregressive Transformers are the default. GANs are rarely used for new systems due to training instability; VAEs are used for latent representations (e.g., Stable Diffusion's VAE encoder).
+
+### Model Capacity: Parameters vs FLOPs
+
+**Model capacity** determines how much a model can learn. Two measures:
+
+| Measure | What it means | Example |
+| ------- | ------------- | ------- |
+| **Parameters** | Learnable weights in the model | GPT-4: ~1.8T params; Llama 3: 405B params; Gemini Ultra: ~1T params |
+| **FLOPs** | Floating-point operations per forward pass | Measures computational complexity, not just size |
+
+**Why this matters for interviews:** Larger models generally perform better but cost more to train and serve. Training cost scales with **FLOPs** (compute); serving cost scales with **parameters** (memory) and tokens.
+
+### Scaling Laws
+
+**Scaling laws** predict model performance from compute, data, and parameters—critical for planning large training runs.
+
+**OpenAI (2020):** Performance improves predictably with scale. Loss follows a power law:
+- More compute → lower loss
+- More data → lower loss
+- More parameters → lower loss
+
+**DeepMind Chinchilla (2022):** Many LLMs were **undertrained**. Optimal scaling: **data should scale linearly with model size**. A 70B model trained on 1.4T tokens outperforms a 280B model trained on 300B tokens.
+
+| Insight | Implication |
+| ------- | ----------- |
+| Scale matters more than architecture tweaks | Focus on data + compute, not micro-optimizations |
+| Data and parameters should scale together | Don't just make models bigger—feed them more data |
+| Compute-optimal training | Given a compute budget, there's an optimal (N, D) pair |
+
+**Inference-time scaling (2024+):** With models like GPT o1, researchers are exploring scaling at inference time (e.g., chain-of-thought, repeated sampling) to improve reasoning.
+
+> [!TIP]
+> 💡 **Aha:** When an interviewer asks "how would you improve this model?", scaling laws say: **more data and compute** often beat architecture changes. But for deployment, you often want **smaller models** (distillation, quantization) to reduce cost.
+
 ---
 
 ## Using Models & Sampling Parameters
@@ -1412,6 +1459,40 @@ _Cost_ impact of caching is in §7; here we focus on **throughput** impact: same
 | Response caching          | Near-instant for cache hits; frees GPU for other requests | Identical or near-identical queries |
 | Semantic caching          | Higher hit rate → more requests served from cache         | Similar queries (e.g. Q&A)          |
 
+### Training Efficiency Techniques
+
+Training large GenAI models (billions of parameters) requires specialized techniques. These also matter for **fine-tuning** in production.
+
+**1. Gradient Checkpointing**
+
+Instead of storing all activations during forward pass (memory-hungry), store only a subset and **recompute** the rest during backward pass. Trade-off: **2–3× less memory** for **~20% more compute**.
+
+**2. Mixed Precision Training (AMP)**
+
+Use **FP16** (16-bit) for most operations, **FP32** (32-bit) only where needed (e.g., loss scaling). Benefits:
+- **2× less memory** (weights + activations)
+- **2–3× faster** on modern GPUs (Tensor Cores)
+- Minimal quality loss with proper loss scaling
+
+**3. Distributed Training**
+
+| Technique | What it does | When to use |
+| --------- | ------------ | ----------- |
+| **Data Parallelism** | Same model on each GPU; split data across GPUs; sync gradients | Model fits in one GPU; large dataset |
+| **Model (Tensor) Parallelism** | Split layers/tensors across GPUs (e.g., split matrix multiply) | Single layer too large for one GPU |
+| **Pipeline Parallelism** | Different layers on different GPUs; micro-batch pipelining | Very deep models (many layers) |
+| **Hybrid (3D) Parallelism** | Combine data + tensor + pipeline | Training 100B+ parameter models |
+
+**4. ZeRO and FSDP**
+
+- **ZeRO** (Zero Redundancy Optimizer, Microsoft): Shards optimizer states, gradients, and parameters across GPUs to reduce memory redundancy.
+- **FSDP** (Fully Sharded Data Parallel, Meta/PyTorch): Similar to ZeRO; shards model parameters across GPUs and gathers them on-demand.
+
+Both enable training **larger models** on the same hardware by eliminating redundant copies.
+
+> [!TIP]
+> 💡 **Aha:** In interviews, if asked "how would you train a 70B model on 8 GPUs?", the answer combines: **FSDP or ZeRO** (shard parameters), **gradient checkpointing** (reduce activation memory), **mixed precision** (FP16), and possibly **pipeline parallelism** if layers are very large.
+
 ---
 
 ## 9. Monitoring & Observability for GenAI
@@ -1871,6 +1952,54 @@ Use this section to **prove technical ability** and to **design GenAI systems th
 | Dense vs Hybrid Search | Semantic matching          | + Keyword precision             |
 | Single vs Multi-Agent  | Simpler, faster            | More capable, modular           |
 | Sync vs Async Eval     | Immediate                  | Cost-effective                  |
+
+### Interview Talking Points by Stage
+
+Use these as prompts during each stage of a GenAI system design interview.
+
+**Clarifying Requirements:**
+- What is the business objective? (e.g., customer support, content creation, code assistance)
+- What are the system features that affect ML design? (e.g., multi-language, feedback loops)
+- What data is available? How large? Labeled or unlabeled?
+- What are the constraints? (cloud vs on-device, compute budget, compliance)
+- What is the expected scale? (users, requests/day, growth)
+- What are the latency and quality requirements? (real-time vs async, quality vs speed trade-off)
+
+**Framing as ML Task:**
+- What are the system's inputs and outputs? (text → text, text → image, etc.)
+- Which modalities? (text, image, audio, video)
+- Single model or multiple specialized models?
+- Which algorithm? (diffusion, autoregressive, VAE, GAN) — and why?
+
+**Data Preparation:**
+- Data sources and diversity?
+- Data sensitivity and anonymization needs?
+- Bias detection and mitigation?
+- Data quality filtering (noise, duplicates, inappropriate content)?
+- Preprocessing for model consumption (tokenization, embeddings)?
+
+**Model Development:**
+- Architecture options and trade-offs? (e.g., U-Net vs DiT for diffusion)
+- Training methodology? (pretraining → finetuning → alignment)
+- Training data for each stage?
+- Loss function(s) and ML objective?
+- Training challenges and mitigations? (stability, memory, compute)
+- Efficiency techniques? (gradient checkpointing, mixed precision, distributed training)
+- Sampling methods? (greedy, beam search, top-k, top-p) — pros/cons?
+
+**Evaluation:**
+- Offline metrics? (perplexity, BLEU, FID, RAGAS faithfulness, etc.)
+- Online metrics? (CTR, conversion, latency, engagement, retention)
+- Bias and fairness evaluation?
+- Robustness and adversarial testing?
+- Human evaluation methods? (A/B tests, expert reviews)
+
+**Overall System Design:**
+- What are all the system components? (model, preprocessing, filtering, postprocessing, upscaling)
+- Safety mechanisms? (NSFW filters, guardrails, Model Armor)
+- User feedback and continuous learning loops?
+- Scalability? (load balancing, distributed inference, model parallelism)
+- Security and privacy? (PII handling, adversarial defense, data leakage prevention)
 
 ### Role Related Knowledge (RRK) interview — structure and prep
 
