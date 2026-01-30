@@ -111,39 +111,95 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 ## Introduction
 
-**Why GenAI is different.** Traditional systems return deterministic results—same input, same output. GenAI systems are _probabilistic_: same prompt can yield different responses. They're also _expensive_ (cost per token), _slow_ (autoregressive generation), and _unreliable_ (hallucinations). Designing for these properties requires new patterns.
+### Why This Guide Exists
 
-**The unique challenges:**
+You're building with LLMs. Maybe it's a chatbot, a RAG system, an agent that calls APIs, or a pipeline that generates images. The technology is powerful—but designing reliable, cost-effective GenAI systems is hard.
 
-| Challenge | What makes it hard |
-| --------- | ------------------ |
-| **Token-by-token generation** | Sequential decoding; can't batch like traditional ML |
-| **Variable latency** | Output length determines response time |
-| **Memory explosion** | KV cache grows with context; long prompts = OOM |
-| **Cost at scale** | Every token costs money; 10M requests/day adds up |
-| **Hallucinations** | Model confidently generates false information |
-| **Agent loops** | Multi-step reasoning can spin forever or go off-track |
+**Traditional software is deterministic.** Same input → same output. You can test it, cache it, reason about it.
 
-**What this guide gives you:**
-- **Theory**: How LLMs, RAG, agents, diffusion, and pipelines actually work
-- **Practice**: Real stacks, estimations, and customer scenarios
-- **Application**: Interview frameworks and end-to-end examples
+**GenAI is different.** Same prompt → different response every time. Responses can be wrong (hallucinations), expensive (every token costs money), slow (seconds, not milliseconds), and unpredictable (agents can loop forever).
 
-_Legend: 💡 = key insight · 🔷 = end-to-end phases · 📊 = estimation · 🛠️ = stack snapshot · ✅ = best practice_
+This guide teaches you how to design for these realities.
 
-> [!TIP]
-> 💡 **Aha:** GenAI system design is different because you're optimizing for **non-determinism** (same prompt → different outputs), **token economics** (cost and latency scale with length), and **orchestration** (models + retrieval + tools), not just throughput of identical requests.
+---
 
-**How to read this guide:**
+### The Six Challenges of GenAI Systems
 
-1. **Start with the Visual Guide Map** (next section) to see how everything connects
-2. **Use the Glossary** when you hit unfamiliar terms
-3. **§§1–10** are **deep dives**: LLM serving → RAG → Fine-tuning → Agents → Evaluation → Data → Cost → Scale → Monitoring → Security
-4. **§11 Real-World Examples** show how to **apply** everything—concrete stacks, estimations, interview walkthroughs
-5. **Quick Reference** gives you the 45-minute interview framework
-6. **Resources** (at the end) point to official docs and further reading
+| Challenge | The Problem | What You'll Learn |
+| --------- | ----------- | ----------------- |
+| **Non-determinism** | Same prompt yields different outputs; hard to test and debug | Evaluation strategies (§5), guardrails (§10) |
+| **Token economics** | Cost and latency scale with input + output length | Cost optimization (§7), caching, model routing |
+| **Memory pressure** | KV cache grows with context; long prompts exhaust GPU memory | Serving architecture (§1), quantization (§8) |
+| **Hallucinations** | Model confidently states false information | RAG for grounding (§2), evaluation (§5) |
+| **Orchestration complexity** | Agents need tools, retrieval, and multi-step reasoning | Agentic systems (§4), ADK patterns |
+| **Scale unpredictability** | Variable output length makes capacity planning hard | Scalability patterns (§8), continuous batching |
 
-Each section builds on the previous. RAG (§2) needs serving (§1). Agents (§4) use RAG + tools. Evaluation (§5) applies to all. Cost (§7) and scale (§8) are cross-cutting. By the end, you can design a complete GenAI system and articulate trade-offs clearly.
+---
+
+### What You'll Get From This Guide
+
+| Layer | What's Covered | Sections |
+| ----- | -------------- | -------- |
+| **Theory** | How LLMs, RAG, agents, diffusion models, and training pipelines actually work | Parts C, D |
+| **System Design** | Architecture patterns for serving, retrieval, agents, evaluation, and operations | §1–§10 |
+| **Practice** | Real stacks, cost estimations, and complete system designs | §11 Examples |
+| **Interview Prep** | 45-minute framework, FAANG evaluation criteria, end-to-end solutioning | Part G |
+
+---
+
+### How to Use This Guide
+
+**If you're new to GenAI systems:**
+1. Start with the **Visual Guide Map** (next section) to see the big picture
+2. Read **Part B: System Overview** to understand the request path
+3. Work through **Part D: LLM Fundamentals** for theory
+4. Then dive into **§1–§10** for system design patterns
+
+**If you're preparing for interviews:**
+1. Skim the **Glossary** to ensure you know the terminology
+2. Read **§1–§4** (Serving, RAG, Fine-tuning, Agents) deeply
+3. Study 3–4 examples from **§11** and practice explaining them
+4. Use **Part G: Quick Reference** for the interview framework
+
+**If you're building a system now:**
+1. Find the closest example in **§11**
+2. Read the relevant deep-dive sections (§1–§10)
+3. Use the **Glossary** and **Resources** as needed
+
+---
+
+### Legend
+
+Throughout this guide, you'll see these markers:
+
+| Symbol | Meaning |
+| ------ | ------- |
+| 💡 | Key insight—something that clicks once you understand it |
+| 📊 | Estimation—rough numbers for capacity planning and cost |
+| 🛠️ | Stack snapshot—concrete tools and technologies |
+| ✅ | Best practice—what works in production |
+| 🔷 | End-to-end phase—part of a complete workflow |
+
+---
+
+### The Mental Model
+
+GenAI system design comes down to three things:
+
+```
+1. NON-DETERMINISM     →  How do you evaluate and control probabilistic outputs?
+2. TOKEN ECONOMICS     →  How do you manage cost and latency that scale with length?
+3. ORCHESTRATION       →  How do you combine models, retrieval, and tools?
+```
+
+Every section in this guide addresses one or more of these. By the end, you'll be able to:
+
+- **Design** a complete GenAI system (serving → RAG → agents → evaluation)
+- **Estimate** costs, latency, and capacity requirements
+- **Articulate** trade-offs clearly in interviews or architecture reviews
+- **Build** with real tools (Vertex AI, Bedrock, vLLM, LangChain, ADK)
+
+Let's start with the big picture.
 
 ---
 
