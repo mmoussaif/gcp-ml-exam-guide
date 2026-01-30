@@ -255,6 +255,155 @@ Google provides two primary environments for experimenting with and deploying Ge
 
 **Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications.
 
+---
+
+## Text Tokenization Strategies
+
+Tokenization converts raw text into numerical tokens the model can process. The choice of tokenization affects vocabulary size, model performance, and handling of unseen words.
+
+### Tokenization Levels
+
+| Level | How it works | Vocabulary Size | Pros | Cons |
+| ----- | ------------ | --------------- | ---- | ---- |
+| **Character** | Split into individual characters | ~100 | Small vocab; handles any word | Hard to learn semantics; slow (many tokens) |
+| **Word** | Split on whitespace/punctuation | ~300,000+ | Easy semantics; fewer tokens | Huge vocab; can't handle unseen words |
+| **Subword** | Frequent words stay whole; rare words split into subwords | ~50,000–150,000 | Best of both; handles unseen words | More complex algorithms |
+
+### Subword Algorithms (Industry Standard)
+
+| Algorithm | Used By | How it works |
+| --------- | ------- | ------------ |
+| **BPE** (Byte-Pair Encoding) | GPT-4, LLaMA | Iteratively merge most frequent character pairs |
+| **SentencePiece** | Gemini, T5 | Language-agnostic; works directly on raw text |
+| **WordPiece** | BERT | Similar to BPE; maximizes likelihood of training data |
+
+> [!TIP]
+> 💡 **Aha:** Subword tokenization solves two problems: (1) vocabulary explosion from word-level, and (2) semantic loss from character-level. "unhappily" becomes ["un", "happy", "ly"]—each subword has meaning the model can learn.
+
+---
+
+## Transformer Architectures
+
+The Transformer architecture has three variations, each suited for different tasks:
+
+| Variation | How it works | Best For | Examples |
+| --------- | ------------ | -------- | -------- |
+| **Encoder-only** | Processes entire input; outputs understanding/classification | Sentiment analysis, NER, classification | BERT, RoBERTa |
+| **Decoder-only** | Generates output token-by-token autoregressively | Text generation, chatbots, code completion | GPT-4, Gemini, LLaMA, Claude |
+| **Encoder-Decoder** | Encoder processes input; decoder generates transformed output | Translation, summarization | T5, BART |
+
+**Key Components of a Decoder-only Transformer:**
+
+1. **Text Embedding**: Converts token IDs to dense vectors (learned during training). Captures semantic similarity—"happy" and "joyful" are close in embedding space.
+
+2. **Positional Encoding**: Adds position information since attention is permutation-invariant.
+   - **Fixed** (sine-cosine): No extra parameters; generalizes to longer sequences
+   - **Learned**: Optimized for task; may overfit to training sequence lengths
+
+3. **Multi-Head Self-Attention**: Each token attends to all previous tokens (in decoder) or all tokens (in encoder). Multiple "heads" capture different relationship types.
+
+4. **Feed-Forward Network**: Two linear layers with ReLU; applied independently to each position.
+
+5. **Prediction Head**: Maps final embeddings to vocabulary probabilities for next-token prediction.
+
+> [!TIP]
+> 💡 **Aha:** For **generation tasks** (chatbots, code completion, Smart Compose), use **decoder-only**. For **understanding tasks** (classification, entity extraction), use **encoder-only**. For **transformation tasks** (translation, summarization), use **encoder-decoder**.
+
+---
+
+## Two-Stage Training: Pretraining + Finetuning
+
+Training LLMs directly on task-specific data is inefficient. Instead, use two stages:
+
+| Stage | Data | Purpose | Compute |
+| ----- | ---- | ------- | ------- |
+| **Pretraining** | Massive general data (web, books) | Learn language structure, grammar, world knowledge | Very expensive (weeks on 1000s of GPUs) |
+| **Finetuning** | Task-specific data (emails, code, medical) | Adapt to specific task, style, domain | Cheaper (hours to days on fewer GPUs) |
+
+**Benefits of Two-Stage Training:**
+
+- **Transfer learning**: Knowledge from pretraining transfers to finetuning
+- **Data efficiency**: Performs well even with limited task-specific data
+- **Reduced overfitting**: Pretraining acts as regularization
+- **Resource optimization**: Pretrain once, finetune for many tasks
+- **Fast adaptation**: Finetuning is much faster than training from scratch
+
+**ML Objective**: Next-token prediction (predict `x_i` given `x_1, ..., x_{i-1}`)
+
+**Loss Function**: Cross-entropy loss between predicted and actual next token
+
+> [!TIP]
+> 💡 **Aha:** You almost never train an LLM from scratch. You take a **pretrained base model** (GPT, LLaMA, Gemini) and **finetune** it on your domain data. This is why foundation models are so valuable—they encode billions of dollars of pretraining compute.
+
+---
+
+## Sampling Strategies for Text Generation
+
+After training, **sampling** generates new text from the model. Two main categories:
+
+### Deterministic vs Stochastic
+
+| Type | How it works | Pros | Cons | Best For |
+| ---- | ------------ | ---- | ---- | -------- |
+| **Deterministic** | Always pick highest probability token(s) | Consistent, reproducible | Repetitive, lacks diversity | Email completion, code, factual Q&A |
+| **Stochastic** | Sample from probability distribution | Diverse, creative | Inconsistent, may produce nonsense | Creative writing, dialogue, brainstorming |
+
+### Deterministic Methods
+
+| Method | How it works | Pros | Cons |
+| ------ | ------------ | ---- | ---- |
+| **Greedy Search** | Always pick the single highest-probability token | Simple, fast | Often repetitive; misses better sequences |
+| **Beam Search** | Track top-k sequences simultaneously; prune at each step | Better quality than greedy; finds coherent sequences | Computationally expensive; limited diversity |
+
+**Beam Search Example (beam width = 3):**
+1. Start with input → get top 3 next tokens
+2. For each of 3 sequences → get top 3 next tokens (9 candidates)
+3. Keep only top 3 sequences by cumulative probability
+4. Repeat until `<EOS>` or max length
+5. Return sequence with highest cumulative probability
+
+### Stochastic Methods
+
+| Method | How it works | Use Case |
+| ------ | ------------ | -------- |
+| **Random Sampling** | Sample according to full probability distribution | Maximum diversity |
+| **Top-K Sampling** | Sample only from top K tokens | Balance diversity and quality |
+| **Top-p (Nucleus)** | Sample from smallest set with cumulative probability ≥ p | Adaptive diversity |
+| **Temperature Scaling** | Adjust distribution sharpness before sampling | Control creativity |
+
+> [!TIP]
+> 💡 **Aha:** For **autocomplete** (Smart Compose, code completion), use **beam search** (deterministic, consistent). For **chatbots** and **creative generation**, use **Top-p + Temperature** (stochastic, diverse). The choice depends on whether users expect the same answer every time.
+
+---
+
+## Text Generation Evaluation Metrics
+
+### Offline Metrics
+
+| Metric | What it measures | Formula/Method | Lower/Higher is better |
+| ------ | ---------------- | -------------- | ---------------------- |
+| **Perplexity** | How "surprised" the model is by the test data | `exp(-1/N * Σ log P(x_i | x_{1:i-1}))` | **Lower** = better |
+| **ExactMatch@N** | % of N-word predictions that exactly match ground truth | `(correct N-word matches) / (total predictions)` | **Higher** = better |
+| **BLEU** | N-gram precision vs reference text | Geometric mean of n-gram precisions | **Higher** = better |
+| **ROUGE-N** | N-gram recall vs reference text | `(matching n-grams) / (reference n-grams)` | **Higher** = better |
+| **ROUGE-L** | Longest common subsequence with reference | LCS-based F1 score | **Higher** = better |
+
+### Online Metrics
+
+| Category | Metric | What it measures |
+| -------- | ------ | ---------------- |
+| **User Engagement** | Acceptance Rate | % of suggestions accepted by users |
+| | Usage Rate | % of sessions using the feature |
+| **Effectiveness** | Avg Completion Time | Time to complete task (with vs without feature) |
+| **Latency** | Response Time | Time for suggestion to appear after keystroke |
+| **Quality** | Feedback Rate | Rate of explicit user feedback |
+| | Human Evaluation | Expert ratings of output quality |
+
+> [!TIP]
+> 💡 **Aha:** **Perplexity** tells you how well the model predicts test data, but doesn't tell you if outputs are useful. **Online metrics** (acceptance rate, completion time) tell you if users actually benefit. Always measure both.
+
+---
+
 ### Google's Generative AI APIs
 
 Google's generative AI APIs offer pre-trained foundation models that can be fine-tuned for specific tasks:
@@ -1673,6 +1822,24 @@ Model Armor is Google Cloud's service for real-time input/output filtering on LL
 | **Access**          | IAM (identity and access management)         | IAM                            |
 | **Audit**           | Cloud Audit Logs                             | CloudTrail                     |
 
+### Post-Processing for Bias and Safety
+
+Beyond security threats, LLM outputs require **post-processing** to ensure they are unbiased, respectful, and appropriate. This is especially important for user-facing features like autocomplete, chatbots, and content generation.
+
+**Common Post-Processing Strategies:**
+
+| Strategy | What it does | Example |
+| -------- | ------------ | ------- |
+| **Pronoun Replacement** | Replace gender-specific pronouns with neutral alternatives | "he/she" → "they" when gender unknown |
+| **Gender-Neutral Words** | Replace gendered terms with neutral equivalents | "chairman" → "chairperson", "policeman" → "police officer" |
+| **Sensitive Term Filtering** | Flag and replace terms implying age, race, disability bias | Predefined blocklist with neutral alternatives |
+| **NSFW Filtering** | Detect and remove explicit language | Keyword lists + pattern matching + classifier |
+| **Confidence Thresholding** | Only show suggestions above confidence threshold | Suppress low-confidence predictions |
+| **Length Filtering** | Remove suggestions that are too long or too short | Max 10 words for autocomplete suggestions |
+
+> [!TIP]
+> 💡 **Aha:** Post-processing is **cheap and fast**—rule-based checks run in microseconds. They're your last line of defense before output reaches users. Combine with Model Armor/Guardrails for defense-in-depth.
+
 ---
 
 ## 11. Real-World Examples: Applying the Stack
@@ -1817,6 +1984,77 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 🛠️ **Stack snapshot:** LangChain (sequential pipeline + tools) + Vertex/Bedrock LLMs + Vertex grounding or RAG + RAGAS (eval) + optional Giskard for regression tests.
 
 **Variant: internal knowledge workers (Gemini Enterprise).** For **internal** users (e.g. advisors, analysts), **Gemini Enterprise** offers agents + **unified search** across connected business systems (not just uploaded docs). Use **trusted/curated sources only** (e.g. government reports, internal research). **Plan-then-verify-then-execute:** agent proposes a research plan → human verifies → agent executes (searches, asks new questions, iterates) → output = report + source links + optional **audio summary**. **NotebookLM Enterprise** = deep dive into specific documents/sources (Q&A, summarize); Gemini can connect to it for personalized context (e.g. client notes). See §4 Enterprise knowledge workers (Gemini Enterprise).
+
+---
+
+### Example 4: Smart Compose / Email Autocomplete (like Gmail)
+
+_Real-time text completion as users type. Key constraints: imperceptible latency (<100 ms), high consistency (deterministic), and bias-free suggestions. This is a classic decoder-only Transformer use case._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Latency** | P99 < 100 ms (imperceptible). Suggestion must appear before user types next character. | Any visible lag breaks the UX; users type faster than slow models can respond. |
+| **Token budget** | Input: partial email (100–500 tokens) + context (subject, recipient). Output: 2–10 tokens (short phrase). | Short outputs = fast; long suggestions are ignored anyway. |
+| **Quality** | High acceptance rate; completions must be grammatically correct and contextually relevant. | Users reject bad suggestions; acceptance rate is the key online metric. |
+| **Consistency** | Deterministic: same input → same suggestion. No surprising outputs. | Users expect predictable, repeatable behavior for autocomplete. |
+| **Safety** | No biased assumptions (gender, race, age); no inappropriate content. | Suggestions are visible instantly; post-processing for bias is essential. |
+| **Scale** | 1.8B users; up to 500 emails/user/day; not all trigger suggestions. Assume 10% of keystrokes trigger. | Massive scale; model must be small/fast; caching is critical. |
+
+📊 **Rough estimation (email autocomplete)**
+
+- **Volume:** Assume 100M active sessions/day, 20 suggestions/session = **2B suggestion requests/day** = ~23K QPS average.
+- **Token budget:** ~200 input + ~5 output per request = 205 tokens. At 2B requests: **~400B input + ~10B output tokens/day**.
+- **Cost (if using external API—not practical at this scale):** At ≈$0.10/1M tokens: $40K/day. **Must use internal/self-hosted model** (small, distilled).
+- **Latency budget (100 ms):** Triggering < 5 ms, inference < 80 ms, post-processing < 15 ms. Requires small model + on-device or edge inference.
+
+**2. High-Level Architecture (10–15 min)**
+
+```
+User Typing → Triggering Service → Phrase Generator (Beam Search) → Filtering (length, confidence) → Post-Processing (bias) → Display Suggestion
+```
+
+- **Triggering Service**: Monitors keystrokes. Only triggers model when:
+  - User has typed enough context (e.g., 3+ words)
+  - Pause in typing (e.g., 100ms since last keystroke)
+  - Not in the middle of a word
+- **Phrase Generator**: Decoder-only Transformer with beam search (beam width 3–5). Returns top-k completions with confidence scores.
+- **Filtering**: Remove suggestions that are (a) too long (>10 words), (b) low confidence (<0.15), (c) duplicates.
+- **Post-Processing**: Rule-based bias removal—pronoun neutralization, gender-neutral terms, NSFW filtering.
+- **Response**: Top remaining suggestion (or nothing if all filtered out).
+
+**Components:**
+- **Model**: Small decoder-only Transformer (~100M–1B params), distilled from larger model. Trained in two stages: (1) pretrain on general web text, (2) finetune on email corpus.
+- **Tokenization**: Subword (BPE or SentencePiece) for vocabulary efficiency.
+- **Sampling**: Beam search (deterministic, consistent).
+- **Serving**: On-device (mobile) or edge (low-latency regions). Not practical to hit cloud LLM per keystroke.
+
+**3. Deep Dive (15–20 min)**
+
+- **Model architecture**: Decoder-only Transformer; positional encoding (fixed sine-cosine for generalization); 6–12 layers; ~100M params for on-device.
+- **Training**: (1) Pretrain on web corpus (Common Crawl); (2) Finetune on anonymized email corpus. ML objective = next-token prediction; loss = cross-entropy.
+- **Input context**: Combine email body + subject + recipient in prompt template:
+  ```
+  [Subject: {subject}]
+  [To: {recipient}]
+  [Body: {partial_body}]
+  ```
+- **Beam search**: Track top 3 sequences; prune at each step; stop at `<EOS>` or max 10 tokens.
+- **Post-processing rules**: Replace "he/she" → "they"; "chairman" → "chairperson"; blocklist for sensitive terms; NSFW keyword filter.
+- **Evaluation**:
+  - Offline: **Perplexity** (lower = better prediction), **ExactMatch@3** (% of 3-word predictions that match ground truth)
+  - Online: **Acceptance rate** (% suggestions accepted), **Usage rate** (% emails using feature), **Avg completion time reduction**
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Latency vs quality**: Smaller model = faster but less accurate. Distillation from larger model helps.
+- **Consistency vs diversity**: Beam search gives consistency; if diversity needed (e.g., creative writing), switch to top-p sampling.
+- **Personalization vs cold start**: Personalized models improve acceptance rate but require per-user data; start with global model, add personalization later.
+- **On-device vs cloud**: On-device = fastest latency, no network cost; cloud = larger model, easier updates. Hybrid: on-device for common cases, cloud fallback for complex.
+- **Triggering sensitivity**: Trigger too often = annoying; too rarely = missed opportunities. A/B test threshold.
+
+🛠️ **Stack snapshot:** Small decoder-only Transformer (distilled) + on-device serving (TFLite, Core ML) or edge (Cloud Run, Lambda@Edge) + beam search + rule-based post-processing + Perplexity/ExactMatch@N eval + acceptance rate monitoring.
 
 ---
 
