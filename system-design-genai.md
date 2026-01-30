@@ -377,6 +377,118 @@ CLIPScore = cosine_similarity(CLIP_text(prompt), CLIP_image(generated_image))
 > [!TIP]
 > 💡 **Aha:** For text-to-image, you need **both** quality metrics (FID) **and** alignment metrics (CLIPScore). A model could generate beautiful images that ignore the prompt (low CLIPScore, good FID) or follow the prompt but look bad (high CLIPScore, poor FID).
 
+---
+
+## Text-to-Video Generation
+
+Text-to-video extends text-to-image by generating sequences of temporally consistent frames.
+
+### Latent Diffusion Models (LDM)
+
+**Problem:** Video is expensive. A 5-second 720p video at 24 FPS = 120 frames × 1280×720 pixels = ~110M pixels.
+
+**Solution:** Train diffusion model in **latent space** instead of pixel space.
+
+```
+Original Video → VAE Encoder → Latent Representation (compressed) → Diffusion Model → Denoised Latent → VAE Decoder → Generated Video
+```
+
+**Compression network (VAE):**
+- **Visual Encoder**: Video pixels → lower-dimensional latent representation
+- **Visual Decoder**: Latent representation → reconstructed video
+
+**Compression ratio example:**
+- Input: 120 frames × 1280×720 = 110M pixels
+- With 8× temporal + 8× spatial compression: 15 frames × 160×90 = 216K
+- **512× smaller** → much cheaper training and inference
+
+| Approach | Operates in | Training cost | Examples |
+| -------- | ----------- | ------------- | -------- |
+| **Pixel diffusion** | Full resolution pixels | Very expensive | Imagen Video |
+| **Latent diffusion** | Compressed latent space | Much cheaper | Stable Diffusion, Sora, Movie Gen |
+
+### Extending DiT to Video
+
+**Image DiT:** 2D patches (spatial only)
+**Video DiT:** 3D patches (spatial + temporal)
+
+```
+Video → 3D Patchify → Positional Encoding (3D: x, y, t) → Transformer + Temporal Layers → Unpatchify → Predicted Noise
+```
+
+**Temporal layers added to architecture:**
+
+| Layer | How it works | Purpose |
+| ----- | ------------ | ------- |
+| **Temporal Attention** | Each feature attends across frames | Capture motion, ensure consistency |
+| **Temporal Convolution** | 3D conv across frames | Local temporal patterns |
+
+**U-Net for video:** Inject temporal attention + temporal convolution into each downsampling/upsampling block.
+
+**DiT for video:** Use 3D patches; Transformer naturally handles sequences; RoPE for 3D positional encoding.
+
+### Video Training Challenges
+
+| Challenge | Problem | Mitigations |
+| --------- | ------- | ----------- |
+| **Limited video-text data** | Much less paired video-text than image-text | Train on both images (as 1-frame videos) + videos; pretrain on images, finetune on videos |
+| **High compute cost** | 120 frames vs 1 frame | Latent diffusion; precompute latents; spatial/temporal super-resolution |
+| **High-res generation** | 720p+ is expensive | Generate at lower res (e.g., 360p), upscale with super-resolution models |
+| **Long videos** | More frames = more memory | Generate short clips, stitch; temporal super-resolution |
+
+**Two training strategies:**
+1. **Joint training**: Train DiT on mixed image-text + video-text data (treat images as 1-frame videos)
+2. **Two-stage**: Pretrain on images → finetune on videos
+
+**Super-resolution cascade for video:**
+```
+LDM (40×23 @ 8 fps) → Visual Decoder → Spatial SR (320×180) → Temporal SR (24 fps) → Final Video (1280×720 @ 24 fps)
+```
+
+### Video Evaluation Metrics
+
+| Metric | What it measures | How it works |
+| ------ | ---------------- | ------------ |
+| **FID (per-frame)** | Frame quality | Average FID across all frames |
+| **IS (per-frame)** | Frame quality + diversity | Average Inception Score |
+| **FVD** (Fréchet Video Distance) | Quality + temporal consistency | Like FID, but uses I3D features (action recognition model) |
+| **CLIP similarity** | Video-text alignment | Average CLIP score across frames |
+
+**FVD calculation:**
+1. Extract features from I3D model (trained for action recognition)
+2. Compute mean + covariance for generated and real videos
+3. Calculate Fréchet distance between distributions
+4. Lower FVD = better (quality + temporal consistency)
+
+**Benchmarks:** VBench, Movie Gen Bench
+
+> [!TIP]
+> 💡 **Aha:** FID only measures individual frame quality—a video could have great frames but terrible motion. **FVD** captures **temporal consistency** by using an action recognition model (I3D) that understands motion. Always report FVD for video generation.
+
+### Video Inference Pipeline
+
+```
+Prompt → Safety → Enhancement → Text Encoder → LDM (latent space)
+                                                      ↓
+                                               Visual Decoder → Spatial SR → Temporal SR → Harm Detection → Final Video
+```
+
+| Component | Purpose |
+| --------- | ------- |
+| **LDM** | Generate video in latent space (cheaper than pixel space) |
+| **Visual Decoder** | Convert latent → pixel space |
+| **Spatial Super-Resolution** | Upscale resolution (e.g., 360p → 720p) |
+| **Temporal Super-Resolution** | Interpolate frames (e.g., 8 fps → 24 fps) |
+
+**Models to know:**
+- **Sora** (OpenAI): DiT-based; variable duration/resolution; "world simulator"
+- **Movie Gen** (Meta): DiT + LDM; 16s videos at 768p
+- **Stable Video Diffusion** (Stability AI): U-Net based; image-to-video
+- **Runway Gen-3**: Commercial; fast iteration
+- **Imagen Video** (Google): Pixel-space cascade; high quality
+
+---
+
 ### Model Capacity: Parameters vs FLOPs
 
 **Model capacity** determines how much a model can learn. Two measures:
@@ -3257,6 +3369,105 @@ User Prompt → Prompt Safety → Prompt Enhancement (LLM) → Text Encoder (T5)
 - **Imagen 3**: Google; pixel-space diffusion; high quality
 - **Midjourney**: Closed-source; artistic focus
 - **Adobe Firefly**: Commercial; trained on licensed data
+
+---
+
+### Example 11: Text-to-Video Generation System (like Sora, Movie Gen)
+
+_Generate 5-second 720p videos from text prompts. Latent diffusion with DiT, temporal layers for consistency, and super-resolution for quality._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Video length** | 5 seconds target | Longer = exponentially more compute |
+| **Resolution** | 720p (1280×720) | Train at lower res + super-resolution |
+| **Frame rate** | 24 FPS → 120 frames | Temporal super-resolution can help |
+| **Latency** | Minutes acceptable initially | Optimization for speed comes later |
+| **Training data** | 100M video-caption pairs | Quality filtering critical |
+| **Pretrained model** | Have text-to-image model | Can leverage for video training |
+| **Audio** | Silent videos initially | Audio is separate problem |
+| **Safety** | No harmful content | Prompt + output filtering |
+
+📊 **Rough estimation (text-to-video)**
+
+- **Training data:** 100M videos; after filtering + latent precomputation, ~200TB storage.
+- **Training compute:** DiT on 100M videos: ~months on 6000+ H100 GPUs (Sora-scale).
+- **Compression:** 120 frames × 1280×720 = 110M pixels → with 8×8 compression: 216K (512× smaller).
+- **Inference:** 50 DDIM steps × ~500ms/step = ~25s for latent. + super-resolution: ~2–5 minutes total.
+- **Serving cost:** ~$0.10–1.00 per video depending on duration/resolution.
+
+**2. High-Level Architecture (10–15 min)**
+
+**Training Pipeline:**
+```
+Videos → Filter (quality, NSFW, dedup) → Standardize (5s clips, 24fps, 720p)
+                                              ↓
+                        VAE Encoder → Precompute Latents → Storage (200TB)
+                                              ↓
+                        Captions → Re-caption (LLaVA) → Text Encoder → Cache Embeddings
+                                              ↓
+                        DiT Training (latent space) + Image-Video Joint Training
+```
+
+**Inference Pipeline:**
+```
+Prompt → Safety → Enhancement → Text Encoder (T5)
+                                       ↓
+             Noise → DiT (LDM) + CFG → Denoised Latent
+                                       ↓
+             VAE Decoder → Low-res Video (160×90 @ 8fps)
+                                       ↓
+             Spatial SR (720p) → Temporal SR (24fps) → Harm Detection → Final Video
+```
+
+**Components:**
+1. **VAE (Compression Network)**: Compress 512× for efficient training
+2. **DiT with Temporal Layers**: Temporal attention + temporal convolution
+3. **Text Encoder**: T5 for text embeddings
+4. **Spatial Super-Resolution**: Upscale 160×90 → 1280×720
+5. **Temporal Super-Resolution**: Interpolate 8fps → 24fps
+
+**3. Deep Dive (15–20 min)**
+
+- **Compression network (VAE)**: 8× temporal (120→15 frames) + 8×8 spatial (1280×720 → 160×90). Train separately; freeze during diffusion training.
+- **DiT architecture**:
+  - 3D patchify (spatial + temporal patches)
+  - RoPE for 3D positional encoding (x, y, t)
+  - Temporal attention: each patch attends across frames
+  - Temporal convolution: 3D conv for local motion patterns
+- **Training**:
+  - Joint training on images (1-frame videos) + videos to leverage large image datasets
+  - MSE loss on predicted vs true noise
+  - Precompute and cache all latents + embeddings before training
+- **Sampling**: DDIM (50 steps) + CFG (w=7–15)
+- **Super-resolution**:
+  - Spatial: Separate diffusion model conditioned on low-res input
+  - Temporal: Frame interpolation model (generate intermediate frames)
+- **Evaluation**:
+  - Quality: **FID** (per-frame average)
+  - Temporal consistency: **FVD** (Fréchet Video Distance using I3D features)
+  - Alignment: **CLIP similarity** (per-frame average)
+  - Benchmarks: VBench, Movie Gen Bench
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Latent vs pixel diffusion**: Latent is 512× cheaper but VAE decoder may lose fine details. Pixel-space (Imagen Video) is higher quality but much slower.
+- **Image vs video training data**: Images are abundant; videos are scarce. Joint training or pretrain-finetune helps.
+- **Temporal consistency vs quality**: More temporal attention = better consistency, more compute.
+- **Resolution vs speed**: Generate at 360p + SR is faster than native 720p. Trade-off quality.
+- **Video length**: 5s is manageable; 60s requires hierarchical generation (plan → clips → stitch).
+- **CFG guidance scale**: Higher = better prompt adherence, less diversity. Tune per use case.
+- **Super-resolution cascade**: Each stage adds latency but enables higher final quality with cheaper base model.
+
+🛠️ **Stack snapshot:** VAE (compression) + DiT (temporal attention/conv, 3D patches, RoPE) + T5 encoder + DDIM + CFG + spatial/temporal SR + FVD/FID/CLIP eval + distributed training (6000+ GPUs).
+
+**Models to Consider:**
+- **Sora** (OpenAI): DiT; variable duration/resolution; "world simulator"
+- **Movie Gen** (Meta): DiT + LDM; 16s at 768p; joint image-video training
+- **Stable Video Diffusion**: U-Net based; image-to-video
+- **Runway Gen-3**: Commercial; fast; video-to-video
+- **Veo** (Google): High quality; integrated with Vertex AI
 
 ---
 
