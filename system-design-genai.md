@@ -15,6 +15,8 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 ## Table of Contents
 
 - [Introduction](#introduction)
+- [Visual Guide Map](#visual-guide-map) _(mermaid mind-map of the guide)_
+- [Glossary](#glossary) _(quick reference for key terms)_
 - [GenAI System: Big Picture (Frontend to Backend)](#genai-system-big-picture-frontend-to-backend)
 - [GenAI vs Traditional ML](#genai-vs-traditional-ml)
 - [Using Models & Sampling Parameters](#using-models--sampling-parameters)
@@ -22,7 +24,7 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 - [1. LLM Serving Architecture](#1-llm-serving-architecture-at-scale)
 - [2. RAG Systems](#2-rag-retrieval-augmented-generation-system)
 - [3. RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework)
-- [4. Agentic AI Systems](#4-agentic-ai-systems)
+- [4. Agentic AI Systems](#4-agentic-ai-systems) _(includes ADK)_
 - [5. LLM Evaluation & Quality](#5-llm-evaluation--quality)
 - [6. GenAI Data Pipeline](#6-genai-data-pipeline-architecture)
 - [7. Cost Optimization & Model Routing](#7-cost-optimization-for-genai-systems)
@@ -30,29 +32,194 @@ This guide focuses specifically on **ML and GenAI system design**. For foundatio
 - [9. Monitoring & Observability](#9-monitoring--observability-for-genai)
 - [10. Security & Guardrails](#10-security--guardrails)
 - [11. Real-World Examples](#11-real-world-examples-applying-the-stack)
-- [Resources](#resources)
+- [Quick Reference](#quick-reference)
+- [Resources](#resources) _(at the end)_
 
 ---
 
 ## Introduction
 
-Generative AI applications introduce unique challenges that differ significantly from traditional software systems:
+**Why GenAI is different.** Traditional systems return deterministic results—same input, same output. GenAI systems are _probabilistic_: same prompt can yield different responses. They're also _expensive_ (cost per token), _slow_ (autoregressive generation), and _unreliable_ (hallucinations). Designing for these properties requires new patterns.
 
-- **Token-by-token generation**: Sequential decoding (unlike batch predictions)
-- **Variable latency**: Generation time depends on output length
-- **High memory requirements**: **KV cache** (key-value cache: stored attention keys and values in transformers) for attention mechanisms
-- **Cost optimization**: Balance between latency and throughput
-- **Hallucination management**: Ensuring factual accuracy
-- **Agent orchestration**: Multi-step reasoning and tool use
+**The unique challenges:**
 
-This guide is built for **proving technical ability** in GenAI application and **shipping to customers at scale**. It combines **theory** (how LLMs, RAG, agents, and pipelines work) with **practical implementation** (real stacks, numbers, and customer scenarios)—so you can design systems that work in the real world and articulate trade-offs clearly.
+| Challenge | What makes it hard |
+| --------- | ------------------ |
+| **Token-by-token generation** | Sequential decoding; can't batch like traditional ML |
+| **Variable latency** | Output length determines response time |
+| **Memory explosion** | KV cache grows with context; long prompts = OOM |
+| **Cost at scale** | Every token costs money; 10M requests/day adds up |
+| **Hallucinations** | Model confidently generates false information |
+| **Agent loops** | Multi-step reasoning can spin forever or go off-track |
+
+**What this guide gives you:**
+- **Theory**: How LLMs, RAG, agents, diffusion, and pipelines actually work
+- **Practice**: Real stacks, estimations, and customer scenarios
+- **Application**: Interview frameworks and end-to-end examples
 
 _Legend: 💡 = key insight · 🔷 = end-to-end phases · 📊 = estimation · 🛠️ = stack snapshot · ✅ = best practice_
 
 > [!TIP]
 > 💡 **Aha:** GenAI system design is different because you're optimizing for **non-determinism** (same prompt → different outputs), **token economics** (cost and latency scale with length), and **orchestration** (models + retrieval + tools), not just throughput of identical requests.
 
-**How to use this guide:** §§1–10 give you **theory and design** (serving, RAG, agents, evaluation, data pipeline, cost, scale, monitoring, security). Each section ties concepts to **real tools and trade-offs**. §11 **Real-World Examples** and the **Quick Reference** (end-to-end solutioning, RRK) show how to **apply** that knowledge—with concrete stacks, estimations, and customer-facing flow (Scope → Design → Deploy → Communicate). Always connect theory to implementation: when you read a concept, ask "how would I build this with Vertex, Bedrock, or open source, and what would I tell a customer or interviewer?"
+**How to read this guide:**
+
+1. **Start with the Visual Guide Map** (next section) to see how everything connects
+2. **Use the Glossary** when you hit unfamiliar terms
+3. **§§1–10** are **deep dives**: LLM serving → RAG → Fine-tuning → Agents → Evaluation → Data → Cost → Scale → Monitoring → Security
+4. **§11 Real-World Examples** show how to **apply** everything—concrete stacks, estimations, interview walkthroughs
+5. **Quick Reference** gives you the 45-minute interview framework
+6. **Resources** (at the end) point to official docs and further reading
+
+Each section builds on the previous. RAG (§2) needs serving (§1). Agents (§4) use RAG + tools. Evaluation (§5) applies to all. Cost (§7) and scale (§8) are cross-cutting. By the end, you can design a complete GenAI system and articulate trade-offs clearly.
+
+---
+
+## Visual Guide Map
+
+This mind-map shows how the guide fits together. Use it to navigate and to see how concepts connect.
+
+```mermaid
+mindmap
+  root((GenAI System Design))
+    Frontend to Backend
+      API Gateway
+      Orchestration
+        RAG §2
+        Agents §4
+        Tools
+      LLM Inference §1
+        Serving
+        Batching
+        KV Cache
+    Core Patterns
+      RAG
+        Chunking
+        Embeddings
+        Vector DB
+        Reranking
+      Agents
+        ReAct
+        Tool Use
+        Multi-agent
+        ADK
+      Fine-tuning §3
+        LoRA
+        When vs RAG
+    Quality & Safety
+      Evaluation §5
+        RAGAS
+        Human Eval
+        A/B Testing
+      Guardrails §10
+        Model Armor
+        Content Filters
+        PII Detection
+    Operations
+      Data Pipeline §6
+        Events
+        Labeling
+        Training Data
+      Cost §7
+        Token Economics
+        Model Routing
+        Caching
+      Scale §8
+        Batching
+        Parallelism
+        Quantization
+      Monitoring §9
+        Traces
+        Metrics
+        Drift
+    Generative Models
+      Transformers
+        Attention
+        Self-attention
+        Cross-attention
+      Text-to-Image
+        Diffusion
+        CLIP
+        CFG
+      Text-to-Video
+        LDM
+        Temporal Layers
+        FVD
+    Apply It
+      Examples §11
+        LLM Service
+        Support Bot
+        Code Assistant
+        RAG Pipeline
+        Text-to-Image
+        Text-to-Video
+      Interview Framework
+        Clarify
+        Architecture
+        Deep Dive
+        Trade-offs
+```
+
+---
+
+## Glossary
+
+Quick reference for key terms used throughout this guide.
+
+| Term | Definition |
+| ---- | ---------- |
+| **LLM** | Large Language Model — neural network trained on text to generate human-like responses |
+| **GenAI** | Generative AI — models that create new content (text, images, video, audio) |
+| **Token** | Basic unit of text processing; ~4 characters in English; models charge per token |
+| **Context Window** | Maximum tokens an LLM can process in one request (input + output) |
+| **KV Cache** | Key-Value cache — stores attention computations to avoid recomputation during autoregressive generation |
+| **RAG** | Retrieval-Augmented Generation — retrieve relevant documents, inject into prompt, then generate |
+| **Embedding** | Dense vector representation of text; similar meanings → similar vectors |
+| **Vector Database** | Database optimized for similarity search on embeddings (Pinecone, Weaviate, pgvector) |
+| **Chunking** | Splitting documents into smaller pieces for embedding and retrieval |
+| **Reranking** | Scoring retrieved chunks by relevance using a cross-encoder model |
+| **Fine-tuning** | Training a pretrained model on task-specific data to improve performance |
+| **LoRA** | Low-Rank Adaptation — parameter-efficient fine-tuning; trains small adapter weights |
+| **PEFT** | Parameter-Efficient Fine-Tuning — umbrella term for LoRA, QLoRA, adapters |
+| **Quantization** | Reducing model precision (FP16 → INT8/INT4) to save memory and speed up inference |
+| **Agent** | LLM + tools + reasoning loop; can take actions and observe results |
+| **ReAct** | Reasoning + Acting — agent pattern: Thought → Action → Observation → repeat |
+| **Tool / Function Calling** | LLM generates structured calls to external functions (APIs, databases, code) |
+| **MCP** | Model Context Protocol — standard for exposing tools and context to LLMs |
+| **A2A** | Agent-to-Agent Protocol — standard for agent communication and task delegation |
+| **ADK** | Agent Development Kit — Google's framework for building multi-agent systems |
+| **Prompt Engineering** | Designing prompts to get better LLM outputs (few-shot, CoT, system prompts) |
+| **Few-shot** | Including examples in the prompt to guide model behavior |
+| **Chain-of-Thought (CoT)** | Prompting the model to reason step-by-step before answering |
+| **System Prompt** | Instructions that set the model's persona, constraints, and behavior |
+| **Temperature** | Controls randomness; 0 = deterministic, 1+ = more creative/random |
+| **Top-p / Top-k** | Sampling strategies that limit token selection to most probable candidates |
+| **CFG** | Classifier-Free Guidance — technique to improve prompt adherence in diffusion models |
+| **Diffusion Model** | Generative model that learns to denoise; used for images and video |
+| **Latent Diffusion (LDM)** | Diffusion in compressed latent space (faster than pixel space) |
+| **VAE** | Variational Autoencoder — encoder-decoder for compressing to/from latent space |
+| **FID** | Fréchet Inception Distance — measures image quality vs reference distribution |
+| **FVD** | Fréchet Video Distance — like FID but for video; measures quality + temporal consistency |
+| **CLIPScore** | Measures alignment between image and text using CLIP embeddings |
+| **Hallucination** | Model generates plausible-sounding but factually incorrect information |
+| **Grounding** | Anchoring model responses to retrieved facts or sources |
+| **Faithfulness** | Whether the response accurately reflects the retrieved context |
+| **Guardrails** | Safety filters on inputs and outputs (toxicity, PII, jailbreak detection) |
+| **Model Armor** | Google Cloud's guardrail service for prompt injection and harm detection |
+| **RAGAS** | Reference-free RAG evaluation framework (faithfulness, relevancy, context metrics) |
+| **vLLM** | High-throughput open-source LLM serving engine with PagedAttention |
+| **TGI** | Text Generation Inference — Hugging Face's LLM serving solution |
+| **TTFT** | Time To First Token — latency from request to first output token |
+| **TPS** | Tokens Per Second — generation throughput |
+| **Speculative Decoding** | Use small draft model to predict tokens, verify with large model in parallel |
+| **Continuous Batching** | Dynamically add/remove requests from batch as they complete |
+| **PagedAttention** | Memory management for KV cache using non-contiguous pages (like OS virtual memory) |
+| **Tensor Parallelism** | Split model layers across GPUs for large models |
+| **Pipeline Parallelism** | Split model stages across GPUs; each processes different batches |
+| **SFT** | Supervised Fine-Tuning — fine-tune on (input, output) pairs |
+| **RLHF** | Reinforcement Learning from Human Feedback — align model with human preferences |
+| **DPO** | Direct Preference Optimization — simpler alternative to RLHF |
+| **Semantic Cache** | Cache responses by embedding similarity, not exact match |
 
 ---
 
@@ -688,6 +855,32 @@ Google provides two primary environments for experimenting with and deploying Ge
 | **Advantages**   | Simplified interface; easy to get started                                                          | Enterprise-grade security, compliance, flexible quotas                    |
 
 **Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications.
+
+### Agent Development Kit (ADK)
+
+**ADK** is Google's open-source framework for building AI agents. It's the recommended way to build multi-agent systems on GCP.
+
+| Tool | What it does | When to use |
+| ---- | ------------ | ----------- |
+| **Google AI Studio** | Prompt playground; quick prototyping | Experimenting with prompts |
+| **Vertex AI Studio** | Enterprise model access; fine-tuning; evaluation | Production workloads |
+| **ADK** | Agent framework; multi-agent orchestration | Building agents with tools, workflows, multi-agent coordination |
+| **Vertex AI Agent Engine** | Managed agent hosting | Deploying ADK agents at scale |
+
+**ADK installation:**
+```bash
+pip install google-adk   # Python
+npm install @google/adk  # TypeScript
+```
+
+**Quick start:**
+```bash
+adk create my_agent   # Scaffold project
+adk run my_agent      # Run locally
+adk web               # Local dev UI
+```
+
+See **§4 Agentic AI Systems** for full ADK coverage with code examples.
 
 ---
 
@@ -2071,6 +2264,138 @@ Keep **working context** (the prompt for this turn) small and focused. Push dura
 | ------------------- | ---------------------------------------------------- |
 | **Agents as Tools** | Sub-agent sees only specific instructions and inputs |
 | **Agent Transfer**  | Sub-agent inherits a configurable view over Session  |
+
+---
+
+### Google ADK (Agent Development Kit)
+
+**ADK** is Google's open-source framework for building, deploying, and orchestrating AI agents. It's model-agnostic (optimized for Gemini but works with others), deployment-agnostic (local, Cloud Run, Vertex AI Agent Engine), and compatible with other frameworks.
+
+**Installation:**
+```bash
+pip install google-adk        # Python
+npm install @google/adk       # TypeScript
+go get google.golang.org/adk  # Go
+```
+
+**Core concepts:**
+
+| Concept | Description |
+| ------- | ----------- |
+| **LlmAgent** | Agent powered by an LLM; has instructions, tools, and sub-agents |
+| **Workflow Agents** | Orchestrate sub-agents: `SequentialAgent`, `ParallelAgent`, `LoopAgent` |
+| **Tools** | Functions the agent can call (custom, pre-built, or MCP) |
+| **Session State** | Shared state across agents in the same invocation |
+| **Agent Transfer** | LLM-driven delegation to sub-agents via `transfer_to_agent()` |
+| **AgentTool** | Wrap an agent as a tool for another agent to call |
+
+**Workflow agents:**
+
+| Agent | Behavior |
+| ----- | -------- |
+| `SequentialAgent` | Run sub-agents in order; each sees shared state from previous |
+| `ParallelAgent` | Run sub-agents concurrently; all share the same state |
+| `LoopAgent` | Repeat sub-agents until `max_iterations` or `escalate=True` |
+
+**Multi-agent patterns in ADK:**
+
+| Pattern | How to build |
+| ------- | ------------ |
+| **Coordinator/Dispatcher** | Parent `LlmAgent` with sub-agents; LLM decides which to call via `transfer_to_agent` |
+| **Sequential Pipeline** | `SequentialAgent` with sub-agents; use `output_key` to pass data via state |
+| **Parallel Fan-Out/Gather** | `ParallelAgent` + `SequentialAgent` for aggregation |
+| **Hierarchical Decomposition** | Nest agents; parent uses `AgentTool` to call child as tool |
+| **Generator-Critic** | `SequentialAgent` with generator → reviewer; reviewer reads generator's `output_key` |
+| **Iterative Refinement** | `LoopAgent` with refiner → checker; loop until checker escalates |
+
+**Practical example: Customer support agent with ADK**
+
+```python
+from google.adk.agents import LlmAgent, SequentialAgent
+
+# Define tools as functions
+def get_order_status(order_id: str) -> dict:
+    """Look up order status from database."""
+    return {"order_id": order_id, "status": "shipped", "eta": "2026-02-01"}
+
+def create_support_ticket(issue: str, priority: str) -> dict:
+    """Create a support ticket in the ticketing system."""
+    return {"ticket_id": "TKT-12345", "status": "created"}
+
+def search_knowledge_base(query: str) -> dict:
+    """Search the knowledge base for relevant articles."""
+    return {"articles": [{"title": "Return Policy", "content": "..."}]}
+
+# Create specialist agents
+order_agent = LlmAgent(
+    name="OrderAgent",
+    model="gemini-2.0-flash",
+    description="Handles order status inquiries and shipping questions.",
+    instruction="You help customers with order status. Use get_order_status tool.",
+    tools=[get_order_status]
+)
+
+knowledge_agent = LlmAgent(
+    name="KnowledgeAgent",
+    model="gemini-2.0-flash",
+    description="Answers policy and FAQ questions.",
+    instruction="Search the knowledge base to answer customer questions.",
+    tools=[search_knowledge_base]
+)
+
+escalation_agent = LlmAgent(
+    name="EscalationAgent",
+    model="gemini-2.0-flash",
+    description="Creates tickets for issues requiring human review.",
+    instruction="Create support tickets for complex issues.",
+    tools=[create_support_ticket]
+)
+
+# Create coordinator that routes to specialists
+support_coordinator = LlmAgent(
+    name="SupportCoordinator",
+    model="gemini-2.0-flash",
+    instruction="""You are a customer support coordinator. Route requests:
+    - Order status/shipping → OrderAgent
+    - Policy/FAQ questions → KnowledgeAgent  
+    - Complex issues needing human help → EscalationAgent
+    Always be helpful and professional.""",
+    description="Routes customer requests to the appropriate specialist.",
+    sub_agents=[order_agent, knowledge_agent, escalation_agent]
+)
+
+# Run the agent (conceptual)
+# adk run support_coordinator
+```
+
+**Running ADK agents:**
+```bash
+# Create project
+adk create my_agent
+
+# Run with CLI
+adk run my_agent
+
+# Run with web UI (dev only)
+adk web --port 8000
+```
+
+**ADK vs other frameworks:**
+
+| Framework | Best for | Key difference |
+| --------- | -------- | -------------- |
+| **ADK** | Google ecosystem, Vertex AI, multi-agent | Workflow agents (Sequential, Parallel, Loop); Vertex AI Agent Engine deployment |
+| **LangChain** | Prototyping, broad integrations | Chain-based; many connectors; LangGraph for agents |
+| **LlamaIndex** | RAG-first applications | Data framework; strong indexing and retrieval |
+| **CrewAI** | Role-based multi-agent | Crew metaphor with roles and tasks |
+
+**Deployment options:**
+- **Local**: `adk run` or `adk web` for development
+- **Cloud Run**: Containerize and deploy as serverless
+- **Vertex AI Agent Engine**: Managed, scalable agent hosting on GCP
+
+> [!TIP]
+> 💡 **Aha:** ADK's workflow agents (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) let you build complex pipelines without custom orchestration code. Use `output_key` to pass data through shared state. Start with the coordinator pattern for multi-domain tasks.
 
 ---
 
@@ -3484,58 +3809,6 @@ Prompt → Safety → Enhancement → Text Encoder (T5)
 
 The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
 
----
-
-## Resources
-
-### Books
-
-- **Building LLM Applications for Production** by Huyen, Chip
-- **Designing Machine Learning Systems** by Chip Huyen
-- **Designing Data-Intensive Applications** by Martin Kleppmann
-
-### Online
-
-- [vLLM Documentation](https://docs.vllm.ai/) - High-throughput LLM serving
-- [RAGAS Documentation](https://docs.ragas.io/) - Reference-free RAG evaluation (faithfulness, relevancy, context metrics)
-- [LangSmith Evaluation](https://docs.smith.langchain.com/evaluation) - Evaluators, datasets, human annotation
-- [Arize Phoenix](https://phoenix.arize.com/) - LLM tracing and evals (hallucination, relevance, toxicity)
-- [Giskard RAG Toolkit](https://docs.giskard.ai/en/stable/reference/rag-toolset/) - RAG test suite and testset generation
-- [Braintrust Evaluate](https://www.braintrust.dev/docs/evaluation) - Custom scorers and experiments
-- [Vectara FaithJudge](https://github.com/vectara/FaithJudge) - Faithfulness/hallucination benchmark and model
-- [LangChain Documentation](https://docs.langchain.com/)
-- [LlamaIndex Documentation](https://docs.llamaindex.ai/)
-- [OpenAI Guardrails](https://openai.github.io/openai-guardrails-python/)
-- [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) - Standard for tools and context to LLMs
-- [A2A (Agent-to-Agent Protocol)](https://google.github.io/A2A/) - Standard for agent-to-agent communication
-
-### Google Cloud Documentation
-
-- [Vertex AI Generative AI](https://cloud.google.com/vertex-ai/generative-ai/docs/overview)
-- [Vertex AI Agent Builder](https://cloud.google.com/vertex-ai/docs/agent-builder/overview)
-- [Customer Engagement Suite](https://cloud.google.com/dialogflow/contact-center/docs) - Conversational Agents, Agent Assist, Conversational Insights, CCaaS
-- [Vertex AI RAG Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/overview)
-- [Vertex AI Search](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/vertex-ai-search) - Search and recommendations; grounding with your data and Google Search; summaries and Q&A
-- [Gemini Enterprise](https://support.google.com/googleapi/answer/gemini-enterprise) - Enterprise AI assistant: agents + unified search across connected business systems; plan-verify-execute; report + sources + audio
-- [NotebookLM Enterprise](https://notebooklm.google.com/) - Document-focused: upload docs and web sources; Q&A, summarize, create content, audio summaries; can connect to Gemini Enterprise
-- [Model Armor](https://cloud.google.com/security/products/model-armor)
-
-### AWS Documentation
-
-- [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/)
-- [Amazon SageMaker](https://docs.aws.amazon.com/sagemaker/)
-- [Bedrock Agents](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
-- [Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html)
-
-### Practice
-
-- Build real GenAI applications
-- Experiment with different model sizes and costs
-- Practice with RAG systems and agents
-- **Google Cloud Generative AI Leader certification:** [cloud.google.com/learn/certification/generative-ai-leader](https://cloud.google.com/learn/certification/generative-ai-leader) — proctored exam, ~90 min; use study guides and course lessons to prepare
-
----
-
 ## Strategy and planning (for integration and impact)
 
 _Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification._
@@ -3780,5 +4053,58 @@ Below, each **recruiter question or theme** is mapped to **where** you answer it
 **What this guide gives you:** **Technical depth** (theory: serving, RAG, agents, evaluation, data pipeline, cost, scale, monitoring, security) so you can reason about trade-offs. **Practical implementation** (tools, stacks, rough estimations, §11 examples) so you can point to real options (Vertex, Bedrock, LangChain, vLLM, RAGAS, etc.). **Shipping to customers at scale** (Scope → Design → Deploy → Communicate, POC→prod, stakeholder communication, end-to-end examples) so you can prove you can take a GenAI application from idea to production and present it clearly to technical and non-technical audiences. Always connect theory to implementation; that is how you demonstrate technical ability.
 
 _For foundational system design concepts, see [System Design Essentials](./system-design-essentials.md)._
+
+---
+
+## Resources
+
+### Books
+
+- **Building LLM Applications for Production** by Huyen, Chip
+- **Designing Machine Learning Systems** by Chip Huyen
+- **Designing Data-Intensive Applications** by Martin Kleppmann
+
+### Online
+
+- [vLLM Documentation](https://docs.vllm.ai/) - High-throughput LLM serving
+- [RAGAS Documentation](https://docs.ragas.io/) - Reference-free RAG evaluation (faithfulness, relevancy, context metrics)
+- [LangSmith Evaluation](https://docs.smith.langchain.com/evaluation) - Evaluators, datasets, human annotation
+- [Arize Phoenix](https://phoenix.arize.com/) - LLM tracing and evals (hallucination, relevance, toxicity)
+- [Giskard RAG Toolkit](https://docs.giskard.ai/en/stable/reference/rag-toolset/) - RAG test suite and testset generation
+- [Braintrust Evaluate](https://www.braintrust.dev/docs/evaluation) - Custom scorers and experiments
+- [Vectara FaithJudge](https://github.com/vectara/FaithJudge) - Faithfulness/hallucination benchmark and model
+- [LangChain Documentation](https://docs.langchain.com/)
+- [LlamaIndex Documentation](https://docs.llamaindex.ai/)
+- [OpenAI Guardrails](https://openai.github.io/openai-guardrails-python/)
+- [MCP (Model Context Protocol)](https://modelcontextprotocol.io/) - Standard for tools and context to LLMs
+- [A2A (Agent-to-Agent Protocol)](https://google.github.io/A2A/) - Standard for agent-to-agent communication
+- [Google ADK Documentation](https://google.github.io/adk-docs/) - Agent Development Kit for building multi-agent systems
+
+### Google Cloud Documentation
+
+- [Vertex AI Generative AI](https://cloud.google.com/vertex-ai/generative-ai/docs/overview)
+- [Vertex AI Agent Builder](https://cloud.google.com/vertex-ai/docs/agent-builder/overview)
+- [Customer Engagement Suite](https://cloud.google.com/dialogflow/contact-center/docs) - Conversational Agents, Agent Assist, Conversational Insights, CCaaS
+- [Vertex AI RAG Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/rag-engine/overview)
+- [Vertex AI Search](https://cloud.google.com/vertex-ai/generative-ai/docs/learn/vertex-ai-search) - Search and recommendations; grounding with your data and Google Search; summaries and Q&A
+- [Gemini Enterprise](https://support.google.com/googleapi/answer/gemini-enterprise) - Enterprise AI assistant: agents + unified search across connected business systems; plan-verify-execute; report + sources + audio
+- [NotebookLM Enterprise](https://notebooklm.google.com/) - Document-focused: upload docs and web sources; Q&A, summarize, create content, audio summaries; can connect to Gemini Enterprise
+- [Model Armor](https://cloud.google.com/security/products/model-armor)
+
+### AWS Documentation
+
+- [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/)
+- [Amazon SageMaker](https://docs.aws.amazon.com/sagemaker/)
+- [Bedrock Agents](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
+- [Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html)
+
+### Practice
+
+- Build real GenAI applications
+- Experiment with different model sizes and costs
+- Practice with RAG systems and agents
+- **Google Cloud Generative AI Leader certification:** [cloud.google.com/learn/certification/generative-ai-leader](https://cloud.google.com/learn/certification/generative-ai-leader) — proctored exam, ~90 min; use study guides and course lessons to prepare
+
+---
 
 _Last updated: January 2026_
