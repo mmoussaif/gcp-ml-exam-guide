@@ -20,80 +20,80 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| A.1 | [Introduction](#introduction) | Why GenAI is different; how to use this guide | ☐ |
-| A.2 | [Visual Guide Map](#visual-guide-map) | ASCII diagram showing how sections connect | ☐ |
-| A.3 | [Glossary](#glossary) | 80+ terms organized by category | ☐ |
+| A.1 | [Introduction](#a1-introduction) | Why GenAI is different; how to use this guide | ☐ |
+| A.2 | [Visual Guide Map](#a2-visual-guide-map) | ASCII diagram showing how sections connect | ☐ |
+| A.3 | [Glossary](#a3-glossary) | 80+ terms organized by category | ☐ |
 
 ### Part B: System Overview
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| B.1 | [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend) | End-to-end request path and supporting systems | ☐ |
-| B.2 | [GenAI vs Traditional ML](#genai-vs-traditional-ml) | Key differences in architecture and operations | ☐ |
+| B.1 | [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend) | End-to-end request path and supporting systems | ☐ |
+| B.2 | [GenAI vs Traditional ML](#b2-genai-vs-traditional-ml) | Key differences in architecture and operations | ☐ |
 
 ### Part C: Generative Models (theory)
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| C.1 | [Text-to-Video Generation](#text-to-video-generation) | LDM, temporal layers, DiT, video evaluation | ☐ |
-| C.2 | [Multimodal & Vision-Language](#multimodal--vision-language-models) | CLIP, image captioning, visual Q&A | ☐ |
+| C.1 | [Text-to-Video Generation](#c1-text-to-video-generation) | LDM, temporal layers, DiT, video evaluation | ☐ |
+| C.2 | [Multimodal & Vision-Language](#c2-multimodal--vision-language-models) | CLIP, image captioning, visual Q&A | ☐ |
 
 ### Part D: LLM Fundamentals
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| D.1 | [Using Models & Sampling](#using-models--sampling-parameters) | Temperature, top-p, top-k, when to use each | ☐ |
-| D.2 | [Google GenAI Tools](#google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start | ☐ |
-| D.3 | [Text Tokenization](#text-tokenization-strategies) | BPE, SentencePiece, WordPiece | ☐ |
-| D.4 | [Transformer Architectures](#transformer-architectures) | Attention, encoder-decoder, decoder-only | ☐ |
-| D.5 | [ML Objectives for Pretraining](#ml-objectives-for-pretraining) | Next-token prediction, masked LM | ☐ |
-| D.6 | [Two-Stage Training](#two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline | ☐ |
-| D.7 | [Three-Stage Training (Chatbots)](#three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF | ☐ |
-| D.8 | [Sampling Strategies](#sampling-strategies-for-text-generation) | Greedy, beam search, nucleus sampling | ☐ |
-| D.9 | [Text Generation Evaluation](#text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, BERTScore | ☐ |
-| D.10 | [Chatbot Inference Pipeline](#chatbot-inference-pipeline-components) | Components from prompt to response | ☐ |
+| D.1 | [Using Models & Sampling](#d1-using-models--sampling-parameters) | Temperature, top-p, top-k, when to use each | ☐ |
+| D.2 | [Google GenAI Tools](#d2-google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start | ☐ |
+| D.3 | [Text Tokenization](#d3-text-tokenization-strategies) | BPE, SentencePiece, WordPiece | ☐ |
+| D.4 | [Transformer Architectures](#d4-transformer-architectures) | Attention, encoder-decoder, decoder-only | ☐ |
+| D.5 | [ML Objectives for Pretraining](#d5-ml-objectives-for-pretraining) | Next-token prediction, masked LM | ☐ |
+| D.6 | [Two-Stage Training](#d6-two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline | ☐ |
+| D.7 | [Three-Stage Training (Chatbots)](#d7-three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF | ☐ |
+| D.8 | [Sampling Strategies](#d8-sampling-strategies-for-text-generation) | Greedy, beam search, nucleus sampling | ☐ |
+| D.9 | [Text Generation Evaluation](#d9-text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, BERTScore | ☐ |
+| D.10 | [Chatbot Inference Pipeline](#d10-chatbot-inference-pipeline-components) | Components from prompt to response | ☐ |
 
 ### Part E: Core System Design (the main content)
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| **§1** | [LLM Serving Architecture](#1-llm-serving-architecture-at-scale) | Inference, batching, KV cache, vLLM, parallelism | ☐ |
-| **§2** | [RAG Systems](#2-rag-retrieval-augmented-generation-system) | Chunking, embeddings, vector DB, reranking | ☐ |
-| **§3** | [RAG vs Fine-Tuning](#3-rag-vs-fine-tuning-decision-framework) | When to use each; LoRA, PEFT, decision tree | ☐ |
-| **§4** | [Agentic AI Systems](#4-agentic-ai-systems) | ReAct, tools, multi-agent, ADK, orchestration | ☐ |
-| **§5** | [LLM Evaluation & Quality](#5-llm-evaluation--quality) | RAGAS, LLM-as-judge, human eval, A/B testing | ☐ |
-| **§6** | [GenAI Data Pipeline](#6-genai-data-pipeline-architecture) | Events, labeling, training data, feedback loops | ☐ |
-| **§7** | [Cost Optimization](#7-cost-optimization-for-genai-systems) | Token economics, model routing, caching | ☐ |
-| **§8** | [Scalability Patterns](#8-scalability-patterns-for-genai) | Batching, parallelism, quantization, autoscaling | ☐ |
-| **§9** | [Monitoring & Observability](#9-monitoring--observability-for-genai) | Traces, metrics, drift detection, alerting | ☐ |
-| **§10** | [Security & Guardrails](#10-security--guardrails) | Model Armor, prompt injection, PII, filters | ☐ |
+| E.1 | [LLM Serving Architecture](#e1-llm-serving-architecture-at-scale) | Inference, batching, KV cache, vLLM, parallelism | ☐ |
+| E.2 | [RAG Systems](#e2-rag-retrieval-augmented-generation-system) | Chunking, embeddings, vector DB, reranking | ☐ |
+| E.3 | [RAG vs Fine-Tuning](#e3-rag-vs-fine-tuning-decision-framework) | When to use each; LoRA, PEFT, decision tree | ☐ |
+| E.4 | [Agentic AI Systems](#e4-agentic-ai-systems) | ReAct, tools, multi-agent, ADK, orchestration | ☐ |
+| E.5 | [LLM Evaluation & Quality](#e5-llm-evaluation--quality) | RAGAS, LLM-as-judge, human eval, A/B testing | ☐ |
+| E.6 | [GenAI Data Pipeline](#e6-genai-data-pipeline-architecture) | Events, labeling, training data, feedback loops | ☐ |
+| E.7 | [Cost Optimization](#e7-cost-optimization-for-genai-systems) | Token economics, model routing, caching | ☐ |
+| E.8 | [Scalability Patterns](#e8-scalability-patterns-for-genai) | Batching, parallelism, quantization, autoscaling | ☐ |
+| E.9 | [Monitoring & Observability](#e9-monitoring--observability-for-genai) | Traces, metrics, drift detection, alerting | ☐ |
+| E.10 | [Security & Guardrails](#e10-security--guardrails) | Model Armor, prompt injection, PII, filters | ☐ |
 
 ### Part F: Real-World Examples
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| **§11** | [Real-World Examples](#11-real-world-examples-applying-the-stack) | Complete system designs with estimations | ☐ |
-| 11.1 | — LLM Service | High-throughput inference at scale | ☐ |
-| 11.2 | — Support Chatbot | RAG + agents for customer service | ☐ |
-| 11.3 | — Code Assistant | IDE integration, code generation | ☐ |
-| 11.4 | — RAG Pipeline | Document Q&A with evaluation | ☐ |
-| 11.5 | — Gmail Smart Compose | Real-time text prediction | ☐ |
-| 11.6 | — Google Translate | Seq2seq, attention, serving at scale | ☐ |
-| 11.7 | — ChatGPT Clone | Personal assistant architecture | ☐ |
-| 11.8 | — Image Captioning | Vision + language models | ☐ |
-| 11.9 | — RAG Deep Dive | Advanced retrieval patterns | ☐ |
-| 11.10 | — Text-to-Image | Diffusion, CLIP, CFG, evaluation | ☐ |
-| 11.11 | — Text-to-Video | LDM, temporal layers, FVD | ☐ |
+| F.1 | [Real-World Examples](#f1-real-world-examples-applying-the-stack) | Complete system designs with estimations | ☐ |
+| F.1.1 | — LLM Service | High-throughput inference at scale | ☐ |
+| F.1.2 | — Support Chatbot | RAG + agents for customer service | ☐ |
+| F.1.3 | — Code Assistant | IDE integration, code generation | ☐ |
+| F.1.4 | — RAG Pipeline | Document Q&A with evaluation | ☐ |
+| F.1.5 | — Gmail Smart Compose | Real-time text prediction | ☐ |
+| F.1.6 | — Google Translate | Seq2seq, attention, serving at scale | ☐ |
+| F.1.7 | — ChatGPT Clone | Personal assistant architecture | ☐ |
+| F.1.8 | — Image Captioning | Vision + language models | ☐ |
+| F.1.9 | — RAG Deep Dive | Advanced retrieval patterns | ☐ |
+| F.1.10 | — Text-to-Image | Diffusion, CLIP, CFG, evaluation | ☐ |
+| F.1.11 | — Text-to-Video | LDM, temporal layers, FVD | ☐ |
 
 ### Part G: Reference & Interview Prep
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| G.1 | [Strategy & Planning](#strategy-and-planning-for-integration-and-impact) | ROI, metrics, change management | ☐ |
-| G.2 | [Quick Reference](#quick-reference) | 45-min interview framework | ☐ |
+| G.1 | [Strategy & Planning](#g1-strategy-and-planning-for-integration-and-impact) | ROI, metrics, change management | ☐ |
+| G.2 | [Quick Reference](#g2-quick-reference) | 45-min interview framework | ☐ |
 | G.3 | [Interview Checklist](#what-faang-interviewers-evaluate) | What interviewers look for | ☐ |
 | G.4 | [End-to-End Solutioning](#end-to-end-solutioning-and-rrk-skills) | Scope → Design → Deploy → Communicate | ☐ |
-| G.5 | [Resources](#resources) | Books, docs, links | ☐ |
+| G.5 | [Resources](#g5-resources) | Books, docs, links | ☐ |
 
 ---
 
@@ -101,15 +101,15 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 **Suggested reading order:**
 1. **Quick orientation (1 hour):** A.1–A.3 (intro, map, glossary) → B.1 (big picture)
-2. **Theory foundation (3-4 hours):** C.1–C.2 (genertic models) → D.1–D.10 (LLM fundamentals)
-3. **System design deep dive (6-8 hours):** §1–§10 in order, taking notes
-4. **Application practice (3-4 hours):** §11 examples — work through 3-4 in detail
+2. **Theory foundation (3-4 hours):** C.1–C.2 (generative models) → D.1–D.10 (LLM fundamentals)
+3. **System design deep dive (6-8 hours):** E.1–E.10 in order, taking notes
+4. **Application practice (3-4 hours):** F.1 examples — work through 3-4 in detail
 5. **Interview prep (2 hours):** G.2–G.4 (quick reference, checklist, solutioning)
 6. **Reference as needed:** A.3 Glossary, G.5 Resources
 
 ---
 
-## Introduction
+## A.1 Introduction
 
 ### Why This Guide Exists
 
@@ -203,7 +203,7 @@ Let's start with the big picture.
 
 ---
 
-## Visual Guide Map
+## A.2 Visual Guide Map
 
 This map shows how the guide fits together. Use it to navigate and see how concepts connect.
 
@@ -253,7 +253,7 @@ This map shows how the guide fits together. Use it to navigate and see how conce
 
 ---
 
-## Glossary
+## A.3 Glossary
 
 Quick reference for key terms. Organized by category for easier navigation.
 
@@ -411,7 +411,7 @@ Quick reference for key terms. Organized by category for easier navigation.
 
 ---
 
-## GenAI System: Big Picture (Frontend to Backend)
+## B.1 GenAI System: Big Picture (Frontend to Backend)
 
 Before diving into components, here is the end-to-end shape of a GenAI system. The **request path** runs from frontend to backend; **supporting systems** (data pipelines, evaluation, monitoring, security) surround that path. Each numbered section later in this guide is a T-shaped deep dive on one layer or concern: broad role in this picture first, then detail.
 
@@ -458,7 +458,7 @@ Before diving into components, here is the end-to-end shape of a GenAI system. T
 
 ---
 
-## GenAI vs Traditional ML
+## B.2 GenAI vs Traditional ML
 
 Understanding the fundamental differences between traditional ML systems and **GenAI** / **LLM (Large Language Model)** systems is crucial for making the right architectural decisions.
 
@@ -734,7 +734,7 @@ CLIPScore = cosine_similarity(CLIP_text(prompt), CLIP_image(generated_image))
 
 ---
 
-## Text-to-Video Generation
+## C.1 Text-to-Video Generation
 
 Text-to-video extends text-to-image by generating sequences of temporally consistent frames.
 
@@ -879,7 +879,7 @@ Prompt → Safety → Enhancement → Text Encoder → LDM (latent space)
 
 ---
 
-## Multimodal & Vision-Language Models
+## C.2 Multimodal & Vision-Language Models
 
 Many GenAI tasks involve **multiple modalities** (text + image, text + video, etc.). Key architectures:
 
@@ -963,7 +963,7 @@ CIDEr (Consensus-based Image Description Evaluation) is designed specifically fo
 
 ---
 
-## Using Models & Sampling Parameters
+## D.1 Using Models & Sampling Parameters
 
 Generative AI agents are powered by models that act as the "brains" of the operation. While models are pre-trained, their behavior during inference can be customized using **sampling parameters**—the "knobs and dials" of the model.
 
@@ -1030,7 +1030,7 @@ Most generative AI models are accessed via **APIs**. The flow:
 
 ---
 
-## Google Generative AI Development Tools
+## D.2 Google Generative AI Development Tools
 
 Google provides two primary environments for experimenting with and deploying Gemini models:
 
@@ -1072,7 +1072,7 @@ See **§4 Agentic AI Systems** for full ADK coverage with code examples.
 
 ---
 
-## Text Tokenization Strategies
+## D.3 Text Tokenization Strategies
 
 Tokenization converts raw text into numerical tokens the model can process. The choice of tokenization affects vocabulary size, model performance, and handling of unseen words.
 
@@ -1097,7 +1097,7 @@ Tokenization converts raw text into numerical tokens the model can process. The 
 
 ---
 
-## Transformer Architectures
+## D.4 Transformer Architectures
 
 The Transformer architecture has three variations, each suited for different tasks:
 
@@ -1153,7 +1153,7 @@ Decoder: Previous Output → Self-Attention → Cross-Attention (to encoder) →
 
 ---
 
-## ML Objectives for Pretraining
+## D.5 ML Objectives for Pretraining
 
 Different architectures use different pretraining objectives:
 
@@ -1189,7 +1189,7 @@ Target: "<X> you for <Y> me"
 
 ---
 
-## Two-Stage Training: Pretraining + Finetuning
+## D.6 Two-Stage Training: Pretraining + Finetuning
 
 Training LLMs directly on task-specific data is inefficient. Instead, use two stages:
 
@@ -1215,7 +1215,7 @@ Training LLMs directly on task-specific data is inefficient. Instead, use two st
 
 ---
 
-## Three-Stage Training for Chatbots (Pretraining → SFT → RLHF)
+## D.7 Three-Stage Training for Chatbots (Pretraining → SFT → RLHF)
 
 For **chatbots** (ChatGPT, Gemini, Claude), two stages aren't enough. A third stage aligns the model to human preferences:
 
@@ -1287,7 +1287,7 @@ For long-context chatbots (4K+ tokens), traditional positional encodings struggl
 
 ---
 
-## Sampling Strategies for Text Generation
+## D.8 Sampling Strategies for Text Generation
 
 After training, **sampling** generates new text from the model. Two main categories:
 
@@ -1326,7 +1326,7 @@ After training, **sampling** generates new text from the model. Two main categor
 
 ---
 
-## Text Generation Evaluation Metrics
+## D.9 Text Generation Evaluation Metrics
 
 ### Offline Metrics
 
@@ -1436,7 +1436,7 @@ Critical for production chatbots:
 
 ---
 
-## Chatbot Inference Pipeline Components
+## D.10 Chatbot Inference Pipeline Components
 
 Beyond the model itself, production chatbots need:
 
@@ -1473,7 +1473,7 @@ Google's generative AI APIs offer pre-trained foundation models that can be fine
 
 ---
 
-## 1. LLM Serving Architecture at Scale
+## E.1 LLM Serving Architecture at Scale
 
 ### Use Case: Design a Chatbot Service (like ChatGPT)
 
@@ -1579,7 +1579,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ---
 
-## 2. RAG (Retrieval-Augmented Generation) System
+## E.2 RAG (Retrieval-Augmented Generation) System
 
 **Why this comes next:** §1 gave you **LLM serving** (how to run the model at scale). When the model **lacks knowledge** about your domain (docs, KB, policies) or that knowledge **changes often**, you add **retrieval** at query time—that's **RAG** (§2). Same request path (gateway → orchestration → LLM), but orchestration now includes "retrieve relevant chunks, then generate."
 
@@ -1925,7 +1925,7 @@ RAG evaluation has three dimensions—retrieval quality, generation faithfulness
 
 ---
 
-## 3. RAG vs Fine-Tuning Decision Framework
+## E.3 RAG vs Fine-Tuning Decision Framework
 
 **Why this comes next:** §2 gave you **RAG** (retrieve, then generate). When do you **also**—or **instead**—**fine-tune**? §3 is the decision framework so you choose the right lever for the problem.
 
@@ -2026,7 +2026,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 ---
 
-## 4. Agentic AI Systems
+## E.4 Agentic AI Systems
 
 **Why this comes next:** §§2–3 gave you **RAG** and **fine-tuning** (retrieval + behavior). When do you need **tools** and **multi-step** reasoning—e.g. look up an order, call an API, then decide what to say? That's **agents** (§4): the same request path (gateway → orchestration → LLM) but with a loop and tools.
 
@@ -2587,7 +2587,7 @@ adk web --port 8000
 
 ---
 
-## 5. LLM Evaluation & Quality
+## E.5 LLM Evaluation & Quality
 
 **Why this comes next:** §§1–4 gave you the **request path** (serving, RAG, agents). The next question is **did we build the right thing?** Evaluation (§5) answers that—quality, grounding, safety—so you can ship with confidence and iterate.
 
@@ -2734,7 +2734,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ---
 
-## 6. GenAI Data Pipeline Architecture
+## E.6 GenAI Data Pipeline Architecture
 
 **In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." Evaluation (§5) tells you _what_ to improve (quality, safety, drift); this pipeline gives you the _data_ to improve it (fine-tuning, RLHF, few-shot curation). It is _distinct_ from the evaluation pipeline (§5), which moves _prediction_ data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
 
@@ -2794,7 +2794,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ---
 
-## 7. Cost Optimization for GenAI Systems
+## E.7 Cost Optimization for GenAI Systems
 
 **In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**. §§1–6 gave you the request path (serving, RAG, agents), evaluation, and training data; **cost** (§7) and **scale** (§8) determine how you run it affordably and at customer load. Cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. _Throughput_ and _capacity_ are in §8 Scalability; here we focus on _cost per request_.
 
@@ -2913,7 +2913,7 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 ---
 
-## 8. Scalability Patterns for GenAI
+## E.8 Scalability Patterns for GenAI
 
 **In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. _Cost per request_ is in §7; here we focus on _requests per second_ and _utilization_.
 
@@ -2985,7 +2985,7 @@ Both enable training **larger models** on the same hardware by eliminating redun
 
 ---
 
-## 9. Monitoring & Observability for GenAI
+## E.9 Monitoring & Observability for GenAI
 
 **In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we observe the system**: metrics, traces, and drift detection across the request path and the evaluation/training pipelines. Quality metrics and eval pipeline are in §5; here we focus on **what to track** and **which platform services** support it.
 
@@ -3014,7 +3014,7 @@ Both enable training **larger models** on the same hardware by eliminating redun
 
 ---
 
-## 10. Security & Guardrails
+## E.10 Security & Guardrails
 
 **In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit _around_ the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
 
@@ -3183,7 +3183,7 @@ Beyond security threats, LLM outputs require **post-processing** to ensure they 
 
 ---
 
-## 11. Real-World Examples: Applying the Stack
+## F.1 Real-World Examples: Applying the Stack
 
 This section is where **theory meets shipping**: real stacks (LangChain, Vertex, Bedrock, vLLM), real numbers (tokens, cost, latency), and customer-ready scenarios. It comes **after** all core concepts (§1–§10) so every term is defined. Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out _why_ each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize. For **end-to-end solutioning** (Scope → Design → Deploy → Communicate) with hypotheticals, stakeholder loop-in, and presenting to CxO vs Product vs live customer, see [Quick Reference: End-to-end solutioning](#end-to-end-solutioning-scope--design--deploy--communicate)—it uses §11-style designs inside a full Scope/Design/Deploy/Communicate flow with worked examples.
 
@@ -3997,7 +3997,7 @@ Prompt → Safety → Enhancement → Text Encoder (T5)
 
 The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
 
-## Strategy and planning (for integration and impact)
+## G.1 Strategy and Planning (for integration and impact)
 
 _Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification._
 
@@ -4012,7 +4012,7 @@ _Gen AI evolves quickly; no one stays an "expert" without adapting. This section
 
 ---
 
-## Quick Reference
+## G.2 Quick Reference
 
 Use this section to **prove technical ability** and to **design GenAI systems that ship to customers at scale**—in interviews (system design + hypotheticals) and in practice (Scope → Design → Deploy → Communicate).
 
@@ -4244,7 +4244,7 @@ _For foundational system design concepts, see [System Design Essentials](./syste
 
 ---
 
-## Resources
+## G.5 Resources
 
 ### Books
 
