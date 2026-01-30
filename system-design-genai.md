@@ -139,6 +139,103 @@ Modern GenAI uses four main algorithm classes. Each has different strengths:
 > [!TIP]
 > 💡 **Aha:** In interviews, when asked "design a text-to-image system," diffusion is the default choice (quality). For LLMs/chatbots, autoregressive Transformers are the default. GANs are rarely used for new systems due to training instability; VAEs are used for latent representations (e.g., Stable Diffusion's VAE encoder).
 
+### GAN Architecture Deep Dive
+
+GANs have two competing networks trained together:
+
+**Generator Architecture:**
+```
+Noise Vector (100-dim) → Reshape → [Upsampling Blocks] → Output Image
+                                          ↓
+                         ConvTranspose2D → BatchNorm → ReLU (repeat)
+                                          ↓
+                         Final: ConvTranspose2D → Tanh (-1 to 1)
+```
+
+**Discriminator Architecture:**
+```
+Input Image → [Downsampling Blocks] → Classification Head → Probability (real/fake)
+                    ↓                          ↓
+         Conv2D → BatchNorm → LeakyReLU    Fully Connected → Sigmoid
+```
+
+| Component | Generator | Discriminator |
+| --------- | --------- | ------------- |
+| **Purpose** | Transform noise → image | Classify real vs fake |
+| **Convolution** | Transposed Conv (upsample) | Standard Conv (downsample) |
+| **Final activation** | Tanh (output in [-1, 1]) | Sigmoid (probability) |
+
+### Normalization Layers
+
+Normalization stabilizes training by ensuring consistent distributions across layers.
+
+| Type | Normalizes across | Best for | Notes |
+| ---- | ----------------- | -------- | ----- |
+| **Batch Norm (BN)** | Batch dimension | CNNs, GANs | Standard choice; needs decent batch size |
+| **Layer Norm (LN)** | Feature dimension | Transformers, RNNs | Batch-size independent |
+| **Instance Norm (IN)** | Each feature map individually | Style transfer | Removes style information |
+| **Group Norm (GN)** | Groups of channels | Small batch sizes | Balance between BN and LN |
+
+### GAN Training: Adversarial Loss
+
+**Minimax objective:** Discriminator maximizes, Generator minimizes:
+
+```
+L = E[log D(x)] + E[log(1 - D(G(z)))]
+     ↑ real          ↑ fake
+```
+
+**Training loop:**
+1. Train discriminator for k steps (generator frozen)
+2. Train generator for 1 step (discriminator frozen)
+3. Repeat until convergence
+
+### GAN Training Challenges & Mitigations
+
+| Challenge | What happens | Mitigations |
+| --------- | ------------ | ----------- |
+| **Vanishing gradients** | Discriminator too good → generator gets tiny gradients | Modified loss: maximize log(D(G(z))) instead of minimize log(1-D(G(z))); Wasserstein loss |
+| **Mode collapse** | Generator produces only 1–2 image types | Wasserstein loss; Unrolled GAN; minibatch discrimination |
+| **Failure to converge** | Discriminator/generator oscillate, never stabilize | Different learning rates; spectral normalization; gradient penalty |
+
+**Wasserstein GAN (WGAN):**
+- Discriminator (critic) outputs score, not probability
+- Critic loss = D(real) - D(fake) (maximize)
+- Generator loss = -D(G(z)) (minimize)
+- More stable gradients; reduces mode collapse
+
+### GAN Latent Space & Sampling
+
+**Latent space:** The generator learns a mapping from noise vectors to images. Points in this space represent potential images; nearby points → similar images.
+
+| Sampling method | How it works | Trade-off |
+| --------------- | ------------ | --------- |
+| **Random** | Sample from N(0,1) | Maximum diversity; may include outliers |
+| **Truncated** | Reject samples beyond threshold | Higher quality; less diversity |
+
+**StyleGAN** extends this with style-based generation:
+- Separate "style" vectors control different attributes (age, hair, expression)
+- Enables **attribute manipulation**: change age without changing identity
+- Used for face generation, editing, and deepfakes
+
+### Image Generation Metrics
+
+| Metric | What it measures | How it works | Interpretation |
+| ------ | ---------------- | ------------ | -------------- |
+| **Inception Score (IS)** | Quality + diversity | Run images through Inception v3; measure class probability sharpness and diversity | Higher = better (quality: sharp predictions; diversity: spread across classes) |
+| **FID** (Fréchet Inception Distance) | Similarity to real images | Compare feature statistics (mean, covariance) of generated vs real images | Lower = better (distributions closer) |
+| **KID** (Kernel Inception Distance) | Like FID, unbiased | Uses kernel methods instead of Gaussian assumption | Lower = better |
+| **CLIP Score** | Image-text alignment | Cosine similarity between CLIP embeddings | Higher = better match to prompt |
+
+**FID calculation:**
+1. Generate large set of images
+2. Extract features from Inception v3 (both real and generated)
+3. Compute mean and covariance for each set
+4. Calculate Fréchet distance between distributions
+
+> [!TIP]
+> 💡 **Aha:** FID and IS use ImageNet-trained Inception, which can introduce artifacts. **CLIP-based metrics** (e.g., CLIP-FID) often align better with human judgment. For face generation, **human evaluation** (pairwise comparison: "which looks more real?") is still the gold standard.
+
 ### Model Capacity: Parameters vs FLOPs
 
 **Model capacity** determines how much a model can learn. Two measures:
@@ -2853,6 +2950,83 @@ User Query → Safety Filter → Query Expansion (optional)
 🛠️ **Stack snapshot:** Layout-Parser/Document AI + CLIP/text-embedding-004 + FAISS/Pinecone (HNSW) + LangChain RecursiveTextSplitter + cross-encoder rerank + Gemini/GPT-4 + RAGAS eval + citation validation.
 
 **RAFT consideration:** If retrieval is noisy (many similar docs), consider RAFT finetuning—train LLM on (query, mixed golden+distractor context, answer) to ignore irrelevant chunks.
+
+---
+
+### Example 9: Realistic Face Generation System (like StyleGAN)
+
+_Generate diverse, high-quality synthetic faces for entertainment, marketing, or training data. GAN-based approach with optional attribute control (age, expression, hairstyle)._
+
+**1. Clarify Requirements (5–10 min)**
+
+| Dimension | What to pin down | Why it matters |
+| --------- | ---------------- | -------------- |
+| **Output resolution** | 1024×1024 target | Higher resolution = more compute, more data needed |
+| **Diversity** | Balanced ethnicity, age, gender | Avoid bias; need diverse training data |
+| **Attribute control** | Optional: edit age, hair, expression | Requires StyleGAN-style architecture |
+| **Latency** | < 1 second per image | Single forward pass through generator |
+| **Training data** | 70K diverse face images (licensed) | Quality and diversity determine output quality |
+| **Safety** | No deepfakes of real people | Watermarking; usage policies |
+
+📊 **Rough estimation (face generation)**
+
+- **Training data:** 70K images × 3 channels × 1024×1024 = ~200GB raw. Augmented 5×: 1TB.
+- **Training compute:** StyleGAN2 on 70K images: ~1–2 weeks on 8×V100 GPUs.
+- **Inference:** Single forward pass: ~20–50ms on GPU. Can generate ~20–50 faces/second.
+- **Serving cost:** ~$0.001–0.01 per image depending on GPU utilization.
+
+**2. High-Level Architecture (10–15 min)**
+
+```
+User Request → Face Generator Service → [Sample Noise] → Generator (StyleGAN) → Output Image
+                     ↓ (optional)
+              Attribute Control → Modify Latent Vector → Generator
+```
+
+**Training Pipeline:**
+```
+Training Data → Preprocess (resize, normalize, augment) → GAN Training Loop
+                                                              ↓
+                                        Generator ←→ Discriminator (adversarial)
+                                                              ↓
+                                        Evaluation (FID, IS) → Deploy if improved
+```
+
+**Components:**
+1. **Generator**: Upsampling blocks (ConvTranspose2D → BatchNorm → ReLU) × N → Tanh output
+2. **Discriminator**: Downsampling blocks (Conv2D → BatchNorm → LeakyReLU) × N → Sigmoid
+3. **Latent Space**: 512-dim noise vector sampled from N(0,1)
+4. **StyleGAN extensions**: Style mapping network for attribute control
+
+**3. Deep Dive (15–20 min)**
+
+- **Architecture**: StyleGAN2 (or StyleGAN3) generator. Mapping network transforms noise to style vectors. Style vectors injected at each resolution level (4×4, 8×8, ..., 1024×1024).
+- **Training**:
+  - Adversarial training: alternate discriminator (k steps) and generator (1 step)
+  - Loss: Non-saturating GAN loss (modified minimax) or Wasserstein loss with gradient penalty (WGAN-GP)
+  - Regularization: R1 regularization, path length regularization (StyleGAN2)
+- **Normalization**: BatchNorm in generator; spectral normalization in discriminator for stability.
+- **Sampling**: Random sampling from N(0,1) for diversity; truncated sampling (ψ=0.7) for higher quality, less diversity.
+- **Attribute control** (if required): Find attribute directions in latent space (e.g., "age vector"). Add/subtract to modify attributes while preserving identity.
+- **Evaluation**:
+  - Offline: **FID** (lower = closer to real distribution), **Inception Score** (higher = quality + diversity)
+  - Online: Human evaluation (pairwise comparison), user feedback, latency monitoring
+
+**4. Bottlenecks & Trade-offs (5–10 min)**
+
+- **Quality vs diversity**: Truncated sampling increases quality but reduces diversity. Adjust truncation parameter ψ based on use case.
+- **Training stability**: GANs are notoriously unstable. Use WGAN-GP or progressive growing; monitor discriminator/generator loss balance.
+- **Mode collapse**: Generator may produce limited variety. Mitigations: minibatch discrimination, unrolled GAN, Wasserstein loss.
+- **Resolution vs speed**: 1024×1024 is slower than 256×256. For real-time, consider lower resolution or distilled models.
+- **Diversity vs bias**: Training data must be balanced. Use attribute classifiers to measure distribution; resample if biased.
+- **Deepfake concerns**: Generated faces may be misused. Add watermarks; track usage; implement content policies.
+
+🛠️ **Stack snapshot:** StyleGAN2/StyleGAN3 (NVIDIA) + PyTorch/TensorFlow + 8×V100/A100 GPUs + FID/IS evaluation + human eval pairwise comparison + watermarking.
+
+**Models/Resources:**
+- **StyleGAN2-ADA**: Adaptive augmentation for limited data
+- **StyleGAN3**: Alias-free, better video generation
+- **NVIDIA pretrained models**: thispersondoesnotexist.com uses StyleGAN
 
 ---
 
