@@ -77,149 +77,209 @@ Each section builds on the previous. RAG (§2) needs serving (§1). Agents (§4)
 
 ## Visual Guide Map
 
-This mind-map shows how the guide fits together. Use it to navigate and to see how concepts connect.
+This map shows how the guide fits together. Use it to navigate and see how concepts connect.
 
-```mermaid
-mindmap
-  root((GenAI System Design))
-    Frontend to Backend
-      API Gateway
-      Orchestration
-        RAG §2
-        Agents §4
-        Tools
-      LLM Inference §1
-        Serving
-        Batching
-        KV Cache
-    Core Patterns
-      RAG
-        Chunking
-        Embeddings
-        Vector DB
-        Reranking
-      Agents
-        ReAct
-        Tool Use
-        Multi-agent
-        ADK
-      Fine-tuning §3
-        LoRA
-        When vs RAG
-    Quality & Safety
-      Evaluation §5
-        RAGAS
-        Human Eval
-        A/B Testing
-      Guardrails §10
-        Model Armor
-        Content Filters
-        PII Detection
-    Operations
-      Data Pipeline §6
-        Events
-        Labeling
-        Training Data
-      Cost §7
-        Token Economics
-        Model Routing
-        Caching
-      Scale §8
-        Batching
-        Parallelism
-        Quantization
-      Monitoring §9
-        Traces
-        Metrics
-        Drift
-    Generative Models
-      Transformers
-        Attention
-        Self-attention
-        Cross-attention
-      Text-to-Image
-        Diffusion
-        CLIP
-        CFG
-      Text-to-Video
-        LDM
-        Temporal Layers
-        FVD
-    Apply It
-      Examples §11
-        LLM Service
-        Support Bot
-        Code Assistant
-        RAG Pipeline
-        Text-to-Image
-        Text-to-Video
-      Interview Framework
-        Clarify
-        Architecture
-        Deep Dive
-        Trade-offs
 ```
+                              ┌─────────────────────────────────────┐
+                              │      GenAI SYSTEM DESIGN            │
+                              │           GUIDE MAP                 │
+                              └─────────────────────────────────────┘
+                                              │
+        ┌───────────────┬───────────────┬─────┴─────┬───────────────┬───────────────┐
+        │               │               │           │               │               │
+        ▼               ▼               ▼           ▼               ▼               ▼
+┌───────────────┐ ┌───────────────┐ ┌───────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
+│ REQUEST PATH  │ │ CORE PATTERNS │ │ QUALITY   │ │  OPERATIONS   │ │  GENERTIC     │ │  APPLY IT     │
+│               │ │               │ │ & SAFETY  │ │               │ │  MODELS       │ │               │
+└───────┬───────┘ └───────┬───────┘ └─────┬─────┘ └───────┬───────┘ └───────┬───────┘ └───────┬───────┘
+        │                 │               │               │               │               │
+        ▼                 ▼               ▼               ▼               ▼               ▼
+  ┌───────────┐     ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
+  │API Gateway│     │  RAG §2   │   │Evaluation │   │Data Pipe  │   │Transformer│   │Examples   │
+  │           │     │ Chunking  │   │   §5      │   │   §6      │   │ Attention │   │   §11     │
+  │Rate Limit │     │ Embedding │   │ RAGAS     │   │ Events    │   │ Self/Cross│   │ LLM Svc   │
+  │Auth       │     │ Vector DB │   │ Human Eval│   │ Labeling  │   │           │   │ RAG       │
+  └─────┬─────┘     │ Reranking │   │ A/B Test  │   │ Training  │   ├───────────┤   │ Agents    │
+        │           └───────────┘   └───────────┘   └───────────┘   │Text-Image │   │ Support   │
+        ▼           ┌───────────┐   ┌───────────┐   ┌───────────┐   │ Diffusion │   └───────────┘
+  ┌───────────┐     │Agents §4  │   │Guardrails │   │ Cost §7   │   │ CLIP, CFG │   ┌───────────┐
+  │Orchestrat.│     │ ReAct     │   │   §10     │   │ Tokens    │   ├───────────┤   │Interview  │
+  │           │     │ Tools     │   │Model Armor│   │ Routing   │   │Text-Video │   │ Framework │
+  │ RAG       │     │ Multi-Agt │   │ Filters   │   │ Caching   │   │ LDM       │   │ Clarify   │
+  │ Agents    │     │ ADK       │   │ PII       │   └───────────┘   │ Temporal  │   │ Architect │
+  │ Tools     │     └───────────┘   └───────────┘   ┌───────────┐   │ FVD       │   │ Deep Dive │
+  └─────┬─────┘     ┌───────────┐                   │ Scale §8  │   └───────────┘   │ Tradeoffs │
+        │           │Fine-tune  │                   │ Batching  │                   └───────────┘
+        ▼           │   §3      │                   │ Parallel  │
+  ┌───────────┐     │ LoRA/PEFT │                   │ Quantize  │
+  │LLM Infer. │     │ vs RAG    │                   └───────────┘
+  │   §1      │     └───────────┘                   ┌───────────┐
+  │ Serving   │                                     │Monitor §9 │
+  │ Batching  │                                     │ Traces    │
+  │ KV Cache  │                                     │ Metrics   │
+  └───────────┘                                     │ Drift     │
+                                                    └───────────┘
+```
+
+**Reading order:** Start with **§1 LLM Serving** (the foundation), then **§2 RAG** and **§3 Fine-tuning** (how to add knowledge), then **§4 Agents** (how to add actions). **§§5–10** are cross-cutting concerns. **§11 Examples** ties it all together.
 
 ---
 
 ## Glossary
 
-Quick reference for key terms used throughout this guide.
+Quick reference for key terms. Organized by category for easier navigation.
 
-| Term | Definition |
-| ---- | ---------- |
-| **LLM** | Large Language Model — neural network trained on text to generate human-like responses |
-| **GenAI** | Generative AI — models that create new content (text, images, video, audio) |
-| **Token** | Basic unit of text processing; ~4 characters in English; models charge per token |
-| **Context Window** | Maximum tokens an LLM can process in one request (input + output) |
-| **KV Cache** | Key-Value cache — stores attention computations to avoid recomputation during autoregressive generation |
-| **RAG** | Retrieval-Augmented Generation — retrieve relevant documents, inject into prompt, then generate |
-| **Embedding** | Dense vector representation of text; similar meanings → similar vectors |
-| **Vector Database** | Database optimized for similarity search on embeddings (Pinecone, Weaviate, pgvector) |
-| **Chunking** | Splitting documents into smaller pieces for embedding and retrieval |
-| **Reranking** | Scoring retrieved chunks by relevance using a cross-encoder model |
-| **Fine-tuning** | Training a pretrained model on task-specific data to improve performance |
-| **LoRA** | Low-Rank Adaptation — parameter-efficient fine-tuning; trains small adapter weights |
-| **PEFT** | Parameter-Efficient Fine-Tuning — umbrella term for LoRA, QLoRA, adapters |
-| **Quantization** | Reducing model precision (FP16 → INT8/INT4) to save memory and speed up inference |
-| **Agent** | LLM + tools + reasoning loop; can take actions and observe results |
-| **ReAct** | Reasoning + Acting — agent pattern: Thought → Action → Observation → repeat |
-| **Tool / Function Calling** | LLM generates structured calls to external functions (APIs, databases, code) |
-| **MCP** | Model Context Protocol — standard for exposing tools and context to LLMs |
-| **A2A** | Agent-to-Agent Protocol — standard for agent communication and task delegation |
-| **ADK** | Agent Development Kit — Google's framework for building multi-agent systems |
-| **Prompt Engineering** | Designing prompts to get better LLM outputs (few-shot, CoT, system prompts) |
-| **Few-shot** | Including examples in the prompt to guide model behavior |
-| **Chain-of-Thought (CoT)** | Prompting the model to reason step-by-step before answering |
-| **System Prompt** | Instructions that set the model's persona, constraints, and behavior |
-| **Temperature** | Controls randomness; 0 = deterministic, 1+ = more creative/random |
-| **Top-p / Top-k** | Sampling strategies that limit token selection to most probable candidates |
-| **CFG** | Classifier-Free Guidance — technique to improve prompt adherence in diffusion models |
-| **Diffusion Model** | Generative model that learns to denoise; used for images and video |
-| **Latent Diffusion (LDM)** | Diffusion in compressed latent space (faster than pixel space) |
-| **VAE** | Variational Autoencoder — encoder-decoder for compressing to/from latent space |
-| **FID** | Fréchet Inception Distance — measures image quality vs reference distribution |
-| **FVD** | Fréchet Video Distance — like FID but for video; measures quality + temporal consistency |
-| **CLIPScore** | Measures alignment between image and text using CLIP embeddings |
-| **Hallucination** | Model generates plausible-sounding but factually incorrect information |
-| **Grounding** | Anchoring model responses to retrieved facts or sources |
-| **Faithfulness** | Whether the response accurately reflects the retrieved context |
-| **Guardrails** | Safety filters on inputs and outputs (toxicity, PII, jailbreak detection) |
-| **Model Armor** | Google Cloud's guardrail service for prompt injection and harm detection |
-| **RAGAS** | Reference-free RAG evaluation framework (faithfulness, relevancy, context metrics) |
-| **vLLM** | High-throughput open-source LLM serving engine with PagedAttention |
-| **TGI** | Text Generation Inference — Hugging Face's LLM serving solution |
-| **TTFT** | Time To First Token — latency from request to first output token |
-| **TPS** | Tokens Per Second — generation throughput |
-| **Speculative Decoding** | Use small draft model to predict tokens, verify with large model in parallel |
-| **Continuous Batching** | Dynamically add/remove requests from batch as they complete |
-| **PagedAttention** | Memory management for KV cache using non-contiguous pages (like OS virtual memory) |
-| **Tensor Parallelism** | Split model layers across GPUs for large models |
-| **Pipeline Parallelism** | Split model stages across GPUs; each processes different batches |
-| **SFT** | Supervised Fine-Tuning — fine-tune on (input, output) pairs |
-| **RLHF** | Reinforcement Learning from Human Feedback — align model with human preferences |
-| **DPO** | Direct Preference Optimization — simpler alternative to RLHF |
-| **Semantic Cache** | Cache responses by embedding similarity, not exact match |
+### Core Concepts
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **LLM** | Large Language Model. A neural network with billions of parameters trained on massive text corpora to predict the next token. Examples: GPT-4, Gemini, Claude, LLaMA. | The foundation of modern GenAI. Understanding how LLMs work (attention, tokens, context) is essential for system design. |
+| **GenAI** | Generative AI. Models that create new content—text, images, video, audio, code—rather than just classifying or predicting. | Broader than LLMs: includes diffusion models (images), video generators, music models. |
+| **Token** | The smallest unit of text the model processes. Roughly 4 characters or 0.75 words in English. "Hello world" ≈ 2 tokens. Models charge and limit by tokens. | Tokens determine cost, latency, and context limits. A 100K token context costs 100× more than 1K. |
+| **Context Window** | Maximum number of tokens an LLM can see in one request (prompt + response combined). GPT-4: 128K, Gemini 1.5: 2M, Claude 3: 200K. | Larger context = more information per request, but higher cost and latency. Design retrieval to fit within limits. |
+| **Inference** | Running a trained model to get predictions. For LLMs: turning a prompt into a response. | Most of your GenAI costs come from inference, not training. Optimize inference = save money. |
+| **Latency** | Time from request to response. For LLMs: TTFT (first token) + generation time. Typically 100ms–10s depending on model and output length. | Users notice latency >2s. Streaming helps perception. Trade off latency vs cost vs quality. |
+
+### Tokens & Generation
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Tokenization** | Converting text to tokens. Different models use different tokenizers (BPE, SentencePiece, WordPiece). "unhappily" → ["un", "happy", "ly"]. | Same text = different token counts on different models. Affects cost calculations and context limits. |
+| **Autoregressive** | Generating one token at a time, using previous tokens to predict the next. LLMs generate left-to-right, token by token. | Explains why LLM latency scales with output length. 1000 tokens takes ~10× longer than 100 tokens. |
+| **Temperature** | Controls randomness in token selection. 0 = always pick most likely token (deterministic). 1 = sample according to probabilities. >1 = more random/creative. | Low temp for factual tasks (0–0.3). High temp for creative tasks (0.7–1.0). Critical parameter for quality. |
+| **Top-p (Nucleus)** | Only consider tokens whose cumulative probability ≤ p. Top-p=0.9 means pick from tokens covering 90% of probability mass. | Alternative to temperature. Often used together. Prevents very unlikely tokens from being selected. |
+| **Top-k** | Only consider the k most likely next tokens. Top-k=50 means choose from top 50 candidates only. | Simpler than top-p. Can combine with temperature. Prevents rare/weird token selection. |
+| **Sampling** | The process of selecting the next token from the probability distribution. Greedy (always max) vs random (sample from distribution). | Greedy = deterministic but repetitive. Random sampling with temp/top-p/top-k = more varied outputs. |
+
+### Memory & Caching
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **KV Cache** | Key-Value cache. Stores the computed attention keys and values for all previous tokens so they don't need to be recomputed for each new token. | Without KV cache, generating token N would require O(N²) computation. KV cache makes it O(N). But it uses memory that grows with sequence length. |
+| **PagedAttention** | Memory management technique (from vLLM) that stores KV cache in non-contiguous memory pages, like virtual memory in operating systems. | Enables much higher throughput by reducing memory fragmentation. Can serve 2-4× more concurrent requests. |
+| **Semantic Cache** | Cache LLM responses by embedding similarity rather than exact string match. Similar questions get cached answers. | Can reduce costs 30-50% for repetitive queries. But risk of returning stale or slightly wrong cached answers. |
+| **Prompt Cache** | Cache the KV computations for common prompt prefixes (system prompts, few-shot examples). Reuse across requests. | System prompts are often identical across requests. Caching saves compute and reduces TTFT. |
+
+### RAG (Retrieval-Augmented Generation)
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **RAG** | Retrieval-Augmented Generation. Pattern: (1) embed user query, (2) retrieve relevant documents from vector DB, (3) inject documents into prompt, (4) generate response grounded in retrieved context. | The standard way to give LLMs access to private/current data without fine-tuning. Cheaper, more flexible, data stays fresh. |
+| **Embedding** | A dense vector (e.g., 768 or 1536 dimensions) representing the semantic meaning of text. Similar meanings → vectors that are close together in vector space. | Embeddings enable semantic search: "car" and "automobile" are close even though strings are different. |
+| **Embedding Model** | Model that converts text → embedding vector. Examples: OpenAI text-embedding-3, Cohere embed, Vertex AI textembedding-gecko, open-source e5/bge. | Different models have different dimensions, quality, and cost. Choose based on your retrieval quality needs. |
+| **Vector Database** | Database optimized for storing embeddings and finding nearest neighbors. Examples: Pinecone, Weaviate, Milvus, Qdrant, pgvector (Postgres extension), Vertex AI Vector Search. | Regular databases can't efficiently search by vector similarity. Vector DBs use specialized indexes (HNSW, IVF). |
+| **Chunking** | Splitting documents into smaller pieces (chunks) for embedding and retrieval. Typically 200-1000 tokens per chunk. | Too small = lose context. Too large = irrelevant content dilutes signal. Chunk size affects retrieval quality. |
+| **Overlap** | When chunking, include some text from the previous chunk (e.g., 50-100 tokens). Helps preserve context across chunk boundaries. | Without overlap, sentences split across chunks lose meaning. Overlap trades storage for better retrieval. |
+| **Reranking** | After initial retrieval (e.g., top 20 chunks by embedding similarity), use a more expensive cross-encoder model to re-score and reorder by true relevance. | Embedding similarity is fast but approximate. Reranking is slower but more accurate. Typical flow: retrieve 20 → rerank → use top 5. |
+| **Hybrid Search** | Combine vector similarity search with keyword search (BM25). Merges results using reciprocal rank fusion or similar. | Vector search misses exact matches; keyword search misses synonyms. Hybrid gets both. Often 10-20% better retrieval than either alone. |
+| **Grounding** | Anchoring LLM responses to specific retrieved sources. Model should cite where information came from. | Without grounding, LLMs confidently hallucinate. Grounding makes responses verifiable and trustworthy. |
+| **Context Stuffing** | Putting as much retrieved context as possible into the prompt, up to context window limit. | More context = more information, but also more noise and higher cost. Quality of retrieval matters more than quantity. |
+
+### Fine-Tuning
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Fine-tuning** | Training a pretrained model on your task-specific data. Model learns your domain, style, or capabilities. | Changes model behavior permanently. More expensive than RAG but can improve quality for specific tasks. |
+| **SFT** | Supervised Fine-Tuning. Train on (input, output) pairs. Model learns to produce the expected output for each input. | The standard fine-tuning approach. Need 100s–1000s of high-quality examples. |
+| **LoRA** | Low-Rank Adaptation. Instead of updating all model weights, train small "adapter" matrices (rank 8-64) that modify the frozen base model. | 10-100× cheaper than full fine-tuning. Adapters are small (MBs vs GBs). Can swap adapters at inference. |
+| **QLoRA** | Quantized LoRA. Combine LoRA with 4-bit quantization of base model. Train adapters on quantized model. | Even cheaper than LoRA. Can fine-tune 70B models on a single GPU. Some quality loss from quantization. |
+| **PEFT** | Parameter-Efficient Fine-Tuning. Umbrella term for LoRA, QLoRA, adapters, prefix tuning—any method that trains only a small subset of parameters. | Full fine-tuning is expensive and requires storing full model copies. PEFT makes fine-tuning practical. |
+| **RLHF** | Reinforcement Learning from Human Feedback. Train a reward model on human preferences, then use RL to optimize the LLM to get higher rewards. | How ChatGPT was trained to be helpful/harmless. Complex pipeline: need preference data, reward model, RL training. |
+| **DPO** | Direct Preference Optimization. Simpler alternative to RLHF that directly optimizes on preference pairs without a separate reward model. | Easier to implement than RLHF. Becoming the preferred approach for alignment fine-tuning. |
+| **Instruction Tuning** | Fine-tuning on (instruction, response) pairs to make model better at following instructions. | Why base models become chat models. Instruct-tuned models follow prompts better than base models. |
+
+### Agents & Tools
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Agent** | An LLM that can use tools and reason in a loop. Perceive state → decide action → execute tool → observe result → repeat until done. | Enables LLMs to take actions in the world: query databases, call APIs, run code, browse web. |
+| **Tool / Function Calling** | LLM outputs structured JSON specifying which function to call with what arguments. System executes the function and returns result to LLM. | The mechanism for agents to interact with external systems. Most modern LLMs support native function calling. |
+| **ReAct** | Reasoning + Acting. Agent pattern: Thought (reasoning about what to do) → Action (tool call) → Observation (tool result) → repeat. | Popular agent framework. Interleaving reasoning with actions makes agent behavior more interpretable. |
+| **Multi-Agent** | System with multiple specialized agents that collaborate. E.g., researcher agent + writer agent + reviewer agent. | Complex tasks benefit from specialization. Agents can have different tools, prompts, or even different LLMs. |
+| **ADK** | Agent Development Kit. Google's open-source framework for building agents. Supports workflow agents (Sequential, Parallel, Loop), tools, multi-agent orchestration. | The recommended way to build agents on GCP. Integrates with Vertex AI Agent Engine for deployment. |
+| **MCP** | Model Context Protocol. Open standard for exposing tools and context to LLMs. Defines how to describe tools, call them, and return results. | Standardizes tool integration. Tools written for MCP work with any MCP-compatible agent framework. |
+| **A2A** | Agent-to-Agent Protocol. Standard for how agents communicate and delegate tasks to each other. | Enables interoperable multi-agent systems. Agent A can delegate to Agent B even if built with different frameworks. |
+| **Orchestration** | The layer that manages LLM calls, tool execution, retrieval, and control flow. Examples: LangChain, LlamaIndex, ADK. | Glue code between LLM, tools, and your application. Handles retries, routing, state management. |
+
+### Prompting
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Prompt Engineering** | Designing prompts to get better outputs. Includes system prompts, few-shot examples, chain-of-thought, output format specifications. | Good prompts can improve quality 2-3× without changing the model. Often the highest-ROI optimization. |
+| **System Prompt** | Instructions at the start of the prompt that set persona, constraints, and behavior. Persists across the conversation. | "You are a helpful assistant that..." Sets the tone and rules. Most production apps have carefully crafted system prompts. |
+| **Few-shot** | Including examples in the prompt: "Input: X → Output: Y. Input: A → Output: B. Input: [user query] → Output:" | Shows the model the desired format and style. Often 3-5 examples. More examples = better but uses more tokens. |
+| **Zero-shot** | Prompting without examples. Just the instruction and the query. | Simpler and cheaper. Works well for capable models on common tasks. Try zero-shot first, add few-shot if needed. |
+| **Chain-of-Thought (CoT)** | Prompting the model to reason step-by-step before giving the final answer. "Let's think through this step by step..." | Dramatically improves reasoning and math. Makes the model "show its work." Can add 2-3× to output length. |
+| **Output Formatting** | Specifying the desired output structure. "Respond in JSON with fields: answer, confidence, sources." | Makes outputs parseable and consistent. Essential for production systems that need structured data. |
+
+### Serving & Performance
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **TTFT** | Time To First Token. Latency from sending request to receiving the first token of the response. | Users perceive responsiveness from TTFT. Optimize TTFT for interactive applications. Streaming helps. |
+| **TPS** | Tokens Per Second. How fast the model generates tokens after the first one. Typical: 30-100 TPS depending on model and hardware. | Affects total response time. 100 tokens at 50 TPS = 2 seconds of generation time. |
+| **Throughput** | Total tokens per second across all concurrent requests. A serving system's capacity. | More throughput = serve more users. Trade off throughput vs latency (batching helps throughput, hurts latency). |
+| **Batching** | Processing multiple requests together. Static batching waits for batch to fill; continuous batching adds/removes requests dynamically. | Batching improves GPU utilization. Continuous batching (vLLM, TGI) is state-of-the-art for LLM serving. |
+| **Continuous Batching** | Dynamically add new requests to a running batch as slots free up (when requests complete). No waiting for batch boundaries. | Much higher throughput than static batching. Standard in modern LLM serving (vLLM, TGI, TensorRT-LLM). |
+| **Quantization** | Reducing model precision from FP32/FP16 to INT8/INT4. Model is smaller and faster, with some quality loss. | Can reduce memory 2-4× and improve speed 1.5-2×. Quality loss is often acceptable. Essential for deploying large models. |
+| **vLLM** | Open-source LLM serving engine with PagedAttention, continuous batching, and high throughput. The most popular OSS option. | 2-4× better throughput than naive serving. Production-ready. Supports most open models. |
+| **TGI** | Text Generation Inference. Hugging Face's LLM serving solution. Similar capabilities to vLLM. | Good Hugging Face integration. Used by Inference Endpoints. Alternative to vLLM. |
+| **Speculative Decoding** | Use a small "draft" model to predict multiple tokens, then verify with the large model in parallel. Faster if draft model is accurate. | Can speed up generation 2-3× for some model pairs. Works best when draft model is good at predicting the large model. |
+
+### Parallelism & Scaling
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Tensor Parallelism** | Split each layer's weights across multiple GPUs. Each GPU computes part of each layer, then they communicate. | Required when model doesn't fit on one GPU. Llama 70B needs 4+ GPUs with tensor parallelism. |
+| **Pipeline Parallelism** | Split model into stages (groups of layers), each stage on different GPU. Requests flow through pipeline. | Alternative to tensor parallelism. Less communication but more complex scheduling. Often combined with tensor parallelism. |
+| **Data Parallelism** | Same model on multiple GPUs, each processes different data. For training: gradients are averaged. | Standard for training. For serving, more about replication than parallelism—multiple model copies. |
+| **Model Parallelism** | Umbrella term for tensor and pipeline parallelism—any technique that splits the model across GPUs. | Essential for large models. A 70B model with FP16 needs ~140GB, far exceeding single GPU memory. |
+
+### Image & Video Generation
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Diffusion Model** | Generative model trained to reverse a noising process. Learns to denoise: given noisy image, predict the noise to remove. Generation: start from pure noise, iteratively denoise. | The dominant approach for image generation (Stable Diffusion, DALL-E 3, Imagen). Also used for video and audio. |
+| **Latent Diffusion (LDM)** | Run diffusion in a compressed latent space (from a VAE) rather than pixel space. Much faster and cheaper. | Stable Diffusion uses latent diffusion. 512×512 pixels → 64×64 latent → diffusion → decode to pixels. 8×8 = 64× compression. |
+| **VAE** | Variational Autoencoder. Encoder compresses image to latent, decoder reconstructs image from latent. Used in latent diffusion. | The compression step that makes latent diffusion efficient. Trained separately from the diffusion model. |
+| **CLIP** | Contrastive Language-Image Pretraining. Model trained to align images and text in a shared embedding space. | Enables text-to-image: encode text with CLIP, use embedding to guide diffusion. Also used for evaluation (CLIPScore). |
+| **CFG** | Classifier-Free Guidance. Technique to improve prompt adherence in diffusion. Generate with and without prompt, amplify the difference. CFG scale controls strength. | Higher CFG = more prompt-adherent but less diverse. Typical values: 7-15. Critical parameter for image quality. |
+| **Negative Prompt** | Text describing what you don't want in the image. "blurry, low quality, watermark". Diffusion model steers away from it. | Often as important as the positive prompt. Standard practice in image generation. |
+| **FID** | Fréchet Inception Distance. Metric comparing distribution of generated images to real images using Inception network features. Lower = better. | Standard metric for image generation quality. Measures both quality and diversity. |
+| **FVD** | Fréchet Video Distance. Like FID but for video, using I3D features. Measures both frame quality and temporal consistency. | The main automated metric for video generation. Captures motion quality, not just frame quality. |
+| **CLIPScore** | Cosine similarity between CLIP embeddings of image and text prompt. Higher = better text-image alignment. | Measures if the image matches the prompt. FID measures quality; CLIPScore measures relevance. Need both. |
+| **Temporal Consistency** | Whether video frames transition smoothly and objects maintain identity across frames. | The hard part of video generation. Individual frames can look good but motion can be jittery or objects can morph. |
+
+### Evaluation & Quality
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Hallucination** | Model generates plausible-sounding but factually incorrect information. Confidently states false things. | The core reliability problem with LLMs. RAG, grounding, and guardrails help but don't eliminate. |
+| **Faithfulness** | Whether the response accurately reflects the retrieved/provided context. Did the model use the sources correctly? | Key metric for RAG. Model might have sources but still make things up or misrepresent them. |
+| **Relevancy** | Whether the response actually answers the question. Model might be faithful to context but not address the query. | Different from faithfulness. Response can be grounded but off-topic. Measure both. |
+| **RAGAS** | Reference-free RAG evaluation framework. Computes faithfulness, answer relevancy, context relevancy without ground truth. Uses LLM-as-judge. | Enables automated RAG evaluation at scale without labeled data. Industry standard for RAG metrics. |
+| **LLM-as-Judge** | Using an LLM to evaluate another LLM's outputs. Prompt: "Rate this response for accuracy 1-5 and explain why." | Scalable evaluation. Not perfect (LLMs have biases) but correlates with human judgment. Use strong models as judges. |
+| **Human Evaluation** | Human raters assess quality, usually on Likert scales or A/B preferences. Gold standard but expensive and slow. | Required for high-stakes applications. Use for calibration and final validation. Automate what you can, human-eval the rest. |
+| **A/B Testing** | Show different model versions to different users, measure which performs better on business metrics. | The ultimate evaluation: does it work in production? Requires sufficient traffic and clear metrics. |
+| **Guardrails** | Safety filters that check inputs and outputs for policy violations: toxicity, PII, jailbreaks, harmful content. | Required for production. Check inputs (block malicious prompts) and outputs (block harmful responses). |
+| **Model Armor** | Google Cloud's guardrail service. Detects prompt injection, jailbreaks, and harmful content. | Managed guardrails—don't build from scratch. Integrates with Vertex AI. |
+
+### Infrastructure & Deployment
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Vertex AI** | Google Cloud's ML platform. Includes model hosting, fine-tuning, RAG Engine, Agent Engine, evaluation tools. | The GCP way to deploy GenAI. Managed infrastructure, enterprise security, Gemini access. |
+| **Bedrock** | AWS's managed GenAI service. Access to Claude, Llama, and others. Includes agents, knowledge bases, guardrails. | The AWS way to deploy GenAI. Similar capabilities to Vertex AI. |
+| **Cloud Run** | Google Cloud's serverless container platform. Pay per request, auto-scales to zero. Good for bursty GenAI workloads. | Simple deployment for orchestration layers. Not for running LLMs (use GPUs), but good for the API/RAG layer. |
+| **GKE** | Google Kubernetes Engine. Managed Kubernetes. Use for complex deployments that need more control than serverless. | Run vLLM or TGI on GKE with GPUs. More control than managed services, more ops burden. |
+
+### Costs
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **Per-token pricing** | LLM APIs charge by input + output tokens. Gemini 1.5 Flash: ~$0.075/1M input, ~$0.30/1M output. GPT-4o: ~$2.50/1M input, ~$10/1M output. | Output tokens cost 3-4× more than input. Long responses are expensive. Prompt engineering to reduce output saves money. |
+| **Model Routing** | Sending easy requests to cheap/fast models, hard requests to expensive/capable models. E.g., simple FAQ → Flash, complex reasoning → Pro. | Can reduce costs 50-70% with minimal quality loss. Classify difficulty first, then route. |
+| **Token Budget** | Maximum tokens you're willing to spend per request or per user session. Enforce limits to control costs. | Without budgets, runaway agents or verbose prompts can explode costs. Set and monitor token budgets. |
 
 ---
 
