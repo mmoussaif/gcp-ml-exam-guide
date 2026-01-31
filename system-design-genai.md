@@ -444,9 +444,7 @@ Quick reference for key terms. Organized by category for easier navigation.
 
 ## B.1 GenAI System: Big Picture (Frontend to Backend)
 
-Before diving into components, here is the end-to-end shape of a GenAI system. The **request path** runs from frontend to backend; **supporting systems** (data pipelines, evaluation, monitoring, security) surround that path. Each numbered section later in this guide is a T-shaped deep dive on one layer or concern: broad role in this picture first, then detail.
-
-**Request path (frontend → backend):**
+This is the end-to-end shape of a GenAI system. Every request follows this path:
 
 ```
   User / Frontend
@@ -458,30 +456,20 @@ Before diving into components, here is the end-to-end shape of a GenAI system. T
            │
            ▼
   ┌─────────────────┐
-  │  Orchestration  │  Agent, RAG, tools (sections 2, 4)
+  │  Orchestration  │  RAG retrieval, agent logic, tool calls (E.2, E.4)
   │  (Agent / RAG)  │
   └────────┬────────┘
            │
            ▼
   ┌─────────────────┐
-  │  LLM(s)         │  Inference, model routing (section 1)
+  │  LLM(s)         │  Inference, model routing (E.1)
   └────────┬────────┘
            │
            ▼
   Response (→ user, or → tools, then back into orchestration)
 ```
 
-**Supporting systems (around the request path):**
-
-| System                     | Role in the big picture                                                                        | Deep dive                    |
-| -------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- |
-| **Evaluation**             | "Did we build the right thing?" — quality, grounding, safety on a sample of requests           | E.5 Evaluation & Quality     |
-| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | E.6 GenAI Data Pipeline      |
-| **Cost**                   | "How do we keep inference affordable?" — tokens, caching, model routing, quantization          | E.7 Cost Optimization        |
-| **Scale**                  | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache        | E.8 Scalability              |
-| **Monitoring**             | "How do we observe the system?" — metrics, traces, drift                                       | E.9 Monitoring               |
-| **Security**               | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM                | E.10 Security & Guardrails   |
-| **Real-world examples**    | "How do I build this with real tools?" — apply E.1–E.10 with real stacks                       | F.1 Real-World Examples      |
+The remaining Part E sections (E.5–E.10) are cross-cutting concerns that surround this path: evaluation, data pipelines, cost, scale, monitoring, and security.
 
 ---
 
