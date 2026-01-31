@@ -304,6 +304,7 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 | **N-gram** | A sequence of N consecutive words. 1-gram = single word ("cat"), 2-gram = two words ("the cat"), 3-gram = three words ("the cat sat"). Higher N captures more context but is harder to match exactly. | Used in BLEU, ROUGE metrics. "4-gram precision" = how many 4-word sequences in your output appear in the reference. |
 | **Open Source** | Software whose code is freely available for anyone to use, modify, and share. Examples: Linux, LLaMA, Stable Diffusion. | Many AI tools are open source. You can run them yourself instead of paying API fees. |
 | **Open Weight** | Model where weights are publicly downloadable, but training code/data may not be disclosed. Less open than "open source." Examples: LLaMA, Mistral, Gemma (weights available, but full training details are not). Contrast with fully open: OLMo, BLOOM (weights + code + data). | Important distinction: "open weight" lets you USE the model but not fully REPRODUCE it. Check licenses — some restrict commercial use. |
+| **Elo Rating** | A ranking system (from chess) where players gain/lose points based on match outcomes. In LLM evaluation (LMSYS Arena), models gain Elo when users prefer their response over another model's. Higher Elo = better. Typical range: 1000 (average) to 1500+ (top models). | LMSYS Chatbot Arena uses Elo to rank LLMs based on human preferences. More reliable than benchmarks because it reflects real user choices. |
 | **Hyperparameter** | A setting you choose before training (learning rate, batch size, etc.). The model doesn't learn these — you set them. | Tuning hyperparameters is how you optimize training. Different from model parameters (weights). |
 | **Epoch** | One complete pass through all training data. Training for 3 epochs = seeing every example 3 times. | More epochs = model sees data more times. Too many = overfitting (memorizing instead of learning). |
 | **Weights / Parameters** | The numbers inside a neural network that determine its behavior. A 7B model has 7 billion parameters. Training = adjusting these numbers. | Model size is measured in parameters. More parameters = more capable but more expensive to run. |
@@ -476,6 +477,25 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 | **A/B Testing** | Show different model versions to different users, measure which performs better on business metrics. | The ultimate evaluation: does it work in production? Requires sufficient traffic and clear metrics. |
 | **Guardrails** | Safety filters that check inputs and outputs for policy violations: toxicity, PII, jailbreaks, harmful content. | Required for production. Check inputs (block malicious prompts) and outputs (block harmful responses). |
 | **Model Armor** | Google Cloud's guardrail service. Detects prompt injection, jailbreaks, and harmful content. | Managed guardrails—don't build from scratch. Integrates with Vertex AI. |
+
+### LLM Benchmarks (Acronyms)
+
+| Benchmark | Full Name | What it Tests |
+| --------- | --------- | ------------- |
+| **MMLU** | Massive Multitask Language Understanding | Knowledge across 57 subjects (math, history, law, medicine, etc.). Multiple choice. |
+| **MMLU-Pro** | MMLU Professional | Harder version of MMLU with 12K questions and 10 answer choices (vs 4). |
+| **GSM8K** | Grade School Math 8K | 8,000 grade-school math word problems. Tests multi-step reasoning. |
+| **MATH** | Mathematics Aptitude Test of Heuristics | Competition-level math problems. Much harder than GSM8K. |
+| **HumanEval** | Human Evaluation (Code) | 164 Python programming problems. Model must write working code. |
+| **MBPP** | Mostly Basic Programming Problems | 974 entry-level Python problems. Easier than HumanEval. |
+| **HellaSwag** | Harder Endings, Longer contexts, Low-shot Activities for Situations With Adversarial Generations | Common-sense reasoning: "What happens next?" |
+| **WinoGrande** | Winograd Schema Challenge (Grande) | Pronoun resolution requiring common sense. "The trophy didn't fit in the suitcase because it was too [big/small]." |
+| **TruthfulQA** | Truthful Question Answering | Tests if model avoids common misconceptions and falsehoods. |
+| **BBQ** | Bias Benchmark for QA | Measures social biases (gender, race, religion, etc.) in question answering. |
+| **SQuAD** | Stanford Question Answering Dataset | Reading comprehension: answer questions about a given passage. |
+| **PIQA** | Physical Interaction Question Answering | Physical common sense: "How do you boil water?" |
+| **ARC** | AI2 Reasoning Challenge | Science questions from 3rd-8th grade exams. |
+| **LMSYS** | Large Model Systems Organization | Not a benchmark itself, but the org running Chatbot Arena (Elo-based human evaluation). |
 
 ### Infrastructure & Deployment
 
