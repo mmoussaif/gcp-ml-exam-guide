@@ -312,6 +312,7 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 | **Encoder** | Processes input and creates a representation (embedding). Reads and understands. BERT is encoder-only. | Good for classification, embeddings, understanding. Not for generation. |
 | **Decoder** | Generates output token by token. GPT and most chat models are decoder-only. | Good for text generation, chat, code. The architecture behind ChatGPT. |
 | **Cross-Attention** | Attention between two different sequences (e.g., text prompt and image). Lets one sequence "look at" the other. | How text guides image generation in diffusion models. Text embeddings cross-attend with image features. |
+| **NSFW** | Not Safe For Work. Content inappropriate for professional settings — violence, adult material, offensive content. | AI systems use NSFW filters to block harmful prompts and outputs. "Prompt safety" and "harm detection" components check for NSFW. |
 
 ### Core Concepts
 
