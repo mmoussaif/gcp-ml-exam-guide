@@ -1207,36 +1207,132 @@ FID says: "Great video!"             FVD says: "Frames are nice, but
 
 ### Model Capacity: Parameters vs FLOPs
 
-**Model capacity** determines how much a model can learn. Two measures:
+**What determines how "smart" a model can be?**
 
-| Measure | What it means | Example |
-| ------- | ------------- | ------- |
-| **Parameters** | Learnable weights in the model | GPT-4: ~1.8T params; Llama 3: 405B params; Gemini Ultra: ~1T params |
-| **FLOPs** | Floating-point operations per forward pass | Measures computational complexity, not just size |
+Think of it like a brain:
+- **Parameters** = How many "memory cells" the brain has (storage capacity)
+- **FLOPs** = How hard the brain has to work to answer one question (thinking effort)
 
-**Why this matters for interviews:** Larger models generally perform better but cost more to train and serve. Training cost scales with **FLOPs** (compute); serving cost scales with **parameters** (memory) and tokens.
+| Measure | What it means | Simple Analogy | Example |
+| ------- | ------------- | -------------- | ------- |
+| **Parameters** | Learnable weights (numbers) in the model | Books in a library | GPT-4: ~1.8T; Llama 3: 405B; Gemini: undisclosed |
+| **FLOPs** | Math operations per forward pass | Steps to solve one problem | More layers/attention = more FLOPs |
+
+---
+
+**Model Sizes (2025 landscape):**
+
+| Model | Parameters | Architecture | Notes |
+| ----- | ---------- | ------------ | ----- |
+| **GPT-4** | ~1.8T (estimated) | 8×220B MoE | OpenAI doesn't confirm; estimate from multiple sources |
+| **GPT-4.5** | Undisclosed | MoE | Released April 2025; larger training data |
+| **Claude 4** | Undisclosed | Unknown | Released May 2025 |
+| **Gemini 2.5 Pro** | Undisclosed | MoE | January 2025 |
+| **Llama 3** | 8B / 70B / 405B | Dense | Open source; Meta |
+
+*Note: Major AI companies now keep parameter counts secret for competitive reasons. Mixture of Experts (MoE) models only activate a fraction of parameters per token, making raw counts less meaningful.*
+
+---
+
+**Why this matters for system design:**
+
+```
+TRAINING COST                        SERVING COST
+─────────────────                    ─────────────────
+
+Scales with FLOPs                    Scales with Parameters
+(how much compute)                   (how much GPU memory)
+
+More layers, more data               Bigger model = more GPUs
+= more training cost                 = more $ per request
+
+GPT-4 training: ~$100M              GPT-4 serving: needs 8+ H100s
+```
+
+| Cost Type | Scales With | Example |
+| --------- | ----------- | ------- |
+| **Training** | FLOPs (compute × time) | Training GPT-4 cost ~$100M |
+| **Serving (memory)** | Parameters (model size) | 70B model needs ~140GB VRAM |
+| **Serving (per-request)** | Tokens generated | Longer responses = more cost |
 
 ### Scaling Laws
 
-**Scaling laws** predict model performance from compute, data, and parameters—critical for planning large training runs.
+**What are scaling laws? (The Recipe for Better AI)**
 
-**OpenAI (2020):** Performance improves predictably with scale. Loss follows a power law:
-- More compute → lower loss
-- More data → lower loss
-- More parameters → lower loss
+Scaling laws are formulas that predict: "If I spend $X on training, how good will my model be?"
 
-**DeepMind Chinchilla (2022):** Many LLMs were **undertrained**. Optimal scaling: **data should scale linearly with model size**. A 70B model trained on 1.4T tokens outperforms a 280B model trained on 300B tokens.
+Think of it like baking: more flour + more sugar + bigger oven (in the right proportions) = bigger cake. AI works similarly:
 
-| Insight | Implication |
-| ------- | ----------- |
-| Scale matters more than architecture tweaks | Focus on data + compute, not micro-optimizations |
-| Data and parameters should scale together | Don't just make models bigger—feed them more data |
-| Compute-optimal training | Given a compute budget, there's an optimal (N, D) pair |
+```
+More compute + More data + More parameters = Better model
+     ↓              ↓            ↓
+   (GPUs)       (tokens)     (weights)
+```
 
-**Inference-time scaling (2024+):** With models like GPT o1, researchers are exploring scaling at inference time (e.g., chain-of-thought, repeated sampling) to improve reasoning.
+---
+
+**The Evolution of Scaling Laws:**
+
+| Year | Discovery | Key Finding |
+| ---- | --------- | ----------- |
+| **2020** | OpenAI Scaling Laws | Performance improves predictably with scale (power law) |
+| **2022** | Chinchilla (DeepMind) | Most LLMs were undertrained — need more DATA, not just bigger models |
+| **2024+** | Inference-Time Scaling | Scale compute at inference, not just training |
+| **2025** | Architecture-Aware Scaling | Model shape (wide vs deep) matters as much as size |
+
+---
+
+**Chinchilla's Key Insight (2022):**
+
+Before: "Make the model bigger!" → GPT-3 (175B params, 300B tokens)  
+After: "Train longer on more data!" → Chinchilla (70B params, 1.4T tokens) = **same performance, 4× smaller**
+
+**Rule of thumb:** Tokens should be ~20× parameters. A 70B model needs ~1.4T tokens.
+
+---
+
+**Inference-Time Scaling (2024-2025) — The New Frontier**
+
+Instead of making models bigger, make them **think longer** at inference:
+
+| Technique | How it works | Example |
+| --------- | ------------ | ------- |
+| **Chain-of-Thought** | Model writes out reasoning steps | "Let me think step by step..." |
+| **Best-of-N** | Generate N answers, pick the best | Generate 10 solutions, select highest-confidence one |
+| **Tree Search** | Explore multiple reasoning paths | Like chess — consider many moves ahead |
+
+**2025 Research Finding:** A 7B model with smart inference (tree search) can outperform a 34B model with simple inference! Smaller model + more thinking = better than bigger model + quick answer.
+
+```
+OLD APPROACH (pre-2024):                    NEW APPROACH (2025+):
+─────────────────────────                   ─────────────────────────
+
+Make model bigger                           Make model think longer
+     ↓                                           ↓
+70B → 175B → 540B                           7B + Chain-of-Thought
+     ↓                                           ↓  + Best-of-N
+More GPU memory                                  ↓  + Tree Search
+More cost                                        ↓
+                                            Same GPU, better answers!
+```
+
+**But there's a catch:** Inference-time scaling has "rapidly diminishing returns" and can become expensive. Generating 10 answers costs 10× more tokens!
+
+---
+
+**Summary: Three Eras of Scaling**
+
+| Era | Strategy | Example |
+| --- | -------- | ------- |
+| **2020** | Bigger models | GPT-3: 175B parameters |
+| **2022** | More data | Chinchilla: 70B params, 1.4T tokens |
+| **2025** | Smarter inference | o1: smaller model + chain-of-thought |
 
 > [!TIP]
-> 💡 **Aha:** When an interviewer asks "how would you improve this model?", scaling laws say: **more data and compute** often beat architecture changes. But for deployment, you often want **smaller models** (distillation, quantization) to reduce cost.
+> 💡 **Aha:** When asked "how would you improve this model?":
+> - **For training:** More data often beats bigger models (Chinchilla)
+> - **For inference:** Smarter decoding can beat model size (inference-time scaling)
+> - **For cost:** Smaller models + quantization + smart inference is often the sweet spot
 
 ---
 
