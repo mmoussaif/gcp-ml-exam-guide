@@ -2840,8 +2840,6 @@ How it works:
 
 ---
 
----
-
 ## E.1 LLM Serving Architecture at Scale
 
 ### Use Case: Design a Chatbot Service (like ChatGPT)
