@@ -1020,83 +1020,188 @@ BEFORE COMPRESSION (Original Video)              AFTER COMPRESSION (Latent Space
 
 ### Extending DiT to Video
 
-**Image DiT:** 2D patches (spatial only)
-**Video DiT:** 3D patches (spatial + temporal)
+**The Core Idea: From 2D to 3D**
+
+For images, DiT cuts the picture into flat puzzle pieces (2D patches). For video, we need to cut through TIME as well — creating little cubes (3D patches) that span multiple frames.
 
 ```
-Video → 3D Patchify → Positional Encoding (3D: x, y, t) → Transformer + Temporal Layers → Unpatchify → Predicted Noise
+IMAGE (2D patches):                    VIDEO (3D patches):
+┌───┬───┬───┐                         ┌───┬───┬───┐  Frame 1
+│ 1 │ 2 │ 3 │  One frame              │ 1 │ 2 │ 3 │  ─┐
+├───┼───┼───┤                         ├───┼───┼───┤   │ Same patch
+│ 4 │ 5 │ 6 │                         │ 4 │ 5 │ 6 │   │ spans
+├───┼───┼───┤                         └───┴───┴───┘   │ multiple
+│ 7 │ 8 │ 9 │                         ┌───┬───┬───┐  Frame 2  │ frames
+└───┴───┴───┘                         │ 1 │ 2 │ 3 │  ─┘
+                                      ├───┼───┼───┤
+Patch = 16×16 pixels                  │ 4 │ 5 │ 6 │
+                                      └───┴───┴───┘
+                                      
+                                      Patch = 16×16 pixels × 4 frames
 ```
 
-**Temporal layers added to architecture:**
+**Why 3D patches matter:** A 3D patch captures motion! Patch #5 knows what happened in that spot across multiple frames — so it can understand "the ball is moving left."
 
-| Layer | How it works | Purpose |
-| ----- | ------------ | ------- |
-| **Temporal Attention** | Each feature attends across frames | Capture motion, ensure consistency |
-| **Temporal Convolution** | 3D conv across frames | Local temporal patterns |
+---
 
-**U-Net for video:** Inject temporal attention + temporal convolution into each downsampling/upsampling block.
+**How does the model understand time? (Temporal Layers)**
 
-**DiT for video:** Use 3D patches; Transformer naturally handles sequences; RoPE for 3D positional encoding.
+The model needs to know:
+1. **What's happening in each frame** (spatial understanding — like images)
+2. **How things change across frames** (temporal understanding — unique to video)
+
+| Layer Type | What it does | Analogy |
+| ---------- | ------------ | ------- |
+| **Temporal Attention** | Each pixel "looks at" the same spot in other frames | Watching one spot in a video and noticing it changes color over time |
+| **Temporal Convolution** | Detects local patterns across nearby frames | Noticing a blur → because something moved quickly between frames |
+
+**Example:** Frame 1 has a ball on the left. Frame 5 has it on the right. Temporal attention connects these, understanding "the ball moved."
+
+---
+
+**Two architectures for video:**
+
+| Architecture | How it adds time | Used by |
+| ------------ | ---------------- | ------- |
+| **U-Net for video** | Add temporal attention + temporal conv into each block | Stable Video Diffusion |
+| **DiT for video** | Use 3D patches; Transformer naturally handles the sequence | Sora, Movie Gen |
 
 ### Video Training Challenges
 
-| Challenge | Problem | Mitigations |
-| --------- | ------- | ----------- |
-| **Limited video-text data** | Much less paired video-text than image-text | Train on both images (as 1-frame videos) + videos; pretrain on images, finetune on videos |
-| **High compute cost** | 120 frames vs 1 frame | Latent diffusion; precompute latents; spatial/temporal super-resolution |
-| **High-res generation** | 720p+ is expensive | Generate at lower res (e.g., 360p), upscale with super-resolution models |
-| **Long videos** | More frames = more memory | Generate short clips, stitch; temporal super-resolution |
+**Why is training video models SO much harder than images?**
 
-**Two training strategies:**
-1. **Joint training**: Train DiT on mixed image-text + video-text data (treat images as 1-frame videos)
-2. **Two-stage**: Pretrain on images → finetune on videos
+| Challenge | The Problem | Solution | Simple Explanation |
+| --------- | ----------- | -------- | ------------------ |
+| **Not enough data** | Internet has billions of captioned images, but far fewer captioned videos | Train on both images AND videos | Treat images as "1-frame videos" so you can use all that image data too |
+| **120× more work** | A 5-sec video = 120 frames = 120× an image | Latent diffusion | Compress first, then generate in small space |
+| **High-res is expensive** | 720p = 1 million pixels per frame | Generate small, upscale later | Make a 360p video, then use another model to sharpen it |
+| **Long videos** | 30 seconds = 720 frames = won't fit in GPU memory | Generate chunks, stitch together | Make 5-second clips, blend the edges |
 
-**Super-resolution cascade for video:**
+---
+
+**Two ways to train video models:**
+
+| Strategy | How it works | Pros | Cons |
+| -------- | ------------ | ---- | ---- |
+| **Joint training** | Mix images + videos during training (images = 1-frame videos) | Uses all available data | More complex training |
+| **Two-stage** | First learn images well → then learn video on top | Proven to work; simpler | May not fully learn video dynamics |
+
+---
+
+**Super-Resolution Cascade: Start Small, Scale Up**
+
+Generate a tiny, choppy video first → then make it bigger and smoother:
+
 ```
-LDM (40×23 @ 8 fps) → Visual Decoder → Spatial SR (320×180) → Temporal SR (24 fps) → Final Video (1280×720 @ 24 fps)
+Step 1: Generate tiny video         Step 2: Make it bigger           Step 3: Make it smoother
+─────────────────────────           ────────────────────────         ─────────────────────────
+
+  ┌─────┐                             ┌─────────────┐                 ┌─────────────┐
+  │     │  40×23 pixels               │             │  320×180        │             │  1280×720
+  └─────┘  @ 8 fps (choppy)           │             │  @ 8 fps        │             │  @ 24 fps
+                                      └─────────────┘                 └─────────────┘
+  
+     │                                      │                               │
+     └──────► Spatial SR ──────────────────►└──────► Temporal SR ──────────►│
+              (bigger)                               (smoother)              Final!
 ```
+
+- **Spatial Super-Resolution**: Makes each frame bigger (40×23 → 320×180 → 1280×720)
+- **Temporal Super-Resolution**: Adds frames in between (8 fps → 24 fps) for smooth motion
 
 ### Video Evaluation Metrics
 
-| Metric | What it measures | How it works |
-| ------ | ---------------- | ------------ |
-| **FID (per-frame)** | Frame quality | Average FID across all frames |
-| **IS (per-frame)** | Frame quality + diversity | Average Inception Score |
-| **FVD** (Fréchet Video Distance) | Quality + temporal consistency | Like FID, but uses I3D features (action recognition model) |
-| **CLIP similarity** | Video-text alignment | Average CLIP score across frames |
+**How do we know if a generated video is good?**
 
-**FVD calculation:**
-1. Extract features from I3D model (trained for action recognition)
-2. Compute mean + covariance for generated and real videos
-3. Calculate Fréchet distance between distributions
-4. Lower FVD = better (quality + temporal consistency)
+We need to measure THREE things:
+1. **Do individual frames look good?** (image quality)
+2. **Does the motion look natural?** (temporal consistency)
+3. **Does it match what the user asked for?** (prompt alignment)
 
-**Benchmarks:** VBench, Movie Gen Bench
+| Metric | What it measures | Simple Explanation | Good Score |
+| ------ | ---------------- | ------------------ | ---------- |
+| **FID (per-frame)** | Frame quality | "Do the individual pictures look real?" | Lower = better |
+| **FVD** | Quality + motion | "Do the frames look real AND move naturally?" | Lower = better |
+| **CLIP Score** | Prompt match | "Does the video show what was requested?" | Higher = better |
+
+---
+
+**Why FVD matters more than FID for video (The Slideshow Problem)**
+
+```
+FID only checks each frame:          FVD checks frames AND motion:
+
+Frame 1: Beautiful ✓                 Frame 1 → Frame 2 → Frame 3
+Frame 2: Beautiful ✓                      ↓         ↓         ↓
+Frame 3: Beautiful ✓                 "Is this movement realistic?"
+         
+FID says: "Great video!"             FVD says: "Frames are nice, but 
+                                     the person teleports between them!"
+```
+
+**FVD uses I3D** — a model trained to recognize human actions in videos (running, jumping, waving). It understands motion, so it can tell if movement looks natural.
+
+---
+
+**How FVD works (simplified):**
+1. Feed real videos into I3D → get "motion fingerprints"
+2. Feed generated videos into I3D → get their "motion fingerprints"  
+3. Compare: How similar are the fingerprints?
+4. Lower score = generated videos have realistic motion like real videos
+
+**Benchmarks:** VBench, Movie Gen Bench — standard test sets for comparing video models
 
 > [!TIP]
-> 💡 **Aha:** FID only measures individual frame quality—a video could have great frames but terrible motion. **FVD** captures **temporal consistency** by using an action recognition model (I3D) that understands motion. Always report FVD for video generation.
+> 💡 **Aha:** A video with FID=50 (good frames) but FVD=500 (bad motion) will look like a weird slideshow. A video with FID=80 (okay frames) but FVD=100 (great motion) will look more natural. **Always check FVD for video!**
 
 ### Video Inference Pipeline
 
+**What happens when you type "a dog running on a beach"?**
+
 ```
-Prompt → Safety → Enhancement → Text Encoder → LDM (latent space)
-                                                      ↓
-                                               Visual Decoder → Spatial SR → Temporal SR → Harm Detection → Final Video
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 1: SAFETY + ENHANCEMENT                                                │
+│  "a dog running on a beach" → Safe? ✓ → Enhance to detailed prompt          │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 2: GENERATE TINY VIDEO                                                 │
+│  Text → LDM → Tiny compressed video (40×23 @ 8 fps)                         │
+│  (This is fast because it's so small!)                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 3: DECOMPRESS                                                          │
+│  Visual Decoder: Compressed → Real pixels (still small: 320×180)            │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 4: MAKE IT BIGGER (Spatial Super-Resolution)                           │
+│  320×180 → 1280×720 (add detail to make frames sharper)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 5: MAKE IT SMOOTHER (Temporal Super-Resolution)                        │
+│  8 fps → 24 fps (add frames in between for smooth motion)                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+                                      ↓
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  Step 6: SAFETY CHECK                                                        │
+│  Scan final video for harmful content → Deliver to user 🎬                  │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-| Component | Purpose |
-| --------- | ------- |
-| **LDM** | Generate video in latent space (cheaper than pixel space) |
-| **Visual Decoder** | Convert latent → pixel space |
-| **Spatial Super-Resolution** | Upscale resolution (e.g., 360p → 720p) |
-| **Temporal Super-Resolution** | Interpolate frames (e.g., 8 fps → 24 fps) |
+---
 
-**Models to know:**
-- **Sora** (OpenAI): DiT-based; variable duration/resolution; "world simulator"
-- **Movie Gen** (Meta): DiT + LDM; 16s videos at 768p
-- **Stable Video Diffusion** (Stability AI): U-Net based; image-to-video
-- **Runway Gen-3**: Commercial; fast iteration
-- **Imagen Video** (Google): Pixel-space cascade; high quality
+**Major Video Generation Models:**
+
+| Model | Company | Architecture | Notable Features |
+| ----- | ------- | ------------ | ---------------- |
+| **Sora** | OpenAI | DiT | Variable duration/resolution; called a "world simulator" |
+| **Movie Gen** | Meta | DiT + LDM | 16-second videos at 768p; open research |
+| **Stable Video Diffusion** | Stability AI | U-Net | Image-to-video (give it a photo, it animates it) |
+| **Runway Gen-3** | Runway | Proprietary | Commercial; fast; popular with creators |
+| **Imagen Video** | Google | Pixel cascade | High quality; generates in pixel space (expensive) |
 
 ---
 
