@@ -2238,40 +2238,271 @@ Key insight: The DIFFERENCE between positions is what matters!
 
 ## D.8 Sampling Strategies for Text Generation
 
-After training, **sampling** generates new text from the model. Two main categories:
+### Why Sampling Matters
 
-### Deterministic vs Stochastic
+**The Core Question:** When the model predicts the next word, it doesn't give ONE answer — it gives PROBABILITIES for EVERY possible word. How do we choose which word to use?
 
-| Type | How it works | Pros | Cons | Best For |
-| ---- | ------------ | ---- | ---- | -------- |
-| **Deterministic** | Always pick highest probability token(s) | Consistent, reproducible | Repetitive, lacks diversity | Email completion, code, factual Q&A |
-| **Stochastic** | Sample from probability distribution | Diverse, creative | Inconsistent, may produce nonsense | Creative writing, dialogue, brainstorming |
+```
+Input: "The cat sat on the"
+
+Model's prediction (probabilities):
+─────────────────────────────────────
+  mat     → 35%  ████████████████
+  floor   → 25%  ████████████
+  couch   → 15%  ███████
+  table   → 10%  █████
+  roof    → 5%   ██
+  moon    → 0.1% 
+  pizza   → 0.01%
+  ...thousands more options...
+
+Question: Which word do we pick?
+```
+
+**The choice dramatically affects the output:**
+
+```
+ALWAYS PICK HIGHEST (Greedy):        SOMETIMES PICK LOWER ONES (Sampling):
+─────────────────────────────        ─────────────────────────────────────
+
+"The cat sat on the mat.             "The cat sat on the roof.
+ The cat sat on the mat.              It watched the stars twinkling
+ The cat sat on the mat..."           in the midnight sky..."
+
+→ Repetitive but predictable         → Creative but unpredictable
+→ Good for: code, facts              → Good for: stories, chat
+```
+
+---
+
+### The Two Approaches: Deterministic vs Stochastic
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    DETERMINISTIC vs STOCHASTIC                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+DETERMINISTIC ("Always pick the best")     STOCHASTIC ("Roll the dice")
+─────────────────────────────────────      ─────────────────────────────
+
+Same input → Same output (always)          Same input → Different outputs
+
+  "2+2=" → "4" (every time)                "Tell me a joke" → Different joke
+                                                               each time
+
+Good for:                                  Good for:
+• Code completion (consistency)            • Creative writing (variety)
+• Factual Q&A (accuracy)                   • Chatbots (natural feel)
+• Translation (reliability)                • Brainstorming (diversity)
+```
+
+---
 
 ### Deterministic Methods
 
-| Method | How it works | Pros | Cons |
-| ------ | ------------ | ---- | ---- |
-| **Greedy Search** | Always pick the single highest-probability token | Simple, fast | Often repetitive; misses better sequences |
-| **Beam Search** | Track top-k sequences simultaneously; prune at each step | Better quality than greedy; finds coherent sequences | Computationally expensive; limited diversity |
+#### 1. Greedy Search — "Always Pick #1"
 
-**Beam Search Example (beam width = 3):**
-1. Start with input → get top 3 next tokens
-2. For each of 3 sequences → get top 3 next tokens (9 candidates)
-3. Keep only top 3 sequences by cumulative probability
-4. Repeat until `<EOS>` or max length
-5. Return sequence with highest cumulative probability
+**How it works:** At each step, pick the single highest-probability word.
 
-### Stochastic Methods
+```
+Step 1: "The cat" → next word probabilities → pick "sat" (highest)
+Step 2: "The cat sat" → next word probabilities → pick "on" (highest)
+Step 3: "The cat sat on" → next word probabilities → pick "the" (highest)
+...and so on
+```
 
-| Method | How it works | Use Case |
-| ------ | ------------ | -------- |
-| **Random Sampling** | Sample according to full probability distribution | Maximum diversity |
-| **Top-K Sampling** | Sample only from top K tokens | Balance diversity and quality |
-| **Top-p (Nucleus)** | Sample from smallest set with cumulative probability ≥ p | Adaptive diversity |
-| **Temperature Scaling** | Adjust distribution sharpness before sampling | Control creativity |
+**The problem — it can miss better sentences:**
+
+```
+Greedy picks:  "The" (90%) → "nice" (80%) → "day" (70%)
+               Total: 0.9 × 0.8 × 0.7 = 50.4%
+
+But this exists: "A" (60%) → "beautiful" (90%) → "morning" (95%)
+                 Total: 0.6 × 0.9 × 0.95 = 51.3%  ← BETTER overall!
+
+Greedy missed it because it only looks one step ahead!
+```
+
+| Pros | Cons |
+| ---- | ---- |
+| Fast (one choice per step) | Often repetitive ("the the the...") |
+| Simple to implement | Misses globally better sequences |
+| Deterministic | Can get stuck in loops |
+
+---
+
+#### 2. Beam Search — "Keep Multiple Options Open"
+
+**The idea:** Instead of committing to ONE path, explore the top K paths simultaneously.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    BEAM SEARCH (beam width = 3)                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Start: "The cat"
+              │
+              ▼
+    ┌─────────┼─────────┐
+    ▼         ▼         ▼
+  "sat"     "was"    "jumped"     ← Keep top 3
+   60%       25%       10%
+    │         │         │
+    ▼         ▼         ▼
+ ┌──┴──┐   ┌──┴──┐   ┌──┴──┐
+ on  down  very  so   over onto   ← Each spawns 3 more (9 total)
+ 40% 15%   20%  18%   8%   7%
+    │
+    ▼
+ Keep only top 3 by TOTAL probability:
+ 
+ 1. "The cat sat on"     → 60% × 40% = 24%
+ 2. "The cat was very"   → 25% × 20% = 5%
+ 3. "The cat was so"     → 25% × 18% = 4.5%
+ 
+ Continue until <END> token...
+```
+
+**Why it's better than greedy:**
+- Explores multiple paths → finds globally better sequences
+- Doesn't commit too early to one direction
+- Standard for machine translation
+
+| Beam Width | Speed | Quality | Use Case |
+| ---------- | ----- | ------- | -------- |
+| 1 | Fastest | Lowest (= greedy) | Quick drafts |
+| 3-5 | Moderate | Good | Translation, summarization |
+| 10+ | Slow | Diminishing returns | High-stakes outputs |
+
+---
+
+### Stochastic Methods — Adding Randomness
+
+**Why add randomness?** Deterministic methods always give the same output. But for chatbots and creative writing, we WANT variety!
+
+#### 1. Temperature — "The Creativity Dial"
+
+**What it does:** Reshapes the probability distribution before picking.
+
+```
+Original probabilities:              Temperature = 0.5 (Focused):
+─────────────────────────            ─────────────────────────────
+mat:   35% ████████████              mat:   70% ██████████████████████
+floor: 25% ████████                  floor: 20% ██████
+couch: 15% █████                     couch:  8% ██
+table: 10% ███                       table:  2% 
+roof:   5% ██                        (top choice dominates!)
+
+
+Original probabilities:              Temperature = 1.5 (Creative):
+─────────────────────────            ─────────────────────────────
+mat:   35% ████████████              mat:   25% ████████
+floor: 25% ████████                  floor: 22% ███████
+couch: 15% █████                     couch: 18% ██████
+table: 10% ███                       table: 15% █████
+roof:   5% ██                        roof:  12% ████
+                                     (more even — anything could be picked!)
+```
+
+| Temperature | Effect | Use Case |
+| ----------- | ------ | -------- |
+| **T → 0** | Almost greedy (top choice wins) | Factual answers, code |
+| **T = 1** | Original distribution | Balanced |
+| **T > 1** | Flattened (rare words more likely) | Creative writing, brainstorming |
+
+---
+
+#### 2. Top-K Sampling — "Only Consider the Top K Options"
+
+**The problem with pure random:** Even with low probability, the model might pick "pizza" for "The cat sat on the ___"
+
+**Solution:** Only allow sampling from the top K words.
+
+```
+Top-K = 5:
+
+Allowed:    mat (35%), floor (25%), couch (15%), table (10%), roof (5%)
+Blocked:    moon, pizza, banana, ... (too weird!)
+
+Now sample randomly from only these 5 options.
+```
+
+| K Value | Effect |
+| ------- | ------ |
+| K = 1 | = Greedy (only top choice) |
+| K = 10 | Moderate variety |
+| K = 50 | High variety (may include weird options) |
+| K = ∞ | = Pure random sampling |
+
+---
+
+#### 3. Top-p (Nucleus Sampling) — "Adaptive Top-K"
+
+**The problem with Top-K:** Sometimes top 5 is too few, sometimes too many.
+
+```
+Situation A: Model is confident       Situation B: Model is uncertain
+──────────────────────────────        ──────────────────────────────
+mat:   90%  ← Top 5 includes          word1: 15%
+floor:  5%     low-quality            word2: 14%
+couch:  2%     options!               word3: 13%  ← Top 5 misses
+table:  1%                            word4: 12%     many good options!
+roof:   1%                            word5: 11%
+other:  1%                            word6: 10%
+                                      word7:  9%
+                                      ...
+```
+
+**Top-p solution:** Include words until their probabilities sum to p (e.g., 90%).
+
+```
+Top-p = 0.90:
+
+Situation A: Only need 1 word!        Situation B: Need 7 words!
+──────────────────────────────        ──────────────────────────────
+mat: 90% ← Already at 90%!            word1 + word2 + word3 + word4 +
+         STOP                         word5 + word6 + word7 = 94%
+                                      STOP
+
+Adaptive: fewer choices when confident, more when uncertain!
+```
+
+---
+
+### Putting It All Together: Real-World Settings
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    COMMON CONFIGURATIONS                                    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+CODE COMPLETION (GitHub Copilot):     CHATBOT (ChatGPT):
+─────────────────────────────────     ─────────────────────
+Temperature: 0.0 - 0.2                Temperature: 0.7 - 1.0
+Top-p: 0.95                           Top-p: 0.9
+Why: Code must be correct!            Why: Natural, varied responses
+
+CREATIVE WRITING:                     FACTUAL Q&A:
+─────────────────                     ─────────────
+Temperature: 1.0 - 1.5                Temperature: 0.0 - 0.3
+Top-p: 0.95                           Top-p: 0.95 or beam search
+Why: Maximum creativity!              Why: Accuracy over creativity
+```
+
+| Task | Method | Temperature | Top-p/Top-K | Why |
+| ---- | ------ | ----------- | ----------- | --- |
+| Code completion | Greedy or low-temp | 0.0 - 0.2 | — | Must be syntactically correct |
+| Translation | Beam search (k=5) | — | — | Quality matters, not creativity |
+| Chatbot | Top-p sampling | 0.7 - 1.0 | p = 0.9 | Natural, varied but coherent |
+| Creative writing | Top-p sampling | 1.0 - 1.5 | p = 0.95 | Maximum diversity |
+| Factual Q&A | Low-temp or greedy | 0.0 - 0.3 | — | Accuracy is critical |
 
 > [!TIP]
-> 💡 **Aha:** For **autocomplete** (Smart Compose, code completion), use **beam search** (deterministic, consistent). For **chatbots** and **creative generation**, use **Top-p + Temperature** (stochastic, diverse). The choice depends on whether users expect the same answer every time.
+> 💡 **Key Learning:** Sampling strategy depends on the USER'S EXPECTATION:
+> - **"I expect the same answer every time"** → Deterministic (greedy/beam)
+> - **"I want variety and creativity"** → Stochastic (temperature + top-p)
+> 
+> Most production chatbots use **Temperature 0.7 + Top-p 0.9** as a balanced default.
 
 ---
 
