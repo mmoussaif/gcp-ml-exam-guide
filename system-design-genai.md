@@ -525,25 +525,48 @@ The remaining Part E sections (E.5–E.10) are cross-cutting concerns that surro
 
 ## B.2 GenAI vs Traditional ML
 
-Understanding the fundamental differences between traditional ML systems and **GenAI** / **LLM (Large Language Model)** systems is crucial for making the right architectural decisions.
+Think of the difference like this:
 
-| Aspect         | Traditional ML       | GenAI/LLM                                |
-| -------------- | -------------------- | ---------------------------------------- |
-| **Prediction** | Single forward pass  | Token-by-token generation                |
-| **Latency**    | Fixed (milliseconds) | Variable (seconds to minutes)            |
-| **Memory**     | Model weights        | Model + KV cache (grows with sequence)   |
-| **Batching**   | Static batches       | Dynamic/continuous batching              |
-| **Cost**       | Per-request          | Per-token (input + output)               |
-| **Control**    | Fixed weights        | Sampling parameters (temp, top-p, top-k) |
+- **Traditional ML** = A calculator. You press "=" and instantly get one answer. "Is this email spam?" → "Yes" (done in 5ms).
+- **GenAI/LLM** = A person typing a response. They think, then type word... by... word. "Write me an email" → takes seconds, length varies.
 
-**Why these differences matter:**
+This fundamental difference changes everything about how you design, scale, and pay for these systems.
 
-- **Token-by-token generation** means you can't predict exact response time—a 10-token response is much faster than a 1000-token response.
-- **KV cache growth** means memory requirements increase with context length, limiting how many concurrent requests you can serve.
-- **Per-token pricing** means prompt engineering and response length directly impact costs.
+### The Key Differences Explained
+
+| Aspect | Traditional ML | GenAI/LLM | Everyday Analogy |
+| ------ | -------------- | --------- | ---------------- |
+| **Prediction** | Single forward pass — one input, one output | Token-by-token — generates one word at a time, each depending on previous words | Calculator vs. person typing |
+| **Latency** | Fixed and fast (5-50ms) | Variable (500ms to 2 minutes) — depends on response length | Instant answer vs. waiting for someone to finish writing |
+| **Memory** | Just the model weights | Model weights + KV cache (remembers the conversation) | A photo vs. a video recording |
+| **Batching** | Static — wait for N requests, process together | Dynamic — requests join/leave mid-batch as they finish | Bus that waits until full vs. subway that runs continuously |
+| **Cost** | Per request (flat fee) | Per token — longer prompts and responses cost more | Flat-rate parking vs. metered parking |
+| **Control** | Fixed — same input always gives same output | Adjustable — temperature, top-p, top-k change creativity | Vending machine vs. asking a chef |
+
+### Why This Matters for System Design
+
+**1. You can't predict response time**
+- Traditional ML: "Image classification takes 20ms" — plan capacity easily
+- GenAI: "Could be 500ms or 30 seconds" — depends on how much the model writes
+- *Impact:* Need streaming (show words as they generate), timeouts, and flexible capacity
+
+**2. Memory grows during the request**
+- Traditional ML: Memory is constant (just model weights)
+- GenAI: KV cache grows with every token — a 10K token conversation uses 10× more memory than a 1K conversation
+- *Impact:* Long conversations can exhaust GPU memory; need to limit context or use pagination
+
+**3. Every word costs money**
+- Traditional ML: $0.001 per image classified (fixed)
+- GenAI: $0.01 per 1K input tokens + $0.03 per 1K output tokens (variable)
+- *Impact:* A chatty system that writes long responses costs 10× more than a concise one
+
+**4. Same question can give different answers**
+- Traditional ML: Deterministic — same input = same output
+- GenAI: Probabilistic — controlled by temperature (0 = deterministic, 1 = creative)
+- *Impact:* Need evaluation strategies since you can't just "unit test" outputs
 
 > [!TIP]
-> 💡 **Aha:** Traditional ML is "one input → one prediction." GenAI is "one prompt → a stream of tokens, each depending on the last." That shifts bottlenecks from GPU compute to memory (KV cache), latency (time-to-first-token vs total time), and cost (every token billed).
+> 💡 **Aha:** Traditional ML is "one input → one prediction" (like a calculator). GenAI is "one prompt → a stream of tokens, each depending on the last" (like a person typing). This shifts bottlenecks from raw compute to memory (KV cache), latency (time-to-first-token matters), and cost (every single token is billed).
 
 ### Generative Algorithm Classes
 
