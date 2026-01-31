@@ -197,51 +197,94 @@ Let's start with the big picture.
 
 ## A.2 Visual Guide Map
 
-This map shows how the guide fits together. Use it to navigate and see how concepts connect.
+This map shows how the guide fits together. Follow **Parts A → G** in order, or jump to what you need.
 
 ```
-                              ┌─────────────────────────────────────┐
-                              │      GenAI SYSTEM DESIGN            │
-                              │           GUIDE MAP                 │
-                              └─────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                           GenAI SYSTEM DESIGN GUIDE                                 │
+└─────────────────────────────────────────────────────────────────────────────────────┘
+
+  START HERE
+      │
+      ▼
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   PART A    │     │   PART B    │     │   PART C    │
+│  GETTING    │────▶│   SYSTEM    │────▶│ GENERATIVE  │
+│  STARTED    │     │  OVERVIEW   │     │   MODELS    │
+├─────────────┤     ├─────────────┤     ├─────────────┤
+│ A.1 Intro   │     │ B.1 Big     │     │ C.1 Text-to │
+│ A.2 Map     │     │     Picture │     │     -Video  │
+│ A.3 Glossary│     │ B.2 GenAI   │     │ C.2 Multi-  │
+│             │     │     vs ML   │     │     modal   │
+└─────────────┘     └─────────────┘     └─────────────┘
                                               │
-        ┌───────────────┬───────────────┬─────┴─────┬───────────────┬───────────────┐
-        │               │               │           │               │               │
-        ▼               ▼               ▼           ▼               ▼               ▼
-┌───────────────┐ ┌───────────────┐ ┌───────────┐ ┌───────────────┐ ┌───────────────┐ ┌───────────────┐
-│ REQUEST PATH  │ │ CORE PATTERNS │ │ QUALITY   │ │  OPERATIONS   │ │  GENERTIC     │ │  APPLY IT     │
-│               │ │               │ │ & SAFETY  │ │               │ │  MODELS       │ │               │
-└───────┬───────┘ └───────┬───────┘ └─────┬─────┘ └───────┬───────┘ └───────┬───────┘ └───────┬───────┘
-        │                 │               │               │               │               │
-        ▼                 ▼               ▼               ▼               ▼               ▼
-  ┌───────────┐     ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐   ┌───────────┐
-  │API Gateway│     │  RAG §2   │   │Evaluation │   │Data Pipe  │   │Transformer│   │Examples   │
-  │           │     │ Chunking  │   │   §5      │   │   §6      │   │ Attention │   │   §11     │
-  │Rate Limit │     │ Embedding │   │ RAGAS     │   │ Events    │   │ Self/Cross│   │ LLM Svc   │
-  │Auth       │     │ Vector DB │   │ Human Eval│   │ Labeling  │   │           │   │ RAG       │
-  └─────┬─────┘     │ Reranking │   │ A/B Test  │   │ Training  │   ├───────────┤   │ Agents    │
-        │           └───────────┘   └───────────┘   └───────────┘   │Text-Image │   │ Support   │
-        ▼           ┌───────────┐   ┌───────────┐   ┌───────────┐   │ Diffusion │   └───────────┘
-  ┌───────────┐     │Agents §4  │   │Guardrails │   │ Cost §7   │   │ CLIP, CFG │   ┌───────────┐
-  │Orchestrat.│     │ ReAct     │   │   §10     │   │ Tokens    │   ├───────────┤   │Interview  │
-  │           │     │ Tools     │   │Model Armor│   │ Routing   │   │Text-Video │   │ Framework │
-  │ RAG       │     │ Multi-Agt │   │ Filters   │   │ Caching   │   │ LDM       │   │ Clarify   │
-  │ Agents    │     │ ADK       │   │ PII       │   └───────────┘   │ Temporal  │   │ Architect │
-  │ Tools     │     └───────────┘   └───────────┘   ┌───────────┐   │ FVD       │   │ Deep Dive │
-  └─────┬─────┘     ┌───────────┐                   │ Scale §8  │   └───────────┘   │ Tradeoffs │
-        │           │Fine-tune  │                   │ Batching  │                   └───────────┘
-        ▼           │   §3      │                   │ Parallel  │
-  ┌───────────┐     │ LoRA/PEFT │                   │ Quantize  │
-  │LLM Infer. │     │ vs RAG    │                   └───────────┘
-  │   §1      │     └───────────┘                   ┌───────────┐
-  │ Serving   │                                     │Monitor §9 │
-  │ Batching  │                                     │ Traces    │
-  │ KV Cache  │                                     │ Metrics   │
-  └───────────┘                                     │ Drift     │
-                                                    └───────────┘
+      ┌───────────────────────────────────────┘
+      ▼
+┌─────────────┐
+│   PART D    │
+│    LLM      │
+│FUNDAMENTALS │
+├─────────────┤
+│ D.1  Models & Sampling      │
+│ D.2  Google GenAI Tools     │
+│ D.3  Tokenization           │
+│ D.4  Transformers           │
+│ D.5  Pretraining Objectives │
+│ D.6  Two-Stage Training     │
+│ D.7  Three-Stage (RLHF)     │
+│ D.8  Sampling Strategies    │
+│ D.9  Evaluation Metrics     │
+│ D.10 Inference Pipeline     │
+└─────────────┬───────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────────────────────────────────────────────────┐
+│                            PART E: CORE SYSTEM DESIGN                               │
+│                              (the main content)                                     │
+├────────────────┬────────────────┬────────────────┬──────────────────────────────────┤
+│   SERVING      │   KNOWLEDGE    │   QUALITY      │          OPERATIONS              │
+├────────────────┼────────────────┼────────────────┼──────────────────────────────────┤
+│ E.1 LLM        │ E.2 RAG        │ E.5 Evaluation │ E.6 Data Pipeline                │
+│     Serving    │     System     │     & Quality  │ E.7 Cost Optimization            │
+│   - Batching   │   - Chunking   │   - RAGAS      │ E.8 Scalability                  │
+│   - KV Cache   │   - Embeddings │   - Human Eval │ E.9 Monitoring                   │
+│   - vLLM       │   - Vector DB  │   - A/B Test   │                                  │
+│                │   - Reranking  │                │                                  │
+│                │                │ E.10 Security  │                                  │
+│                │ E.3 RAG vs     │    & Guardrails│                                  │
+│                │     Fine-tune  │   - Model Armor│                                  │
+│                │   - LoRA/PEFT  │   - PII Filter │                                  │
+│                │                │                │                                  │
+│                │ E.4 Agentic AI │                │                                  │
+│                │   - ReAct      │                │                                  │
+│                │   - Tools      │                │                                  │
+│                │   - Multi-agent│                │                                  │
+│                │   - ADK        │                │                                  │
+└────────────────┴────────────────┴────────────────┴──────────────────────────────────┘
+              │
+              ▼
+┌─────────────┐     ┌─────────────┐
+│   PART F    │     │   PART G    │
+│  EXAMPLES   │────▶│  REFERENCE  │
+│  (Apply it) │     │ & INTERVIEW │
+├─────────────┤     ├─────────────┤
+│ F.1 Real-   │     │ G.1 Strategy│
+│   World     │     │ G.2 Quick   │
+│   Examples  │     │     Ref     │
+│  - LLM Svc  │     │ G.3 What    │
+│  - Chatbot  │     │   FAANG     │
+│  - Code Ast │     │   Evaluates │
+│  - RAG      │     │ G.4 End-to- │
+│  - Translate│     │   End       │
+│  - ChatGPT  │     │ G.5 Resources
+│  - T2I/T2V  │     │             │
+└─────────────┘     └─────────────┘
 ```
 
-**Reading order:** Start with **§1 LLM Serving** (the foundation), then **§2 RAG** and **§3 Fine-tuning** (how to add knowledge), then **§4 Agents** (how to add actions). **§§5–10** are cross-cutting concerns. **§11 Examples** ties it all together.
+**Reading paths:**
+- **New to GenAI:** A → B → D → E.1–E.4 → F (examples)
+- **Interview prep:** A.3 (glossary) → E.1–E.4 → F → G.2–G.4
+- **Building now:** Find similar example in F → Read relevant E sections
 
 ---
 
