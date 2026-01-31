@@ -985,13 +985,32 @@ Original Video → VAE Encoder → Latent Representation (compressed) → Diffus
 - **Visual Decoder**: Latent representation → reconstructed video
 
 **Compression ratio example (typical values):**
-- Input: 120 frames × 1280×720 = 110M pixels
-- With 8× temporal + 8× spatial compression (common in Sora-like systems):
-  - Frames: 120 ÷ 8 = 15 frames
-  - Width: 1280 ÷ 8 = 160
-  - Height: 720 ÷ 8 = 90
-  - Result: 15 × 160 × 90 = 216K latent points
-- **512× smaller** → much cheaper training and inference
+
+```
+BEFORE COMPRESSION (Original Video)              AFTER COMPRESSION (Latent Space)
+─────────────────────────────────────            ─────────────────────────────────
+                                                 
+  ┌─────────────────────────┐                      ┌─────┐
+  │                         │ 720px                │     │ 90
+  │      One Frame          │                      │     │
+  │                         │                      └─────┘
+  └─────────────────────────┘                       160
+         1280px                                   
+                                                 
+  × 120 frames (5 sec × 24 FPS)                   × 15 frames (÷8 temporal)
+  ─────────────────────────────                   ─────────────────────────
+                                                 
+  = 120 × 1280 × 720                              = 15 × 160 × 90
+  = 110,592,000 pixels                           = 216,000 latent points
+  ≈ 110M                                          ≈ 216K
+                                                 
+                    ──────────────────────────────►
+                         VAE Encoder (512× smaller!)
+```
+
+- **8× temporal compression**: 120 frames → 15 frames (keep every 8th frame's info)
+- **8× spatial compression**: 1280×720 → 160×90 (shrink each dimension by 8)
+- **Result**: 512× fewer points to process!
 - *Note: Actual compression ratios vary (4×, 8×, 16×) depending on the system*
 
 | Approach | Operates in | Training cost | Examples |
