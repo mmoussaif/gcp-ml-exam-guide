@@ -1338,85 +1338,330 @@ More cost                                        ↓
 
 ## C.2 Multimodal & Vision-Language Models
 
-Many GenAI tasks involve **multiple modalities** (text + image, text + video, etc.). Key architectures:
+**What is "multimodal"?**
 
-### Image Encoders
+Humans understand the world through multiple senses (modes): sight, sound, language. **Multimodal AI** combines different types of data:
 
-| Architecture | How it works | Pros | Cons | Examples |
-| ------------ | ------------ | ---- | ---- | -------- |
-| **CNN-based** | Convolutional filters detect patterns; output = feature grid | Fast; good for local patterns | Weak on long-range dependencies | ResNet, EfficientNet |
-| **Transformer-based (ViT)** | Patchify image → positional encoding → Transformer | Global attention; scales well | More compute; needs more data | ViT, CLIP, DINOv2 |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           MULTIMODAL = Multiple Input Types                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│    📷 Image    +    📝 Text    =    "What's in this photo?"                 │
+│    🎬 Video    +    📝 Text    =    "Summarize this video"                  │
+│    🔊 Audio    +    📝 Text    =    "Transcribe and translate"              │
+│    📷 Image    +    🔊 Audio   =    "Describe what you see and hear"        │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-**ViT (Vision Transformer) Process:**
-1. **Patchify**: Divide image into fixed patches (e.g., 256×256 → 16 patches of 64×64)
-2. **Flatten + Project**: Each patch → linear projection to embedding vector
-3. **Positional Encoding**: Add position info (1D or 2D)
-4. **Transformer**: Self-attention across patches → sequence of embeddings
+**The challenge:** Text is a sequence of words. Images are grids of pixels. How do we make them "speak the same language"? → **Convert everything to embeddings!**
 
-**Positional Encoding for Images:**
+---
 
-| Type | How it works | Use case |
-| ---- | ------------ | -------- |
-| **1D** | Position in flattened sequence | Simple; may lose 2D spatial info |
-| **2D** | Row + column position | Preserves spatial structure |
-| **Learnable** | Learned during training | Task-optimized; may overfit |
-| **Fixed** (sine-cosine) | Computed from position | Generalizes to new sizes |
+### Image Encoders: How AI "Sees" Images
 
-### Encoder Output: Single Token vs Sequence
+**Two approaches to understanding images:**
 
-| Output | Description | Pros | Cons |
-| ------ | ----------- | ---- | ---- |
-| **Single token** | Entire image compressed to one vector | Simple; less compute | Loses local details; generic captions |
-| **Sequence of tokens** | Each token = patch/region of image | Rich detail; works with cross-attention | More tokens; more memory |
+```
+CNN (Convolutional Neural Network)              ViT (Vision Transformer)
+────────────────────────────────────            ────────────────────────────────
+
+"Look at small areas, build up"                 "Cut into pieces, look at everything"
+
+┌─────────────────┐                             ┌───┬───┬───┬───┐
+│ ▓▓░░░░░░░░░░░░░ │  Small filter               │ 1 │ 2 │ 3 │ 4 │  Cut into patches
+│ ▓▓░░░░░░░░░░░░░ │  slides across              ├───┼───┼───┼───┤
+│ ░░░░░░░░░░░░░░░ │  the image                  │ 5 │ 6 │ 7 │ 8 │
+│ ░░░░░░░░░░░░░░░ │                             ├───┼───┼───┼───┤
+└─────────────────┘                             │ 9 │10 │11 │12 │
+        ↓                                       ├───┼───┼───┼───┤
+  Detect edges →                                │13 │14 │15 │16 │
+  Detect shapes →                               └───┴───┴───┴───┘
+  Detect objects                                        ↓
+                                                Each patch attends to
+                                                ALL other patches
+```
+
+| Architecture | How it works | Good at | Bad at | Examples |
+| ------------ | ------------ | ------- | ------ | -------- |
+| **CNN** | Sliding window detects local patterns, builds up to larger features | Fast; local patterns (edges, textures) | Understanding relationships across distant parts | ResNet, EfficientNet |
+| **ViT** | Cut image into patches, let each patch "look at" all others | Global understanding; scales well | Needs lots of data; more compute | ViT, CLIP, DINOv2 |
+
+---
+
+### ViT (Vision Transformer): Step-by-Step
+
+**The core idea:** Treat image patches like words in a sentence, then use a Transformer!
+
+```
+Step 1: PATCHIFY                    Step 2: FLATTEN & PROJECT           Step 3: ADD POSITION
+─────────────────                   ───────────────────────             ─────────────────────
+
+┌───┬───┬───┬───┐                   Patch 1 → [0.2, 0.5, ...]          [0.2, 0.5, ...] + Pos 1
+│ 1 │ 2 │ 3 │ 4 │                   Patch 2 → [0.8, 0.1, ...]          [0.8, 0.1, ...] + Pos 2
+├───┼───┼───┼───┤                   Patch 3 → [0.3, 0.7, ...]          [0.3, 0.7, ...] + Pos 3
+│ 5 │ 6 │ 7 │ 8 │                      ...           ...                   ...
+├───┼───┼───┼───┤                   Patch 16→ [0.6, 0.4, ...]          [0.6, 0.4, ...] + Pos 16
+│ 9 │10 │11 │12 │                   
+├───┼───┼───┼───┤                   Each patch becomes                 Now the model knows
+│13 │14 │15 │16 │                   a vector of numbers                "where" each patch is
+└───┴───┴───┴───┘
+
+256×256 image                       16 patches → 16 embeddings
+÷ 64×64 patches
+= 16 patches
+```
+
+```
+Step 4: TRANSFORMER MAGIC
+─────────────────────────
+
+  Patch 1 ←──────────────────────────┐
+     ↕                               │
+  Patch 2 ←───────────────────┐      │
+     ↕                        │      │   Every patch
+  Patch 3 ←────────────┐      │      │   can "look at"
+     ↕                 │      │      │   every other patch
+    ...               ...    ...    ...
+     ↕                 │      │      │
+  Patch 16 ←───────────┴──────┴──────┘
+
+  Output: 16 embeddings that understand the WHOLE image
+```
+
+---
+
+**Positional Encoding: How does the model know where patches are?**
+
+Without position info, the model sees patches as an unordered bag — it wouldn't know if patch 1 is top-left or bottom-right!
+
+| Type | How it works | Analogy |
+| ---- | ------------ | ------- |
+| **1D** | Number patches 1, 2, 3... in reading order | Page numbers in a book |
+| **2D** | Give row AND column (patch at row 2, col 3) | Chess notation (e.g., "B3") |
+| **Learnable** | Let model learn best positions during training | Model figures out what works |
+| **Fixed (sine-cosine)** | Mathematical formula based on position | Universal; works for any image size |
+
+---
+
+### Encoder Output: One Token vs Many Tokens
+
+**When the image encoder finishes, what do we get?**
+
+```
+SINGLE TOKEN OUTPUT                          SEQUENCE OUTPUT
+─────────────────────                        ────────────────────────
+
+┌─────────────────────┐                      ┌─────────────────────┐
+│                     │                      │  1    2    3    4   │
+│   Entire image      │                      │  5    6    7    8   │
+│   compressed into   │ → [0.2, 0.8, ...]    │  9   10   11   12   │ → 16 separate embeddings
+│   ONE vector        │                      │ 13   14   15   16   │    one per patch
+│                     │                      │                     │
+└─────────────────────┘                      └─────────────────────┘
+
+Good for: "Is this a cat?"                   Good for: "Describe what's happening"
+          (simple yes/no)                              (need to see details)
+```
+
+| Output Type | What you get | Best for | Example |
+| ----------- | ------------ | -------- | ------- |
+| **Single token** | One embedding for whole image | Classification: "cat or dog?" | CLIP image embedding |
+| **Sequence** | One embedding per patch (16-256 tokens) | Captioning, VQA: "What's the dog doing?" | ViT patch embeddings |
 
 > [!TIP]
-> 💡 **Aha:** For **image captioning** and **VQA**, use **sequence output** (one embedding per patch). Cross-attention in the decoder can then focus on relevant image regions for each output word. Single-token outputs work for simple classification but lose detail for generation.
+> 💡 **Aha:** For tasks that need detail (captioning, VQA), use **sequence output**. The text decoder can then "look at" different patches for different words: "The **dog** [look at patch 5] is **running** [look at patches 5-8] on the **beach** [look at patches 9-12]."
 
 ### Vision-Language Models
 
-| Model | Architecture | Use Cases |
-| ----- | ------------ | --------- |
-| **CLIP** | Dual encoder (image + text); contrastive learning | Image-text similarity, zero-shot classification, filtering |
-| **ViT** | Image encoder (patches → Transformer) | Feature extraction, image classification |
-| **BLIP-2/BLIP-3** | Frozen image encoder + LLM + Q-Former bridge | Image captioning, VQA, multimodal chat |
-| **LLaVA** | ViT encoder + LLM decoder | Multimodal chat, image understanding |
-| **Gemini** | Native multimodal (image, text, audio, video) | General-purpose multimodal |
-
-### Image Captioning Architecture
+**How do we connect images and text?** Different architectures take different approaches:
 
 ```
-Input Image → Image Encoder (ViT) → Sequence of Embeddings → Text Decoder (GPT-style) → Caption
-                                              ↓
-                                    Cross-Attention (decoder attends to image)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  APPROACH 1: Dual Encoder (CLIP)                                            │
+│  ─────────────────────────────────                                          │
+│                                                                              │
+│    Image ──→ [Image Encoder] ──→ Image Embedding ──┐                        │
+│                                                     ├──→ Compare similarity │
+│    Text  ──→ [Text Encoder]  ──→ Text Embedding ──┘                        │
+│                                                                              │
+│    "Do these match?" → Used for search, filtering, zero-shot classification │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  APPROACH 2: Encoder-Decoder (BLIP, LLaVA)                                  │
+│  ───────────────────────────────────────────                                │
+│                                                                              │
+│    Image ──→ [Image Encoder] ──→ Embeddings ──┐                             │
+│                                                ├──→ [Text Decoder] ──→ Words│
+│    "Describe this" ─────────────────────────→─┘                             │
+│                                                                              │
+│    Image → Caption, or Image + Question → Answer                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  APPROACH 3: Native Multimodal (Gemini)                                     │
+│  ─────────────────────────────────────────                                  │
+│                                                                              │
+│    Image ──┐                                                                 │
+│    Text  ──┼──→ [Single Model Understands All] ──→ Output                   │
+│    Audio ──┘                                                                 │
+│                                                                              │
+│    Everything processed together from the start                             │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Key components:**
-1. **Image Encoder**: ViT or CLIP encoder → sequence of patch embeddings
-2. **Text Decoder**: Decoder-only Transformer (GPT-2, LLaMA)
-3. **Cross-Attention**: Decoder attends to image embeddings at each generation step
+| Model | How it works | Best for | Simple Explanation |
+| ----- | ------------ | -------- | ------------------ |
+| **CLIP** | Two separate encoders trained to match images and text | Search, filtering, classification | "Does this image match this text?" |
+| **BLIP-2/BLIP-3** | Image encoder + bridge (Q-Former) + LLM | Captioning, VQA, chat | Image → smart connector → language model |
+| **LLaVA** | ViT encoder directly connected to LLM | Multimodal chat | Simple: image patches become "visual words" |
+| **Gemini** | Single model trained on all modalities together | General-purpose | Native understanding of image+text+audio+video |
 
-**Training:**
-1. **Pretrain encoder** (CLIP, ViT) on image classification or contrastive learning
-2. **Pretrain decoder** (GPT) on text
-3. **Finetune together** on image-caption pairs (next-token prediction, cross-entropy loss)
+---
 
-### CIDEr Metric (Image Captioning)
+### Image Captioning: How AI Describes Pictures
 
-CIDEr (Consensus-based Image Description Evaluation) is designed specifically for image captioning:
+**The goal:** Given a picture of a dog on a beach, output "A golden retriever running on a sandy beach."
 
-1. **TF-IDF representation**: Convert captions to vectors based on word importance
-2. **Cosine similarity**: Compare generated caption to each reference caption
-3. **Average**: Final score = mean similarity across all references
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                        IMAGE CAPTIONING PIPELINE                            │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-| Metric | Focus | Best For |
-| ------ | ----- | -------- |
-| **BLEU** | N-gram precision | Translation, short text |
-| **ROUGE** | N-gram recall | Summarization |
-| **METEOR** | Precision + recall + synonyms | Translation with paraphrasing |
-| **CIDEr** | Consensus across multiple references | Image captioning |
+     ┌─────────────────┐
+     │   📷 Image      │
+     │   (dog on beach)│
+     └────────┬────────┘
+              │
+              ▼
+     ┌─────────────────┐
+     │  Image Encoder  │  ViT cuts into patches, processes with Transformer
+     │     (ViT)       │
+     └────────┬────────┘
+              │
+              ▼
+     ┌─────────────────────────────────────────────┐
+     │  16 patch embeddings (the image as "tokens")│
+     │  [dog patch] [sand patch] [water patch] ... │
+     └────────────────────┬────────────────────────┘
+                          │
+                          ▼
+     ┌─────────────────────────────────────────────────────────────────────┐
+     │                      TEXT DECODER (GPT-style)                       │
+     │                                                                      │
+     │  Generating: "A"                                                     │
+     │              ↓ Cross-attention: "What should come next?"            │
+     │              ↓ Look at patches → sees dog prominently               │
+     │                                                                      │
+     │  Generating: "A golden"                                              │
+     │              ↓ Look at patches → sees golden fur color              │
+     │                                                                      │
+     │  Generating: "A golden retriever"                                    │
+     │              ↓ Look at patches → confirms dog breed                 │
+     │                                                                      │
+     │  Generating: "A golden retriever running"                            │
+     │              ↓ Look at patches → sees motion blur, leg position     │
+     │                                                                      │
+     │  ... continues until complete caption ...                            │
+     └─────────────────────────────────────────────────────────────────────┘
+              │
+              ▼
+     ┌─────────────────────────────────────────────┐
+     │  "A golden retriever running on a sandy     │
+     │   beach with waves in the background"       │
+     └─────────────────────────────────────────────┘
+```
+
+**Cross-Attention: The Key to Good Captions**
+
+When generating each word, the decoder "looks at" the relevant image patches:
+
+```
+Generating word:     Cross-attention focuses on:
+────────────────     ─────────────────────────────
+"A"                  Everything (general start)
+"golden"             Patches with the dog's fur
+"retriever"          Patches with the dog's shape
+"running"            Patches showing legs and motion
+"beach"              Patches with sand
+"waves"              Patches with water
+```
+
+**Training (3 steps):**
+
+| Step | What happens | Why |
+| ---- | ------------ | --- |
+| 1. Pretrain encoder | Train ViT on millions of images | Learn to "see" and understand images |
+| 2. Pretrain decoder | Train GPT on text | Learn to write fluent sentences |
+| 3. Finetune together | Train on image-caption pairs | Learn to connect what it sees to what it writes |
+
+### CIDEr Metric: Measuring Caption Quality
+
+**The problem:** For one image, many captions are correct!
+
+```
+Image: [Photo of a cat sleeping on a couch]
+
+Human caption 1: "A cat sleeping on a sofa"
+Human caption 2: "An orange tabby napping on the couch"  
+Human caption 3: "A sleepy cat curled up on furniture"
+Human caption 4: "Cute cat taking a nap"
+
+All correct! Which one should we match?
+```
+
+**CIDEr's solution: Reward captions that capture the CONSENSUS**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           HOW CIDEr WORKS                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Step 1: What words are important? (TF-IDF)
+─────────────────────────────────────────────
+  "cat" appears in 4/4 captions  → Very important!
+  "sleeping/napping" in 4/4      → Very important!
+  "couch/sofa/furniture" in 3/4  → Important
+  "orange" only in 1/4           → Less important (specific detail)
+  "the" appears everywhere       → Not important (common word)
+
+Step 2: Compare generated caption to ALL references
+─────────────────────────────────────────────────────
+  Generated: "A cat sleeping on a couch"
+  
+  vs Reference 1: 85% similar (almost same words)
+  vs Reference 2: 60% similar (different words, same meaning)
+  vs Reference 3: 70% similar (partial overlap)
+  vs Reference 4: 65% similar (partial overlap)
+  
+  CIDEr Score = Average = 70% (good!)
+
+Step 3: Why this is smart
+──────────────────────────
+  Generated: "An orange tabby napping" 
+  → Only matches reference 2 well
+  → Lower CIDEr (only captured ONE person's description)
+  
+  Generated: "A cat sleeping"
+  → Matches the CONSENSUS of what everyone said
+  → Higher CIDEr!
+```
+
+---
+
+**Caption Metrics Comparison:**
+
+| Metric | What it measures | How it works | Best for |
+| ------ | ---------------- | ------------ | -------- |
+| **BLEU** | "Did you use the same words?" | Count matching word sequences | Translation |
+| **ROUGE** | "Did you cover the key content?" | Count how much reference was captured | Summarization |
+| **METEOR** | "Same meaning, maybe different words?" | Match words + synonyms + stems | Paraphrased text |
+| **CIDEr** | "Did you capture what MOST people said?" | Match consensus across multiple references | Image captioning |
 
 > [!TIP]
-> 💡 **Aha:** CIDEr rewards captions that match **multiple** reference captions (consensus). BLEU/ROUGE only compare to one reference at a time. For image captioning with 3–5 reference captions per image, CIDEr is the standard metric.
+> 💡 **Aha:** Image captioning datasets have 3-5 captions per image (different people describe the same photo). CIDEr rewards captions that capture what MOST people mentioned — the "consensus description." A caption matching all 5 references scores higher than one matching only 1 perfectly.
 
 ---
 
