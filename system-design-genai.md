@@ -1734,17 +1734,94 @@ Most generative AI models are accessed via **APIs**. The flow:
 
 ## D.2 Google Generative AI Development Tools
 
-Google provides two primary environments for experimenting with and deploying Gemini models:
+Google provides two primary environments for working with Gemini and other foundation models:
 
-| Attribute        | Google AI Studio                                                                                   | Vertex AI Studio                                                          |
-| :--------------- | :------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------ |
-| **Focus**        | Streamlined, easy-to-use interface for rapid prototyping                                           | Comprehensive environment for building, training, and deploying ML models |
-| **Target Users** | Beginners, hobbyists, initial project stages                                                       | Professionals, researchers, enterprise developers                         |
-| **Access**       | Standard Google Account login                                                                      | Google Cloud Console (Enterprise account)                                 |
-| **Limitations**  | Usage limits (**QPM** queries/min, **RPM** requests/min, **TPM** tokens/min); small-scale projects | Service charges based on usage; enterprise-grade quotas                   |
-| **Advantages**   | Simplified interface; easy to get started                                                          | Enterprise-grade security, compliance, flexible quotas                    |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    GOOGLE'S TWO AI DEVELOPMENT PATHS                        │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-**Key Takeaway**: Use **Google AI Studio** for fast, small-scale prototyping. Transition to **Vertex AI Studio** for large-scale, production-ready enterprise applications.
+  GOOGLE AI STUDIO                           VERTEX AI STUDIO
+  (ai.google.dev)                            (cloud.google.com)
+  ─────────────────                          ─────────────────────
+
+  ┌─────────────────┐                        ┌─────────────────────┐
+  │  Quick Start    │                        │  Enterprise Scale   │
+  │  Prototyping    │                        │  Production Ready   │
+  └─────────────────┘                        └─────────────────────┘
+        │                                           │
+        ▼                                           ▼
+  • Personal Google account                  • Google Cloud account
+  • Free tier available                      • Pay-as-you-go billing
+  • Rate limits (RPM, TPM, RPD)              • Higher quotas, SLAs
+  • Gemini API (Developer API)               • Vertex AI API + Model Garden
+  • Prompt testing & API keys                • Fine-tuning, evaluation, MLOps
+
+  Best for:                                  Best for:
+  ─────────                                  ─────────
+  • Learning & experimentation               • Production applications
+  • Small projects & hackathons              • Enterprise security/compliance
+  • Individual developers                    • Team collaboration
+  • Quick API access                         • Custom model tuning
+```
+
+---
+
+**Detailed Comparison (Updated 2025):**
+
+| Attribute | Google AI Studio | Vertex AI Studio |
+| :-------- | :--------------- | :--------------- |
+| **URL** | ai.google.dev / aistudio.google.com | cloud.google.com/vertex-ai |
+| **Account** | Personal Google Account | Google Cloud Console |
+| **Billing** | Free tier + paid tiers | Pay-per-use (Cloud billing) |
+| **Rate Limits** | RPM, TPM, RPD (varies by tier) | Higher enterprise quotas |
+| **Models** | Gemini family via Gemini API | 200+ models via Model Garden (Gemini, Claude, Llama, Mistral, etc.) |
+| **Fine-tuning** | Limited | Full tuning: supervised, preference (RLHF), adapter tuning |
+| **Evaluation** | Basic | Comprehensive eval pipelines |
+| **Security** | Standard | Enterprise-grade (VPC, IAM, audit logs, compliance) |
+| **MLOps** | None | Full MLOps: pipelines, versioning, monitoring |
+
+---
+
+**Google AI Studio Rate Limit Tiers (from official docs):**
+
+| Tier | Qualification | Rate Limits |
+| ---- | ------------- | ----------- |
+| **Free** | Users in eligible countries | Lowest limits; good for testing |
+| **Tier 1** | Paid billing account linked | Increased RPM/TPM |
+| **Tier 2** | $250+ total spend, 30+ days | Higher limits |
+| **Tier 3** | $1,000+ total spend, 30+ days | Highest limits |
+
+*Rate limits measured as: RPM (requests/min), TPM (tokens/min), RPD (requests/day). Limits are per-project, not per-API-key.*
+
+---
+
+**Vertex AI Model Garden:**
+
+Access 200+ curated models in one place:
+
+| Category | Available Models |
+| -------- | ---------------- |
+| **Google 1st-party** | Gemini 2.5 Pro/Flash, Imagen, Veo, Chirp |
+| **Open models** | Gemma, Llama 3, Mistral, Falcon |
+| **3rd-party** | Claude (Anthropic), others |
+
+All models use consistent deployment patterns and integrate with Vertex AI tuning/evaluation/serving.
+
+---
+
+**When to Use Which:**
+
+| Scenario | Use This |
+| -------- | -------- |
+| "I want to test Gemini quickly" | Google AI Studio |
+| "I'm building a hackathon project" | Google AI Studio |
+| "I need enterprise security/compliance" | Vertex AI |
+| "I want to fine-tune a model" | Vertex AI |
+| "I'm deploying to production" | Vertex AI |
+| "I need to use Claude or Llama" | Vertex AI (Model Garden) |
+
+**Key Takeaway:** Start with **Google AI Studio** for fast experimentation. Move to **Vertex AI** when you need enterprise features, fine-tuning, or production deployment.
 
 ### Agent Development Kit (ADK)
 
