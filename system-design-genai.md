@@ -2842,13 +2842,6 @@ How it works:
 
 ---
 
-> **Note:** Production chatbot pipelines (safety filters, response evaluation, session management) are covered in:
-> - **E.1 LLM Serving Architecture** — Full system design with caching, routing, scaling
-> - **E.10 Security & Guardrails** — Input/output safety, prompt injection defense
-> - **D.8 Sampling Strategies** — How responses are generated (temperature, top-p)
-
----
-
 ## E.1 LLM Serving Architecture at Scale
 
 ### Use Case: Design a Chatbot Service (like ChatGPT)
