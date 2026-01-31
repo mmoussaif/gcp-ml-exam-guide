@@ -1879,13 +1879,33 @@ Tokenization converts raw text into numerical tokens the model can process. The 
 
 ## D.4 Transformer Architectures
 
-The Transformer architecture has three variations, each suited for different tasks:
+The Transformer architecture has three main variations, each suited for different tasks:
 
-| Variation | How it works | Best For | Examples |
-| --------- | ------------ | -------- | -------- |
-| **Encoder-only** | Processes entire input; outputs understanding/classification | Sentiment analysis, NER, classification | BERT, RoBERTa |
-| **Decoder-only** | Generates output token-by-token autoregressively | Text generation, chatbots, code completion | GPT-4, Gemini, LLaMA, Claude |
-| **Encoder-Decoder** | Encoder processes input; decoder generates transformed output | Translation, summarization | T5, BART |
+```
+ENCODER-ONLY                    DECODER-ONLY                   ENCODER-DECODER
+(Bidirectional)                 (Autoregressive)               (Seq2Seq)
+─────────────────               ─────────────────              ─────────────────
+
+  Input: "The cat sat"           Input: "The cat"              Input: "Hello"
+         ↓↓↓                            ↓↓                            ↓
+    ┌─────────┐                   ┌─────────┐                   ┌─────────┐
+    │ ENCODER │ ← sees ALL        │ DECODER │ ← sees only      │ ENCODER │
+    │         │   tokens at       │         │   previous       └────┬────┘
+    └────┬────┘   once            └────┬────┘   tokens               │
+         │                             │                       ┌────▼────┐
+    Understanding                 "The cat sat"                │ DECODER │
+    (classification)              (generates next)             └────┬────┘
+                                                                    │
+                                                               "Bonjour"
+```
+
+| Variation | How it works | Attention | Best For | Examples |
+| --------- | ------------ | --------- | -------- | -------- |
+| **Encoder-only** | Processes entire input at once; outputs understanding | Bidirectional (sees all tokens) | Classification, NER, embeddings, search | BERT, RoBERTa, DeBERTa |
+| **Decoder-only** | Generates output token-by-token | Causal (sees only past tokens) | Text generation, chatbots, code | GPT-4, LLaMA, Claude |
+| **Encoder-Decoder** | Encoder understands input; decoder generates output | Encoder: bidirectional; Decoder: causal + cross-attention | Translation, summarization | T5, BART, mT5 |
+
+**Note on Gemini:** Gemini uses a multimodal architecture with modality-specific encoders (for images, audio, video) feeding into a decoder. For text-only tasks, it behaves like decoder-only, but its full architecture is more sophisticated.
 
 **Key Components of a Decoder-only Transformer:**
 
