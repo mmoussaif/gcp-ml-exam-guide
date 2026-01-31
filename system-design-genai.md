@@ -119,12 +119,12 @@ This guide teaches you how to design for these realities.
 
 | Challenge | The Problem | What You'll Learn |
 | --------- | ----------- | ----------------- |
-| **Non-determinism** | Same prompt yields different outputs; hard to test and debug | Evaluation strategies (§5), guardrails (§10) |
-| **Token economics** | Cost and latency scale with input + output length | Cost optimization (§7), caching, model routing |
-| **Memory pressure** | KV cache grows with context; long prompts exhaust GPU memory | Serving architecture (§1), quantization (§8) |
-| **Hallucinations** | Model confidently states false information | RAG for grounding (§2), evaluation (§5) |
-| **Orchestration complexity** | Agents need tools, retrieval, and multi-step reasoning | Agentic systems (§4), ADK patterns |
-| **Scale unpredictability** | Variable output length makes capacity planning hard | Scalability patterns (§8), continuous batching |
+| **Non-determinism** | Same prompt yields different outputs; hard to test and debug | Evaluation strategies (E.5), guardrails (E.10) |
+| **Token economics** | Cost and latency scale with input + output length | Cost optimization (E.7), caching, model routing |
+| **Memory pressure** | KV cache grows with context; long prompts exhaust GPU memory | Serving architecture (E.1), quantization (E.8) |
+| **Hallucinations** | Model confidently states false information | RAG for grounding (E.2), evaluation (E.5) |
+| **Orchestration complexity** | Agents need tools, retrieval, and multi-step reasoning | Agentic systems (E.4), ADK patterns |
+| **Scale unpredictability** | Variable output length makes capacity planning hard | Scalability patterns (E.8), continuous batching |
 
 ---
 
@@ -133,8 +133,8 @@ This guide teaches you how to design for these realities.
 | Layer | What's Covered | Sections |
 | ----- | -------------- | -------- |
 | **Theory** | How LLMs, RAG, agents, diffusion models, and training pipelines actually work | Parts C, D |
-| **System Design** | Architecture patterns for serving, retrieval, agents, evaluation, and operations | §1–§10 |
-| **Practice** | Real stacks, cost estimations, and complete system designs | §11 Examples |
+| **System Design** | Architecture patterns for serving, retrieval, agents, evaluation, and operations | E.1–E.10 |
+| **Practice** | Real stacks, cost estimations, and complete system designs | F.1 Examples |
 | **Interview Prep** | 45-minute framework, FAANG evaluation criteria, end-to-end solutioning | Part G |
 
 ---
@@ -145,17 +145,17 @@ This guide teaches you how to design for these realities.
 1. Start with the **Visual Guide Map** (next section) to see the big picture
 2. Read **Part B: System Overview** to understand the request path
 3. Work through **Part D: LLM Fundamentals** for theory
-4. Then dive into **§1–§10** for system design patterns
+4. Then dive into **Part E** (E.1–E.10) for system design patterns
 
 **If you're preparing for interviews:**
 1. Skim the **Glossary** to ensure you know the terminology
-2. Read **§1–§4** (Serving, RAG, Fine-tuning, Agents) deeply
-3. Study 3–4 examples from **§11** and practice explaining them
+2. Read **E.1–E.4** (Serving, RAG, Fine-tuning, Agents) deeply
+3. Study 3–4 examples from **F.1** and practice explaining them
 4. Use **Part G: Quick Reference** for the interview framework
 
 **If you're building a system now:**
-1. Find the closest example in **§11**
-2. Read the relevant deep-dive sections (§1–§10)
+1. Find the closest example in **F.1**
+2. Read the relevant deep-dive sections (E.1–E.10)
 3. Use the **Glossary** and **Resources** as needed
 
 ---
@@ -281,10 +281,6 @@ This map shows how the guide fits together. Follow **Parts A → G** in order, o
 └─────────────┘     └─────────────┘
 ```
 
-**Reading paths:**
-- **New to GenAI:** A → B → D → E.1–E.4 → F (examples)
-- **Interview prep:** A.3 (glossary) → E.1–E.4 → F → G.2–G.4
-- **Building now:** Find similar example in F → Read relevant E sections
 
 ---
 
@@ -477,19 +473,15 @@ Before diving into components, here is the end-to-end shape of a GenAI system. T
 
 **Supporting systems (around the request path):**
 
-| System                     | Role in the big picture                                                                        | Deep dive                                                         |
-| -------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| **Evaluation**             | "Did we build the right thing?" — quality, grounding, safety on a sample of requests           | §5 Evaluation & Quality (metrics + eval _data_ pipeline at scale) |
-| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | §6 GenAI Data Pipeline                                            |
-| **Cost**                   | "How do we keep inference affordable?" — tokens, caching, model routing, quantization          | §7 Cost Optimization                                              |
-| **Scale**                  | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache        | §8 Scalability                                                    |
-| **Monitoring**             | "How do we observe the system?" — metrics, traces, drift                                       | §9 Monitoring & Observability                                     |
-| **Security**               | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM                | §10 Security & Guardrails                                         |
-| **Real-world examples**    | "How do I build this with real tools?" — apply §1–§10 with LangChain, AWS, Google, open source | §11 Real-World Examples                                           |
-
-🔗 **Rationale in one line:** The **request path** (gateway → orchestration → LLM) is what users hit. **Evaluation** and **training data** are two different data flows: eval = "log predictions → run quality metrics" (§5); training = "log interactions → clean → fine-tune" (§6). **Cost** (§7) is _spend per request_; **scale** (§8) is _throughput and capacity_. **Monitoring** (§9) and **security** (§10) are cross-cutting. **Examples** (§11) come last so you can apply everything with concrete stacks.
-
-🔗 **Logical flow of this guide:** Big Picture → foundations (GenAI vs ML, sampling, Google tools) → **request path** (§1 Serving, §2 RAG, §3 RAG vs FT, §4 Agents) → **evaluation** (§5: what to measure + eval data pipeline at scale; _consolidated_ so "evaluation" is one place) → **training data** (§6) → **efficiency** (§7 Cost, §8 Scale) → **operations** (§9 Monitoring, §10 Security) → **§11 Real-World Examples** (apply §1–§10 with LangChain, AWS, Google, open source). Examples are last so every concept is already defined when you see concrete solutioning.
+| System                     | Role in the big picture                                                                        | Deep dive                    |
+| -------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------- |
+| **Evaluation**             | "Did we build the right thing?" — quality, grounding, safety on a sample of requests           | E.5 Evaluation & Quality     |
+| **Training data pipeline** | "Where do fine-tuning examples come from?" — user interactions → events → lake → training prep | E.6 GenAI Data Pipeline      |
+| **Cost**                   | "How do we keep inference affordable?" — tokens, caching, model routing, quantization          | E.7 Cost Optimization        |
+| **Scale**                  | "How do we serve more load?" — horizontal scaling, model/pipeline parallelism, KV cache        | E.8 Scalability              |
+| **Monitoring**             | "How do we observe the system?" — metrics, traces, drift                                       | E.9 Monitoring               |
+| **Security**               | "How do we protect inputs, outputs, and access?" — guardrails, Model Armor, IAM                | E.10 Security & Guardrails   |
+| **Real-world examples**    | "How do I build this with real tools?" — apply E.1–E.10 with real stacks                       | F.1 Real-World Examples      |
 
 ---
 
@@ -1103,7 +1095,7 @@ adk run my_agent      # Run locally
 adk web               # Local dev UI
 ```
 
-See **§4 Agentic AI Systems** for full ADK coverage with code examples.
+See **E.4 Agentic AI Systems** for full ADK coverage with code examples.
 
 ---
 
@@ -1616,7 +1608,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 ## E.2 RAG (Retrieval-Augmented Generation) System
 
-**Why this comes next:** §1 gave you **LLM serving** (how to run the model at scale). When the model **lacks knowledge** about your domain (docs, KB, policies) or that knowledge **changes often**, you add **retrieval** at query time—that's **RAG** (§2). Same request path (gateway → orchestration → LLM), but orchestration now includes "retrieve relevant chunks, then generate."
+**Why this comes next:** E.1 gave you **LLM serving** (how to run the model at scale). When the model **lacks knowledge** about your domain (docs, KB, policies) or that knowledge **changes often**, you add **retrieval** at query time—that's **RAG**. Same request path (gateway → orchestration → LLM), but orchestration now includes "retrieve relevant chunks, then generate."
 
 ### Use Case: Design a Document Q&A System
 
@@ -1962,7 +1954,7 @@ RAG evaluation has three dimensions—retrieval quality, generation faithfulness
 
 ## E.3 RAG vs Fine-Tuning Decision Framework
 
-**Why this comes next:** §2 gave you **RAG** (retrieve, then generate). When do you **also**—or **instead**—**fine-tune**? §3 is the decision framework so you choose the right lever for the problem.
+**Why this comes next:** E.2 gave you **RAG** (retrieve, then generate). When do you **also**—or **instead**—**fine-tune**? This section is the decision framework so you choose the right lever for the problem.
 
 **Key insight:** This is not a binary choice. Think of it as a **spectrum of adaptation**: RAG and fine-tuning solve different problems and are often used **together**. The right question is not "RAG or fine-tuning?" but "What does the model lack—**knowledge** or **behavior**?"
 
@@ -2063,7 +2055,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 ## E.4 Agentic AI Systems
 
-**Why this comes next:** §§2–3 gave you **RAG** and **fine-tuning** (retrieval + behavior). When do you need **tools** and **multi-step** reasoning—e.g. look up an order, call an API, then decide what to say? That's **agents** (§4): the same request path (gateway → orchestration → LLM) but with a loop and tools.
+**Why this comes next:** E.2–E.3 gave you **RAG** and **fine-tuning** (retrieval + behavior). When do you need **tools** and **multi-step** reasoning—e.g. look up an order, call an API, then decide what to say? That's **agents**: the same request path (gateway → orchestration → LLM) but with a loop and tools.
 
 ### What Is an Agent? Why Do We Need One?
 
@@ -2154,7 +2146,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 
 **Agent Assist:** When bots aren’t enough or a human touch is needed, **live agents** take over—but they need support too. **Agent Assist** gives live agents **in-the-moment assistance**: AI-generated **suggested responses**, **knowledge-base recommendations** to solve the customer’s issue, **real-time transcription and translation**, **conversation summarization**, and coaching. That’s GenAI in the loop with the human: the system suggests; the agent decides. In system design terms, “escalate to human” is a tool; Agent Assist is the layer that makes that handoff effective.
 
-**Conversational Insights:** All customer interactions (chatbot and human) are data. **Conversational Insights** analyzes that data to give contact center leaders **data-driven insights**: agent and caller **sentiment**, **entity identification**, **call topics**, and automatic flagging of interactions that need review. **Generative FAQ** in Insights surfaces the **common questions** customers ask and how they’re answered—so you can find **FAQ gaps**, **trending questions**, and improve responses. Useful for evaluation (§5) and for improving your RAG/knowledge base.
+**Conversational Insights:** All customer interactions (chatbot and human) are data. **Conversational Insights** analyzes that data to give contact center leaders **data-driven insights**: agent and caller **sentiment**, **entity identification**, **call topics**, and automatic flagging of interactions that need review. **Generative FAQ** in Insights surfaces the **common questions** customers ask and how they’re answered—so you can find **FAQ gaps**, **trending questions**, and improve responses. Useful for evaluation (E.5) and for improving your RAG/knowledge base.
 
 **CCaaS (Contact Center as a Service):** A full contact center needs 24/7 multichannel (phone, text, email), security and privacy, CRM integration, and **omnichannel** experience (consistent across web, app, phone, text). CCaaS provides the infrastructure: **simultaneous multichannel** communication, **channel switching**, **multimodal** interactions (text, voice, images), and **agent routing**. It integrates with **Conversational Agents** (automated support), **Agent Assist** (live-agent guidance), and **Conversational Insights** (analytics). When an interviewer asks “design a contact center” or “support voice and chat,” CCaaS + agents + Agent Assist + Insights is the product landscape to reference.
 
@@ -2174,7 +2166,7 @@ You can **add RAG and then fine-tune** (or the reverse) if you need both knowled
 3. **Agent executes** the plan: searches thousands of sources, asks new questions, iterates until satisfied.
 4. **Output:** detailed report with **source links** and optional **audio summary** for quick consumption.
 
-This is the same "research → draft → grounding" pipeline (§11 Example 3) but with **human-in-the-loop at the plan stage** and **curated sources only**. Useful when the domain is sensitive (e.g. financial, legal) and you need auditability and control.
+This is the same "research → draft → grounding" pipeline (F.1 Example 3) but with **human-in-the-loop at the plan stage** and **curated sources only**. Useful when the domain is sensitive (e.g. financial, legal) and you need auditability and control.
 
 **Gemini Enterprise vs NotebookLM Enterprise:** **NotebookLM Enterprise** is a **document-focused** tool: upload specific documents and web sources, then ask questions, summarize, and create content _from those sources only_. **Gemini Enterprise** is a **comprehensive enterprise AI assistant**: it uses **agents** and **unified search** to automate tasks and find information **across all connected business systems**, not just uploaded documents. Gemini Enterprise can **connect to** NotebookLM Enterprise (e.g. attach "Client Notes" for personalized advice); the two serve different roles—deep dive into a corpus vs. search and automate across the enterprise.
 
@@ -2624,7 +2616,7 @@ adk web --port 8000
 
 ## E.5 LLM Evaluation & Quality
 
-**Why this comes next:** §§1–4 gave you the **request path** (serving, RAG, agents). The next question is **did we build the right thing?** Evaluation (§5) answers that—quality, grounding, safety—so you can ship with confidence and iterate.
+**Why this comes next:** E.1–E.4 gave you the **request path** (serving, RAG, agents). The next question is **did we build the right thing?** This section answers that—quality, grounding, safety—so you can ship with confidence and iterate.
 
 **What "knowledge quality" means here:** For LLM and RAG systems, quality is **groundedness** (is the answer supported by the context?), **relevance** (does it address the question?), and **retrieval quality** (did we fetch the right chunks?). You rarely have gold labels for every request, so evaluation mixes **reference-free** automated metrics (e.g. faithfulness, relevancy) with **sampled human review** to calibrate and catch edge cases. This section is tool-first: each concept is tied to frameworks you can run today.
 
@@ -2737,7 +2729,7 @@ adk web --port 8000
 
 ### Evaluation data pipeline at scale
 
-The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the _evaluation_ pipeline (log predictions, run quality/safety/cost metrics); the _training_ pipeline (user interactions → fine-tuning data) is §6.
+The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the _evaluation_ pipeline (log predictions, run quality/safety/cost metrics); the _training_ pipeline (user interactions → fine-tuning data) is E.6.
 
 **Use case: Production LLM evaluation system**
 
@@ -2771,7 +2763,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ## E.6 GenAI Data Pipeline Architecture
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." Evaluation (§5) tells you _what_ to improve (quality, safety, drift); this pipeline gives you the _data_ to improve it (fine-tuning, RLHF, few-shot curation). It is _distinct_ from the evaluation pipeline (§5), which moves _prediction_ data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
+**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." Evaluation (E.5) tells you _what_ to improve (quality, safety, drift); this pipeline gives you the _data_ to improve it (fine-tuning, RLHF, few-shot curation). It is _distinct_ from the evaluation pipeline (E.5), which moves _prediction_ data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
 
 **T-shaped summary:** User interactions → event stream (Pub/Sub, Kinesis) → stream processor (Dataflow, etc.) → data lake and optionally feature store → training data prep (filter, dedupe, validate, format for fine-tuning). Deep dive below.
 
@@ -2831,7 +2823,7 @@ The metrics and tools above assume you have prediction data to evaluate. At scal
 
 ## E.7 Cost Optimization for GenAI Systems
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**. §§1–6 gave you the request path (serving, RAG, agents), evaluation, and training data; **cost** (§7) and **scale** (§8) determine how you run it affordably and at customer load. Cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. _Throughput_ and _capacity_ are in §8 Scalability; here we focus on _cost per request_.
+**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**. E.1–E.6 gave you the request path (serving, RAG, agents), evaluation, and training data; **cost** and **scale** determine how you run it affordably and at customer load. Cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. _Throughput_ and _capacity_ are in E.8 Scalability; here we focus on _cost per request_.
 
 **T-shaped summary:** Cost = f(tokens, model). Levers: prompt optimization, response/prompt caching, routing easy queries to smaller models, quantization, and continuous batching (better GPU use → same throughput with fewer machines). Deep dive below.
 
@@ -2944,13 +2936,13 @@ Reducing numerical precision shrinks model size and speeds inference. **FP32** (
 
 - Static batching: 40–60% GPU utilization
 - Continuous batching: 80–95% GPU utilization
-- **Result**: 2–3× higher throughput → fewer machines for the same load (cost and scale). Throughput/parallelism patterns (model parallelism, pipeline parallelism) are in §8.
+- **Result**: 2–3× higher throughput → fewer machines for the same load (cost and scale). Throughput/parallelism patterns (model parallelism, pipeline parallelism) are in E.8.
 
 ---
 
 ## E.8 Scalability Patterns for GenAI
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. _Cost per request_ is in §7; here we focus on _requests per second_ and _utilization_.
+**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. _Cost per request_ is in E.7; here we focus on _requests per second_ and _utilization_.
 
 **T-shaped summary:** Levers: stateless serving (more replicas), model parallelism (split layers across GPUs), pipeline parallelism (different layers on different GPUs), and caching (KV cache for prefixes, response cache for identical/similar queries). Deep dive below.
 
@@ -2976,7 +2968,7 @@ Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) 
 
 ### Caching Strategies for Scale
 
-_Cost_ impact of caching is in §7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
+_Cost_ impact of caching is in E.7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
 
 | Strategy                  | Throughput / latency impact                               | Best For                            |
 | ------------------------- | --------------------------------------------------------- | ----------------------------------- |
@@ -3022,7 +3014,7 @@ Both enable training **larger models** on the same hardware by eliminating redun
 
 ## E.9 Monitoring & Observability for GenAI
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we observe the system**: metrics, traces, and drift detection across the request path and the evaluation/training pipelines. Quality metrics and eval pipeline are in §5; here we focus on **what to track** and **which platform services** support it.
+**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we observe the system**: metrics, traces, and drift detection across the request path and the evaluation/training pipelines. Quality metrics and eval pipeline are in E.5; here we focus on **what to track** and **which platform services** support it.
 
 **T-shaped summary:** Track quality (task accuracy, safety), performance (latency, throughput), cost (tokens, model tier), reliability (errors, timeouts), and safety (toxicity, jailbreak). Use Cloud Monitoring / CloudWatch, logging, tracing (Trace / X-Ray), and model monitoring for drift. Deep dive below.
 
@@ -3051,7 +3043,7 @@ Both enable training **larger models** on the same hardware by eliminating redun
 
 ## E.10 Security & Guardrails
 
-**In the big picture** (see [GenAI System: Big Picture](#genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit _around_ the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
+**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we protect the system**: inputs (prompt injection, jailbreak, PII), outputs (harmful content, PII leakage), and access (IAM, API keys). Guardrails sit _around_ the request path—input checks before the LLM, output checks after—and work with HTTP-level protections (Cloud Armor, WAF) and data protection (DLP).
 
 **T-shaped summary:** Threats: direct/indirect prompt injection, data leakage, jailbreaking, unauthorized access. Mitigations: input/output guardrails, spotlighting, least-privilege tools, Model Armor (or Bedrock Guardrails). Use defense-in-depth: gateway → guardrails → LLM → guardrails → response. Deep dive below.
 
@@ -3220,7 +3212,7 @@ Beyond security threats, LLM outputs require **post-processing** to ensure they 
 
 ## F.1 Real-World Examples: Applying the Stack
 
-This section is where **theory meets shipping**: real stacks (LangChain, Vertex, Bedrock, vLLM), real numbers (tokens, cost, latency), and customer-ready scenarios. It comes **after** all core concepts (§1–§10) so every term is defined. Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out _why_ each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize. For **end-to-end solutioning** (Scope → Design → Deploy → Communicate) with hypotheticals, stakeholder loop-in, and presenting to CxO vs Product vs live customer, see [Quick Reference: End-to-end solutioning](#end-to-end-solutioning-scope--design--deploy--communicate)—it uses §11-style designs inside a full Scope/Design/Deploy/Communicate flow with worked examples.
+This section is where **theory meets shipping**: real stacks (LangChain, Vertex, Bedrock, vLLM), real numbers (tokens, cost, latency), and customer-ready scenarios. It comes **after** all core concepts (E.1–E.10) so every term is defined. Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out _why_ each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize. For **end-to-end solutioning** (Scope → Design → Deploy → Communicate) with hypotheticals, stakeholder loop-in, and presenting to CxO vs Product vs live customer, see [Quick Reference: End-to-end solutioning](#end-to-end-solutioning-scope--design--deploy--communicate)—it uses F.1-style designs inside a full Scope/Design/Deploy/Communicate flow with worked examples.
 
 ---
 
@@ -3235,7 +3227,7 @@ _In an interview you’d start by clarifying what “good” looks like: how fas
 | **Token budget** | Input: ~2K tokens (prefix + cursor context); output: 20–100 tokens per completion. Cap total context at e.g. 8K.            | Larger context = higher cost and slower TTFT; you need a hard cap for pricing and latency.               |
 | **Latency**      | P95 < 200 ms time-to-first-token for inline completions. Batch jobs (e.g. index workspace) can be 1–2 s.                    | Users feel lag above ~200 ms; the rest of the budget goes to gateway, RAG, and model.                    |
 | **Quality**      | Completions must compile and match project style. Low tolerance for hallucination.                                          | Wrong or irrelevant suggestions hurt trust; you’ll measure correctness and relevance (RAGAS, LangSmith). |
-| **Cost**         | Per-token pricing; monthly budget. Prefer smaller/faster models and routing by complexity (§7).                             | Cost scales with active devs × completions per day × tokens; routing keeps easy cases cheap.             |
+| **Cost**         | Per-token pricing; monthly budget. Prefer smaller/faster models and routing by complexity (E.7).                             | Cost scales with active devs × completions per day × tokens; routing keeps easy cases cheap.             |
 | **Safety**       | No PII/secrets in prompts or logs; optional filters; Model Armor / Bedrock Guardrails. Data residency if code is sensitive. | Code can contain secrets; compliance may require “data never leaves region.”                             |
 
 📊 **Rough estimation (code assistant)**
@@ -3254,7 +3246,7 @@ _In an interview you’d start by clarifying what “good” looks like: how fas
 **3. Deep Dive (15–20 min)**
 
 - **RAG:** Chunk by file/function (e.g. **LlamaIndex** CodeIndex, **LangChain** by language); code-capable embeddings; top-k on cursor context; optional rerank. Keep chunks small to stay within token budget.
-- **Model & routing:** Small model for most completions; route to larger model when context is big or a complexity heuristic fires (§7).
+- **Model & routing:** Small model for most completions; route to larger model when context is big or a complexity heuristic fires (E.7).
 - **Eval & observability:** **RAGAS** / **LangSmith** on (prompt, context, completion); **Phoenix** for production traces and latency.
 - **Security:** Length limits; PII/secret filters; **Model Armor** / **Bedrock Guardrails**; no raw code in logs for sensitive repos.
 
@@ -3280,7 +3272,7 @@ _Here the user expects an answer that’s grounded in your docs and in real data
 | **Token budget** | Conversation: 4–32K context per turn; RAG: 2–4K retrieved tokens. Cap response at e.g. 500 tokens.           | Long context = higher cost and slower; you need a cap for pricing and latency.                                       |
 | **Latency**      | P95 < 3–5 s full response (RAG + tool calls + LLM); TTFT < 1 s so the user sees something quickly.           | Users wait for a full answer; TTFT < 1 s keeps the UI feeling responsive.                                            |
 | **Quality**      | Faithful to docs and tool outputs; no hallucinated policies. Relevancy of answers.                           | Wrong or irrelevant answers hurt trust and compliance; RAGAS faithfulness + relevancy + human review on escalations. |
-| **Cost**         | Per-token; monthly budget. Cache frequent questions; smaller model for simple intents (§7).                  | Cost = conversations × turns × tokens; caching and routing cut cost.                                                 |
+| **Cost**         | Per-token; monthly budget. Cache frequent questions; smaller model for simple intents (E.7).                  | Cost = conversations × turns × tokens; caching and routing cut cost.                                                 |
 | **Safety**       | Compliance (PCI, PII); no leaking internal docs or customer data. Guardrails; PII filtering in tool outputs. | One leak can be catastrophic; guardrails and least-privilege tools are non-negotiable.                               |
 
 📊 **Rough estimation (chatbot)**
@@ -3298,10 +3290,10 @@ _Here the user expects an answer that’s grounded in your docs and in real data
 
 **3. Deep Dive (15–20 min)**
 
-- **RAG:** Chunk by semantic units (e.g. 512 tokens) or doc/section; Vertex/Bedrock or Cohere embeddings; hybrid retrieval if you need keyword + vector; rerank to top-5 before putting in context (§2).
+- **RAG:** Chunk by semantic units (e.g. 512 tokens) or doc/section; Vertex/Bedrock or Cohere embeddings; hybrid retrieval if you need keyword + vector; rerank to top-5 before putting in context (E.2).
 - **Model & routing:** One model for chat + tool use (Gemini, Claude); optional routing: small model for FAQ-only, larger for multi-step.
 - **Eval & observability:** **RAGAS** (faithfulness, answer relevancy) on logged (query, context, response); **LangSmith** for datasets and human review; track escalation rate and tool success.
-- **Security:** **Model Armor** / **Bedrock Guardrails** on input/output; IAM and least privilege on tools; filter PII in tool _outputs_ before they reach the LLM or user (§10).
+- **Security:** **Model Armor** / **Bedrock Guardrails** on input/output; IAM and least privilege on tools; filter PII in tool _outputs_ before they reach the LLM or user (E.10).
 
 **4. Bottlenecks & Trade-offs (5–10 min)**
 
@@ -3312,7 +3304,7 @@ _Here the user expects an answer that’s grounded in your docs and in real data
 
 🛠️ **Stack snapshot:** LangChain/LlamaIndex (agent + tools) + Vertex RAG Engine or Bedrock Knowledge Bases + Vertex/Bedrock LLM + RAGAS/LangSmith (eval) + Model Armor/Bedrock Guardrails.
 
-**In production:** Full customer engagement often adds **Agent Assist** (suggested responses, knowledge-base hints, real-time transcribe/summarize when escalating to humans) and **Conversational Insights** (sentiment, topics, Generative FAQ for FAQ gaps and trending questions). A full contact center runs on **CCaaS** (omnichannel, multimodal, agent routing) with Conversational Agents + Agent Assist + Insights on top—see §4 Customer engagement & contact center.
+**In production:** Full customer engagement often adds **Agent Assist** (suggested responses, knowledge-base hints, real-time transcribe/summarize when escalating to humans) and **Conversational Insights** (sentiment, topics, Generative FAQ for FAQ gaps and trending questions). A full contact center runs on **CCaaS** (omnichannel, multimodal, agent routing) with Conversational Agents + Agent Assist + Insights on top—see E.4 Customer engagement & contact center.
 
 ---
 
@@ -3327,7 +3319,7 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 | **Token budget** | Research: 10–50K tokens (snippets); draft: 2–4K output; grounding: full draft + sources. Per-step caps.            | Unbounded research or draft blows cost; caps keep pricing predictable.        |
 | **Latency**      | End-to-end 30–90 s (async). Per-step: research ~5–10 s, draft ~15–30 s, grounding ~10–20 s.                        | Users expect “background” generation; per-step times drive capacity planning. |
 | **Quality**      | High faithfulness: every claim grounded in sources. RAGAS faithfulness; optional human spot-checks.                | Ungrounded claims damage trust; you’ll measure and monitor faithfulness.      |
-| **Cost**         | Per-token; routing: Flash/small for research + SEO, Pro/large for draft (§7); monthly budget and per-article caps. | Most tokens are in research + draft; routing keeps research/SEO cheap.        |
+| **Cost**         | Per-token; routing: Flash/small for research + SEO, Pro/large for draft (E.7); monthly budget and per-article caps. | Most tokens are in research + draft; routing keeps research/SEO cheap.        |
 | **Safety**       | No harmful or copyrighted content; cite sources; optional guardrails on output.                                    | Citations and guardrails protect you and the reader.                          |
 
 📊 **Rough estimation (content platform)**
@@ -3346,7 +3338,7 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 **3. Deep Dive (15–20 min)**
 
 - **RAG / grounding:** Research = search API (ranked snippets). Grounding = evidence per claim via **Vertex grounding with Google Search** / **Bedrock** retrieval, or NLI-style / RAGAS faithfulness on (claim, source). Chunking matters if you build your own source KB.
-- **Model & routing:** **Vertex** / **Bedrock**; Flash for research summarization and SEO, Pro for full draft (§7).
+- **Model & routing:** **Vertex** / **Bedrock**; Flash for research summarization and SEO, Pro for full draft (E.7).
 - **Eval & observability:** **RAGAS** faithfulness and relevancy on (brief, sources, draft); **LangSmith** / **Braintrust** for A/B prompts and models; optional **Giskard** for regression.
 - **Security:** Input/output guardrails; source attribution and citation; no unsanctioned content in final output without citation.
 
@@ -3359,7 +3351,7 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 
 🛠️ **Stack snapshot:** LangChain (sequential pipeline + tools) + Vertex/Bedrock LLMs + Vertex grounding or RAG + RAGAS (eval) + optional Giskard for regression tests.
 
-**Variant: internal knowledge workers (Gemini Enterprise).** For **internal** users (e.g. advisors, analysts), **Gemini Enterprise** offers agents + **unified search** across connected business systems (not just uploaded docs). Use **trusted/curated sources only** (e.g. government reports, internal research). **Plan-then-verify-then-execute:** agent proposes a research plan → human verifies → agent executes (searches, asks new questions, iterates) → output = report + source links + optional **audio summary**. **NotebookLM Enterprise** = deep dive into specific documents/sources (Q&A, summarize); Gemini can connect to it for personalized context (e.g. client notes). See §4 Enterprise knowledge workers (Gemini Enterprise).
+**Variant: internal knowledge workers (Gemini Enterprise).** For **internal** users (e.g. advisors, analysts), **Gemini Enterprise** offers agents + **unified search** across connected business systems (not just uploaded docs). Use **trusted/curated sources only** (e.g. government reports, internal research). **Plan-then-verify-then-execute:** agent proposes a research plan → human verifies → agent executes (searches, asks new questions, iterates) → output = report + source links + optional **audio summary**. **NotebookLM Enterprise** = deep dive into specific documents/sources (Q&A, summarize); Gemini can connect to it for personalized context (e.g. client notes). See E.4 Enterprise knowledge workers (Gemini Enterprise).
 
 ---
 
@@ -4036,7 +4028,7 @@ The full **45-min Interview Framework** (Clarify → High-Level Architecture →
 
 _Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification._
 
-**Plan for generative AI integration:** (1) **Establish a clear vision** — align with business goals. (2) **Prioritize high-impact use cases** — start where value is measurable. (3) **Invest in capabilities** — tools, data, skills. (4) **Drive organizational change** — adoption, workflows. (5) **Measure and demonstrate value** — see below. (6) **Champion responsible AI** — safety, fairness, compliance (§10).
+**Plan for generative AI integration:** (1) **Establish a clear vision** — align with business goals. (2) **Prioritize high-impact use cases** — start where value is measurable. (3) **Invest in capabilities** — tools, data, skills. (4) **Drive organizational change** — adoption, workflows. (5) **Measure and demonstrate value** — see below. (6) **Champion responsible AI** — safety, fairness, compliance (E.10).
 
 **Define key metrics:** Choose metrics that align with business objectives. Common targets: **ROI** (financial benefits of gen AI initiatives vs. costs), **revenue** (direct impact on sales/profits), **cost reduction**, **efficiency** (throughput, time-to-resolution), **customer experience**, **security**. If ROI matters, compare benefits to costs; if revenue matters, measure direct impact on sales and profits.
 
@@ -4187,7 +4179,7 @@ Use this flow to answer hypotheticals in a structured way. It matches the recrui
 | Phase              | What you do                                                                                                                                                                                                                                                                | Recruiter themes                                                              |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
 | 🔷 **Scope**       | Define **business requirements**, **success criteria**, **key metrics**. Identify **stakeholders** (eng, product, security, legal) and what they care about. Ask **clarifying questions**: already on GCP vs first-time migration vs hybrid? Timeline, budget, compliance? | Loop in stakeholders; define clear business requirements and relevant metrics |
-| 🔷 **Design**      | Choose **architecture** (RAG vs other, agent vs single call); **hosting** (serverless vs microservice on GCP/Cloud); data flow, APIs, guardrails. Tie to §1–§10 (this guide).                                                                                              | Design the flow (RAG); build on serverless vs microservice                    |
+| 🔷 **Design**      | Choose **architecture** (RAG vs other, agent vs single call); **hosting** (serverless vs microservice on GCP/Cloud); data flow, APIs, guardrails. Tie to E.1–E.10 (this guide).                                                                                              | Design the flow (RAG); build on serverless vs microservice                    |
 | 🔷 **Deploy**      | **POC** first: validate use case, success criteria, one clear metric. Then **production**: reliability, scale, guardrails, observability. Call out timeline and budget trade-offs.                                                                                         | POC to prod                                                                   |
 | 🔷 **Communicate** | **CxO**: high-level value, risk, cost, timeline; no jargon. **Product/technical**: open-source vs managed LLMs, RAG flow, serverless vs microservice, metrics. **Present to live customer**: professional, confirm timeline/budget and constraints.                        | Explain for non-technical (CxO) vs Product; present solution to customer      |
 
@@ -4202,13 +4194,13 @@ Use this flow to answer hypotheticals in a structured way. It matches the recrui
 **Action (🔷 Scope → 🔷 Design → 🔷 Deploy → 🔷 Communicate):**
 
 - 🔷 **Scope:** I’d ask: Are you already on GCP or first-time migration or hybrid? What’s the timeline and budget? Who owns success — support team, product, eng? I’d define **business requirements**: deflect X% of tier-1 tickets, answer from knowledge base + order lookup, escalate to human when needed. **Metrics**: deflection rate, CSAT, resolution time, cost per conversation. I’d **loop in stakeholders**: eng (architecture), product (scope), security (PII, compliance), legal (terms), support (escalation flow).
-- 🔷 **Design:** I’d propose **RAG + agent** (knowledge base + order/ticket tools + escalate) on **GCP**: **Vertex AI** (Gemini) + **Vertex RAG Engine** or **Vertex AI Search** for the knowledge base; **Cloud Run** or **GKE** for the API — **serverless** (Cloud Run) if traffic is spiky and we want low ops, **microservices** (GKE) if we need more control and multiple services. Guardrails: **Model Armor**, input/output filters, PII handling. (Details: §11 Example 2.)
+- 🔷 **Design:** I’d propose **RAG + agent** (knowledge base + order/ticket tools + escalate) on **GCP**: **Vertex AI** (Gemini) + **Vertex RAG Engine** or **Vertex AI Search** for the knowledge base; **Cloud Run** or **GKE** for the API — **serverless** (Cloud Run) if traffic is spiky and we want low ops, **microservices** (GKE) if we need more control and multiple services. Guardrails: **Model Armor**, input/output filters, PII handling. (Details: F.1 Example 2.)
 - 🔷 **Deploy:** **POC** (4–6 weeks): one channel (e.g. web), one knowledge domain, success = deflection rate and CSAT on a pilot. Then **production**: add channels, scale, observability (traces, evals), and runbooks. I’d call out **timeline** (e.g. POC 6 weeks, prod 3 months) and **budget** (LLM cost, infra, labor) so the customer can plan.
 - 🔷 **Communicate:** For **CxO**: “We’ll reduce tier-1 load by X%, improve CSAT, with clear cost and timeline; we’ll start with a POC to de-risk.” For **Product**: “RAG over your docs + tools for orders/tickets; we can go serverless on Cloud Run or microservices on GKE depending on scale.” For the **live customer**: present the flow (Scope → Design → Deploy), show a simple diagram, confirm timeline and budget, and ask what they’d want to see in a follow-up.
 
 🎯 **Result:** Clear requirements, metrics, and stakeholder alignment; a concrete design (RAG + agent, GCP, serverless vs microservice); a POC→prod path with timeline and budget; and messaging that fits CxO vs Product vs customer.
 
-🔮 **Future thinking:** I’d plan for **Agent Assist** and **Conversational Insights** when they add live agents; revisit model choice and routing as traffic grows (§7).
+🔮 **Future thinking:** I’d plan for **Agent Assist** and **Conversational Insights** when they add live agents; revisit model choice and routing as traffic grows (E.7).
 
 ---
 
@@ -4232,7 +4224,7 @@ Use this flow to answer hypotheticals in a structured way. It matches the recrui
 ---
 
 > [!TIP]
-> 💡 **Aha:** End-to-end solutioning = **Scope** (requirements, metrics, stakeholders, clarifying questions) → **Design** (RAG/agent, serverless vs microservice, GCP/Cloud) → **Deploy** (POC then prod, timeline, budget) → **Communicate** (CxO vs Product vs live customer). Use Examples A and B as templates; swap in your own scenarios and tie to §1–§11.
+> 💡 **Aha:** End-to-end solutioning = **Scope** (requirements, metrics, stakeholders, clarifying questions) → **Design** (RAG/agent, serverless vs microservice, GCP/Cloud) → **Deploy** (POC then prod, timeline, budget) → **Communicate** (CxO vs Product vs live customer). Use Examples A and B as templates; swap in your own scenarios and tie to E.1–F.1.
 
 ### How this addresses each question (tangible mapping)
 
@@ -4273,7 +4265,7 @@ Below, each **recruiter question or theme** is mapped to **where** you answer it
 
 ---
 
-**What this guide gives you:** **Technical depth** (theory: serving, RAG, agents, evaluation, data pipeline, cost, scale, monitoring, security) so you can reason about trade-offs. **Practical implementation** (tools, stacks, rough estimations, §11 examples) so you can point to real options (Vertex, Bedrock, LangChain, vLLM, RAGAS, etc.). **Shipping to customers at scale** (Scope → Design → Deploy → Communicate, POC→prod, stakeholder communication, end-to-end examples) so you can prove you can take a GenAI application from idea to production and present it clearly to technical and non-technical audiences. Always connect theory to implementation; that is how you demonstrate technical ability.
+**What this guide gives you:** **Technical depth** (theory: serving, RAG, agents, evaluation, data pipeline, cost, scale, monitoring, security) so you can reason about trade-offs. **Practical implementation** (tools, stacks, rough estimations, F.1 examples) so you can point to real options (Vertex, Bedrock, LangChain, vLLM, RAGAS, etc.). **Shipping to customers at scale** (Scope → Design → Deploy → Communicate, POC→prod, stakeholder communication, end-to-end examples) so you can prove you can take a GenAI application from idea to production and present it clearly to technical and non-technical audiences. Always connect theory to implementation; that is how you demonstrate technical ability.
 
 _For foundational system design concepts, see [System Design Essentials](./system-design-essentials.md)._
 
