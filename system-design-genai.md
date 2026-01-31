@@ -2508,111 +2508,314 @@ Why: Maximum creativity!              Why: Accuracy over creativity
 
 ## D.9 Text Generation Evaluation Metrics
 
-### Offline Metrics
+### Why Evaluation is Hard
 
-| Metric | What it measures | Formula/Method | Lower/Higher is better |
-| ------ | ---------------- | -------------- | ---------------------- |
-| **Perplexity** | How "surprised" the model is by the test data | `exp(-1/N * Σ log P(x_i | x_{1:i-1}))` | **Lower** = better |
-| **ExactMatch@N** | % of N-word predictions that exactly match ground truth | `(correct N-word matches) / (total predictions)` | **Higher** = better |
-| **BLEU** | N-gram precision vs reference text | Geometric mean of n-gram precisions | **Higher** = better |
-| **ROUGE-N** | N-gram recall vs reference text | `(matching n-grams) / (reference n-grams)` | **Higher** = better |
-| **ROUGE-L** | Longest common subsequence with reference | LCS-based F1 score | **Higher** = better |
-| **METEOR** | Precision + recall with synonyms/stemming | Weighted harmonic mean with synonym matching | **Higher** = better |
+**The core problem:** Unlike classification ("Is this a cat? Yes/No"), text generation has MANY correct answers:
 
-### Translation Metrics Deep Dive
+```
+Question: "What's a good breakfast?"
 
-**BLEU (BiLingual Evaluation Understudy)** — Precision-focused
+Correct: "Eggs and toast"
+Correct: "Oatmeal with fruit"
+Correct: "A healthy breakfast includes protein and complex carbs"
+Correct: "Pancakes!"
 
-`BLEU = BP × exp(Σ wn × log(pn))`
+All valid! How do we measure "good"?
+```
 
-- **pn** = n-gram precision (how many candidate n-grams appear in reference)
-- **BP** = Brevity Penalty (penalizes short translations)
-- **wn** = weight for each n-gram size (usually 1/N each)
+**Three levels of evaluation:**
 
-| Pros | Cons |
-| ---- | ---- |
-| Simple, fast to compute | Penalizes correct but different wording |
-| Widely used benchmark | No semantic understanding |
-| Correlates reasonably with human judgment | Exact match only |
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    THE EVALUATION PYRAMID                                   │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-**ROUGE (Recall-Oriented Understudy for Gisting Evaluation)** — Recall-focused
+                    ┌───────────────┐
+                    │    Human      │  Most accurate, most expensive
+                    │  Evaluation   │  "Which response is better?"
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │  Task-Specific │  MMLU, HumanEval, GSM8K
+                    │   Benchmarks   │  "Can it do math? Code? Reason?"
+                    └───────┬───────┘
+                            │
+                    ┌───────▼───────┐
+                    │   Automatic    │  Perplexity, BLEU, ROUGE
+                    │    Metrics     │  Fast, cheap, limited
+                    └───────────────┘
+```
 
-`ROUGE-N Recall = (matching n-grams) / (n-grams in reference)`
+---
 
-- **ROUGE-1**: Unigram overlap
-- **ROUGE-2**: Bigram overlap
-- **ROUGE-L**: Longest Common Subsequence
+### Perplexity — "How Surprised is the Model?"
 
-| Pros | Cons |
-| ---- | ---- |
-| Captures coverage of reference | No semantic understanding |
-| Good for summarization | Exact match only |
+**What it measures:** Given a test sentence, how well did the model predict each word?
 
-**METEOR (Metric for Evaluation of Translation with Explicit ORdering)** — Semantic-aware
+**The intuition:**
+```
+Sentence: "The cat sat on the mat"
 
-- Considers **synonyms** (via WordNet) and **stemming** (run ≈ running)
-- Combines precision and recall with weighted harmonic mean
-- Penalizes fragmented matches
+Good model (low perplexity):          Bad model (high perplexity):
+─────────────────────────────          ─────────────────────────────
+"The" → predicted with 80%             "The" → predicted with 20%
+"cat" → predicted with 60%             "cat" → predicted with 5%
+"sat" → predicted with 70%             "sat" → predicted with 10%
+...                                    ...
 
-| Pros | Cons |
-| ---- | ---- |
-| Semantic understanding | Computationally expensive |
-| Better correlation with human judgment | Requires linguistic resources |
-| Handles paraphrasing | Language-dependent resources |
+Model was NOT surprised               Model was VERY surprised
+(it expected these words)             (it didn't expect these words)
+```
+
+**The formula (simplified):**
+
+```
+                         1
+Perplexity = exp( - ─────── × Σ log P(word_i | previous words) )
+                      N
+
+Where:
+- N = number of words
+- P(word_i | previous words) = probability the model assigned to the actual next word
+- Lower = better (less surprised = better predictions)
+```
+
+**Example calculation:**
+```
+Sentence: "The cat sat" (3 words)
+
+P("The") = 0.1   → log(0.1) = -2.3
+P("cat" | "The") = 0.05  → log(0.05) = -3.0
+P("sat" | "The cat") = 0.2  → log(0.2) = -1.6
+
+Average log prob = (-2.3 + -3.0 + -1.6) / 3 = -2.3
+Perplexity = exp(2.3) ≈ 10
+
+Interpretation: On average, the model was "choosing between 10 equally likely options"
+```
+
+| Perplexity | Interpretation |
+| ---------- | -------------- |
+| 1 | Perfect prediction (impossible in practice) |
+| 10-20 | Excellent (state-of-the-art LLMs) |
+| 50-100 | Decent |
+| 1000+ | Poor |
+
+**Limitation:** Low perplexity ≠ useful output. A model could predict text perfectly but still be unhelpful!
+
+---
+
+### BLEU, ROUGE, METEOR — Comparing Generated Text to References
+
+**When to use which:**
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    CHOOSING THE RIGHT METRIC                                │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+BLEU (Precision-focused)              ROUGE (Recall-focused)
+─────────────────────────             ─────────────────────────
+"How much of MY output                "How much of the REFERENCE
+ is in the reference?"                 did I capture?"
+
+Good for: Translation                 Good for: Summarization
+(don't add wrong words)               (don't miss key points)
+
+
+METEOR (Semantic-aware)
+───────────────────────
+"Same meaning, even if
+ different words?"
+
+Good for: Paraphrasing
+(understands synonyms)
+```
+
+---
+
+**BLEU — Did I Use the Right Words?**
+
+```
+Reference: "The cat sat on the mat"
+Generated: "The cat was on the mat"
+
+Step 1: Count matching n-grams (word sequences)
+
+1-grams (words):     "The"✓ "cat"✓ "was"✗ "on"✓ "the"✓ "mat"✓  → 5/6 = 83%
+2-grams (pairs):     "The cat"✓ "cat was"✗ "was on"✗ "on the"✓ "the mat"✓ → 3/5 = 60%
+3-grams (triples):   "The cat was"✗ "cat was on"✗ ... → 1/4 = 25%
+4-grams:             "The cat was on"✗ ... → 0/3 = 0%
+
+Step 2: Combine with geometric mean
+
+BLEU = (0.83 × 0.60 × 0.25 × 0.00)^(1/4) × BP
+     = 0 (because 4-gram precision is 0!)
+
+This shows BLEU's weakness: one zero kills everything!
+```
+
+**BLEU Formula:**
+
+```
+BLEU = BP × exp( w₁×log(p₁) + w₂×log(p₂) + w₃×log(p₃) + w₄×log(p₄) )
+
+Where:
+- p₁, p₂, p₃, p₄ = precision for 1-gram, 2-gram, 3-gram, 4-gram
+- w₁ = w₂ = w₃ = w₄ = 0.25 (equal weights, typically)
+- BP = Brevity Penalty (penalizes if output is shorter than reference)
+```
+
+---
+
+**ROUGE — Did I Cover the Key Points?**
+
+```
+Reference: "The quick brown fox jumps over the lazy dog"
+Generated: "The fox jumps"
+
+ROUGE-1 (unigram recall):
+─────────────────────────
+Reference words: The, quick, brown, fox, jumps, over, the, lazy, dog (9 words)
+Generated words: The, fox, jumps (3 words)
+Matching: The, fox, jumps (3 matches)
+
+ROUGE-1 = 3/9 = 33%  (captured 33% of the reference words)
+
+ROUGE-L (longest common subsequence):
+─────────────────────────────────────
+Reference: "The quick brown fox jumps over the lazy dog"
+Generated: "The fox jumps"
+LCS: "The ... fox jumps" (length 3)
+
+ROUGE-L considers word ORDER, not just presence
+```
+
+---
+
+**METEOR — Understanding Synonyms**
+
+```
+Reference: "The automobile was fast"
+Generated: "The car was quick"
+
+BLEU/ROUGE: "automobile" ≠ "car", "fast" ≠ "quick" → Low score!
+
+METEOR:
+- "car" is synonym of "automobile" ✓
+- "quick" is synonym of "fast" ✓
+- Higher score because meaning is preserved!
+```
+
+---
+
+**Summary: When to Use Each**
+
+| Metric | Focus | Best For | Weakness |
+| ------ | ----- | -------- | -------- |
+| **Perplexity** | Model confidence | Comparing model versions | Doesn't measure usefulness |
+| **BLEU** | Precision (don't add wrong words) | Translation | Exact match only; one zero kills score |
+| **ROUGE** | Recall (cover key points) | Summarization | Exact match only |
+| **METEOR** | Semantic similarity | When paraphrasing is OK | Slow; needs linguistic resources |
+
+---
+
+### LLM Benchmarks (2025 Landscape)
+
+**Why benchmarks matter:** Perplexity and BLEU don't tell you if a model can reason, code, or answer questions. Modern LLMs need task-specific evaluation.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    KEY BENCHMARKS AND TOP SCORES (2025)                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+MMLU (Knowledge)         GSM8K (Math)            HumanEval (Code)
+57 subjects              Grade-school math        Python functions
+─────────────────        ─────────────────        ─────────────────
+o1:        92.3%         o1:        96.4%         o1-mini:   92.4%
+DeepSeek-R1: 90.8%       Claude 3.5: 95%+         Claude 3.5: 92.0%
+Claude 3.5: 88.7%        GPT-4:     92%           GPT-4:     87%
+Gemini 2.5: 88.4%
+```
+
+| Category | Benchmark | What It Tests | Top Score (2025) |
+| -------- | --------- | ------------- | ---------------- |
+| **Knowledge** | MMLU | 57 subjects (math, history, law, medicine) | 92.3% (o1) |
+| **Knowledge** | MMLU-Pro | Harder MMLU with 10 choices | 72%+ |
+| **Math** | GSM8K | Grade-school word problems | 96.4% |
+| **Math** | MATH | Competition-level math | 76%+ |
+| **Code** | HumanEval | Python function completion | 92.4% |
+| **Code** | MBPP | Multi-language coding | 86%+ |
+| **Reasoning** | HellaSwag | Common-sense completion | 95%+ |
+| **Multilingual** | Global-MMLU | MMLU in 42 languages | Varies by language |
+
+**New benchmarks in 2025:**
+- **MMLU-Pro**: Harder version with 12K questions, 10 answer choices (vs 4)
+- **FACTS Grounding**: Tests factual accuracy and grounding
+- **AIME-2025**: Advanced math (competition level)
+- **Global-MMLU**: Multilingual evaluation (42 languages)
+
+---
+
+### Safety Benchmarks — What the Model Shouldn't Do
+
+| Category | Benchmark | What It Tests | Why It Matters |
+| -------- | --------- | ------------- | -------------- |
+| **Toxicity** | RealToxicityPrompts | Does it generate harmful content? | Prevent hate speech, violence |
+| **Bias** | BBQ, CrowS-Pairs | Gender, racial, socioeconomic bias | Fairness in outputs |
+| **Truthfulness** | TruthfulQA | Does it make things up? | Prevent hallucinations |
+| **Privacy** | PrivacyQA | Does it leak personal info? | GDPR, data protection |
+| **Adversarial** | AdvBench | Can it be tricked into bad behavior? | Jailbreak resistance |
+
+---
+
+### Human Evaluation: LMSYS Chatbot Arena (2025)
+
+**The gold standard:** Real humans compare model outputs in blind A/B tests.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    LMSYS CHATBOT ARENA (Jan 2025)                           │
+│                    lmarena.ai — 1M+ human comparisons                       │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+TEXT CATEGORY (Elo Rating):          CODE CATEGORY (Elo Rating):
+─────────────────────────────        ─────────────────────────────
+1. Gemini-3-Pro         1488         1. Claude Opus-4-5 (Thinking) 1504
+2. Grok-4.1-Thinking    1476         2. GPT-5.2-High               1475
+3. Gemini-3-Flash       1471         3. Claude Opus-4-5            1467
+4. Claude Opus-4-5      1468         4. Gemini-3-Pro               1462
+5. GPT-5.1-High         1458         5. Gemini-3-Flash             1454
+
+How it works:
+─────────────
+1. User asks a question
+2. Two anonymous models respond
+3. User picks the better response
+4. Elo ratings update (like chess rankings)
+```
+
+---
+
+### Online Metrics — Real-World Performance
+
+**Benchmarks tell you capability. Online metrics tell you actual value.**
+
+| Metric | What It Measures | Why It Matters |
+| ------ | ---------------- | -------------- |
+| **Acceptance Rate** | % of suggestions users accept | Are outputs actually useful? |
+| **Time to Complete** | Task completion time with vs without AI | Does AI save time? |
+| **User Retention** | Do users come back? | Long-term value |
+| **Thumbs Up/Down** | Direct feedback | User satisfaction |
+| **Conversion Rate** | Free → Paid users | Business value |
 
 > [!TIP]
-> 💡 **Aha:** Use **BLEU** for quick benchmarking (translation). Use **ROUGE** for summarization. Use **METEOR** when you need semantic matching but can afford the compute. In production, **human evaluation** is still the gold standard.
-
-### Online Metrics
-
-| Category | Metric | What it measures |
-| -------- | ------ | ---------------- |
-| **User Engagement** | Acceptance Rate | % of suggestions accepted by users |
-| | Usage Rate | % of sessions using the feature |
-| **Effectiveness** | Avg Completion Time | Time to complete task (with vs without feature) |
-| **Latency** | Response Time | Time for suggestion to appear after keystroke |
-| **Quality** | Feedback Rate | Rate of explicit user feedback |
-| | Human Evaluation | Expert ratings of output quality |
-
-> [!TIP]
-> 💡 **Aha:** **Perplexity** tells you how well the model predicts test data, but doesn't tell you if outputs are useful. **Online metrics** (acceptance rate, completion time) tell you if users actually benefit. Always measure both.
-
-### LLM Evaluation Benchmarks (Task-Specific)
-
-For chatbots, perplexity isn't enough. Evaluate across diverse tasks:
-
-| Category | Benchmarks | What it tests |
-| -------- | ---------- | ------------- |
-| **Common-Sense Reasoning** | PIQA, HellaSwag, WinoGrande, CommonsenseQA | Everyday logic, cause-effect, idioms |
-| **World Knowledge** | TriviaQA, Natural Questions, SQuAD | Factual recall, question answering |
-| **Reading Comprehension** | SQuAD, QuAC, BoolQ | Understanding and extracting from text |
-| **Mathematical Reasoning** | GSM8K (grade school), MATH (competition) | Problem-solving, multi-step reasoning |
-| **Code Generation** | HumanEval (Python), MBPP (multi-language) | Syntax, correctness, functionality |
-| **Composite** | MMLU, AGIEval, MMMU (multilingual) | Multi-domain, multi-task assessment |
-
-### Safety Evaluation Benchmarks
-
-Critical for production chatbots:
-
-| Category | Benchmarks | What it tests |
-| -------- | ---------- | ------------- |
-| **Toxicity** | RealToxicityPrompts, ToxiGen, HateCheck | Harmful content generation, hate speech |
-| **Bias & Fairness** | CrowS-Pairs, BBQ, BOLD | Gender, racial, socioeconomic bias |
-| **Truthfulness** | TruthfulQA | Factual accuracy, avoiding falsehoods |
-| **Privacy** | PrivacyQA | Data leakage, PII exposure |
-| **Adversarial Robustness** | AdvGLUE, TextFooler, AdvBench | Resistance to adversarial inputs |
-
-### Online LLM Evaluation
-
-| Metric | What it measures |
-| ------ | ---------------- |
-| **User Feedback/Ratings** | Direct satisfaction (thumbs up/down) |
-| **Engagement** | Queries per session, session duration, return rate |
-| **Conversion Rate** | % users who subscribe/pay after interaction |
-| **Online Leaderboards** | LMSYS Chatbot Arena (800K+ human comparisons) |
-
-> [!TIP]
-> 💡 **Aha:** Task-specific benchmarks tell you **what** the model can do. Safety benchmarks tell you **what it shouldn't do**. Human eval (LMSYS Arena) tells you **what users prefer**. A production chatbot needs all three.
+> 💡 **Key Learning:** A complete evaluation strategy needs THREE types:
+> 1. **Capability benchmarks** (MMLU, HumanEval) — "What CAN it do?"
+> 2. **Safety benchmarks** (TruthfulQA, AdvBench) — "What SHOULDN'T it do?"
+> 3. **Human evaluation** (LMSYS Arena, online metrics) — "What do users PREFER?"
+> 
+> High MMLU score + failing safety benchmarks + low user acceptance = unusable product!
 
 ---
 
