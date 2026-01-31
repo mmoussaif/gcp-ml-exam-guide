@@ -286,7 +286,32 @@ This map shows how the guide fits together. Follow **Parts A → G** in order, o
 
 ## A.3 Glossary
 
-Quick reference for key terms. Organized by category for easier navigation.
+Quick reference for key terms. Organized by category for easier navigation. **Start here if you're new** — the Fundamentals section explains basic computing terms.
+
+### Fundamentals (Start Here)
+
+| Term | Definition | Why it matters |
+| ---- | ---------- | -------------- |
+| **AI** | Artificial Intelligence. Computers that can do tasks normally requiring human intelligence — recognizing images, understanding language, making decisions. | The broad field. ML and GenAI are types of AI. |
+| **ML** | Machine Learning. Teaching computers to learn patterns from data instead of explicit programming. Show it 1000 cat photos → it learns to recognize cats. | The foundation for all modern AI. Models learn from examples. |
+| **Neural Network** | A computer system inspired by the human brain. Layers of connected "neurons" that process information and learn patterns. Deep = many layers. | The architecture behind LLMs, image generators, and most modern AI. |
+| **GPU** | Graphics Processing Unit. A chip originally designed for video games that's very good at doing many calculations in parallel. Essential for AI training and inference. | AI needs GPUs. A single GPU can do 1000× more parallel math than a CPU. Training LLMs requires 100s-1000s of GPUs. |
+| **CPU** | Central Processing Unit. The main "brain" of a computer. Good at sequential tasks but slow for AI workloads compared to GPUs. | CPUs run your computer; GPUs run AI. |
+| **API** | Application Programming Interface. A way for programs to talk to each other. You send a request, you get a response. Like a waiter taking your order to the kitchen. | How you use AI services. Send prompt to OpenAI API → get response back. |
+| **JSON** | JavaScript Object Notation. A simple text format for structured data: `{"name": "Alice", "age": 30}`. Both humans and computers can read it. | The standard format for API requests/responses and LLM tool calls. |
+| **NLP** | Natural Language Processing. Teaching computers to understand and generate human language — the field that led to ChatGPT. | LLMs are NLP models. Understanding NLP history helps understand LLM design. |
+| **Open Source** | Software whose code is freely available for anyone to use, modify, and share. Examples: Linux, LLaMA, Stable Diffusion. | Many AI tools are open source. You can run them yourself instead of paying API fees. |
+| **Hyperparameter** | A setting you choose before training (learning rate, batch size, etc.). The model doesn't learn these — you set them. | Tuning hyperparameters is how you optimize training. Different from model parameters (weights). |
+| **Epoch** | One complete pass through all training data. Training for 3 epochs = seeing every example 3 times. | More epochs = model sees data more times. Too many = overfitting (memorizing instead of learning). |
+| **Weights / Parameters** | The numbers inside a neural network that determine its behavior. A 7B model has 7 billion parameters. Training = adjusting these numbers. | Model size is measured in parameters. More parameters = more capable but more expensive to run. |
+| **Training** | Teaching a model by showing it examples and adjusting its weights to reduce errors. Requires lots of data and compute. | Training GPT-4 cost ~$100M. Most users don't train — they use pre-trained models or fine-tune. |
+| **Inference** | Running a trained model to get predictions. For LLMs: sending a prompt and getting a response. | What you pay for when using APIs. Most of your AI costs are inference, not training. |
+| **Loss Function** | Measures how wrong the model's predictions are. Training tries to minimize loss. Lower loss = better predictions. | The "score" during training. Model adjusts weights to reduce loss. Different tasks use different loss functions. |
+| **Attention** | A mechanism that lets models focus on relevant parts of the input. "What words should I pay attention to when predicting the next word?" | The key innovation in Transformers. Why LLMs can understand context and relationships between words. |
+| **Transformer** | The neural network architecture behind LLMs. Uses attention to process all words in parallel instead of one-by-one. | Invented in 2017 ("Attention Is All You Need" paper). Powers GPT, BERT, Gemini, Claude, and all modern LLMs. |
+| **Encoder** | Processes input and creates a representation (embedding). Reads and understands. BERT is encoder-only. | Good for classification, embeddings, understanding. Not for generation. |
+| **Decoder** | Generates output token by token. GPT and most chat models are decoder-only. | Good for text generation, chat, code. The architecture behind ChatGPT. |
+| **Cross-Attention** | Attention between two different sequences (e.g., text prompt and image). Lets one sequence "look at" the other. | How text guides image generation in diffusion models. Text embeddings cross-attend with image features. |
 
 ### Core Concepts
 
@@ -332,6 +357,8 @@ Quick reference for key terms. Organized by category for easier navigation.
 | **Overlap** | When chunking, include some text from the previous chunk (e.g., 50-100 tokens). Helps preserve context across chunk boundaries. | Without overlap, sentences split across chunks lose meaning. Overlap trades storage for better retrieval. |
 | **Reranking** | After initial retrieval (e.g., top 20 chunks by embedding similarity), use a more expensive cross-encoder model to re-score and reorder by true relevance. | Embedding similarity is fast but approximate. Reranking is slower but more accurate. Typical flow: retrieve 20 → rerank → use top 5. |
 | **Hybrid Search** | Combine vector similarity search with keyword search (BM25). Merges results using reciprocal rank fusion or similar. | Vector search misses exact matches; keyword search misses synonyms. Hybrid gets both. Often 10-20% better retrieval than either alone. |
+| **BM25** | Best Match 25. A keyword search algorithm that ranks documents by term frequency. Finds exact word matches. The "traditional" search before vector search. | Fast and good for exact matches ("error code 404"). Use with vector search for best results. |
+| **FAISS** | Facebook AI Similarity Search. Open-source library for fast vector similarity search. Implements HNSW, IVF, and other ANN algorithms. | The most popular vector search library. Used standalone or inside vector databases. |
 | **ANN** | Approximate Nearest Neighbor. Algorithms that find similar vectors quickly by trading exactness for speed. Exact search is O(n); ANN is O(log n). | Essential for RAG at scale. 1M vectors with exact search = seconds. ANN = milliseconds. Recall vs speed trade-off. |
 | **HNSW** | Hierarchical Navigable Small World. Graph-based ANN algorithm. Builds a multi-layer graph where upper layers connect distant nodes. | Best recall-latency trade-off for high-dimensional vectors. Default choice for most vector DBs (Pinecone, Weaviate, FAISS). |
 | **IVF** | Inverted File Index. Clustering-based ANN. Clusters vectors, then only searches relevant clusters at query time. | Uses less memory than HNSW. Good when index size is a constraint. Lower recall than HNSW; requires tuning nprobe. |
@@ -386,6 +413,8 @@ Quick reference for key terms. Organized by category for easier navigation.
 | **Batching** | Processing multiple requests together. Static batching waits for batch to fill; continuous batching adds/removes requests dynamically. | Batching improves GPU utilization. Continuous batching (vLLM, TGI) is state-of-the-art for LLM serving. |
 | **Continuous Batching** | Dynamically add new requests to a running batch as slots free up (when requests complete). No waiting for batch boundaries. | Much higher throughput than static batching. Standard in modern LLM serving (vLLM, TGI, TensorRT-LLM). |
 | **Quantization** | Reducing model precision from FP32/FP16 to INT8/INT4. Model is smaller and faster, with some quality loss. | Can reduce memory 2-4× and improve speed 1.5-2×. Quality loss is often acceptable. Essential for deploying large models. |
+| **FP32/FP16** | Floating Point 32-bit / 16-bit. How precisely numbers are stored. FP32 = very precise but uses more memory. FP16 = half the memory, slightly less precise. | FP16 is standard for inference. Same quality, half the memory. FP32 sometimes needed for training stability. |
+| **INT8/INT4** | Integer 8-bit / 4-bit. Even lower precision than FP16. Numbers rounded to integers. | Aggressive compression. INT8 = 2× smaller than FP16. INT4 = 4× smaller. Some quality loss but often acceptable. |
 | **vLLM** | Open-source LLM serving engine with PagedAttention, continuous batching, and high throughput. The most popular OSS option. | 2-4× better throughput than naive serving. Production-ready. Supports most open models. |
 | **TGI** | Text Generation Inference. Hugging Face's LLM serving solution. Similar capabilities to vLLM. | Good Hugging Face integration. Used by Inference Endpoints. Alternative to vLLM. |
 | **Speculative Decoding** | Use a small "draft" model to predict multiple tokens, then verify with the large model in parallel. Faster if draft model is accurate. | Can speed up generation 2-3× for some model pairs. Works best when draft model is good at predicting the large model. |
@@ -399,6 +428,9 @@ Quick reference for key terms. Organized by category for easier navigation.
 | **Data Parallelism** | Same model on multiple GPUs, each processes different data. For training: gradients are averaged. | Standard for training. For serving, more about replication than parallelism—multiple model copies. |
 | **Model Parallelism** | Umbrella term for tensor and pipeline parallelism—any technique that splits the model across GPUs. | Essential for large models. A 70B model with FP16 needs ~140GB, far exceeding single GPU memory. |
 | **FSDP** | Fully Sharded Data Parallel. Distributed training technique that shards model parameters, gradients, and optimizer states across GPUs. Each GPU holds only a fraction; gathers on-demand. | Enables training models too large for one GPU. PyTorch native. Combine with gradient checkpointing and mixed precision for 70B+ models. |
+| **RoPE** | Rotary Position Embedding. A way to encode token positions in LLMs that supports any sequence length. Rotates embeddings based on position. | Enables long context windows (100K+ tokens). Used in LLaMA, Gemini, and most modern LLMs. Better than absolute position embeddings. |
+| **Softmax** | A function that converts a list of numbers into probabilities that sum to 1. Used in attention and for picking the next token. | The final step in LLM generation. Turns "raw scores" into "probability that this is the next token." |
+| **Cosine Similarity** | Measures how similar two vectors are (0 = unrelated, 1 = identical direction). Used to compare embeddings. | How vector search works. Query embedding vs document embeddings → rank by cosine similarity. |
 
 ### Image & Video Generation
 
@@ -408,6 +440,7 @@ Quick reference for key terms. Organized by category for easier navigation.
 | **Latent Space** | A compressed, lower-dimensional representation of data. VAE encoder maps images → latent vectors; decoder maps latent → images. Similar images have nearby latent vectors. | Working in latent space is 64-512× cheaper than pixel space. The "latent" in Latent Diffusion. Enables efficient generation. |
 | **Latent Diffusion (LDM)** | Run diffusion in a compressed latent space (from a VAE) rather than pixel space. Much faster and cheaper. | Stable Diffusion uses latent diffusion. 512×512 pixels → 64×64 latent → diffusion → decode to pixels. 8×8 = 64× compression. |
 | **DiT** | Diffusion Transformer. Uses Transformer architecture instead of U-Net for the denoising network. Patches image like ViT, applies attention. | Scales better than U-Net. Used in Sora, newer video models. More compute but better quality at scale. |
+| **U-Net** | A neural network shaped like a "U". Downsamples image → processes → upsamples back. Used in Stable Diffusion to predict noise. | The original architecture for diffusion denoising. Being replaced by DiT in newer models. |
 | **ViT** | Vision Transformer. Applies Transformer to images by splitting into patches (e.g., 16×16), treating each patch as a token. | Foundation for modern vision models. CLIP, DINO, and many image encoders use ViT architecture. |
 | **VAE** | Variational Autoencoder. Encoder compresses image to latent, decoder reconstructs image from latent. Used in latent diffusion. | The compression step that makes latent diffusion efficient. Trained separately from the diffusion model. |
 | **CLIP** | Contrastive Language-Image Pretraining. Model trained to align images and text in a shared embedding space. | Enables text-to-image: encode text with CLIP, use embedding to guide diffusion. Also used for evaluation (CLIPScore). |
