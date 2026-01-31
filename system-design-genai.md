@@ -97,15 +97,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 ---
 
-**Total: 7 parts, 40+ sections**
-
-**Suggested reading order:**
-1. **Quick orientation (1 hour):** A.1–A.3 (intro, map, glossary) → B.1 (big picture)
-2. **Theory foundation (3-4 hours):** C.1–C.2 (generative models) → D.1–D.10 (LLM fundamentals)
-3. **System design deep dive (6-8 hours):** E.1–E.10 in order, taking notes
-4. **Application practice (3-4 hours):** F.1 examples — work through 3-4 in detail
-5. **Interview prep (2 hours):** G.2–G.4 (quick reference, checklist, solutioning)
-6. **Reference as needed:** A.3 Glossary, G.5 Resources
+**Total: 7 parts, 40+ sections** — See [How to Use This Guide](#how-to-use-this-guide) in the Introduction for reading paths.
 
 ---
 
