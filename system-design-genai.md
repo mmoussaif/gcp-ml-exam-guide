@@ -2953,6 +2953,85 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 | **Response caching** | 10-30%                  | Instant          | Identical requests                 |
 | **Semantic caching** | 30-50%                  | +5-10ms overhead | Paraphrased queries                |
 
+### Multi-Turn Session Management
+
+**The challenge:** Chatbots need to remember previous turns in the conversation. But LLMs have no built-in memory — you must include conversation history in every request.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    HOW MULTI-TURN WORKS                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Turn 1: User: "What's the capital of France?"
+        LLM sees: [System Prompt] + "What's the capital of France?"
+        Response: "The capital of France is Paris."
+
+Turn 2: User: "What's its population?"
+        LLM sees: [System Prompt] 
+                  + [Turn 1: User: "What's the capital of France?"]
+                  + [Turn 1: Assistant: "The capital of France is Paris."]
+                  + [Turn 2: User: "What's its population?"]
+        Response: "Paris has a population of about 2.1 million..."
+                  (Model knows "its" refers to Paris from context!)
+
+Turn 3: User: "Compare it to London"
+        LLM sees: [System Prompt] + [Turn 1] + [Turn 2] + [Turn 3]
+        ... and so on
+```
+
+**The problem: Context window fills up!**
+
+```
+Turn 1:   [System: 500 tokens] + [User: 20] + [Asst: 100] = 620 tokens
+Turn 5:   [System: 500] + [Turns 1-4: 2,000] + [Turn 5: 120] = 2,620 tokens
+Turn 20:  [System: 500] + [Turns 1-19: 10,000] + [Turn 20: 120] = 10,620 tokens
+
+If context window is 8K tokens → Turn 20 won't fit!
+```
+
+**Solutions:**
+
+| Strategy | How it works | Trade-off |
+| -------- | ------------ | --------- |
+| **Truncation** | Keep only most recent N turns | Loses early context |
+| **Sliding window** | Keep first turn + last N turns | Preserves start and recent |
+| **Summarization** | LLM summarizes old turns into shorter text | Compute cost; may lose details |
+| **Hierarchical memory** | Short-term (recent turns) + long-term (summaries) | Complex but effective |
+
+**Typical implementation:**
+
+```python
+def build_context(session_id, new_message, max_tokens=6000):
+    history = get_conversation_history(session_id)
+    system_prompt = get_system_prompt()  # ~500 tokens
+    
+    # Build context from most recent turns
+    context = [system_prompt]
+    token_count = count_tokens(system_prompt)
+    
+    # Add turns from newest to oldest until we hit limit
+    for turn in reversed(history):
+        turn_tokens = count_tokens(turn)
+        if token_count + turn_tokens > max_tokens:
+            break
+        context.insert(1, turn)  # Insert after system prompt
+        token_count += turn_tokens
+    
+    context.append(new_message)
+    return context
+```
+
+**Session storage options:**
+
+| Storage | Latency | Persistence | Best For |
+| ------- | ------- | ----------- | -------- |
+| **In-memory (Redis)** | <1ms | Session-only (TTL) | High-traffic, short sessions |
+| **Database (Postgres)** | 5-20ms | Permanent | Audit logs, long-term history |
+| **User device** | 0ms (client-side) | Permanent | Privacy-sensitive, offline |
+
+> [!TIP]
+> 💡 **Key insight:** Every turn makes the next request MORE expensive (more input tokens to process). A 20-turn conversation might cost 10× more than a single turn. Consider: (1) summarizing after N turns, (2) charging per-token, or (3) limiting conversation length.
+
 ---
 
 ## E.2 RAG (Retrieval-Augmented Generation) System
