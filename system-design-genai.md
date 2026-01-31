@@ -50,8 +50,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 | D.6 | [Two-Stage Training](#d6-two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline | ☐ |
 | D.7 | [Three-Stage Training (Chatbots)](#d7-three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF | ☐ |
 | D.8 | [Sampling Strategies](#d8-sampling-strategies-for-text-generation) | Greedy, beam search, nucleus sampling | ☐ |
-| D.9 | [Text Generation Evaluation](#d9-text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, BERTScore | ☐ |
-| D.10 | [Chatbot Inference Pipeline](#d10-chatbot-inference-pipeline-components) | Components from prompt to response | ☐ |
+| D.9 | [Text Generation Evaluation](#d9-text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, benchmarks | ☐ |
 
 ### Part E: Core System Design (the main content)
 
@@ -2841,40 +2840,12 @@ How it works:
 
 ---
 
-## D.10 Chatbot Inference Pipeline Components
-
-Beyond the model itself, production chatbots need:
-
-```
-User Prompt → Safety Filter → Prompt Enhancer → Response Generator (LLM + Top-p) → Response Safety Evaluator → Output
-                   ↓                                                                        ↓
-            Rejection Response ←────────────────────────────────────────────────── Rejection Response
-```
-
-| Component | Purpose |
-| --------- | ------- |
-| **Safety Filter** | Block harmful/inappropriate prompts before model sees them |
-| **Prompt Enhancer** | Expand acronyms, fix typos, add context for better responses |
-| **Response Generator** | LLM + top-p sampling; may generate multiple and select best |
-| **Response Safety Evaluator** | Check generated response for harmful content before showing user |
-| **Rejection Response Generator** | Polite explanation when request can't be fulfilled |
-| **Session Management** | Track conversation history for multi-turn context |
-
-**Session Management for Multi-Turn:**
-- Feed previous turns into context: `[Turn 1] ... [Turn 2] ... [Current Prompt]`
-- Track within context window limit (4K, 8K, 128K tokens)
-- May summarize old turns if context exceeds limit
-
 ---
 
-### Google's Generative AI APIs
-
-Google's generative AI APIs offer pre-trained foundation models that can be fine-tuned for specific tasks:
-
-- **Text Completion**: Generating long-form content or completing snippets
-- **Multi-turn Chat**: Maintaining state across several turns of conversation
-- **Code Generation**: Specialized models for writing and debugging code
-- **Image Generation**: Using the Imagen API to create and customize images
+> **Note:** Production chatbot pipelines (safety filters, response evaluation, session management) are covered in:
+> - **E.1 LLM Serving Architecture** — Full system design with caching, routing, scaling
+> - **E.10 Security & Guardrails** — Input/output safety, prompt injection defense
+> - **D.8 Sampling Strategies** — How responses are generated (temperature, top-p)
 
 ---
 
