@@ -984,10 +984,15 @@ Original Video → VAE Encoder → Latent Representation (compressed) → Diffus
 - **Visual Encoder**: Video pixels → lower-dimensional latent representation
 - **Visual Decoder**: Latent representation → reconstructed video
 
-**Compression ratio example:**
+**Compression ratio example (typical values):**
 - Input: 120 frames × 1280×720 = 110M pixels
-- With 8× temporal + 8× spatial compression: 15 frames × 160×90 = 216K
+- With 8× temporal + 8× spatial compression (common in Sora-like systems):
+  - Frames: 120 ÷ 8 = 15 frames
+  - Width: 1280 ÷ 8 = 160
+  - Height: 720 ÷ 8 = 90
+  - Result: 15 × 160 × 90 = 216K latent points
 - **512× smaller** → much cheaper training and inference
+- *Note: Actual compression ratios vary (4×, 8×, 16×) depending on the system*
 
 | Approach | Operates in | Training cost | Examples |
 | -------- | ----------- | ------------- | -------- |
