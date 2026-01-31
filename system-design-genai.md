@@ -420,6 +420,7 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 | **INT8/INT4** | Integer 8-bit / 4-bit. Even lower precision than FP16. Numbers rounded to integers. | Aggressive compression. INT8 = 2× smaller than FP16. INT4 = 4× smaller. Some quality loss but often acceptable. |
 | **vLLM** | Open-source LLM serving engine with PagedAttention, continuous batching, and high throughput. The most popular OSS option. | 2-4× better throughput than naive serving. Production-ready. Supports most open models. |
 | **TGI** | Text Generation Inference. Hugging Face's LLM serving solution. Similar capabilities to vLLM. | Good Hugging Face integration. Used by Inference Endpoints. Alternative to vLLM. |
+| **TensorRT** | Tensor Runtime. NVIDIA's library that optimizes neural networks for faster inference on NVIDIA GPUs. Fuses layers, reduces precision, optimizes memory. | Can speed up inference 2-5×. TensorRT-LLM is the LLM-specific version with batching and KV cache optimizations. |
 | **Speculative Decoding** | Use a small "draft" model to predict multiple tokens, then verify with the large model in parallel. Faster if draft model is accurate. | Can speed up generation 2-3× for some model pairs. Works best when draft model is good at predicting the large model. |
 
 ### Parallelism & Scaling
