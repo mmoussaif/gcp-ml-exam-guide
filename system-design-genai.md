@@ -636,28 +636,6 @@ Input Image → [Downsampling Blocks] → Classification Head → Probability (r
          Conv2D → BatchNorm → LeakyReLU    Fully Connected → Sigmoid
 ```
 
----
-
-**Summary Table**
-
-| | Generator (Forger) | Discriminator (Detective) |
-| --- | --- | --- |
-| **Job** | Turn random noise into realistic images | Spot the fakes |
-| **Input** | Random numbers | An image (real or fake) |
-| **Output** | A generated image | Probability: "How likely is this real?" (0-100%) |
-| **Gets better when...** | It fools the Detective | It catches fakes correctly |
-
-### Normalization Layers
-
-Normalization stabilizes training by ensuring consistent distributions across layers.
-
-| Type | Normalizes across | Best for | Notes |
-| ---- | ----------------- | -------- | ----- |
-| **Batch Norm (BN)** | Batch dimension | CNNs, GANs | Standard choice; needs decent batch size |
-| **Layer Norm (LN)** | Feature dimension | Transformers, RNNs | Batch-size independent |
-| **Instance Norm (IN)** | Each feature map individually | Style transfer | Removes style information |
-| **Group Norm (GN)** | Groups of channels | Small batch sizes | Balance between BN and LN |
-
 ### GAN Training: How They Learn
 
 **The Training Game (simplified):**
@@ -701,17 +679,30 @@ This is gentler and more stable — like a teacher giving detailed feedback inst
 
 ### GAN Latent Space & Sampling
 
-**Latent space:** The generator learns a mapping from noise vectors to images. Points in this space represent potential images; nearby points → similar images.
+**What is latent space? (The Recipe Book Analogy)**
 
-| Sampling method | How it works | Trade-off |
-| --------------- | ------------ | --------- |
-| **Random** | Sample from N(0,1) | Maximum diversity; may include outliers |
-| **Truncated** | Reject samples beyond threshold | Higher quality; less diversity |
+Think of latent space like a **recipe book** for images:
+- Each "recipe" (noise vector) produces a specific image
+- Similar recipes produce similar images (a recipe for "young woman smiling" is close to "young woman laughing")
+- The Generator learns this recipe book during training
 
-**StyleGAN** extends this with style-based generation:
-- Separate "style" vectors control different attributes (age, hair, expression)
-- Enables **attribute manipulation**: change age without changing identity
-- Used for face generation, editing, and deepfakes
+**Sampling = Picking a Recipe**
+
+| Method | How it works | Result |
+| ------ | ------------ | ------ |
+| **Random** | Pick any recipe from the book | Maximum variety, but some weird results |
+| **Truncated** | Only pick from the "best" recipes (avoid extremes) | Higher quality, but less variety |
+
+*Analogy:* Random = let a kid pick any crayon. Truncated = only let them pick from the "normal" colors (no neon green faces).
+
+**StyleGAN — The Advanced Version**
+
+StyleGAN is like having **separate dials** for different features:
+- One dial for age (young ↔ old)
+- One dial for hair color (blonde ↔ brunette)  
+- One dial for expression (sad ↔ happy)
+
+You can turn one dial without affecting the others — change someone's age without changing their hair! This is called **attribute manipulation** and is used for face generation, photo editing, and (unfortunately) deepfakes.
 
 ### Image Generation Metrics
 
