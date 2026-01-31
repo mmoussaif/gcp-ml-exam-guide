@@ -21,7 +21,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
 | A.1 | [Introduction](#a1-introduction) | Why GenAI is different; how to use this guide | ☐ |
-| A.2 | [Visual Guide Map](#a2-visual-guide-map) | ASCII diagram showing how sections connect | ☐ |
+| A.2 | [Visual Guide Map](#a2-visual-guide-map) | Diagram showing how sections connect | ☐ |
 | A.3 | [Glossary](#a3-glossary) | 80+ terms organized by category | ☐ |
 
 ### Part B: System Overview
