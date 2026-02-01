@@ -3742,36 +3742,144 @@ Answer: "The company was founded in 1995."
 RAG evaluation has three dimensions—retrieval quality, generation faithfulness, and answer quality:
 
 ```
-                    Query
-                   /     \
-                  /       \
-    Context Relevance    Answer Relevance
-          |                    |
-          v                    v
-      Retrieved ─────────── Generated
-       Context   Faithfulness   Response
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         RAG EVALUATION TRIAD                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+                              Query
+                             /     \
+                            /       \
+              Context Relevance    Answer Relevance
+              "Right docs?"        "Answers question?"
+                    │                    │
+                    ▼                    ▼
+                Retrieved ─────────── Generated
+                 Context   Faithfulness   Response
+                           "Grounded in 
+                            context?"
+
+Three ways RAG can fail:
+1. Retrieval failure  → fetched wrong docs
+2. Grounding failure  → LLM made things up
+3. Relevance failure  → answered different question
 ```
 
-| Metric | What it measures | How to evaluate |
-| ------ | ---------------- | --------------- |
-| **Context Relevance** | Did retrieval fetch the right documents? | Hit rate, MRR, NDCG, Precision@k |
-| **Faithfulness** | Is the response grounded in retrieved context? | LLM-as-judge ("is this claim in the context?") |
-| **Answer Relevance** | Does the response address the question? | LLM-as-judge ("does this answer the question?") |
-| **Answer Correctness** | Is the response factually correct? | BLEU/ROUGE vs reference; or human eval |
+---
 
-**Faithfulness detection methods:**
+**Retrieval Quality Metrics (Context Relevance):**
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    RETRIEVAL METRICS EXPLAINED                            │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Setup: Query has relevant doc. You retrieve top-5 results.
+
+Retrieved:  [Doc A] [Doc B] [Doc C*] [Doc D] [Doc E]
+                            ↑ relevant (position 3)
+
+HIT RATE (Recall@k)
+───────────────────
+"Did we find it anywhere in top-k?"
+
+    Doc C* in top-5?  YES → Hit Rate = 1
+    Not in top-5?     NO  → Hit Rate = 0
+
+
+MRR (Mean Reciprocal Rank)
+──────────────────────────
+"How HIGH did the relevant doc rank?"
+
+    Position 1 → 1/1 = 1.0
+    Position 3 → 1/3 = 0.33  ← our example
+    Position 10 → 1/10 = 0.1
+
+    Higher rank = better score
+
+
+PRECISION@K
+───────────
+"What fraction of top-k is relevant?"
+
+    Top-5: [A] [B] [C*] [D*] [E]  (2 relevant)
+    Precision@5 = 2/5 = 0.4
+
+
+NDCG (Normalized Discounted Cumulative Gain)
+────────────────────────────────────────────
+"Is ranking optimal?" (for graded relevance: 0, 1, 2, 3)
+
+    Penalizes good docs appearing low in results.
+    Perfect ranking = 1.0
+```
+
+| Metric | Question | Use When |
+| ------ | -------- | -------- |
+| **Hit Rate@k** | Found relevant doc in top-k? | Binary relevance |
+| **MRR** | How high did it rank? | Single relevant doc |
+| **Precision@k** | What % of top-k is relevant? | Multiple relevant docs |
+| **NDCG** | Is ranking order optimal? | Graded relevance scores |
+
+---
+
+**Faithfulness Metrics (Is response grounded in context?):**
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    NLI (NATURAL LANGUAGE INFERENCE)                       │
+└───────────────────────────────────────────────────────────────────────────┘
+
+NLI = Does the premise ENTAIL the hypothesis?
+
+Three possible labels:
+• ENTAILMENT  → premise supports hypothesis
+• CONTRADICTION → premise contradicts hypothesis  
+• NEUTRAL → premise neither supports nor contradicts
+
+EXAMPLE FOR RAG FAITHFULNESS:
+─────────────────────────────
+
+Context (premise): "Acme Corp was founded in 1995 by John Smith 
+                   in San Francisco."
+
+LLM Response: "Acme was founded in 1995."
+                        │
+                        ▼
+              ┌─────────────────┐
+              │   NLI Model     │
+              │                 │
+              │ Premise: context│
+              │ Hypothesis: claim│
+              └────────┬────────┘
+                       │
+                       ▼
+              Label: ENTAILMENT ✓ (claim is supported)
+
+
+LLM Response: "Acme was founded in 2001."
+                        │
+                        ▼
+              Label: CONTRADICTION ✗ (hallucination detected!)
+
+
+HOW IT'S USED:
+──────────────
+1. Split LLM response into individual claims
+2. Run NLI for each claim against the context
+3. Faithfulness score = % of claims that are ENTAILMENT
+```
 
 | Method | How it works | Accuracy | Latency |
 | ------ | ------------ | -------- | ------- |
-| **Self-consistency** | Sample N answers, check agreement | Moderate | High (N× calls) |
-| **NLI (entailment)** | Check if context entails each claim | High | +50–100ms |
-| **LLM-as-Judge** | "Is this claim supported by context?" | High | +100–200ms |
+| **NLI (entailment)** | NLI model checks if context entails each claim | High | +50-100ms |
+| **LLM-as-Judge** | "Is this claim supported by context?" | High | +100-200ms |
+| **Self-consistency** | Sample N answers, check agreement | Moderate | High (N calls) |
 | **Specialized models** | Fine-tuned faithfulness classifier | Highest | ~+50ms |
 
-**Tools:** RAGAS (faithfulness, answer relevancy, context precision/recall), TruLens (RAG triad), LangSmith (groundedness), Phoenix (hallucination evals), Vectara FaithJudge (specialized model).
+**Tools:** RAGAS, TruLens, LangSmith, Phoenix, Vectara FaithJudge.
 
 > [!TIP]
-> 💡 **Aha:** A RAG system can fail in three ways: (1) **retrieval failure** (didn't fetch relevant docs), (2) **grounding failure** (LLM made things up), (3) **relevance failure** (answered a different question). Evaluate all three—RAGAS metrics cover them in one framework.
+> **Key insight:** Evaluate ALL three dimensions. High retrieval quality + low faithfulness = LLM ignoring good context. High faithfulness + low relevance = accurate but useless answer.
 
 ---
 
