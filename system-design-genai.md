@@ -4170,35 +4170,75 @@ User ──► LLM ──► "Call get_order(123)"      User ──► LLM ─�
 
 ### Agent Protocols: MCP and A2A
 
-**MCP (Model Context Protocol)** and **A2A (Agent-to-Agent / Agent2Agent)** are open standards that define how agents get **tools and context** (MCP) and how **agents talk to other agents** (A2A). Both matter when you build multi-tool or multi-agent systems.
+Two open standards for agent interoperability:
+- **MCP** = how agents get tools and context
+- **A2A** = how agents talk to other agents
 
-**MCP (Model Context Protocol)**
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    MCP vs A2A: WHAT THEY CONNECT                          │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**MCP** is an open protocol (Anthropic, 2024) that standardizes how applications provide **tools and context** to LLMs. It acts as a universal connector: an LLM or agent connects to **MCP servers**, which expose tools, prompts, and resources (files, DBs, APIs) in a consistent way. So instead of each vendor defining its own tool format, you run or connect to MCP servers and the model gets a uniform interface.
+          MCP (Model Context Protocol)              A2A (Agent-to-Agent)
+          ────────────────────────────              ────────────────────
 
-| Aspect        | Description                                                                           |
-| ------------- | ------------------------------------------------------------------------------------- |
-| **Purpose**   | Standardize how models get tools, prompts, and resources from external systems        |
-| **Adoption**  | Anthropic (Claude), OpenAI (Agents SDK), Microsoft (Agent Framework)                  |
-| **Use cases** | AI-powered IDEs, custom workflows, connecting agents to Slack, Figma, databases, etc. |
+              ┌─────────────┐                    ┌─────────────┐
+              │    AGENT    │                    │   AGENT A   │
+              └──────┬──────┘                    │  (Vertex AI)│
+                     │                           └──────┬──────┘
+                     │ MCP                              │ A2A
+                     │                                  │
+        ┌────────────┼────────────┐                     │
+        │            │            │                     │
+        ▼            ▼            ▼                     ▼
+   ┌─────────┐ ┌─────────┐ ┌─────────┐          ┌─────────────┐
+   │  Slack  │ │  Figma  │ │   DB    │          │   AGENT B   │
+   │  (MCP)  │ │  (MCP)  │ │  (MCP)  │          │ (LangChain) │
+   └─────────┘ └─────────┘ └─────────┘          └─────────────┘
 
-**When it matters:** Use MCP when you want **portable tooling**—the same MCP server can back multiple agents or products. It also helps when you integrate many external systems (CRMs, docs, search) without writing custom glue per vendor.
+   One agent ←→ many tools                   Agent ←→ Agent (cross-vendor)
+```
 
-**A2A (Agent-to-Agent / Agent2Agent Protocol)**
+---
 
-**A2A** is an open standard (Google, 2025) for **communication and collaboration between AI agents** built by different vendors and frameworks. It addresses interoperability: agents from different stacks (e.g. Vertex AI, LangChain, Salesforce) can discover each other, negotiate UX, and exchange tasks and state **without** sharing internal memory, resources, or tools.
+**MCP (Model Context Protocol)** — Anthropic, 2024
 
-| Aspect                  | Description                                                                                                          |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| **Purpose**             | Enable agent-to-agent collaboration across vendors and frameworks                                                    |
-| **Mechanisms**          | **Agent Cards** (JSON metadata: identity, capabilities), capability discovery, task/state management, UX negotiation |
-| **Transport**           | JSON-RPC 2.0 over HTTP(S)                                                                                            |
-| **Relationship to MCP** | A2A handles **agent ↔ agent**; MCP handles **model ↔ tools/context**. They complement each other.                    |
+Standardizes how agents connect to **tools and context**. An MCP server exposes tools, prompts, and resources (files, DBs, APIs) in a uniform interface. Instead of custom integrations per vendor, you connect to MCP servers.
 
-**When it matters:** Use A2A when you run **multi-agent** or **cross-vendor** workflows (e.g. your agent hands off to a partner’s agent, or you compose agents from different platforms). It gives you a shared protocol for discovery, tasks, and security instead of one-off integrations.
+| Aspect | Description |
+| ------ | ----------- |
+| **Purpose** | Portable tool interface for LLMs |
+| **Adoption** | Anthropic (Claude), OpenAI (Agents SDK), Google (ADK), Microsoft |
+| **Use cases** | AI-powered IDEs, Slack/Figma/CRM integrations, custom workflows |
+| **Benefit** | Same MCP server backs multiple agents; no custom glue per tool |
+
+---
+
+**A2A (Agent-to-Agent Protocol)** — Google, 2025
+
+Standardizes **communication between agents** from different vendors/frameworks. Agents discover each other, negotiate capabilities, and exchange tasks/state—without sharing internal memory or tools.
+
+| Aspect | Description |
+| ------ | ----------- |
+| **Purpose** | Cross-vendor agent collaboration |
+| **Mechanisms** | **Agent Cards** (JSON: identity, capabilities), discovery, task/state exchange, UX negotiation |
+| **Transport** | JSON-RPC 2.0 over HTTP(S) |
+| **Adoption** | Google, AWS AgentCore, 50+ partners |
+
+---
+
+**When to use which:**
+
+| Scenario | Use |
+| -------- | --- |
+| Single agent needs tools (Slack, DB, search) | **MCP** |
+| Integrate many external systems portably | **MCP** |
+| Agent A hands off task to Agent B (different vendor) | **A2A** |
+| Multi-agent workflows across platforms | **A2A** |
+| Both: agent uses tools AND collaborates with other agents | **MCP + A2A** |
 
 > [!TIP]
-> 💡 **Aha:** **MCP** = “how does _this_ agent get its tools and context?” **A2A** = “how do _multiple_ agents from different systems work together?” For a single agent with your own tools, MCP is the standard to consider. For agent-to-agent orchestration across products or vendors, A2A is the standard to consider.
+> **MCP** answers "how does this agent get its tools?" **A2A** answers "how do agents from different systems work together?" They complement each other.
 
 ---
 
