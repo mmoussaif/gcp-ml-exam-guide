@@ -5374,13 +5374,13 @@ Full precision    Half precision    Integer only      Aggressive
 Traditional Web Service                 LLM Inference
 ───────────────────────                 ─────────────
 
-CPU-bound, stateless                    GPU-bound, stateful
+CPU-bound                               GPU-bound
     │                                       │
     ▼                                       ▼
 Add more servers                        Each server needs:
     │                                   • Full model in GPU memory (GBs)
     ▼                                   • KV cache per request (grows with seq)
-Easy horizontal scale                   • Expensive GPUs ($2-10/hr each)
+Cheap horizontal scale                  • Expensive GPUs ($2-10/hr each)
                                             │
                                             ▼
                                         Can't just "add more servers"
