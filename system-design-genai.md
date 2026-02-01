@@ -4516,135 +4516,166 @@ When delegating to sub-agents, control what they see:
 
 ---
 
+---
+
 ### Google ADK (Agent Development Kit)
 
-**ADK** is Google's open-source framework for building, deploying, and orchestrating AI agents. It's model-agnostic (optimized for Gemini but works with others), deployment-agnostic (local, Cloud Run, Vertex AI Agent Engine), and compatible with other frameworks.
+Google's open-source framework for building and orchestrating AI agents. Model-agnostic, deployment-agnostic, framework-compatible.
 
-**Installation:**
 ```bash
 pip install google-adk        # Python
 npm install @google/adk       # TypeScript
 go get google.golang.org/adk  # Go
 ```
 
-**Core concepts:**
+---
+
+#### Core Concepts
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    ADK ARCHITECTURE                                       │
+└───────────────────────────────────────────────────────────────────────────┘
+
+                         ┌─────────────────┐
+                         │   LlmAgent      │ ← instructions, model, tools
+                         │  (Coordinator)  │
+                         └────────┬────────┘
+                                  │
+              ┌───────────────────┼───────────────────┐
+              │                   │                   │
+              ▼                   ▼                   ▼
+       ┌───────────┐       ┌───────────┐       ┌───────────┐
+       │ LlmAgent  │       │ LlmAgent  │       │ LlmAgent  │
+       │(Specialist│       │(Specialist│       │(Specialist│
+       │    A)     │       │    B)     │       │    C)     │
+       └─────┬─────┘       └─────┬─────┘       └─────┬─────┘
+             │                   │                   │
+           Tools               Tools               Tools
+
+    Delegation via: transfer_to_agent() or AgentTool
+    State shared via: Session State + output_key
+```
 
 | Concept | Description |
 | ------- | ----------- |
-| **LlmAgent** | Agent powered by an LLM; has instructions, tools, and sub-agents |
-| **Workflow Agents** | Orchestrate sub-agents: `SequentialAgent`, `ParallelAgent`, `LoopAgent` |
-| **Tools** | Functions the agent can call (custom, pre-built, or MCP) |
-| **Session State** | Shared state across agents in the same invocation |
-| **Agent Transfer** | LLM-driven delegation to sub-agents via `transfer_to_agent()` |
-| **AgentTool** | Wrap an agent as a tool for another agent to call |
+| **LlmAgent** | Agent with instructions, tools, and optional sub-agents |
+| **Workflow Agents** | `SequentialAgent`, `ParallelAgent`, `LoopAgent` |
+| **Tools** | Functions the agent can call (custom, built-in, MCP) |
+| **Session State** | Shared state across agents in same invocation |
+| **transfer_to_agent()** | LLM-driven delegation to sub-agents |
+| **AgentTool** | Wrap agent as callable tool for another agent |
 
-**Workflow agents:**
+---
 
-| Agent | Behavior |
-| ----- | -------- |
-| `SequentialAgent` | Run sub-agents in order; each sees shared state from previous |
-| `ParallelAgent` | Run sub-agents concurrently; all share the same state |
-| `LoopAgent` | Repeat sub-agents until `max_iterations` or `escalate=True` |
+#### Workflow Agents
 
-**Multi-agent patterns in ADK:**
+| Agent | Behavior | Use Case |
+| ----- | -------- | -------- |
+| `SequentialAgent` | Run sub-agents in order; each sees state from previous | Pipelines (draft → review → publish) |
+| `ParallelAgent` | Run sub-agents concurrently; all share state | Fan-out (multi-perspective analysis) |
+| `LoopAgent` | Repeat until `max_iterations` or `escalate=True` | Iterative refinement |
 
-| Pattern | How to build |
+---
+
+#### Multi-Agent Patterns
+
+| Pattern | How to Build |
 | ------- | ------------ |
-| **Coordinator/Dispatcher** | Parent `LlmAgent` with sub-agents; LLM decides which to call via `transfer_to_agent` |
-| **Sequential Pipeline** | `SequentialAgent` with sub-agents; use `output_key` to pass data via state |
-| **Parallel Fan-Out/Gather** | `ParallelAgent` + `SequentialAgent` for aggregation |
-| **Hierarchical Decomposition** | Nest agents; parent uses `AgentTool` to call child as tool |
-| **Generator-Critic** | `SequentialAgent` with generator → reviewer; reviewer reads generator's `output_key` |
-| **Iterative Refinement** | `LoopAgent` with refiner → checker; loop until checker escalates |
+| **Coordinator** | `LlmAgent` with sub-agents; LLM routes via `transfer_to_agent` |
+| **Sequential Pipeline** | `SequentialAgent`; use `output_key` to pass data |
+| **Parallel Fan-Out** | `ParallelAgent` → `SequentialAgent` for aggregation |
+| **Hierarchical** | Nest agents; parent calls child via `AgentTool` |
+| **Generator-Critic** | `SequentialAgent`: generator → reviewer reads `output_key` |
+| **Iterative Refinement** | `LoopAgent`: refiner → checker; loop until escalate |
 
-**Practical example: Customer support agent with ADK**
+---
+
+#### Example: Customer Support Agent
 
 ```python
-from google.adk.agents import LlmAgent, SequentialAgent
+from google.adk.agents import LlmAgent
 
-# Define tools as functions
+# Tools as functions
 def get_order_status(order_id: str) -> dict:
     """Look up order status from database."""
     return {"order_id": order_id, "status": "shipped", "eta": "2026-02-01"}
 
 def create_support_ticket(issue: str, priority: str) -> dict:
-    """Create a support ticket in the ticketing system."""
+    """Create a support ticket."""
     return {"ticket_id": "TKT-12345", "status": "created"}
 
 def search_knowledge_base(query: str) -> dict:
-    """Search the knowledge base for relevant articles."""
+    """Search KB for relevant articles."""
     return {"articles": [{"title": "Return Policy", "content": "..."}]}
 
-# Create specialist agents
+# Specialist agents
 order_agent = LlmAgent(
     name="OrderAgent",
     model="gemini-2.0-flash",
-    description="Handles order status inquiries and shipping questions.",
-    instruction="You help customers with order status. Use get_order_status tool.",
+    description="Handles order status inquiries.",
+    instruction="Help with order status. Use get_order_status tool.",
     tools=[get_order_status]
 )
 
 knowledge_agent = LlmAgent(
     name="KnowledgeAgent",
     model="gemini-2.0-flash",
-    description="Answers policy and FAQ questions.",
-    instruction="Search the knowledge base to answer customer questions.",
+    description="Answers policy/FAQ questions.",
+    instruction="Search KB to answer questions.",
     tools=[search_knowledge_base]
 )
 
 escalation_agent = LlmAgent(
     name="EscalationAgent",
     model="gemini-2.0-flash",
-    description="Creates tickets for issues requiring human review.",
-    instruction="Create support tickets for complex issues.",
+    description="Creates tickets for human review.",
+    instruction="Create tickets for complex issues.",
     tools=[create_support_ticket]
 )
 
-# Create coordinator that routes to specialists
+# Coordinator routes to specialists
 support_coordinator = LlmAgent(
     name="SupportCoordinator",
     model="gemini-2.0-flash",
-    instruction="""You are a customer support coordinator. Route requests:
-    - Order status/shipping → OrderAgent
-    - Policy/FAQ questions → KnowledgeAgent  
-    - Complex issues needing human help → EscalationAgent
-    Always be helpful and professional.""",
-    description="Routes customer requests to the appropriate specialist.",
+    instruction="""Route customer requests:
+    - Order status → OrderAgent
+    - Policy/FAQ → KnowledgeAgent  
+    - Complex issues → EscalationAgent""",
+    description="Routes to appropriate specialist.",
     sub_agents=[order_agent, knowledge_agent, escalation_agent]
 )
-
-# Run the agent (conceptual)
-# adk run support_coordinator
 ```
 
-**Running ADK agents:**
+---
+
+#### Running & Deployment
+
 ```bash
-# Create project
-adk create my_agent
-
-# Run with CLI
-adk run my_agent
-
-# Run with web UI (dev only)
-adk web --port 8000
+adk create my_agent     # Create project
+adk run my_agent        # Run CLI
+adk web --port 8000     # Dev web UI
 ```
 
-**ADK vs other frameworks:**
+| Deployment | Description |
+| ---------- | ----------- |
+| **Local** | `adk run` / `adk web` for development |
+| **Cloud Run** | Containerize as serverless |
+| **Vertex AI Agent Engine** | Managed, scalable GCP hosting |
 
-| Framework | Best for | Key difference |
+---
+
+#### ADK vs Other Frameworks
+
+| Framework | Best For | Key Difference |
 | --------- | -------- | -------------- |
-| **ADK** | Google ecosystem, Vertex AI, multi-agent | Workflow agents (Sequential, Parallel, Loop); Vertex AI Agent Engine deployment |
-| **LangChain** | Prototyping, broad integrations | Chain-based; many connectors; LangGraph for agents |
-| **LlamaIndex** | RAG-first applications | Data framework; strong indexing and retrieval |
-| **CrewAI** | Role-based multi-agent | Crew metaphor with roles and tasks |
-
-**Deployment options:**
-- **Local**: `adk run` or `adk web` for development
-- **Cloud Run**: Containerize and deploy as serverless
-- **Vertex AI Agent Engine**: Managed, scalable agent hosting on GCP
+| **ADK** | Google ecosystem, multi-agent | Workflow agents; Vertex AI deployment |
+| **LangChain** | Prototyping, integrations | Chain-based; LangGraph for agents |
+| **LlamaIndex** | RAG-first apps | Data indexing and retrieval |
+| **CrewAI** | Role-based teams | Crew metaphor with roles/tasks |
 
 > [!TIP]
-> 💡 **Aha:** ADK's workflow agents (`SequentialAgent`, `ParallelAgent`, `LoopAgent`) let you build complex pipelines without custom orchestration code. Use `output_key` to pass data through shared state. Start with the coordinator pattern for multi-domain tasks.
+> **Start here:** Use `LlmAgent` with `sub_agents` for coordinator pattern. Use `output_key` to pass data through shared state. Workflow agents handle orchestration—no custom code needed.
 
 ---
 
