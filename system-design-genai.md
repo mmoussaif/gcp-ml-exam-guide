@@ -134,7 +134,7 @@ This guide teaches you how to design for these realities.
 | **Theory** | How LLMs, RAG, agents, diffusion models, and training pipelines actually work | Parts C, D |
 | **System Design** | Architecture patterns for serving, retrieval, agents, evaluation, and operations | E.1–E.10 |
 | **Practice** | Real stacks, cost estimations, and complete system designs | F.1 Examples |
-| **Interview Prep** | 45-minute framework, FAANG evaluation criteria, end-to-end solutioning | Part G |
+| **Interview Prep** | 45-minute framework, CxO vs technical communication, worked example | Part G |
 
 ---
 
@@ -7806,7 +7806,7 @@ Final Video: 5s at 720p, 24fps
 | **Evaluation (reference-free)**            | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals)                                              |
 | **Guardrails**                             | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source)                                  |
 
-The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
+The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [G.2 Interview Quick Reference](#g2-interview-quick-reference) (45-Minute Framework). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
 
 ## G.1 Strategy & Planning
 
