@@ -4047,44 +4047,20 @@ User → [Prompt + RAG?] → LLM → Answer      User → Prompt → LLM
 > [!TIP]
 > **Key insight:** Agent = LLM + loop + tools. Start with RAG. Add agent only when you need iteration and tool calls.
 
-> 💡 **Aha:** An agent is an LLM in a **loop** with tools. The model doesn’t just answer once; it _reasons → acts (calls a tool) → observes (gets result) → reasons again_ until it can respond. That turns the LLM into a controller over APIs, DBs, and search—so the "aha" is: the value is in the **loop + tools**, not in a bigger model.
+---
 
-### Customer engagement & contact center (Google Customer Engagement Suite)
+### Google Cloud Agent Products (Quick Reference)
 
-**Why engagement beyond search:** Customers don’t always want to search—they want to **connect directly** for answers and support. Those touchpoints are pain points when they fail but also critical: positive engagement can make or break a company. Google’s **Customer Engagement Suite** is built for this: conversational AI (including generative AI) for chatbots, live-agent support, and analytics, often on top of a **Contact Center as a Service (CCaaS)** platform.
+| Product | What it Does |
+| ------- | ------------ |
+| **Conversational Agents** | Chatbots (rules + GenAI hybrid) |
+| **Agent Assist** | Real-time help for human agents |
+| **Conversational Insights** | Analytics (sentiment, topics, FAQs) |
+| **CCaaS** | Full contact center infrastructure |
+| **Gemini Enterprise** | Unified search + agents across enterprise data |
+| **NotebookLM Enterprise** | Deep dive into uploaded documents only |
 
-**Conversational agents (chatbots):** Two main approaches—**deterministic** and **generative**. **Deterministic** = rule-based, explicit logic (e.g. “if user presses 1, route to billing”); everything must be defined; low–medium code, can feel rigid. **Generative** = LLM-driven, flexible, but can lack structure. A **hybrid** approach is common in production: rules and flows for common paths, GenAI for open-ended questions and natural language. In Google Cloud you can build simple agents with natural-language instructions (GenAI) or complex hybrid agents with custom rules and logic.
-
-**Agent Assist:** When bots aren’t enough or a human touch is needed, **live agents** take over—but they need support too. **Agent Assist** gives live agents **in-the-moment assistance**: AI-generated **suggested responses**, **knowledge-base recommendations** to solve the customer’s issue, **real-time transcription and translation**, **conversation summarization**, and coaching. That’s GenAI in the loop with the human: the system suggests; the agent decides. In system design terms, “escalate to human” is a tool; Agent Assist is the layer that makes that handoff effective.
-
-**Conversational Insights:** All customer interactions (chatbot and human) are data. **Conversational Insights** analyzes that data to give contact center leaders **data-driven insights**: agent and caller **sentiment**, **entity identification**, **call topics**, and automatic flagging of interactions that need review. **Generative FAQ** in Insights surfaces the **common questions** customers ask and how they’re answered—so you can find **FAQ gaps**, **trending questions**, and improve responses. Useful for evaluation (E.5) and for improving your RAG/knowledge base.
-
-**CCaaS (Contact Center as a Service):** A full contact center needs 24/7 multichannel (phone, text, email), security and privacy, CRM integration, and **omnichannel** experience (consistent across web, app, phone, text). CCaaS provides the infrastructure: **simultaneous multichannel** communication, **channel switching**, **multimodal** interactions (text, voice, images), and **agent routing**. It integrates with **Conversational Agents** (automated support), **Agent Assist** (live-agent guidance), and **Conversational Insights** (analytics). When an interviewer asks “design a contact center” or “support voice and chat,” CCaaS + agents + Agent Assist + Insights is the product landscape to reference.
-
-> [!TIP]
-> 💡 **Aha:** “Customer support” in system design often means: **conversational agent** (deterministic + generative hybrid) for self-service, **escalate-to-human** as a tool, and **Agent Assist** + **Insights** for when humans are in the loop. Full contact center = **CCaaS** plus these pieces.
-
-### Enterprise knowledge workers (Gemini Enterprise)
-
-**Why internal knowledge workers matter:** Transforming the organization often happens by supporting **internal** employees, not only external customers. Employees search across many internal sources—analytics, productivity, content, CRM, communications, portfolio, supply chain, enterprise planning. Making that information **discoverable and actionable** is a core use case for GenAI agents.
-
-**Gemini Enterprise** is designed for this: it helps teams use company information more effectively by creating **AI agents** that **access and understand data from various sources**, regardless of where data is stored. These agents can be integrated into **internal websites or dashboards**—like personal research assistants for work. In system design terms: **unified search** across connected business systems + **agents** that plan, retrieve, and synthesize.
-
-**Pattern: plan-then-verify-then-execute (deep research).** For complex, well-sourced outputs (e.g. advisor report on a trending political topic impacting markets):
-
-1. **Limit data sources** to trusted, curated repositories (e.g. government reports, internal research).
-2. **Agent generates a research plan**; the **human verifies** the plan before execution.
-3. **Agent executes** the plan: searches thousands of sources, asks new questions, iterates until satisfied.
-4. **Output:** detailed report with **source links** and optional **audio summary** for quick consumption.
-
-This is the same "research → draft → grounding" pipeline (F.1 Example 3) but with **human-in-the-loop at the plan stage** and **curated sources only**. Useful when the domain is sensitive (e.g. financial, legal) and you need auditability and control.
-
-**Gemini Enterprise vs NotebookLM Enterprise:** **NotebookLM Enterprise** is a **document-focused** tool: upload specific documents and web sources, then ask questions, summarize, and create content _from those sources only_. **Gemini Enterprise** is a **comprehensive enterprise AI assistant**: it uses **agents** and **unified search** to automate tasks and find information **across all connected business systems**, not just uploaded documents. Gemini Enterprise can **connect to** NotebookLM Enterprise (e.g. attach "Client Notes" for personalized advice); the two serve different roles—deep dive into a corpus vs. search and automate across the enterprise.
-
-**Use case snapshot (advisor):** Retrieve and compare latest investment reports → attach **NotebookLM** client notes for tailored advice → agent evaluates research against client notes (e.g. finds portfolio lacks diversification) → upload spreadsheet, run through company risk calculator → Gemini drafts final client email. Combines **unified search**, **agent reasoning**, **tool use** (risk calculator), and **personalized context** (NotebookLM).
-
-> [!TIP]
-> 💡 **Aha:** For "design support for internal knowledge workers," think **Gemini Enterprise**-style: agents + unified search across connected systems, **plan-verify-execute** for high-stakes research, **trusted sources only**, output = report + sources + optional audio. For "deep dive into this set of documents," think **NotebookLM Enterprise**.
+---
 
 ### Agent Frameworks
 
