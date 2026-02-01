@@ -4892,63 +4892,238 @@ Request ──► LLM Response
 
 ---
 
+
 ## E.6 GenAI Data Pipeline Architecture
 
-**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is the **training-data pipeline**: the path from "users interacted with the system" to "we have clean, formatted examples for fine-tuning." Evaluation (E.5) tells you _what_ to improve (quality, safety, drift); this pipeline gives you the _data_ to improve it (fine-tuning, RLHF, few-shot curation). It is _distinct_ from the evaluation pipeline (E.5), which moves _prediction_ data into metrics and alerts. Here we focus on **collecting user interactions** (prompts, responses, feedback), processing them at scale, and producing training-ready datasets.
+**Why this comes next:** E.5 told you *what* to improve (quality, safety, drift). This section gives you the *data* to improve it—the path from "users interacted with the system" to "we have training examples for fine-tuning."
 
-**T-shaped summary:** User interactions → event stream (Pub/Sub, Kinesis) → stream processor (Dataflow, etc.) → data lake and optionally feature store → training data prep (filter, dedupe, validate, format for fine-tuning). Deep dive below.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    THE GENAI FEEDBACK LOOP                                │
+└───────────────────────────────────────────────────────────────────────────┘
+
+            ┌──────────────────────────────────────────────────────┐
+            │                                                      │
+            ▼                                                      │
+    ┌───────────────┐    ┌───────────────┐    ┌───────────────┐   │
+    │     User      │───►│   LLM/RAG     │───►│   Response    │   │
+    │    Query      │    │   System      │    │               │   │
+    └───────────────┘    └───────────────┘    └───────┬───────┘   │
+                                                      │           │
+                                                      ▼           │
+                                               ┌───────────────┐  │
+                                               │   Feedback    │  │
+                                               │ 👍/👎, edits  │  │
+                                               └───────┬───────┘  │
+                                                       │          │
+            ┌──────────────────────────────────────────┘          │
+            │                                                      │
+            ▼                                                      │
+    ┌───────────────────────────────────────────────────────────┐ │
+    │              TRAINING DATA PIPELINE                        │ │
+    │  Collect → Process → Clean → Format → Fine-tune            │ │
+    └───────────────────────────────────────────────────────────┘ │
+            │                                                      │
+            └──────────────────────────────────────────────────────┘
+                              Model improves over time
+```
 
 ---
 
-### Use Case: Design a Training Data Pipeline for Fine-Tuning
+### What Data We Collect (and Why)
 
-**Requirements:**
+| Data Type | What It Is | Why It Matters |
+| --------- | ---------- | -------------- |
+| **Prompts** | User queries, system instructions | Input side of training examples |
+| **Responses** | Model outputs | Output side of training examples |
+| **Context** | Retrieved documents (RAG) | Teaches model what good grounding looks like |
+| **Feedback** | 👍/👎, ratings, edits, regenerations | Signals quality—which responses were good/bad |
+| **Metadata** | Timestamp, user ID, session, latency | Filtering, deduplication, analysis |
 
-- Collect user interactions (prompts, responses, feedback)
-- Process 10M examples/day
-- Clean and prepare data for fine-tuning
-- Support continuous data collection
+**Key insight:** Feedback transforms raw logs into training signal. Without feedback, you just have (prompt, response) pairs with no quality label.
 
-**High-Level Design:**
+---
+
+### Pipeline Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                  TRAINING DATA PIPELINE                         │
-│                                                                 │
-│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
-│   │    User      │────►│    Event     │────►│    Data      │   │
-│   │ Interactions │     │  Collection  │     │  Processing  │   │
-│   │              │     │  Pub/Sub     │     │  Dataflow    │   │
-│   └──────────────┘     └──────────────┘     └──────┬───────┘   │
-│                                                     │           │
-│                        ┌────────────────────────────┤           │
-│                        │                            │           │
-│                        ▼                            ▼           │
-│                  ┌───────────┐              ┌───────────────┐   │
-│                  │ Data Lake │              │ Feature Store │   │
-│                  │   (GCS)   │              │               │   │
-│                  └─────┬─────┘              └───────────────┘   │
-│                        │                                        │
-│                        ▼                                        │
-│                  ┌───────────────────────────────────────────┐ │
-│                  │          Training Data Prep               │ │
-│                  │  Filter, dedupe, validate, format         │ │
-│                  │         for fine-tuning                   │ │
-│                  └───────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TRAINING DATA PIPELINE                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+
+  COLLECT              STREAM              PROCESS             STORE
+  ───────              ──────              ───────             ─────
+
+┌──────────┐      ┌──────────────┐     ┌──────────────┐    ┌──────────────┐
+│ App logs │─────►│ Event Stream │────►│   Stream     │───►│  Data Lake   │
+│ prompts, │      │  (Pub/Sub,   │     │  Processor   │    │ (GCS, S3)    │
+│ responses│      │   Kinesis)   │     │ (Dataflow,   │    └──────┬───────┘
+│ feedback │      └──────────────┘     │  Flink)      │           │
+└──────────┘                           └──────────────┘           │
+                                              │                   │
+                                              ▼                   ▼
+                                       ┌─────────────┐    ┌─────────────┐
+                                       │   CLEAN &   │    │  TRAINING   │
+                                       │   FILTER    │───►│   DATA      │
+                                       │ • Dedupe    │    │  (JSONL)    │
+                                       │ • PII scrub │    └─────────────┘
+                                       │ • Quality   │
+                                       └─────────────┘
 ```
+
+---
+
+### Each Stage Explained
+
+#### 1. Collection: What to Log
+
+```python
+# Example: What to log from each request
+log_event = {
+    "request_id": "uuid-123",
+    "timestamp": "2026-01-27T10:30:00Z",
+    "prompt": "How do I reset my password?",
+    "system_instruction": "You are a helpful support agent...",
+    "retrieved_contexts": ["doc1: Password reset steps...", "doc2: ..."],
+    "response": "To reset your password, go to Settings > Security...",
+    "model": "gemini-2.0-flash",
+    "latency_ms": 450,
+    "tokens_in": 150,
+    "tokens_out": 85,
+    # Feedback (added later by user action)
+    "feedback": {"thumbs": "up", "edited": False}
+}
+```
+
+#### 2. Streaming: Why Not Just Batch?
+
+| Approach | Latency | Use Case |
+| -------- | ------- | -------- |
+| **Streaming** (Pub/Sub, Kinesis) | Seconds | Real-time monitoring, fast iteration |
+| **Batch** (scheduled jobs) | Hours | Cost-sensitive, large historical analysis |
+| **Hybrid** | Both | Most production systems—stream for alerts, batch for training |
+
+#### 3. Processing: Transformations
+
+```
+Raw logs ──► Stream Processor ──► Clean data
+
+Transformations:
+├── Parse: Extract structured fields from logs
+├── Enrich: Add metadata (user segment, model version)
+├── Filter: Remove incomplete, test, or PII-containing records
+├── Dedupe: Remove exact duplicates (same prompt+response)
+└── Validate: Schema check, required fields present
+```
+
+#### 4. Storage: Data Lake vs Feature Store
+
+| Storage | What Goes Here | Access Pattern |
+| ------- | -------------- | -------------- |
+| **Data Lake** (GCS, S3) | Raw + processed logs, historical data | Batch jobs, training |
+| **Feature Store** | Precomputed features (embeddings, user stats) | Low-latency serving |
+| **Data Warehouse** (BigQuery) | Aggregated analytics | Dashboards, ad-hoc queries |
+
+---
+
+### Data Quality for Training
+
+**The problem:** Not all interactions make good training examples.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DATA QUALITY FILTERS                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Raw interactions (10M/day)
+        │
+        ▼
+┌───────────────┐
+│ Remove noise  │ ← Empty, truncated, system errors
+├───────────────┤
+│ Remove PII    │ ← Names, emails, SSNs (regex + NER)
+├───────────────┤
+│ Remove toxic  │ ← Offensive content, jailbreaks
+├───────────────┤
+│ Deduplicate   │ ← Exact + near-duplicates
+├───────────────┤
+│ Quality filter│ ← Only 👍 responses, or human-reviewed
+└───────────────┘
+        │
+        ▼
+Training-ready examples (100K-1M)
+```
+
+| Filter | Why | How |
+| ------ | --- | --- |
+| **PII scrubbing** | Privacy, compliance | Regex patterns + NER models |
+| **Toxicity filter** | Don't train on harmful content | Classifier (Perspective API, custom) |
+| **Deduplication** | Avoid overfitting to repeated examples | Hash-based or embedding similarity |
+| **Quality selection** | Only train on good examples | Feedback-based (👍 only) or human review |
+
+---
+
+### Training Data Formats
+
+Different training methods need different formats:
+
+#### Supervised Fine-Tuning (SFT)
+```json
+{"messages": [
+  {"role": "system", "content": "You are a helpful assistant."},
+  {"role": "user", "content": "How do I reset my password?"},
+  {"role": "assistant", "content": "Go to Settings > Security > Reset Password..."}
+]}
+```
+
+#### RLHF / Preference Data
+```json
+{
+  "prompt": "How do I reset my password?",
+  "chosen": "Go to Settings > Security > Reset Password...",
+  "rejected": "I don't know how to help with that."
+}
+```
+
+#### Few-Shot Examples
+```json
+{
+  "examples": [
+    {"input": "...", "output": "..."},
+    {"input": "...", "output": "..."}
+  ],
+  "test_input": "..."
+}
+```
+
+---
 
 ### Service Comparison
 
-| Component             | Google Cloud            | AWS                     |
-| --------------------- | ----------------------- | ----------------------- |
-| **Event Streaming**   | Pub/Sub                 | Kinesis Data Streams    |
-| **Stream Processing** | Dataflow                | Kinesis Analytics       |
-| **Data Lake**         | Cloud Storage           | S3                      |
-| **Data Warehouse**    | BigQuery                | Redshift                |
-| **Feature Store**     | Vertex AI Feature Store | SageMaker Feature Store |
-| **Training**          | Vertex AI Training      | SageMaker Training      |
-| **Orchestration**     | Vertex AI Pipelines     | SageMaker Pipelines     |
+| Component | Google Cloud | AWS |
+| --------- | ------------ | --- |
+| **Event Streaming** | Pub/Sub | Kinesis Data Streams |
+| **Stream Processing** | Dataflow | Kinesis Analytics, Flink |
+| **Data Lake** | Cloud Storage | S3 |
+| **Data Warehouse** | BigQuery | Redshift |
+| **Feature Store** | Vertex AI Feature Store | SageMaker Feature Store |
+| **Training** | Vertex AI Training | SageMaker Training |
+| **Orchestration** | Vertex AI Pipelines | SageMaker Pipelines |
+
+---
+
+### Key Metrics to Track
+
+| Metric | What It Tells You |
+| ------ | ----------------- |
+| **Volume** | Examples collected per day |
+| **Quality rate** | % with positive feedback |
+| **PII detection rate** | How much PII is being caught |
+| **Duplicate rate** | Data diversity |
+| **Pipeline latency** | Time from interaction to training-ready |
+
+> [!TIP]
+> **Key insight:** The training data pipeline is the feedback loop that makes your model improve over time. Collect everything, filter aggressively, and format for your training method (SFT, RLHF, few-shot). Quality > quantity—1M clean examples beats 10M noisy ones.
 
 ---
 
