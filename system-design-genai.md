@@ -7805,253 +7805,113 @@ Final Video: 5s at 720p, 24fps
 
 The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [Quick Reference: Interview Framework](#interview-framework-45-min-structure). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
 
-## G.1 Strategy and Planning (for integration and impact)
+## G.1 Strategy & Planning
 
-_Gen AI evolves quickly; no one stays an "expert" without adapting. This section summarizes how to plan for integration, measure impact, and stay ahead—useful for leadership discussions and certification._
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    GENAI INTEGRATION ROADMAP                              │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**Plan for generative AI integration:** (1) **Establish a clear vision** — align with business goals. (2) **Prioritize high-impact use cases** — start where value is measurable. (3) **Invest in capabilities** — tools, data, skills. (4) **Drive organizational change** — adoption, workflows. (5) **Measure and demonstrate value** — see below. (6) **Champion responsible AI** — safety, fairness, compliance (E.10).
+1. VISION          2. PRIORITIZE       3. BUILD            4. MEASURE
+───────────        ───────────         ─────────           ──────────
+Align with         Start where         Invest in           Track ROI,
+business           value is            tools, data,        cost, quality,
+goals              measurable          skills              customer impact
+```
 
-**Define key metrics:** Choose metrics that align with business objectives. Common targets: **ROI** (financial benefits of gen AI initiatives vs. costs), **revenue** (direct impact on sales/profits), **cost reduction**, **efficiency** (throughput, time-to-resolution), **customer experience**, **security**. If ROI matters, compare benefits to costs; if revenue matters, measure direct impact on sales and profits.
+**Key Metrics**: ROI, cost reduction, efficiency (throughput, time-to-resolution), customer experience, safety compliance
 
-**Plan for change:** Even when solutions work, be prepared to adapt. Technology and models change rapidly; customers and employees expect you to keep up. **Tips:** Regularly review and refine strategy based on latest advancements and org needs; stay informed (industry news, research, expert opinions); engage with the gen AI community (conferences, workshops, forums); invest in training and upskilling; attract and retain talent with a culture of learning and innovation.
-
-> [!TIP]
-> 💡 **Aha:** Successfully leading with gen AI means **continuous learning and adaptation**. Set a clear strategic vision, stay flexible, refine strategy with data-driven insights, and foster a culture of learning. This guide gives you the technical foundation; strategy and planning help you apply it at scale.
-
----
-
-## G.2 Quick Reference
-
-Use this section to **prove technical ability** and to **design GenAI systems that ship to customers at scale**—in interviews (system design + hypotheticals) and in practice (Scope → Design → Deploy → Communicate).
-
-### What FAANG Interviewers Evaluate
-
-| Dimension                   | What They Test                                             |
-| --------------------------- | ---------------------------------------------------------- |
-| **LLM Awareness**           | Token limits, context windows, model types, pricing models |
-| **Architectural Reasoning** | How retrieval, prompt logic, post-processing connect       |
-| **Cost-Latency Tradeoffs**  | Balancing inference cost, response latency, quality        |
-| **Safety & Governance**     | Reliable outputs, guardrails, compliance                   |
-| **Observability**           | Handling non-deterministic outputs, failure modes          |
-
-### Interview Framework (45-min structure)
-
-**1. Clarify Requirements (5-10 min)**
-
-- Token budget and latency targets
-- Quality requirements (hallucination tolerance)
-- Cost constraints (per-token, monthly budget)
-- Safety requirements (compliance, content filtering)
-
-**2. High-Level Architecture (10-15 min)**
-
-- Draw components: API gateway → orchestration → LLM → post-processing
-- Show data flow and identify APIs
-- Include: RAG, caching, model routing
-
-**3. Deep Dive (15-20 min)**
-
-- RAG design: chunking, embedding, retrieval, reranking
-- Model selection and routing strategy
-- Evaluation and observability approach
-- Security layers (guardrails, Model Armor)
-
-**4. Bottlenecks & Trade-offs (5-10 min)**
-
-- KV cache memory management
-- Quality vs cost (model size, routing)
-- Latency vs throughput (batching)
-- Single vs multi-agent complexity
-
-### Key Trade-offs to Articulate
-
-| Decision               | Option A                   | Option B                        |
-| ---------------------- | -------------------------- | ------------------------------- |
-| RAG vs Fine-tuning     | Fresh data, per-query cost | Behavioral change, upfront cost |
-| Large vs Small Model   | Higher quality             | Lower cost, faster              |
-| Dense vs Hybrid Search | Semantic matching          | + Keyword precision             |
-| Single vs Multi-Agent  | Simpler, faster            | More capable, modular           |
-| Sync vs Async Eval     | Immediate                  | Cost-effective                  |
-
-### Interview Talking Points by Stage
-
-Use these as prompts during each stage of a GenAI system design interview.
-
-**Clarifying Requirements:**
-- What is the business objective? (e.g., customer support, content creation, code assistance)
-- What are the system features that affect ML design? (e.g., multi-language, feedback loops)
-- What data is available? How large? Labeled or unlabeled?
-- What are the constraints? (cloud vs on-device, compute budget, compliance)
-- What is the expected scale? (users, requests/day, growth)
-- What are the latency and quality requirements? (real-time vs async, quality vs speed trade-off)
-
-**Framing as ML Task:**
-- What are the system's inputs and outputs? (text → text, text → image, etc.)
-- Which modalities? (text, image, audio, video)
-- Single model or multiple specialized models?
-- Which algorithm? (diffusion, autoregressive, VAE, GAN) — and why?
-
-**Data Preparation:**
-- Data sources and diversity?
-- Data sensitivity and anonymization needs?
-- Bias detection and mitigation?
-- Data quality filtering (noise, duplicates, inappropriate content)?
-- Preprocessing for model consumption (tokenization, embeddings)?
-
-**Model Development:**
-- Architecture options and trade-offs? (e.g., U-Net vs DiT for diffusion)
-- Training methodology? (pretraining → finetuning → alignment)
-- Training data for each stage?
-- Loss function(s) and ML objective?
-- Training challenges and mitigations? (stability, memory, compute)
-- Efficiency techniques? (gradient checkpointing, mixed precision, distributed training)
-- Sampling methods? (greedy, beam search, top-k, top-p) — pros/cons?
-
-**Evaluation:**
-- Offline metrics? (perplexity, BLEU, FID, RAGAS faithfulness, etc.)
-- Online metrics? (CTR, conversion, latency, engagement, retention)
-- Bias and fairness evaluation?
-- Robustness and adversarial testing?
-- Human evaluation methods? (A/B tests, expert reviews)
-
-**Overall System Design:**
-- What are all the system components? (model, preprocessing, filtering, postprocessing, upscaling)
-- Safety mechanisms? (NSFW filters, guardrails, Model Armor)
-- User feedback and continuous learning loops?
-- Scalability? (load balancing, distributed inference, model parallelism)
-- Security and privacy? (PII handling, adversarial defense, data leakage prevention)
-
-### Role Related Knowledge (RRK) interview — structure and prep
-
-_Some roles use a **Role Related Knowledge** round that mixes GenAI system design with hypotheticals and consultative skills. Use this as a checklist; confirm exact format with your recruiter._
-
-**Time split (example):**
-
-| Segment                      | Duration | Focus                                                                                                            |
-| ---------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------- |
-| **System design (GenAI)**    | ~30 min  | Design a system (RAG, agent, etc.) — use the [Interview Framework](#interview-framework-45-min-structure) above. |
-| **Hypothetical questions**   | ~15 min  | 4–6 scenario-based questions to assess technical ability + **consultative skills**.                              |
-| **Questions to interviewer** | ~15 min  | Your questions about Google, the team, ways of working, other perspectives.                                      |
-
-**Goal of hypotheticals:** Assess **technical ability** and **application development with LLM + consultative skills** — e.g. advising clients, defining scope, leading from conflict, setting strategy, problem troubleshooting, developing partnerships through engagement, looping in stakeholders.
-
-**Answer structure (STAR + future):** Use a structure similar to **STAR** — **S**cenario, **T**ask, **A**ction, **R**esult — and add **future thinking** (what you’d do next, how you’d iterate, risks to watch).
-
-**Adapt to audience:**
-
-- **Non-technical (CxOs):** High-level value, business impact, risk, timeline, cost. Avoid jargon; focus on outcomes and trade-offs in business terms.
-- **Product / technical:** Details are appropriate — e.g. **open-source LLMs** (pros: control, cost, customization; cons: ops, security, updates) vs managed (Vertex, Bedrock). RAG flow, serverless vs microservice, metrics.
-
-**Example hypothetical themes to prepare:**
-
-| Theme                                         | What to be ready for                                                                                                                                                             |
-| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Showcase GenAI to a customer**              | “How would you present a GenAI solution to a live customer in a professional manner?” Consider **timeline** and **budget** — you can ask the interviewer to clarify constraints. |
-| **Loop in stakeholders**                      | How you involve the right people (eng, product, security, legal) and keep them aligned.                                                                                          |
-| **Scope → Design → Deploy**                   | Define clear **business requirements**, **relevant metrics**, and **communicate to stakeholders**.                                                                               |
-| **POC to production**                         | Your approach: validate with POC (use case, success criteria), then production (reliability, scale, guardrails, observability).                                                  |
-| **Design the flow**                           | When to choose **RAG** vs other patterns; **serverless vs microservice** on a specific cloud (e.g. GCP).                                                                         |
-| **Lead a public partner on LLM on GCP/Cloud** | How you guide a partner or customer to adopt an LLM product using GCP or cloud offerings — governance, enablement, rollout.                                                      |
-
-### End-to-end solutioning (Scope → Design → Deploy → Communicate)
-
-Use this flow to answer hypotheticals in a structured way. It matches the recruiter themes: define business requirements and metrics, loop in stakeholders, design the flow (RAG, serverless vs microservice), POC→prod, and communicate to different audiences.
-
-| Phase              | What you do                                                                                                                                                                                                                                                                | Recruiter themes                                                              |
-| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 🔷 **Scope**       | Define **business requirements**, **success criteria**, **key metrics**. Identify **stakeholders** (eng, product, security, legal) and what they care about. Ask **clarifying questions**: already on GCP vs first-time migration vs hybrid? Timeline, budget, compliance? | Loop in stakeholders; define clear business requirements and relevant metrics |
-| 🔷 **Design**      | Choose **architecture** (RAG vs other, agent vs single call); **hosting** (serverless vs microservice on GCP/Cloud); data flow, APIs, guardrails. Tie to E.1–E.10 (this guide).                                                                                              | Design the flow (RAG); build on serverless vs microservice                    |
-| 🔷 **Deploy**      | **POC** first: validate use case, success criteria, one clear metric. Then **production**: reliability, scale, guardrails, observability. Call out timeline and budget trade-offs.                                                                                         | POC to prod                                                                   |
-| 🔷 **Communicate** | **CxO**: high-level value, risk, cost, timeline; no jargon. **Product/technical**: open-source vs managed LLMs, RAG flow, serverless vs microservice, metrics. **Present to live customer**: professional, confirm timeline/budget and constraints.                        | Explain for non-technical (CxO) vs Product; present solution to customer      |
+**Stay Ahead**: Models evolve fast. Review strategy quarterly, upskill teams, engage with community.
 
 ---
 
-**Example A: Customer wants GenAI for support (end-to-end)**
+## G.2 Interview Quick Reference
 
-📋 **Scenario:** A retail customer wants to add an AI chatbot for customer support. They’re considering GCP but haven’t committed.
+### What Interviewers Evaluate
 
-📌 **Task:** Show how you’d take them from idea to production and present the solution.
+| Dimension | What They Test |
+|-----------|----------------|
+| **LLM Awareness** | Token limits, context, pricing |
+| **Architecture** | How RAG, prompts, post-processing connect |
+| **Trade-offs** | Cost vs latency vs quality |
+| **Safety** | Guardrails, compliance |
+| **Observability** | Handling non-determinism |
 
-**Action (🔷 Scope → 🔷 Design → 🔷 Deploy → 🔷 Communicate):**
+### 45-Minute Framework
 
-- 🔷 **Scope:** I’d ask: Are you already on GCP or first-time migration or hybrid? What’s the timeline and budget? Who owns success — support team, product, eng? I’d define **business requirements**: deflect X% of tier-1 tickets, answer from knowledge base + order lookup, escalate to human when needed. **Metrics**: deflection rate, CSAT, resolution time, cost per conversation. I’d **loop in stakeholders**: eng (architecture), product (scope), security (PII, compliance), legal (terms), support (escalation flow).
-- 🔷 **Design:** I’d propose **RAG + agent** (knowledge base + order/ticket tools + escalate) on **GCP**: **Vertex AI** (Gemini) + **Vertex RAG Engine** or **Vertex AI Search** for the knowledge base; **Cloud Run** or **GKE** for the API — **serverless** (Cloud Run) if traffic is spiky and we want low ops, **microservices** (GKE) if we need more control and multiple services. Guardrails: **Model Armor**, input/output filters, PII handling. (Details: F.1 Example 2.)
-- 🔷 **Deploy:** **POC** (4–6 weeks): one channel (e.g. web), one knowledge domain, success = deflection rate and CSAT on a pilot. Then **production**: add channels, scale, observability (traces, evals), and runbooks. I’d call out **timeline** (e.g. POC 6 weeks, prod 3 months) and **budget** (LLM cost, infra, labor) so the customer can plan.
-- 🔷 **Communicate:** For **CxO**: “We’ll reduce tier-1 load by X%, improve CSAT, with clear cost and timeline; we’ll start with a POC to de-risk.” For **Product**: “RAG over your docs + tools for orders/tickets; we can go serverless on Cloud Run or microservices on GKE depending on scale.” For the **live customer**: present the flow (Scope → Design → Deploy), show a simple diagram, confirm timeline and budget, and ask what they’d want to see in a follow-up.
+```
+┌────────────────┐  ┌────────────────┐  ┌────────────────┐  ┌────────────────┐
+│ 1. REQUIREMENTS│  │ 2. ARCHITECTURE│  │ 3. DEEP DIVE   │  │ 4. TRADE-OFFS  │
+│    (5-10 min)  │  │   (10-15 min)  │  │   (15-20 min)  │  │   (5-10 min)   │
+├────────────────┤  ├────────────────┤  ├────────────────┤  ├────────────────┤
+│ • Token budget │  │ • Draw flow    │  │ • RAG strategy │  │ • Quality/cost │
+│ • Latency      │  │ • Components   │  │ • Model choice │  │ • Latency/     │
+│ • Quality bar  │  │ • Data flow    │  │ • Eval approach│  │   throughput   │
+│ • Cost budget  │  │ • APIs         │  │ • Security     │  │ • Build/buy    │
+│ • Safety needs │  │ • Caching      │  │                │  │                │
+└────────────────┘  └────────────────┘  └────────────────┘  └────────────────┘
+```
 
-🎯 **Result:** Clear requirements, metrics, and stakeholder alignment; a concrete design (RAG + agent, GCP, serverless vs microservice); a POC→prod path with timeline and budget; and messaging that fits CxO vs Product vs customer.
+### Key Trade-offs
 
-🔮 **Future thinking:** I’d plan for **Agent Assist** and **Conversational Insights** when they add live agents; revisit model choice and routing as traffic grows (E.7).
-
----
-
-**Example B: Public partner adopting LLM on GCP (end-to-end)**
-
-📋 **Scenario:** A public-sector or large partner wants to adopt an LLM-based product using GCP. You’re leading the engagement.
-
-📌 **Task:** Describe your approach from first contact to production and how you’d present it.
-
-**Action (🔷 Scope → 🔷 Design → 🔷 Deploy → 🔷 Communicate):**
-
-- 🔷 **Scope:** I’d ask **clarifying questions**: Are they already on GCP or first-time migration or hybrid? What’s the primary use case (internal knowledge search, citizen-facing Q&A, document processing)? Timeline, budget, and **compliance** (data residency, audit)? I’d define **business requirements** and **metrics** (e.g. time to answer, accuracy, cost per query). I’d **loop in stakeholders**: their IT (infra, security), business owners (use case), procurement (budget); our side: solutions, eng, legal. I’d align on **governance** and **responsible AI** (fairness, safety, explainability) early.
-- 🔷 **Design:** I’d recommend **GCP** (Vertex AI, RAG Engine or Vertex AI Search, optional **Gemini Enterprise** for internal knowledge workers). **Serverless** (Cloud Run + Vertex) for fast time-to-value and lower ops; **microservices** if they need strict isolation, custom pipelines, or multi-region. I’d include **guardrails** (Model Armor), **access control** (IAM, VPC), and **audit** (Cloud Audit Logs). For “design the flow”: RAG for domain data, agent only if they need tools (APIs, DBs).
-- 🔷 **Deploy:** **POC** (6–8 weeks): one use case, one data source, success = accuracy and user satisfaction. Then **production**: scale, SLAs, monitoring, and handover. I’d be explicit about **timeline** and **budget** (licenses, infra, services) and any dependency on their teams (data, access).
-- 🔷 **Communicate:** For **CxO**: “We’ll deliver a pilot in X weeks with clear success criteria; then we scale with your governance and compliance in mind.” For **technical**: “Vertex AI + RAG; serverless vs microservice trade-offs; we’ll document the architecture and runbooks.” For the **live customer**: present the end-to-end plan (Scope → Design → Deploy), one-page diagram, timeline and budget, and next steps; ask about their decision process and any blockers.
-
-🎯 **Result:** Partner has a clear path (scope, design, deploy) with stakeholder alignment, compliance in mind, and messaging for leadership vs technical; you’ve demonstrated consultative skills and structure.
-
-🔮 **Future thinking:** I’d plan for **feedback loops** (evals, user feedback) and **iteration** (model upgrades, new data sources); consider **Gemini Enterprise** or **NotebookLM Enterprise** if they need internal knowledge discovery later.
-
----
-
-> [!TIP]
-> 💡 **Aha:** End-to-end solutioning = **Scope** (requirements, metrics, stakeholders, clarifying questions) → **Design** (RAG/agent, serverless vs microservice, GCP/Cloud) → **Deploy** (POC then prod, timeline, budget) → **Communicate** (CxO vs Product vs live customer). Use Examples A and B as templates; swap in your own scenarios and tie to E.1–F.1.
-
-### How this addresses each question (tangible mapping)
-
-Below, each **recruiter question or theme** is mapped to **where** you answer it in this section and **what you can say** in a concrete way. Use this as a cheat sheet when practicing.
-
-| Question / theme                                                                                  | Where it's addressed                                                                                             | What you can say (tangible)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **"How would you showcase GenAI to a customer?"**                                                 | Example A, **Communicate** (live customer); Example B, **Communicate** (live customer)                           | "I'd present the flow Scope → Design → Deploy, show a one-page diagram, confirm **timeline** and **budget** explicitly, and ask what they'd want to see in a follow-up. I'd ask the interviewer to clarify timeline and budget constraints so I can tailor the proposal."                                                                                                                                                                                                                                                                                                                                                       |
-| **"How would you loop in stakeholders?"**                                                         | Example A, **Scope**; Example B, **Scope**                                                                       | "I'd identify **eng** (architecture), **product** (scope), **security** (PII, compliance), **legal** (terms), **support** (escalation). For a partner I'd add their IT, business owners, procurement and our solutions, eng, legal. I'd align on what each cares about **before** design so we don't surprise anyone."                                                                                                                                                                                                                                                                                                          |
-| **"Explain for non-technical (CxO) vs Product"**                                                  | Example A, **Communicate**; Example B, **Communicate**; **Adapt to audience** (above)                            | "**CxO:** 'We'll reduce tier-1 load by X%, improve CSAT, with clear cost and timeline; we'll start with a POC to de-risk.' **Product:** 'RAG over your docs plus tools for orders/tickets; we can go serverless on Cloud Run or microservices on GKE depending on scale and control.' I avoid jargon with CxO; I go into RAG, serverless vs microservice, and metrics with Product."                                                                                                                                                                                                                                            |
-| **"Open-source LLMs: pros/cons for Product vs high-level for CxO"**                               | **Adapt to audience** (above); Design in both examples                                                           | "**CxO:** high-level value, risk, cost, timeline—no mention of RAG or serverless unless they ask. **Product:** open-source LLMs—**pros:** control, cost, customization; **cons:** ops, security, model updates. I'd recommend **managed** (Vertex, Bedrock) for faster time-to-value and enterprise support unless they have a strong reason to self-host."                                                                                                                                                                                                                                                                     |
-| **"Scope, Design, Deploy; define business requirements, metrics, communicate to stakeholders"**   | End-to-end **table**; Example A and B, **all four phases**                                                       | "I follow **Scope → Design → Deploy → Communicate**. In **Scope** I define business requirements (e.g. deflect X% of tier-1 tickets, answer from knowledge base + order lookup, escalate when needed), **metrics** (deflection rate, CSAT, resolution time, cost per conversation), and **loop in stakeholders** and what they care about. In **Communicate** I tailor the message to CxO vs Product vs live customer."                                                                                                                                                                                                         |
-| **"How would you lead a public partner's use of LLM on GCP?"**                                    | **Example B**, full flow                                                                                         | "I'd ask **clarifying questions** first: already on GCP or first-time migration or hybrid? Primary use case? Timeline, budget, **compliance** (data residency, audit)? I'd **loop in** their IT, business owners, procurement and our solutions, eng, legal. I'd recommend **GCP** (Vertex AI, RAG Engine or Vertex AI Search, optional Gemini Enterprise), **serverless** for fast time-to-value or **microservices** for isolation. **POC** 6–8 weeks, one use case, then production. I'd **present** the plan with a one-page diagram, timeline, budget, and next steps, and ask about their decision process and blockers." |
-| **"What is your approach from POC to production?"**                                               | Example A, **Deploy**; Example B, **Deploy**                                                                     | "**POC first:** one use case, one channel or one data source, **4–8 weeks**, success = **one clear metric** (e.g. deflection rate, CSAT, or accuracy). Then **production:** add channels, scale, guardrails (Model Armor), observability (traces, evals), runbooks. I'd call out **timeline** (e.g. POC 6 weeks, prod 3 months) and **budget** (LLM cost, infra, labor) so the customer can plan."                                                                                                                                                                                                                              |
-| **"Design the flow (RAG) or build the application on serverless vs microservice"**                | Example A, **Design**; Example B, **Design**                                                                     | "**Flow:** I'd choose **RAG** when the model lacks domain knowledge or data changes often; **agent** when we need tools (orders, tickets, APIs). On GCP: Vertex AI + RAG Engine or Vertex AI Search. **Hosting:** **Serverless** (Cloud Run) for spiky traffic and low ops; **microservices** (GKE) when we need more control, multiple services, or strict isolation. I'd state the trade-off so the customer can decide."                                                                                                                                                                                                     |
-| **"Present your solution to a live customer in a professional manner; consider timeline/budget"** | Example A, **Communicate** (live customer); Example B, **Communicate** (live customer); **Clarifying questions** | "I'd present **Scope → Design → Deploy** in order, show a **simple diagram** (e.g. user → gateway → agent/RAG → LLM → response), **confirm timeline and budget** explicitly—and I'd **ask** the interviewer or customer to clarify constraints so the proposal is realistic. I'd ask what they'd want to see in a follow-up and what their decision process looks like."                                                                                                                                                                                                                                                        |
-| **"Structure like STAR + future thinking"**                                                       | **Example A and B** (Scenario, Task, Action, Result, Future thinking)                                            | "I use **Scenario** (who, what they want), **Task** (what I'm being asked to do), **Action** (Scope → Design → Deploy → Communicate with concrete bullets), **Result** (what we get: clear requirements, design, path, messaging), and **Future thinking** (e.g. Agent Assist when they add live agents, or feedback loops and Gemini Enterprise for internal knowledge). I keep each phase to a few sentences so I don't run over time."                                                                                                                                                                                       |
-| **"Ask clarifying questions: e.g. already on GCP or first-time migration or hybrid?"**            | **Scope** in both examples; **Clarifying questions** list (below)                                                | "I'd ask: **Already on GCP or first-time migration or hybrid?** What's the **timeline** and **budget**? Who are the **key stakeholders** and what do they care about? For partners I'd add: **primary use case**, **compliance** (data residency, audit). I'd ask this **before** proposing a design so the solution fits their context."                                                                                                                                                                                                                                                                                       |
-
-**Domain-specific skills (leading from conflict, strategy, troubleshooting, consultative, advise clients, develop partnerships):** These show up in **how** you do Scope and Communicate—e.g. "I'd align stakeholders early to avoid conflict later"; "I'd set a clear strategy: POC first, then prod with defined success criteria"; "If the customer is stuck, I'd troubleshoot by clarifying requirements and constraints first"; "I'd advise the client to start with one use case and one metric"; "I'd develop the partnership by involving their IT and business owners in scope and design so they own the outcome." Use the same Scope → Design → Deploy → Communicate flow and plug in these behaviors.
+| Decision | Option A | Option B |
+|----------|----------|----------|
+| RAG vs Fine-tuning | Fresh data, per-query cost | Behavioral change, upfront cost |
+| Large vs Small Model | Higher quality | Lower cost, faster |
+| Dense vs Hybrid Search | Semantic matching | + Keyword precision |
+| Serverless vs Microservice | Low ops, spiky traffic | More control, isolation |
 
 ---
 
-**Clarifying questions you can ask (hypotheticals):**
+## G.3 Hypothetical Questions (RRK)
 
-- Is the customer **already on GCP** or **first-time migration** or **hybrid**?
-- What are the main constraints — **timeline**, **budget**, **compliance**?
-- Who are the key stakeholders and what do they care about?
+**Format**: ~30 min system design + ~15 min hypotheticals + ~15 min your questions
 
-**Questions to ask the interviewer (your 15 min):**
+**Answer with STAR + Future**: Scenario → Task → Action → Result → What's next
 
-- About **Google**: team mission, how GenAI is used in the org, culture.
-- About **teamwork**: how teams collaborate, how decisions are made, how conflict is handled.
-- **Other perspectives**: “What do successful candidates do well in this round?” or “What would you want me to know about this role?”
+### Scope → Design → Deploy → Communicate
 
-> [!TIP]
-> 💡 **Aha:** RRK combines **system design** (this guide) with **hypotheticals** (STAR + future, audience-aware) and **consultative skills** (scope, stakeholders, POC→prod, present to customer). Prepare a few concrete stories where you defined requirements, designed or deployed something with LLMs, and communicated to different audiences.
+| Phase | What to Cover |
+|-------|---------------|
+| **Scope** | Requirements, metrics, stakeholders. Ask: "Already on GCP? Timeline? Budget? Compliance?" |
+| **Design** | RAG vs agent, serverless vs microservice, guardrails |
+| **Deploy** | POC (4-8 weeks, one metric) → Production (scale, observability) |
+| **Communicate** | CxO: value, cost, timeline. Technical: RAG flow, trade-offs |
+
+### Adapt to Audience
+
+| Audience | Style |
+|----------|-------|
+| **CxO** | "Reduce tier-1 load by X%, improve CSAT, clear cost and timeline" |
+| **Technical** | "RAG + Vertex AI, serverless on Cloud Run, RAGAS for eval" |
+| **Customer** | Show diagram, confirm budget/timeline, ask about decision process |
+
+### Common Themes to Prepare
+
+| Theme | Key Points |
+|-------|------------|
+| **Showcase to customer** | Scope → Design → Deploy flow, confirm constraints |
+| **Loop in stakeholders** | Eng, product, security, legal — align before design |
+| **POC to production** | One use case, one metric, then scale with guardrails |
+| **RAG vs alternatives** | RAG when data changes; fine-tune for behavior change |
+| **Serverless vs GKE** | Serverless for low ops; GKE for control/isolation |
 
 ---
 
-**What this guide gives you:** **Technical depth** (theory: serving, RAG, agents, evaluation, data pipeline, cost, scale, monitoring, security) so you can reason about trade-offs. **Practical implementation** (tools, stacks, rough estimations, F.1 examples) so you can point to real options (Vertex, Bedrock, LangChain, vLLM, RAGAS, etc.). **Shipping to customers at scale** (Scope → Design → Deploy → Communicate, POC→prod, stakeholder communication, end-to-end examples) so you can prove you can take a GenAI application from idea to production and present it clearly to technical and non-technical audiences. Always connect theory to implementation; that is how you demonstrate technical ability.
+## G.4 Worked Example
 
-_For foundational system design concepts, see [System Design Essentials](./system-design-essentials.md)._
+**Scenario**: Retail customer wants AI chatbot for support on GCP.
+
+| Phase | What You Say |
+|-------|--------------|
+| **Scope** | "What's timeline/budget? Who owns success? Requirements: deflect X% tickets, answer from KB + order lookup, escalate when needed. Metrics: deflection, CSAT, cost/conversation." |
+| **Design** | "RAG + agent on Vertex AI + RAG Engine. Cloud Run (serverless) for spiky traffic. Guardrails: Model Armor, PII filtering." |
+| **Deploy** | "POC: 6 weeks, one channel, measure deflection. Prod: add channels, scale, observability." |
+| **Communicate** | "CxO: reduce load X%, clear ROI. Technical: RAG flow, serverless trade-offs." |
+
+**Future**: Agent Assist when adding human agents, model routing as traffic grows.
 
 ---
-
 ## G.5 Resources
 
 ### Books
