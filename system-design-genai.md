@@ -7863,38 +7863,44 @@ goals              measurable          skills              customer impact
 
 ---
 
-## G.3 Hypothetical Questions (RRK)
+## G.3 Communicating to CxO vs Product/Eng
 
-**Format**: ~30 min system design + ~15 min hypotheticals + ~15 min your questions
+Same concept, different depth and language. Use these as templates.
 
-**Answer with STAR + Future**: Scenario → Task → Action → Result → What's next
+### Example 1: RAG for customer support
 
-### Scope → Design → Deploy → Communicate
+| Audience | How to say it |
+|----------|----------------|
+| **CxO** | "We'll connect the bot to your existing knowledge base so it answers from your docs and policies. Expect 20–30% fewer tier-1 tickets within six months, with a clear one-time build cost and predictable per-conversation cost. Timeline: POC in 8 weeks, production rollout in about 4 months." |
+| **Product/Eng** | "RAG: we chunk the KB, embed with Vertex text embedding, store in a vector DB. At query time we embed the question, retrieve top-k chunks, and pass them as context to the LLM. We'll evaluate with RAGAS (faithfulness, relevancy); add guardrails for PII and escalation triggers; and log citations for support." |
 
-| Phase | What to Cover |
-|-------|---------------|
-| **Scope** | Requirements, metrics, stakeholders. Ask: "Already on GCP? Timeline? Budget? Compliance?" |
-| **Design** | RAG vs agent, serverless vs microservice, guardrails |
-| **Deploy** | POC (4-8 weeks, one metric) → Production (scale, observability) |
-| **Communicate** | CxO: value, cost, timeline. Technical: RAG flow, trade-offs |
+### Example 2: Model choice (quality vs cost)
 
-### Adapt to Audience
+| Audience | How to say it |
+|----------|----------------|
+| **CxO** | "We'll use a larger model for complex or ambiguous questions and a smaller, faster one for straightforward ones. That keeps quality where it matters and cuts cost by roughly 40% compared to using the premium model for every request." |
+| **Product/Eng** | "Two-tier routing: a lightweight classifier or prompt-based router sends to Gemini 1.5 Pro for multi-turn or ambiguous intents, and to Gemini Flash for simple factual lookups. We'll tune the threshold with A/B tests on acceptance rate and cost per conversation." |
 
-| Audience | Style |
-|----------|-------|
-| **CxO** | "Reduce tier-1 load by X%, improve CSAT, clear cost and timeline" |
-| **Technical** | "RAG + Vertex AI, serverless on Cloud Run, RAGAS for eval" |
-| **Customer** | Show diagram, confirm budget/timeline, ask about decision process |
+### Example 3: POC to production
 
-### Common Themes to Prepare
+| Audience | How to say it |
+|----------|----------------|
+| **CxO** | "We'll run a 6–8 week POC with one channel and one success metric—for example, ticket deflection rate. If we hit the target, we move to production with a phased rollout, plus budget for guardrails, monitoring, and support." |
+| **Product/Eng** | "POC: single use case, RAG + one model, serverless (e.g. Cloud Run), one primary metric (e.g. deflection). Production: add eval pipeline (RAGAS + sampling for human review), rate limits, Model Armor, and observability (traces, cost per request, error rates)." |
 
-| Theme | Key Points |
-|-------|------------|
-| **Showcase to customer** | Scope → Design → Deploy flow, confirm constraints |
-| **Loop in stakeholders** | Eng, product, security, legal — align before design |
-| **POC to production** | One use case, one metric, then scale with guardrails |
-| **RAG vs alternatives** | RAG when data changes; fine-tune for behavior change |
-| **Serverless vs GKE** | Serverless for low ops; GKE for control/isolation |
+### Example 4: Latency and cost trade-off
+
+| Audience | How to say it |
+|----------|----------------|
+| **CxO** | "We're optimizing for both speed and cost: users get answers in under 3 seconds on average, while we use batching and smaller models where it's safe, so we stay within the agreed run-rate budget." |
+| **Product/Eng** | "We'll use continuous batching on the inference tier for throughput, and optional speculative decoding or a smaller first-token model to improve TTFT. We'll set a P95 latency SLO and a cost-per-1k-tokens budget and monitor both in the same dashboard." |
+
+### Example 5: Security and guardrails
+
+| Audience | How to say it |
+|----------|----------------|
+| **CxO** | "We're putting guardrails in so the system only uses approved data, blocks harmful or off-topic content, and doesn't expose customer PII. That keeps us compliant and reduces legal and reputational risk." |
+| **Product/Eng** | "Input and output filters (e.g. Model Armor), PII redaction in RAG context and logs, allowlisted tools for the agent. We'll log blocked requests, run periodic red-team prompts, and get security sign-off before go-live." |
 
 ---
 
