@@ -6137,7 +6137,44 @@ Rule-based checks that run in microseconds:
 
 ## F.1 Real-World Examples: Applying the Stack
 
-This section is where **theory meets shipping**: real stacks (LangChain, Vertex, Bedrock, vLLM), real numbers (tokens, cost, latency), and customer-ready scenarios. It comes **after** all core concepts (E.1–E.10) so every term is defined. Each example follows the same **45-minute Interview Framework** from the [Quick Reference](#interview-framework-45-min-structure)—Clarify Requirements → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs—so you can practice answering in a structured way. We spell out _why_ each requirement matters, add **back-of-the-envelope estimations** (tokens, cost, latency) so you can practice doing the math in an interview, and point to concrete stacks (**LangChain** / **LlamaIndex**, **Vertex AI** / **Bedrock**, vLLM, RAGAS, etc.). Use these as interview-style walkthroughs, not as bullet lists to memorize. For **end-to-end solutioning** (Scope → Design → Deploy → Communicate) with hypotheticals, stakeholder loop-in, and presenting to CxO vs Product vs live customer, see [Quick Reference: End-to-end solutioning](#end-to-end-solutioning-scope--design--deploy--communicate)—it uses F.1-style designs inside a full Scope/Design/Deploy/Communicate flow with worked examples.
+This section applies everything from E.1–E.10 to real scenarios. Each example follows the **45-minute interview structure**.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    INTERVIEW FRAMEWORK (45 min)                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│ 1. REQUIREMENTS  │  │ 2. ARCHITECTURE  │  │ 3. DEEP DIVE     │  │ 4. TRADE-OFFS    │
+│    (5-10 min)    │  │    (10-15 min)   │  │    (15-20 min)   │  │    (5-10 min)    │
+├──────────────────┤  ├──────────────────┤  ├──────────────────┤  ├──────────────────┤
+│ • Token budget   │  │ • Flow diagram   │  │ • RAG strategy   │  │ • Quality vs cost│
+│ • Latency target │  │ • Components     │  │ • Model choice   │  │ • Latency vs     │
+│ • Quality metrics│  │ • APIs           │  │ • Eval approach  │  │   throughput     │
+│ • Cost budget    │  │ • Data flow      │  │ • Security       │  │ • Build vs buy   │
+│ • Safety needs   │  │                  │  │                  │  │                  │
+└──────────────────┘  └──────────────────┘  └──────────────────┘  └──────────────────┘
+
+                    + Back-of-envelope estimation at each stage
+```
+
+---
+
+### Example Categories
+
+| # | Example | Type | Key Challenges | Core Concepts |
+| - | ------- | ---- | -------------- | ------------- |
+| 1 | **Code Generation** | Real-time completion | Ultra-low latency, accuracy | RAG, routing, caching |
+| 2 | **Customer Support** | Agent + RAG + Tools | Multi-turn, tool calls | ReAct, guardrails |
+| 3 | **Content Platform** | Async pipeline | Grounding, citations | Sequential chain |
+| 4 | **Email Autocomplete** | On-device ML | <100ms latency, bias | Beam search, filtering |
+| 5 | **Translation** | Encoder-decoder | Multi-language, entities | Cross-attention |
+| 6 | **Personal Assistant** | General chat | Safety, RLHF | 3-stage training |
+| 7 | **Image Captioning** | Vision-language | Multimodal | CNN + RNN/Transformer |
+| 8 | **Document Q&A** | RAG-heavy | Long docs, chunking | Hybrid retrieval |
+| 9 | **Face Generation** | GAN | Realism, diversity | StyleGAN, latent space |
+| 10 | **Text-to-Image** | Diffusion | Prompt adherence | LDM, CLIP |
+| 11 | **Text-to-Video** | Temporal diffusion | Consistency, cost | 3D attention |
 
 ---
 
@@ -6163,10 +6200,52 @@ _In an interview you’d start by clarifying what “good” looks like: how fas
 
 **2. High-Level Architecture (10–15 min)**
 
-- **Flow:** IDE → API gateway (auth, rate limit) → orchestration (RAG: embed + retrieve code context) → LLM (completion) → post-process (format, length cap) → response.
-- **Components:** API gateway (e.g. Cloud Run); orchestration = **LangChain** or **LlamaIndex**; RAG = vector store (Chroma, Pinecone) + embeddings; LLM = **Vertex AI Codey** / **Bedrock** CodeWhisperer or **vLLM** (CodeLlama, StarCoder).
-- **APIs:** POST /complete (prefix, cursor, options); optional indexing API for workspace sync.
-- **Include:** RAG for context, caching (same prefix → reuse or KV cache), model routing (simple vs complex → small vs larger model).
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    CODE ASSISTANT ARCHITECTURE                            │
+└───────────────────────────────────────────────────────────────────────────┘
+
+IDE (VSCode, JetBrains)
+    │
+    │ POST /complete {prefix, cursor_pos, file_context}
+    ▼
+┌─────────────────┐
+│   API Gateway   │ ← Auth, rate limit, logging
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐      ┌─────────────────┐
+│   Orchestrator  │─────►│  Vector Store   │ (Chroma, Pinecone)
+│ (LangChain)     │◄─────│  Code embeddings│
+└────────┬────────┘      └─────────────────┘
+         │
+         │ Complexity classifier
+         ▼
+    ┌────┴────┐
+    │         │
+    ▼         ▼
+┌───────┐ ┌───────┐
+│ Small │ │ Large │  Model routing (E.7)
+│ Model │ │ Model │
+└───┬───┘ └───┬───┘
+    │         │
+    └────┬────┘
+         │
+         ▼
+┌─────────────────┐
+│ Post-processing │ ← Format, length cap, secret filter
+└────────┬────────┘
+         │
+         ▼
+    Completion
+```
+
+**Components:**
+- **Gateway:** Cloud Run, API Gateway
+- **Orchestrator:** LangChain / LlamaIndex
+- **RAG:** Vector store + code embeddings
+- **LLM:** Vertex Codey, Bedrock CodeWhisperer, or vLLM (CodeLlama, StarCoder)
+- **Routing:** Small model for simple, large for complex (E.7)
 
 **3. Deep Dive (15–20 min)**
 
@@ -6208,10 +6287,53 @@ _Here the user expects an answer that’s grounded in your docs and in real data
 
 **2. High-Level Architecture (10–15 min)**
 
-- **Flow:** User → API gateway → orchestration (agent) → [RAG retriever + tools (order, ticket, escalate)] → LLM → post-process (format, guardrails) → response.
-- **Components:** API gateway; orchestration = **LangChain** `create_react_agent` or **LlamaIndex** `ReActAgent`; RAG = **Vertex RAG Engine** or **Bedrock Knowledge Bases** (or LangChain + Chroma/Pinecone); LLM = **Vertex AI** (Gemini) or **Bedrock** (Claude, Llama); tools = MCP or custom APIs (orders, CRM, escalation).
-- **Data flow:** Query → agent picks tool vs RAG vs direct answer → RAG returns top-k chunks; tools return structured data → LLM synthesizes; optional rerank before injection.
-- **Include:** RAG (knowledge base), caching (response or semantic cache for frequent Qs), model routing (simple FAQ vs multi-tool).
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    CUSTOMER SUPPORT AGENT ARCHITECTURE                    │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Customer Query: "Where is my order #12345?"
+        │
+        ▼
+┌───────────────┐
+│  API Gateway  │ ← Auth, session management
+└───────┬───────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         AGENT (ReAct Loop)                                │
+│                                                                           │
+│  Thought: "Need order status" ──► Action: order_lookup(12345)            │
+│                                          │                                │
+│                    ┌─────────────────────┼─────────────────────┐         │
+│                    │                     │                     │         │
+│                    ▼                     ▼                     ▼         │
+│              ┌──────────┐         ┌──────────┐         ┌──────────┐     │
+│              │   RAG    │         │  Order   │         │ Escalate │     │
+│              │Knowledge │         │  System  │         │ to Human │     │
+│              │   Base   │         │   API    │         │          │     │
+│              └──────────┘         └──────────┘         └──────────┘     │
+│                                          │                                │
+│  Observation: "Shipped, arrives tomorrow" ◄──────────────────────────────│
+│                                                                           │
+│  Thought: "Can answer now" ──► Final Answer                              │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────┐
+│  Guardrails   │ ← PII filter, compliance check
+└───────┬───────┘
+        │
+        ▼
+"Your order #12345 shipped and arrives tomorrow!"
+```
+
+**Components:**
+- **Agent:** LangChain ReAct or LlamaIndex ReActAgent
+- **RAG:** Vertex RAG Engine / Bedrock Knowledge Bases
+- **Tools:** Order API, CRM, Ticketing, Escalation
+- **LLM:** Gemini, Claude
+- **Guardrails:** Model Armor / Bedrock Guardrails
 
 **3. Deep Dive (15–20 min)**
 
