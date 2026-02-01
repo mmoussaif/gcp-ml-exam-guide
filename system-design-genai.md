@@ -5127,122 +5127,236 @@ Different training methods need different formats:
 
 ---
 
+---
+
 ## E.7 Cost Optimization for GenAI Systems
 
-**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we keep inference affordable**. E.1–E.6 gave you the request path (serving, RAG, agents), evaluation, and training data; **cost** and **scale** determine how you run it affordably and at customer load. Cost scales with tokens (input + output) and model tier, so optimization is about **reducing spend per request**—shorter prompts, caching, model routing, quantization, and when relevant fine-tuning ROI. _Throughput_ and _capacity_ are in E.8 Scalability; here we focus on _cost per request_.
+**Why this matters:** GenAI cost scales with **tokens**, not just requests. A 10× longer prompt = ~10× cost.
 
-**T-shaped summary:** Cost = f(tokens, model). Levers: prompt optimization, response/prompt caching, routing easy queries to smaller models, quantization, and continuous batching (better GPU use → same throughput with fewer machines). Deep dive below.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    WHERE GENAI COST COMES FROM                            │
+└───────────────────────────────────────────────────────────────────────────┘
+
+                    ┌─────────────────────────────────────┐
+                    │            YOUR COST                │
+                    │                                     │
+                    │   Cost = (Input Tokens × Rate)      │
+                    │        + (Output Tokens × Rate)     │
+                    │        × Model Tier Multiplier      │
+                    │                                     │
+                    └─────────────────────────────────────┘
+                                    │
+            ┌───────────────────────┼───────────────────────┐
+            │                       │                       │
+            ▼                       ▼                       ▼
+     ┌─────────────┐         ┌─────────────┐         ┌─────────────┐
+     │INPUT TOKENS │         │OUTPUT TOKENS│         │ MODEL TIER  │
+     │             │         │             │         │             │
+     │ • Prompt    │         │ • Response  │         │ Flash: $    │
+     │ • Context   │         │ • Typically │         │ Pro:   $$   │
+     │ • Examples  │         │   2-4× more │         │ Ultra: $$$$ │
+     │ • RAG docs  │         │   expensive │         │             │
+     └─────────────┘         └─────────────┘         └─────────────┘
+```
 
 ---
 
-### Token-Based Cost Model
-
-**Cost Components:**
-
-- **Input tokens**: Tokens in prompt (including context)
-- **Output tokens**: Generated tokens (typically 2-4x more expensive)
-- **Model tier**: Different models have different costs
-
-> [!TIP]
-> 💡 **Aha:** GenAI cost scales with **length**, not just request count. A 10× longer prompt or answer can mean ~10× cost per call. So trimming context, caching prefixes, and routing easy queries to smaller models all directly lower spend.
-
-**Example Calculation:**
+### Cost Calculation Example
 
 ```
-Model: Gemini Pro
-Input: $0.000125 per 1K tokens
-Output: $0.0005 per 1K tokens
+Model: Gemini 1.5 Pro
+Input:  $0.00125 per 1K tokens (up to 128K context)
+Output: $0.005 per 1K tokens
 
 Request:
-- Input: 1,000 tokens
-- Output: 500 tokens
+├─ System prompt:     200 tokens
+├─ RAG context:       800 tokens
+├─ User query:         50 tokens
+├─ Total input:     1,050 tokens
+└─ Output:            300 tokens
 
-Cost = (1,000 / 1,000) × $0.000125 + (500 / 1,000) × $0.0005
-     = $0.000125 + $0.00025
-     = $0.000375 per request
+Cost = (1,050 / 1,000) × $0.00125 + (300 / 1,000) × $0.005
+     = $0.0013 + $0.0015
+     = $0.0028 per request
 
-At 1M requests/day: $375/day = $11,250/month
+At 1M requests/day: $2,800/day = $84,000/month
 ```
 
-### Optimization Strategies
+**Note:** Prices vary by model and change frequently. Check current pricing at cloud provider docs.
 
-**1. Prompt Optimization**
+---
 
-| Technique          | Savings               | Trade-off                   |
-| ------------------ | --------------------- | --------------------------- |
-| Shorter prompts    | 20-40% input tokens   | May lose context            |
-| Fewer examples     | 50-200 tokens/example | May reduce quality          |
-| Prompt compression | Variable              | Compression cost vs savings |
-
-**Few-shot sweet spot**: 2-3 examples usually sufficient. Research shows diminishing returns after 3 examples—the model has learned the pattern.
-
-**2. Caching Strategy**
-
-| Strategy         | Hit Rate          | Savings       | Best For       |
-| ---------------- | ----------------- | ------------- | -------------- |
-| Prompt caching   | High for prefixes | 2-5x speedup  | System prompts |
-| Response caching | 10-30%            | 100% for hits | FAQ systems    |
-| Semantic caching | 30-50%            | Varies        | Q&A systems    |
-
-**3. Model Selection (Tiered Strategy)**
-
-| Model                            | Cost                 | Quality | Use For               |
-| -------------------------------- | -------------------- | ------- | --------------------- |
-| **Large (GPT-4, Gemini Ultra)**  | $0.03-0.06/1K output | Best    | Complex reasoning     |
-| **Medium (GPT-3.5, Gemini Pro)** | ≈$0.002/1K output    | Good    | Most production tasks |
-| **Small (Gemini Flash)**         | ≈$0.001/1K output    | Basic   | Simple, high-volume   |
-
-**Model Routing Strategies:**
-
-| Strategy            | How It Works                                       | Savings           |
-| ------------------- | -------------------------------------------------- | ----------------- |
-| **Routing**         | Classify query → send to single optimal model      | 40-60%            |
-| **Cascading**       | Start small → escalate to larger if low confidence | 50-80%            |
-| **Cascade Routing** | Combines both: route + escalation                  | Best cost/quality |
+### Optimization Levers
 
 ```
-Query → Classifier → Simple? → Small Model → Done
-                         │
-                         └──► Complex? → Large Model → Done
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    6 COST OPTIMIZATION LEVERS                             │
+└───────────────────────────────────────────────────────────────────────────┘
 
-OR (Cascading):
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ 1. PROMPT    │  │ 2. CACHING   │  │ 3. MODEL     │
+│ OPTIMIZATION │  │              │  │ ROUTING      │
+├──────────────┤  ├──────────────┤  ├──────────────┤
+│ Fewer tokens │  │ Reuse work   │  │ Right model  │
+│ in prompt    │  │ across calls │  │ for query    │
+│ Savings: 20-40% │ Savings: 50-90%│ Savings: 40-80%│
+└──────────────┘  └──────────────┘  └──────────────┘
 
-Query → Small Model → Confident? → Return
-              │
-              └──► Low confidence → Large Model → Return
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+│ 4. FINE-     │  │ 5. QUANTI-   │  │ 6. CONTINUOUS│
+│ TUNING       │  │ ZATION       │  │ BATCHING     │
+├──────────────┤  ├──────────────┤  ├──────────────┤
+│ Smaller model│  │ Lower preci- │  │ Better GPU   │
+│ same quality │  │ sion weights │  │ utilization  │
+│ ROI varies   │  │ Savings: 2-4×│  │ Savings: 2-3×│
+└──────────────┘  └──────────────┘  └──────────────┘
 ```
 
-**Quality Estimation**: The key to routing—use a small classifier or confidence scores to predict which model can handle the query.
+---
+
+### 1. Prompt Optimization
+
+| Technique | How It Works | Savings | Trade-off |
+| --------- | ------------ | ------- | --------- |
+| **Shorter prompts** | Remove verbose instructions | 20-40% | May lose clarity |
+| **Fewer examples** | 2-3 few-shot instead of 5+ | 50-200 tokens each | May reduce quality |
+| **Compress RAG context** | Summarize before injecting | Variable | Extra LLM call |
+
+**Few-shot sweet spot:** Research shows diminishing returns after 3 examples—the model has learned the pattern.
+
+---
+
+### 2. Caching Strategy
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    THREE CACHING STRATEGIES                               │
+└───────────────────────────────────────────────────────────────────────────┘
+
+RESPONSE CACHE                 PROMPT/KV CACHE              SEMANTIC CACHE
+──────────────                 ───────────────              ──────────────
+
+"What is X?" ─┐                System prompt ──┐            "What is X?"
+              │                RAG context   ──┼──► Cached   Query embed ──┐
+"What is X?" ─┴──► Same resp   User query    ──┘   KV state              │
+                                                             "Tell me X" ─┴─► Same
+Exact match only              Shared prefix reuse           Similar queries
+Hit rate: 10-30%              Hit rate: high for prefixes   Hit rate: 30-50%
+```
+
+| Cache Type | What It Caches | Best For | Savings |
+| ---------- | -------------- | -------- | ------- |
+| **Response cache** | Full (query → response) | FAQs, repeated queries | 100% for hits |
+| **Prompt/KV cache** | KV states for shared prefixes | System prompts, RAG | 2-5× speedup |
+| **Semantic cache** | Embeddings of similar queries | Q&A with variations | Varies |
+
+**Context caching** (Google/Anthropic): Pay once to cache a long prefix (system prompt + docs), then pay reduced rate for queries using that prefix. Break-even at ~5-10 queries using the same cached context.
+
+---
+
+### 3. Model Routing
+
+**The idea:** Not all queries need the best model. Route simple queries to cheap models.
+
+```
+        Query
+          │
+          ▼
+    ┌───────────┐
+    │ Classifier│ (tiny model or rules)
+    └─────┬─────┘
+          │
+    ┌─────┴─────┐
+    │           │
+    ▼           ▼
+ Simple      Complex
+    │           │
+    ▼           ▼
+┌───────┐   ┌───────┐
+│ Flash │   │  Pro  │
+│ $0.001│   │ $0.01 │
+└───────┘   └───────┘
+```
+
+| Strategy | How It Works | Savings | Risk |
+| -------- | ------------ | ------- | ---- |
+| **Routing** | Classify → send to one model | 40-60% | Misclassification |
+| **Cascading** | Try small → escalate if low confidence | 50-80% | Latency for hard queries |
+| **Hybrid** | Route + cascade | Best | Complexity |
+
+**Key insight:** The classifier must be cheap and accurate. Query length, intent detection, or a tiny fine-tuned model work well.
+
+---
+
+### 4. Fine-Tuning ROI
+
+Fine-tuning has upfront cost but can reduce per-request cost:
+
+| Factor | Impact |
+| ------ | ------ |
+| **Upfront cost** | $100-$10,000+ (compute + data prep) |
+| **Per-request savings** | Can use smaller base model for same quality |
+| **Break-even** | If saves $0.001/request, need 1M requests to recoup $1,000 |
+
+**When worth it:** High-volume, domain-specific tasks where a fine-tuned small model matches a large generic model.
+
+---
+
+### 5. Quantization
+
+Reduces model size by lowering numerical precision of weights.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    QUANTIZATION LEVELS                                    │
+└───────────────────────────────────────────────────────────────────────────┘
+
+FP32 (32-bit)     FP16 (16-bit)     INT8 (8-bit)      INT4 (4-bit)
+─────────────     ─────────────     ────────────      ────────────
+Full precision    Half precision    Integer only      Aggressive
+
+████████████  →   ████████      →   ████          →   ██
+  Baseline          2× smaller       4× smaller        8× smaller
+  Quality: 100%     Quality: ~99%    Quality: ~95%     Quality: ~85%
+```
+
+| Transition | Memory Reduction | Quality Loss | When to Use |
+| ---------- | ---------------- | ------------ | ----------- |
+| FP32 → FP16 | 2× | Minimal (<1%) | Almost always—hardware optimized for it |
+| FP16 → INT8 | 2× more | Some (2-5%) | When memory-constrained |
+| INT8 → INT4 | 2× more | Significant (5-15%) | Edge devices, extreme cost pressure |
+
+**Why FP16 is standard:** Modern GPUs have Tensor Cores optimized for FP16. Quality loss is negligible but you get 2× memory savings and faster inference.
+
+---
+
+### 6. Continuous Batching
+
+| Batching Type | GPU Utilization | Why |
+| ------------- | --------------- | --- |
+| **Static** | 40-60% | Wait for batch to fill, waste cycles |
+| **Continuous** | 80-95% | New requests join mid-batch |
+
+**Result:** 2-3× higher throughput → fewer GPUs for same load.
+
+*Throughput patterns (model parallelism, pipeline parallelism) covered in E.8 Scalability.*
+
+---
+
+### Quick Reference: Cost Optimization Checklist
+
+| Lever | Effort | Impact | Do First? |
+| ----- | ------ | ------ | --------- |
+| Prompt optimization | Low | 20-40% | ✅ Yes |
+| Response caching | Low | High for FAQs | ✅ Yes |
+| Model routing | Medium | 40-80% | If high volume |
+| Context caching | Low | Variable | If shared prefixes |
+| FP16 quantization | Low | 2× | Usually default |
+| Fine-tuning | High | Varies | If domain-specific |
 
 > [!TIP]
-> 💡 **Aha:** Routing and cascading both assume "hard" and "easy" queries. If you can **predict** hardness (e.g. by query length, intent, or a tiny classifier), you send easy ones to small/cheap models and reserve the big model for the rest. The leverage comes from that prediction being cheap and reasonably accurate.
-
-**4. Fine-tuning ROI**
-
-- **Upfront cost**: $100-1000s
-- **Break-even**: If fine-tuning costs $1000 and saves $0.001 per request, break-even at 1M requests
-- **Benefits**: Better quality for domain, can use smaller base model
-
-**5. Quantization**
-
-Reducing numerical precision shrinks model size and speeds inference. **FP32** (32-bit float), **FP16** (16-bit), **INT8** (8-bit integer), **INT4** (4-bit) are common levels.
-
-| Precision   | Memory Reduction | Quality Loss |
-| ----------- | ---------------- | ------------ |
-| FP32 → FP16 | 2x               | Minimal      |
-| FP16 → INT8 | 4x               | Some         |
-| INT8 → INT4 | 8x               | Significant  |
-
-**Why FP16 is safe**: Modern **GPUs** (graphics processing units) have Tensor Cores optimized for FP16. Quality loss is minimal (<1%) but memory/cost savings are significant.
-
-> [!TIP]
-> 💡 **Aha:** Weights don’t need 32-bit precision for good answers; most signal lives in a smaller range. Quantization **compresses** that range (FP32→FP16→INT8→INT4). You trade a little quality for large memory and speed gains. FP16 is the first step almost everyone takes because hardware is built for it and the drop is tiny.
-
-**6. Continuous Batching**
-
-- Static batching: 40–60% GPU utilization
-- Continuous batching: 80–95% GPU utilization
-- **Result**: 2–3× higher throughput → fewer machines for the same load (cost and scale). Throughput/parallelism patterns (model parallelism, pipeline parallelism) are in E.8.
+> **Start here:** (1) Trim prompts, (2) Cache responses for common queries, (3) Route simple queries to cheaper models. These three get you 50-80% savings before you touch infrastructure.
 
 ---
 
