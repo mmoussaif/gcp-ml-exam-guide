@@ -7954,13 +7954,6 @@ goals              measurable          skills              customer impact
 - [Bedrock Agents](https://docs.aws.amazon.com/bedrock/latest/userguide/agents.html)
 - [Bedrock Guardrails](https://docs.aws.amazon.com/bedrock/latest/userguide/guardrails.html)
 
-### Practice
-
-- Build real GenAI applications
-- Experiment with different model sizes and costs
-- Practice with RAG systems and agents
-- **Google Cloud Generative AI Leader certification:** [cloud.google.com/learn/certification/generative-ai-leader](https://cloud.google.com/learn/certification/generative-ai-leader) — proctored exam, ~90 min; use study guides and course lessons to prepare
-
 ---
 
 _Last updated: January 2026_
