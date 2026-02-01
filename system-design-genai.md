@@ -45,7 +45,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 | D.1 | [Using Models & Sampling](#d1-using-models--sampling-parameters) | Temperature, top-p, top-k, when to use each | ☐ |
 | D.2 | [Google GenAI Tools](#d2-google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start | ☐ |
 | D.3 | [Text Tokenization](#d3-text-tokenization-strategies) | BPE, SentencePiece, WordPiece | ☐ |
-| D.4 | [Transformer Architectures](#d4-transformer-architectures) | Attention, encoder-decoder, decoder-only | ☐ |
+| D.4 | [Transformer Architectures](#d4-transformer-architectures) | Attention, encoder-decoder, decoder-only, MoE | ☐ |
 | D.5 | [ML Objectives for Pretraining](#d5-ml-objectives-for-pretraining) | Next-token prediction, masked LM | ☐ |
 | D.6 | [Two-Stage Training](#d6-two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline | ☐ |
 | D.7 | [Three-Stage Training (Chatbots)](#d7-three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF | ☐ |
@@ -1971,6 +1971,93 @@ Decoder: Previous Output → Self-Attention → Cross-Attention (to encoder) →
 
 > [!TIP]
 > 💡 **Aha:** Cross-attention is the "bridge" between encoder and decoder. It lets the decoder ask "which parts of the input should I focus on for this output token?" For translation, generating "bonjour" attends heavily to "hello" in the encoder output.
+
+### Mixture of Experts (MoE) Architecture
+
+MoE is a **sparse architecture** that allows models to have many more parameters without proportionally increasing compute cost. Instead of using all parameters for every token, MoE routes each token to a subset of "expert" sub-networks.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DENSE vs SPARSE (MoE) ARCHITECTURE                     │
+└───────────────────────────────────────────────────────────────────────────┘
+
+DENSE MODEL (e.g., LLaMA 70B)              MoE MODEL (e.g., Mixtral 8x7B)
+─────────────────────────────              ─────────────────────────────────
+
+Input Token                                 Input Token
+     │                                           │
+     ▼                                           ▼
+┌─────────────┐                            ┌─────────────┐
+│ Attention   │                            │ Attention   │  (same for both)
+└──────┬──────┘                            └──────┬──────┘
+       │                                          │
+       ▼                                          ▼
+┌─────────────┐                            ┌─────────────┐
+│    FFN      │ ← ALL params               │   Router    │ ← small network
+│  (single)   │   used                     │  (gating)   │   picks experts
+└──────┬──────┘                            └──────┬──────┘
+       │                                          │
+       ▼                                    ┌─────┼─────┐
+    Output                                  ▼     ▼     ▼
+                                        ┌─────┐┌─────┐┌─────┐
+                                        │ E1  ││ E2  ││ ... │ 8 Expert FFNs
+                                        └──┬──┘└──┬──┘└─────┘
+                                           │     │
+                                           ▼     ▼
+                                     Only top-2 activated
+                                     (others skipped)
+                                           │
+                                           ▼
+                                    Weighted sum → Output
+```
+
+**How MoE Works:**
+
+1. **Router/Gating Network**: A small learned network that takes the token embedding and outputs a probability distribution over all experts
+2. **Top-K Selection**: Only the top-K experts (typically K=2) are activated for each token
+3. **Weighted Combination**: Outputs from selected experts are combined using router probabilities as weights
+
+**Key Insight**: A model with 8 experts of 7B parameters each has ~56B total parameters, but only ~14B (2 experts) are used per token. This gives the **capacity** of a large model with the **inference cost** of a smaller one.
+
+| Aspect | Dense Model | MoE Model |
+| ------ | ----------- | --------- |
+| **Total Parameters** | All used per token | Many more (8-16× experts) |
+| **Active Parameters** | = Total | Top-K experts only |
+| **Inference FLOPs** | Proportional to total params | Proportional to active params |
+| **Memory** | Load full model | Load full model (all experts) |
+| **Throughput** | Predictable | Higher (less compute per token) |
+| **Training** | Simpler | Needs load balancing loss |
+
+**MoE Trade-offs:**
+
+| Advantage | Disadvantage |
+| --------- | ------------ |
+| Higher capacity at same compute cost | Full model still needs to fit in memory |
+| Better scaling properties | Router training can be unstable |
+| Specialized experts for different tasks | Load imbalance (some experts overused) |
+| Faster inference than equivalent dense | Harder to fine-tune (expert selection changes) |
+
+**Load Balancing**: Without regularization, the router may send all tokens to the same expert (mode collapse). Solutions:
+- **Auxiliary loss**: Add a loss term encouraging uniform expert usage
+- **Capacity factor**: Limit how many tokens each expert can process per batch
+
+**Notable MoE Models:**
+
+| Model | Config | Total Params | Active Params | Notes |
+| ----- | ------ | ------------ | ------------- | ----- |
+| **Mixtral 8x7B** | 8 experts, top-2 | ~47B | ~13B | Open-source; matches LLaMA 70B quality |
+| **Mixtral 8x22B** | 8 experts, top-2 | ~141B | ~39B | Larger variant |
+| **GPT-4** (rumored) | 8 experts | ~1.7T | ~220B | Not confirmed by OpenAI |
+| **Gemini 1.5** | MoE-based | Undisclosed | Undisclosed | Enables 1M+ context |
+| **DeepSeek-V2** | 160 experts, top-6 | 236B | ~21B | Efficient; strong performance |
+
+> [!TIP]
+> 💡 **Aha:** MoE is how you get GPT-4-level capability at Mixtral-level cost. The trick: train a huge model (many experts), but only run a small fraction per token. Memory is the catch—you still need to load all experts, even if you only use 2.
+
+**When to Choose MoE:**
+- **Use MoE** when you need higher capability without proportional latency increase
+- **Use Dense** when memory is constrained (edge deployment) or you need simpler fine-tuning
+- **Serving consideration**: MoE models benefit from large batches (better expert utilization)
 
 ---
 
