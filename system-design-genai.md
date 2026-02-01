@@ -5360,75 +5360,261 @@ Full precision    Half precision    Integer only      Aggressive
 
 ---
 
+---
+
 ## E.8 Scalability Patterns for GenAI
 
-**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we serve more load**: the LLM layer is GPU-heavy and stateful (KV cache), so scaling is about **throughput and capacity**—horizontal replication, model/pipeline parallelism, and caching that increases effective req/s. _Cost per request_ is in E.7; here we focus on _requests per second_ and _utilization_.
+**Why LLMs are hard to scale:** Unlike stateless web services, LLMs are GPU-heavy, memory-hungry, and stateful (KV cache). E.7 covered cost per request; here we focus on **requests per second** and **GPU utilization**.
 
-**T-shaped summary:** Levers: stateless serving (more replicas), model parallelism (split layers across GPUs), pipeline parallelism (different layers on different GPUs), and caching (KV cache for prefixes, response cache for identical/similar queries). Deep dive below.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    WHY LLM SCALING IS DIFFERENT                           │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Traditional Web Service                 LLM Inference
+───────────────────────                 ─────────────
+
+CPU-bound, stateless                    GPU-bound, stateful
+    │                                       │
+    ▼                                       ▼
+Add more servers                        Each server needs:
+    │                                   • Full model in GPU memory (GBs)
+    ▼                                   • KV cache per request (grows with seq)
+Easy horizontal scale                   • Expensive GPUs ($2-10/hr each)
+                                            │
+                                            ▼
+                                        Can't just "add more servers"
+                                        Need smarter strategies
+```
 
 ---
 
-### Horizontal Scaling
+### Inference Scaling Strategies
 
-**Challenge**: LLM inference is GPU-intensive and stateful (KV cache).
-
-**Solutions:**
-
-| Pattern                  | Description                            | Trade-off                                  |
-| ------------------------ | -------------------------------------- | ------------------------------------------ |
-| **Stateless Serving**    | Load balancer → Multiple LLM servers   | Higher memory (each server has full model) |
-| **Model Parallelism**    | Split model across GPUs                | Communication overhead                     |
-| **Pipeline Parallelism** | Different GPUs handle different layers | Better utilization                         |
-
-**Model Parallelism Visual:**
+#### 1. Horizontal Scaling (Multiple Replicas)
 
 ```
-Input → GPU 1 (Layers 1-10) → GPU 2 (Layers 11-20) → GPU 3 (Layers 21-30) → Output
+                         Load Balancer
+                              │
+            ┌─────────────────┼─────────────────┐
+            │                 │                 │
+            ▼                 ▼                 ▼
+       ┌─────────┐       ┌─────────┐       ┌─────────┐
+       │ Replica │       │ Replica │       │ Replica │
+       │    1    │       │    2    │       │    3    │
+       │ [Model] │       │ [Model] │       │ [Model] │
+       │ [KV $]  │       │ [KV $]  │       │ [KV $]  │
+       └─────────┘       └─────────┘       └─────────┘
+
+Each replica has FULL model → expensive but simple
 ```
 
-### Caching Strategies for Scale
+**When to use:** Model fits in one GPU, need more throughput.
 
-_Cost_ impact of caching is in E.7; here we focus on **throughput** impact: same hardware serves more requests when prefixes or responses are reused.
+**Trade-off:** Memory cost scales linearly (3 replicas = 3× GPU memory).
 
-| Strategy                  | Throughput / latency impact                               | Best For                            |
-| ------------------------- | --------------------------------------------------------- | ----------------------------------- |
-| Prompt caching (KV cache) | 2–3× effective throughput for repeated prefixes           | System prompts, long context        |
-| Response caching          | Near-instant for cache hits; frees GPU for other requests | Identical or near-identical queries |
-| Semantic caching          | Higher hit rate → more requests served from cache         | Similar queries (e.g. Q&A)          |
+---
 
-### Training Efficiency Techniques
+#### 2. Model Parallelism (Split Across GPUs)
 
-Training large GenAI models (billions of parameters) requires specialized techniques. These also matter for **fine-tuning** in production.
+**Problem:** Model too large for one GPU (e.g., 70B parameters = 140GB in FP16).
 
-**1. Gradient Checkpointing**
+**Solution:** Split the model across multiple GPUs.
 
-Instead of storing all activations during forward pass (memory-hungry), store only a subset and **recompute** the rest during backward pass. Trade-off: **2–3× less memory** for **~20% more compute**.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TENSOR vs PIPELINE PARALLELISM                         │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**2. Mixed Precision Training (AMP)**
+TENSOR PARALLELISM                      PIPELINE PARALLELISM
+──────────────────                      ────────────────────
 
-Use **FP16** (16-bit) for most operations, **FP32** (32-bit) only where needed (e.g., loss scaling). Benefits:
-- **2× less memory** (weights + activations)
-- **2–3× faster** on modern GPUs (Tensor Cores)
-- Minimal quality loss with proper loss scaling
+Split WITHIN layers                     Split BETWEEN layers
 
-**3. Distributed Training**
+   Layer 1                                  GPU 1: Layers 1-10
+┌──────────────┐                              │
+│ GPU1 │ GPU2 │  ← Matrix split               ▼
+└──────────────┘                            GPU 2: Layers 11-20
+   Layer 2                                    │
+┌──────────────┐                              ▼
+│ GPU1 │ GPU2 │                             GPU 3: Layers 21-30
+└──────────────┘                              │
+                                              ▼
+Good for: Wide layers                       Output
+Bad: High communication                     
+                                          Good for: Deep models
+                                          Bad: Bubble overhead
+```
 
-| Technique | What it does | When to use |
-| --------- | ------------ | ----------- |
-| **Data Parallelism** | Same model on each GPU; split data across GPUs; sync gradients | Model fits in one GPU; large dataset |
-| **Model (Tensor) Parallelism** | Split layers/tensors across GPUs (e.g., split matrix multiply) | Single layer too large for one GPU |
-| **Pipeline Parallelism** | Different layers on different GPUs; micro-batch pipelining | Very deep models (many layers) |
-| **Hybrid (3D) Parallelism** | Combine data + tensor + pipeline | Training 100B+ parameter models |
+| Parallelism | What It Splits | Communication | Best For |
+| ----------- | -------------- | ------------- | -------- |
+| **Tensor** | Matrix operations within a layer | High (every layer) | Very wide layers |
+| **Pipeline** | Layers across GPUs | Lower (between stages) | Very deep models |
+| **Hybrid** | Both | Balanced | 100B+ models |
 
-**4. ZeRO and FSDP**
+---
 
-- **ZeRO** (Zero Redundancy Optimizer, Microsoft): Shards optimizer states, gradients, and parameters across GPUs to reduce memory redundancy.
-- **FSDP** (Fully Sharded Data Parallel, Meta/PyTorch): Similar to ZeRO; shards model parameters across GPUs and gathers them on-demand.
+#### 3. Continuous Batching
 
-Both enable training **larger models** on the same hardware by eliminating redundant copies.
+**Problem:** Static batching waits for batch to fill → GPU sits idle.
+
+```
+STATIC BATCHING                         CONTINUOUS BATCHING
+───────────────                         ───────────────────
+
+Request A: ████████░░░░░░░░             Request A: ████████
+Request B: ░░░░████████░░░░             Request B: ░░████████░░
+Request C: ░░░░░░░░████████             Request C: ░░░░████████
+
+Wait for batch → process → wait          New requests join mid-flight
+GPU utilization: 40-60%                  GPU utilization: 80-95%
+```
+
+**Result:** 2-3× higher throughput, same hardware.
+
+---
+
+#### 4. Caching for Throughput
+
+| Cache Type | Throughput Impact | How It Helps |
+| ---------- | ----------------- | ------------ |
+| **KV cache (prefix)** | 2-3× for repeated prefixes | Skip recomputation of shared context |
+| **Response cache** | ∞ for hits (no GPU) | Serve from memory, free GPU for new requests |
+| **Semantic cache** | Higher hit rate | More requests served without GPU |
+
+---
+
+### Training Scaling Strategies
+
+Training large models (billions of parameters) requires different techniques. These also apply to **fine-tuning**.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TRAINING MEMORY BREAKDOWN                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+For a 7B parameter model (FP16):
+
+Model weights:        14 GB  (7B × 2 bytes)
+Gradients:            14 GB  (same size as weights)
+Optimizer states:     28 GB  (Adam: 2× weights)
+Activations:       10-50 GB  (depends on batch size, seq length)
+                   ────────
+Total:             66-106 GB  ← Doesn't fit in one 80GB GPU!
+
+Solutions: Gradient checkpointing, ZeRO/FSDP, mixed precision
+```
+
+---
+
+#### 1. Gradient Checkpointing
+
+**Problem:** Storing all activations for backward pass uses huge memory.
+
+**Solution:** Store only checkpoints, recompute the rest.
+
+```
+Standard:     Save all activations     → High memory, fast backward
+              A1 → A2 → A3 → A4 → A5
+
+Checkpointing: Save every Nth          → 2-3× less memory, ~20% slower
+              A1 → [recompute] → A3 → [recompute] → A5
+```
+
+---
+
+#### 2. Mixed Precision Training
+
+| Precision | Memory | Speed | Quality |
+| --------- | ------ | ----- | ------- |
+| FP32 | Baseline | Baseline | Best |
+| **FP16 (AMP)** | **2× less** | **2-3× faster** | ~Same (with loss scaling) |
+| BF16 | 2× less | 2-3× faster | Better stability than FP16 |
+
+**Why it works:** Most math doesn't need 32-bit precision. Use FP16 for bulk operations, FP32 for sensitive parts (loss, some accumulations).
+
+---
+
+#### 3. Distributed Training
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DATA vs MODEL vs PIPELINE PARALLELISM                  │
+└───────────────────────────────────────────────────────────────────────────┘
+
+DATA PARALLELISM                MODEL PARALLELISM           PIPELINE PARALLELISM
+────────────────                ─────────────────           ────────────────────
+
+[Full Model]  [Full Model]      [Layer 1-5]  [Layer 6-10]   GPU1: Layers 1-10
+   GPU 1         GPU 2             GPU 1        GPU 2            │ micro-batch 1
+     │             │                  │            │              ▼
+  Batch 1       Batch 2           Same input    Same input   GPU2: Layers 11-20
+     │             │                  │            │              │ micro-batch 1
+     ▼             ▼                  ▼            ▼              ▼
+ Gradients     Gradients          Partial       Partial      GPU3: Layers 21-30
+     │             │               output        output           │
+     └──── Sync ───┘                  │            │              │
+                                      └─── Combine ┘         micro-batch 2 starts
+
+When: Model fits      When: Layer too big      When: Very deep model
+      in one GPU            for one GPU               many layers
+```
+
+| Technique | Splits | Memory Savings | Communication |
+| --------- | ------ | -------------- | ------------- |
+| **Data Parallelism** | Data batches | None | Gradient sync |
+| **Tensor Parallelism** | Layers/matrices | Linear with GPUs | High |
+| **Pipeline Parallelism** | Layer groups | Linear with GPUs | Medium |
+| **3D Parallelism** | All three | Maximum | Complex |
+
+---
+
+#### 4. ZeRO and FSDP (Memory Optimization)
+
+**Problem:** Data parallelism duplicates model on every GPU → wasteful.
+
+**Solution:** Shard (split) model states across GPUs, gather on demand.
+
+```
+STANDARD DATA PARALLEL                  ZeRO / FSDP
+──────────────────────                  ───────────
+
+GPU 1: [Full Model] [Full Optim]        GPU 1: [Shard 1] [Shard 1 Optim]
+GPU 2: [Full Model] [Full Optim]        GPU 2: [Shard 2] [Shard 2 Optim]
+GPU 3: [Full Model] [Full Optim]        GPU 3: [Shard 3] [Shard 3 Optim]
+       ─────────────────────                   ─────────────────────────
+Total: 3× model memory                  Total: 1× model memory (sharded)
+
+Redundant copies!                       Each GPU holds 1/N of model
+                                        Gather when needed for compute
+```
+
+| Level | What's Sharded | Memory Savings |
+| ----- | -------------- | -------------- |
+| **ZeRO-1** | Optimizer states only | ~4× |
+| **ZeRO-2** | + Gradients | ~8× |
+| **ZeRO-3 / FSDP** | + Parameters | ~N× (N = # GPUs) |
+
+---
+
+### Quick Reference: Interview Answer
+
+**Q: "How would you train a 70B model on 8 GPUs?"**
+
+```
+70B parameters × 2 bytes (FP16) = 140GB weights alone
++ Gradients (140GB) + Optimizer (280GB) + Activations (50GB+)
+= 600GB+ total → doesn't fit in 8 × 80GB GPUs naively
+
+Solution stack:
+1. FSDP/ZeRO-3: Shard everything across 8 GPUs
+2. Gradient checkpointing: Trade compute for activation memory
+3. Mixed precision (BF16): 2× memory savings
+4. Possibly pipeline parallelism if still tight
+```
 
 > [!TIP]
-> 💡 **Aha:** In interviews, if asked "how would you train a 70B model on 8 GPUs?", the answer combines: **FSDP or ZeRO** (shard parameters), **gradient checkpointing** (reduce activation memory), **mixed precision** (FP16), and possibly **pipeline parallelism** if layers are very large.
+> **Key insight:** Inference scaling = more replicas + caching + batching. Training scaling = shard everything (ZeRO/FSDP) + checkpoint activations + use FP16/BF16.
 
 ---
 
