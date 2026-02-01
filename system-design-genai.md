@@ -165,7 +165,7 @@ Throughout this guide, you'll see these markers:
 
 | Symbol | Meaning |
 | ------ | ------- |
-| 💡 | Key insight—something that clicks once you understand it |
+| — | Key insight—something that clicks once you understand it |
 | 📊 | Estimation—rough numbers for capacity planning and cost |
 | 🛠️ | Stack snapshot—concrete tools and technologies |
 | ✅ | Best practice—what works in production |
@@ -588,7 +588,7 @@ This fundamental difference changes everything about how you design, scale, and 
 - *Impact:* Need evaluation strategies since you can't just "unit test" outputs
 
 > [!TIP]
-> 💡 **Aha:** Traditional ML is "one input → one prediction" (like a calculator). GenAI is "one prompt → a stream of tokens, each depending on the last" (like a person typing). This shifts bottlenecks from raw compute to memory (KV cache), latency (time-to-first-token matters), and cost (every single token is billed).
+> Traditional ML is "one input → one prediction" (like a calculator). GenAI is "one prompt → a stream of tokens, each depending on the last" (like a person typing). This shifts bottlenecks from raw compute to memory (KV cache), latency (time-to-first-token matters), and cost (every single token is billed).
 
 ### Generative Algorithm Classes
 
@@ -602,7 +602,7 @@ Modern GenAI uses four main algorithm classes. Each has different strengths:
 | **Autoregressive** | Predict next token given previous | Handles sequences, scales well | Sequential = slow; can't "look ahead" | LLMs (GPT, Gemini, Claude), text generation |
 
 > [!TIP]
-> 💡 **Aha:** In interviews, when asked "design a text-to-image system," diffusion is the default choice (quality). For LLMs/chatbots, autoregressive Transformers are the default. GANs are rarely used for new systems due to training instability; VAEs are used for latent representations (e.g., Stable Diffusion's VAE encoder).
+> In interviews, when asked "design a text-to-image system," diffusion is the default choice (quality). For LLMs/chatbots, autoregressive Transformers are the default. GANs are rarely used for new systems due to training instability; VAEs are used for latent representations (e.g., Stable Diffusion's VAE encoder).
 
 ### GAN Architecture Deep Dive
 
@@ -742,7 +742,7 @@ You can turn one dial without affecting the others — change someone's age with
 4. Calculate Fréchet distance between distributions
 
 > [!TIP]
-> 💡 **Aha:** FID and IS use ImageNet-trained Inception, which can introduce artifacts. **CLIP-based metrics** (e.g., CLIP-FID) often align better with human judgment. For face generation, **human evaluation** (pairwise comparison: "which looks more real?") is still the gold standard.
+> FID and IS use ImageNet-trained Inception, which can introduce artifacts. **CLIP-based metrics** (e.g., CLIP-FID) often align better with human judgment. For face generation, **human evaluation** (pairwise comparison: "which looks more real?") is still the gold standard.
 
 ### Diffusion Model Architecture
 
@@ -865,7 +865,7 @@ Final = B + w × (A - B)
 - w = 20+: Forces prompt compliance but images may look weird
 
 > [!TIP]
-> 💡 **Aha:** **CFG is why "a cat on a skateboard" actually shows BOTH a cat AND a skateboard.** It amplifies what the prompt adds. The guidance scale w is like a "strictness" dial — higher = follows prompt more closely, but may sacrifice naturalness.
+> **CFG is why "a cat on a skateboard" actually shows BOTH a cat AND a skateboard.** It amplifies what the prompt adds. The guidance scale w is like a "strictness" dial — higher = follows prompt more closely, but may sacrifice naturalness.
 
 ### Diffusion Training Challenges & Mitigations
 
@@ -983,7 +983,7 @@ Result: CLIPScore = 0.85 (high = good match!)
 | **Text alignment** | CLIPScore, human eval |
 
 > [!TIP]
-> 💡 **Aha:** For text-to-image, you need **both** quality metrics (FID) **and** alignment metrics (CLIPScore). A model could generate beautiful images that ignore the prompt (low CLIPScore, good FID) or follow the prompt but look bad (high CLIPScore, poor FID).
+> For text-to-image, you need **both** quality metrics (FID) **and** alignment metrics (CLIPScore). A model could generate beautiful images that ignore the prompt (low CLIPScore, good FID) or follow the prompt but look bad (high CLIPScore, poor FID).
 
 ---
 
@@ -1173,7 +1173,7 @@ FID says: "Great video!"             FVD says: "Frames are nice, but
 **Benchmarks:** VBench, Movie Gen Bench — standard test sets for comparing video models
 
 > [!TIP]
-> 💡 **Aha:** A video with FID=50 (good frames) but FVD=500 (bad motion) will look like a weird slideshow. A video with FID=80 (okay frames) but FVD=100 (great motion) will look more natural. **Always check FVD for video!**
+> A video with FID=50 (good frames) but FVD=500 (bad motion) will look like a weird slideshow. A video with FID=80 (okay frames) but FVD=100 (great motion) will look more natural. **Always check FVD for video!**
 
 ### Video Inference Pipeline
 
@@ -1350,7 +1350,7 @@ More cost                                        ↓
 | **2025** | Smarter inference | o1: smaller model + chain-of-thought |
 
 > [!TIP]
-> 💡 **Aha:** When asked "how would you improve this model?":
+> When asked "how would you improve this model?":
 > - **For training:** More data often beats bigger models (Chinchilla)
 > - **For inference:** Smarter decoding can beat model size (inference-time scaling)
 > - **For cost:** Smaller models + quantization + smart inference is often the sweet spot
@@ -1492,7 +1492,7 @@ Good for: "Is this a cat?"                   Good for: "Describe what's happenin
 | **Sequence** | One embedding per patch (16-256 tokens) | Captioning, VQA: "What's the dog doing?" | ViT patch embeddings |
 
 > [!TIP]
-> 💡 **Aha:** For tasks that need detail (captioning, VQA), use **sequence output**. The text decoder can then "look at" different patches for different words: "The **dog** [look at patch 5] is **running** [look at patches 5-8] on the **beach** [look at patches 9-12]."
+> For tasks that need detail (captioning, VQA), use **sequence output**. The text decoder can then "look at" different patches for different words: "The **dog** [look at patch 5] is **running** [look at patches 5-8] on the **beach** [look at patches 9-12]."
 
 ### Vision-Language Models
 
@@ -1682,7 +1682,7 @@ Step 3: Why this is smart
 | **CIDEr** | "Did you capture what MOST people said?" | Match consensus across multiple references | Image captioning |
 
 > [!TIP]
-> 💡 **Aha:** Image captioning datasets have 3-5 captions per image (different people describe the same photo). CIDEr rewards captions that capture what MOST people mentioned — the "consensus description." A caption matching all 5 references scores higher than one matching only 1 perfectly.
+> Image captioning datasets have 3-5 captions per image (different people describe the same photo). CIDEr rewards captions that capture what MOST people mentioned — the "consensus description." A caption matching all 5 references scores higher than one matching only 1 perfectly.
 
 ---
 
@@ -1703,7 +1703,7 @@ Controls the "creativity" or randomness of the output by rescaling logits before
 _Use low temperature (0.1-0.3) for factual tasks, higher (0.7-1.0) for creative tasks._
 
 > [!TIP]
-> 💡 **Aha:** Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
+> Temperature rescales logits before sampling. Low T makes the top token dominate (nearly deterministic); high T flattens the distribution so unlikely tokens get a real chance. You're tuning "how much to trust the model's confidence."
 
 **2. Top-p (Nucleus Sampling)**
 
@@ -1714,7 +1714,7 @@ Selects the smallest set of tokens whose cumulative probability mass reaches thr
 - **Adaptive**: Unlike Top-K, adapts to the distribution's shape—in confident contexts, the "nucleus" is small.
 
 > [!TIP]
-> 💡 **Aha:** Top-p says "consider only tokens that together account for probability mass _p_." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
+> Top-p says "consider only tokens that together account for probability mass _p_." When the model is sure, that might be 2–3 tokens; when unsure, many more. So Top-p scales with confidence; Top-K does not.
 
 **3. Top-K**
 
@@ -1893,7 +1893,7 @@ Tokenization converts raw text into numerical tokens the model can process. The 
 | **WordPiece** | BERT | Similar to BPE; maximizes likelihood of training data |
 
 > [!TIP]
-> 💡 **Aha:** Subword tokenization solves two problems: (1) vocabulary explosion from word-level, and (2) semantic loss from character-level. "unhappily" becomes ["un", "happy", "ly"]—each subword has meaning the model can learn.
+> Subword tokenization solves two problems: (1) vocabulary explosion from word-level, and (2) semantic loss from character-level. "unhappily" becomes ["un", "happy", "ly"]—each subword has meaning the model can learn.
 
 ---
 
@@ -1942,7 +1942,7 @@ ENCODER-ONLY                    DECODER-ONLY                   ENCODER-DECODER
 5. **Prediction Head**: Maps final embeddings to vocabulary probabilities for next-token prediction.
 
 > [!TIP]
-> 💡 **Aha:** For **generation tasks** (chatbots, code completion, Smart Compose), use **decoder-only**. For **understanding tasks** (classification, entity extraction), use **encoder-only**. For **transformation tasks** (translation, summarization), use **encoder-decoder**.
+> For **generation tasks** (chatbots, code completion, Smart Compose), use **decoder-only**. For **understanding tasks** (classification, entity extraction), use **encoder-only**. For **transformation tasks** (translation, summarization), use **encoder-decoder**.
 
 ### Encoder-Decoder Architecture (for Seq2Seq)
 
@@ -1969,7 +1969,7 @@ Decoder: Previous Output → Self-Attention → Cross-Attention (to encoder) →
 - **Cross-attention**: Each decoder token attends to ALL encoder outputs
 
 > [!TIP]
-> 💡 **Aha:** Cross-attention is the "bridge" between encoder and decoder. It lets the decoder ask "which parts of the input should I focus on for this output token?" For translation, generating "bonjour" attends heavily to "hello" in the encoder output.
+> Cross-attention is the "bridge" between encoder and decoder. It lets the decoder ask "which parts of the input should I focus on for this output token?" For translation, generating "bonjour" attends heavily to "hello" in the encoder output.
 
 ### Mixture of Experts (MoE) Architecture
 
@@ -2051,7 +2051,7 @@ Input Token                                 Input Token
 | **DeepSeek-V2** | 160 experts, top-6 | 236B | ~21B | Efficient; strong performance |
 
 > [!TIP]
-> 💡 **Aha:** MoE is how you get GPT-4-level capability at Mixtral-level cost. The trick: train a huge model (many experts), but only run a small fraction per token. Memory is the catch—you still need to load all experts, even if you only use 2.
+> **MoE is how you get GPT-4-level capability at Mixtral-level cost.** The trick: train a huge model (many experts), but only run a small fraction per token. Memory is the catch—you still need to load all experts, even if you only use 2.
 
 **When to Choose MoE:**
 - **Use MoE** when you need higher capability without proportional latency increase
@@ -2092,7 +2092,7 @@ Target: "<X> you for <Y> me"
 ```
 
 > [!TIP]
-> 💡 **Aha:** For **decoder-only** (GPT, Gemini), use **next-token prediction**. For **encoder-only** (BERT), use **MLM**. For **encoder-decoder** (T5), use **span corruption**. The objective shapes what the model learns.
+> For **decoder-only** (GPT, Gemini), use **next-token prediction**. For **encoder-only** (BERT), use **MLM**. For **encoder-decoder** (T5), use **span corruption**. The objective shapes what the model learns.
 
 ---
 
@@ -2118,7 +2118,7 @@ Training LLMs directly on task-specific data is inefficient. Instead, use two st
 **Loss Function**: Cross-entropy loss between predicted and actual next token
 
 > [!TIP]
-> 💡 **Aha:** You almost never train an LLM from scratch. You take a **pretrained base model** (GPT, LLaMA, Gemini) and **finetune** it on your domain data. This is why foundation models are so valuable—they encode billions of dollars of pretraining compute.
+> You almost never train an LLM from scratch. You take a **pretrained base model** (GPT, LLaMA, Gemini) and **finetune** it on your domain data. This is why foundation models are so valuable—they encode billions of dollars of pretraining compute.
 
 ---
 
@@ -2290,7 +2290,7 @@ SFT Model: "Here are the steps to make a bomb: 1. Gather materials..."
 | **3. RLHF** | Residency feedback | Human preferences | Aligned model | Learns human values |
 
 > [!TIP]
-> 💡 **Key Learning:** Each stage solves a specific problem:
+> **Key Learning:** Each stage solves a specific problem:
 > - **Pretraining** gives knowledge (but no helpfulness)
 > - **SFT** gives helpfulness (but no judgment about WHAT to help with)
 > - **RLHF** gives alignment (knows when to help, when to refuse, how to be safe)
@@ -2605,7 +2605,7 @@ Why: Maximum creativity!              Why: Accuracy over creativity
 | Factual Q&A | Low-temp or greedy | 0.0 - 0.3 | — | Accuracy is critical |
 
 > [!TIP]
-> 💡 **Key Learning:** Sampling strategy depends on the USER'S EXPECTATION:
+> **Key Learning:** Sampling strategy depends on the USER'S EXPECTATION:
 > - **"I expect the same answer every time"** → Deterministic (greedy/beam)
 > - **"I want variety and creativity"** → Stochastic (temperature + top-p)
 > 
@@ -2917,7 +2917,7 @@ How it works:
 | **Conversion Rate** | Free → Paid users | Business value |
 
 > [!TIP]
-> 💡 **Key Learning:** A complete evaluation strategy needs THREE types:
+> **Key Learning:** A complete evaluation strategy needs THREE types:
 > 1. **Capability benchmarks** (MMLU, HumanEval) — "What CAN it do?"
 > 2. **Safety benchmarks** (TruthfulQA, AdvBench) — "What SHOULDN'T it do?"
 > 3. **Human evaluation** (LMSYS Arena, online metrics) — "What do users PREFER?"
@@ -3335,7 +3335,7 @@ def build_context(session_id, new_message, max_tokens=6000):
 | **User device** | 0ms (client-side) | Permanent | Privacy-sensitive, offline |
 
 > [!TIP]
-> 💡 **Key insight:** Every turn makes the next request MORE expensive (more input tokens to process). A 20-turn conversation might cost 10× more than a single turn. Consider: (1) summarizing after N turns, (2) charging per-token, or (3) limiting conversation length.
+> **Key insight:** Every turn makes the next request MORE expensive (more input tokens to process). A 20-turn conversation might cost 10× more than a single turn. Consider: (1) summarizing after N turns, (2) charging per-token, or (3) limiting conversation length.
 
 ---
 
@@ -3470,7 +3470,7 @@ public internet data, not YOUR docs          └──────────�
 | **Enterprise**      | Access controls, analytics (search trends, user behavior), scalable APIs/SDKs for customer-facing search or internal knowledge bases.                                                 |
 
 > [!TIP]
-> 💡 **Aha:** When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
+> When an interviewer says "design search for our site" or "smart search for our catalog," they often mean RAG: connect data → retrieve (and optionally rerank) → optionally add an LLM answer grounded in retrieved results. Vertex AI Search (and AWS equivalents) package this as a managed "search agent"; you can also build it from RAG Engine + Vector Search + an LLM yourself.
 
 ### Document Parsing
 
@@ -3489,7 +3489,7 @@ Before chunking, PDFs and other documents must be **parsed** to extract text, ta
 **Managed services:** Google Cloud Document AI, Amazon Textract, PDF.co
 
 > [!TIP]
-> 💡 **Aha:** If your PDFs have **consistent templates** (e.g., invoices, forms), rule-based is faster and cheaper. If layouts **vary widely** (wiki pages, reports, mixed formats), use AI-based parsing—it's worth the extra compute.
+> If your PDFs have **consistent templates** (e.g., invoices, forms), rule-based is faster and cheaper. If layouts **vary widely** (wiki pages, reports, mixed formats), use AI-based parsing—it's worth the extra compute.
 
 ### Chunking Strategy
 
@@ -3735,7 +3735,7 @@ User Query → LLM (rewrite/expand) → Expanded Query → Embedding → Vector 
 ```
 
 > [!TIP]
-> 💡 **Aha:** **HyDE** is counterintuitive: instead of embedding the question "What is RAG?", you embed an LLM-generated answer "RAG is a technique that combines retrieval with generation..." The answer's embedding is often closer to relevant documents than the question's embedding.
+> **HyDE** is counterintuitive: instead of embedding the question "What is RAG?", you embed an LLM-generated answer "RAG is a technique that combines retrieval with generation..." The answer's embedding is often closer to relevant documents than the question's embedding.
 
 ---
 
@@ -3819,7 +3819,7 @@ Answer: "The company was founded in 1995."
 - You can afford to finetune (need training data with relevance labels)
 
 > [!TIP]
-> 💡 **Aha:** RAFT is like training a student with "open-book exams" where some pages are irrelevant. The student learns to **find and use** the right pages while ignoring distractions. Standard finetuning is like "closed-book"—the student memorizes everything. RAFT produces LLMs that are robust to real-world noisy retrieval.
+> RAFT is like training a student with "open-book exams" where some pages are irrelevant. The student learns to **find and use** the right pages while ignoring distractions. Standard finetuning is like "closed-book"—the student memorizes everything. RAFT produces LLMs that are robust to real-world noisy retrieval.
 
 ---
 
