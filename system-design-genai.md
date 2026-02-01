@@ -3997,87 +3997,56 @@ HOW IT'S USED:
 
 ## E.4 Agentic AI Systems
 
-**Why this comes next:** E.2–E.3 gave you **RAG** and **fine-tuning** (retrieval + behavior). When do you need **tools** and **multi-step** reasoning—e.g. look up an order, call an API, then decide what to say? That's **agents**: the same request path (gateway → orchestration → LLM) but with a loop and tools.
-
-### What Is an Agent? Why Do We Need One?
-
-📖 **Definition:** An **agent** is an LLM that **repeatedly** decides, acts, and observes until a task is done. It has access to **tools** (APIs, databases, search, code) and runs in a **loop**: perceive the current state → decide the next step → call a tool → observe the result → repeat. That loop is what makes it an agent, not "one prompt → one answer."
-
-**Why we need agents:** A single LLM call is stateless and one-shot. It can't look up live data, call your CRM, or run multi-step workflows. **RAG** adds retrieval at query time but still produces one answer from one retrieved context—no tool calls, no iterative refinement. **Agents** add the ability to _use the world_: query systems, run code, search, then decide what to do next from the results. So you need an agent when the task requires **multiple steps**, **live data** (orders, DB, APIs), or **decisions that depend on tool outputs** (e.g. "if order status is X, do Y").
-
-**When to use agents vs. not:**
-
-| Use an agent when…                                                                              | Use a single call or RAG when…                                                |
-| ----------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| The task needs **multiple tool calls** or steps (e.g. check order → update CRM → create ticket) | The task is **one question → one answer** (e.g. "what is our return policy?") |
-| The **next step depends on live results** (e.g. "if refund approved, then…")                    | The pipeline is **fixed** (e.g. embed query → retrieve → generate)            |
-| You need **orchestration across systems** (APIs, DBs, search)                                   | You only need **retrieval + generation** (RAG) or pure generation             |
-| Decisions are **context-sensitive** and hard to encode as rules                                 | The flow is **deterministic** and easy to script                              |
-
-> [!TIP]
-> 💡 **Aha:** Start with the simplest thing that works (single call, or RAG). Add an agent only when you need **loop + tools**—when the model must _use_ external systems and _iterate_ based on what it sees.
+**When you need agents:** RAG retrieves, then generates one answer. But what if the task needs multiple steps? Look up order → check policy → create ticket → send email. That's an **agent**: an LLM in a **loop** with **tools**.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│            SINGLE CALL / RAG vs AGENT                                        │
-│                                                                              │
-│   SINGLE CALL or RAG                    AGENT                               │
-│   ────────────────────                  ─────                               │
-│   User → Prompt (+ RAG?) → LLM → Answer  User → Prompt → LLM → Thought       │
-│   (one shot)                                  │                              │
-│                                         Tool call → Observation → (repeat)   │
-└─────────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    SINGLE CALL / RAG vs AGENT                             │
+└───────────────────────────────────────────────────────────────────────────┘
+
+SINGLE CALL or RAG                         AGENT
+──────────────────                         ─────
+
+User → [Prompt + RAG?] → LLM → Answer      User → Prompt → LLM
+         (one shot)                                  │
+                                                     ▼
+                                              ┌─────────────┐
+                                              │   REASON    │ "I need order status"
+                                              └──────┬──────┘
+                                                     │
+                                                     ▼
+                                              ┌─────────────┐
+                                              │    ACT      │ Call order_lookup()
+                                              └──────┬──────┘
+                                                     │
+                                                     ▼
+                                              ┌─────────────┐
+                                              │  OBSERVE    │ "Status: shipped"
+                                              └──────┬──────┘
+                                                     │
+                                                     ▼
+                                              ┌─────────────┐
+                                              │   REASON    │ "Now I can answer"
+                                              └──────┬──────┘
+                                                     │
+                                                     ▼
+                                                  Answer
 ```
 
 ---
 
-### Use Case: Design a Customer Support Agent
+### When to Use Agents
 
-**Requirements:**
-
-- Handle customer inquiries autonomously
-- Access multiple tools (CRM, knowledge base, order system)
-- Support multi-turn conversations
-- Escalate to human when needed
-- Handle 10,000 conversations/day
-
-**Why an agent fits here:** Support often needs _multi-step_ actions (look up order → check policy → create ticket or escalate) and _live data_ (order status, account history). One LLM call or RAG-only can't do that; you need a loop + tools.
-
-**High-Level Design:**
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    AGENTIC AI ARCHITECTURE                      │
-│                                                                 │
-│   ┌──────────────────────────────────────────────────────────┐ │
-│   │                  USER MESSAGE                             │ │
-│   └────────────────────────┬─────────────────────────────────┘ │
-│                            │                                    │
-│                            ▼                                    │
-│   ┌──────────────────────────────────────────────────────────┐ │
-│   │              AGENT ORCHESTRATOR (LLM)                     │ │
-│   │                                                           │ │
-│   │   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐     │ │
-│   │   │  REASONING  │─►│   ACTING    │─►│ OBSERVATION │     │ │
-│   │   │  (Analyze)  │  │(Tool call)  │  │  (Result)   │     │ │
-│   │   └─────────────┘  └─────────────┘  └──────┬──────┘     │ │
-│   │                            ▲                │             │ │
-│   │                            └────────────────┘             │ │
-│   │                         (Iterate until done)              │ │
-│   └────────────────────────┬─────────────────────────────────┘ │
-│                            │                                    │
-│         ┌──────────────────┼──────────────────┐                │
-│         │                  │                  │                │
-│         ▼                  ▼                  ▼                │
-│   ┌───────────┐      ┌───────────┐      ┌───────────┐         │
-│   │  Tool 1   │      │  Tool 2   │      │  Tool 3   │         │
-│   │ Knowledge │      │  Order    │      │  Create   │         │
-│   │   Base    │      │  Status   │      │  Ticket   │         │
-│   └───────────┘      └───────────┘      └───────────┘         │
-└─────────────────────────────────────────────────────────────────┘
-```
+| Use an Agent | Use RAG / Single Call |
+| ------------ | --------------------- |
+| Multiple tool calls (check order → update CRM → create ticket) | One question → one answer |
+| Next step depends on live results | Fixed pipeline |
+| Orchestration across systems (APIs, DBs) | Just retrieval + generation |
+| Context-sensitive decisions | Deterministic flow |
 
 > [!TIP]
+> **Key insight:** Agent = LLM + loop + tools. Start with RAG. Add agent only when you need iteration and tool calls.
+
 > 💡 **Aha:** An agent is an LLM in a **loop** with tools. The model doesn’t just answer once; it _reasons → acts (calls a tool) → observes (gets result) → reasons again_ until it can respond. That turns the LLM into a controller over APIs, DBs, and search—so the "aha" is: the value is in the **loop + tools**, not in a bigger model.
 
 ### Customer engagement & contact center (Google Customer Engagement Suite)
