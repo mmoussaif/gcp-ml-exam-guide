@@ -18,81 +18,81 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 ### Part A: Getting Started
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| A.1 | [Introduction](#a1-introduction) | Why GenAI is different; how to use this guide | ☐ |
-| A.2 | [Visual Guide Map](#a2-visual-guide-map) | Diagram showing how sections connect | ☐ |
-| A.3 | [Glossary](#a3-glossary) | 80+ terms organized by category | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| A.1 | [Introduction](#a1-introduction) | Why GenAI is different; how to use this guide |
+| A.2 | [Visual Guide Map](#a2-visual-guide-map) | Diagram showing how sections connect |
+| A.3 | [Glossary](#a3-glossary) | 80+ terms organized by category |
 
 ### Part B: System Overview
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| B.1 | [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend) | End-to-end request path and supporting systems | ☐ |
-| B.2 | [GenAI vs Traditional ML](#b2-genai-vs-traditional-ml) | Key differences in architecture and operations | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| B.1 | [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend) | End-to-end request path and supporting systems |
+| B.2 | [GenAI vs Traditional ML](#b2-genai-vs-traditional-ml) | Key differences in architecture and operations |
 
 ### Part C: Generative Models (theory)
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| C.1 | [Text-to-Video Generation](#c1-text-to-video-generation) | LDM, temporal layers, DiT, video evaluation | ☐ |
-| C.2 | [Multimodal & Vision-Language](#c2-multimodal--vision-language-models) | CLIP, image captioning, visual Q&A | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| C.1 | [Text-to-Video Generation](#c1-text-to-video-generation) | LDM, temporal layers, DiT, video evaluation |
+| C.2 | [Multimodal & Vision-Language](#c2-multimodal--vision-language-models) | CLIP, image captioning, visual Q&A |
 
 ### Part D: LLM Fundamentals
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| D.1 | [Using Models & Sampling](#d1-using-models--sampling-parameters) | Temperature, top-p, top-k, when to use each | ☐ |
-| D.2 | [Google GenAI Tools](#d2-google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start | ☐ |
-| D.3 | [Text Tokenization](#d3-text-tokenization-strategies) | BPE, SentencePiece, WordPiece | ☐ |
-| D.4 | [Transformer Architectures](#d4-transformer-architectures) | Attention, encoder-decoder, decoder-only, MoE | ☐ |
-| D.5 | [ML Objectives for Pretraining](#d5-ml-objectives-for-pretraining) | Next-token prediction, masked LM | ☐ |
-| D.6 | [Two-Stage Training](#d6-two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline | ☐ |
-| D.7 | [Three-Stage Training (Chatbots)](#d7-three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF | ☐ |
-| D.8 | [Sampling Strategies](#d8-sampling-strategies-for-text-generation) | Greedy, beam search, nucleus sampling | ☐ |
-| D.9 | [Text Generation Evaluation](#d9-text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, benchmarks | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| D.1 | [Using Models & Sampling](#d1-using-models--sampling-parameters) | Temperature, top-p, top-k, when to use each |
+| D.2 | [Google GenAI Tools](#d2-google-generative-ai-development-tools) | AI Studio, Vertex AI, ADK quick start |
+| D.3 | [Text Tokenization](#d3-text-tokenization-strategies) | BPE, SentencePiece, WordPiece |
+| D.4 | [Transformer Architectures](#d4-transformer-architectures) | Attention, encoder-decoder, decoder-only, MoE |
+| D.5 | [ML Objectives for Pretraining](#d5-ml-objectives-for-pretraining) | Next-token prediction, masked LM |
+| D.6 | [Two-Stage Training](#d6-two-stage-training-pretraining--finetuning) | Pretraining + finetuning pipeline |
+| D.7 | [Three-Stage Training (Chatbots)](#d7-three-stage-training-for-chatbots-pretraining--sft--rlhf) | Pretraining → SFT → RLHF |
+| D.8 | [Sampling Strategies](#d8-sampling-strategies-for-text-generation) | Greedy, beam search, nucleus sampling |
+| D.9 | [Text Generation Evaluation](#d9-text-generation-evaluation-metrics) | Perplexity, BLEU, ROUGE, benchmarks |
 
 ### Part E: Core System Design (the main content)
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| E.1 | [LLM Serving Architecture](#e1-llm-serving-architecture-at-scale) | Inference, batching, KV cache, vLLM, parallelism | ☐ |
-| E.2 | [RAG Systems](#e2-rag-retrieval-augmented-generation-system) | Chunking, embeddings, vector DB, reranking | ☐ |
-| E.3 | [RAG vs Fine-Tuning](#e3-rag-vs-fine-tuning-decision-framework) | When to use each; LoRA, PEFT, decision tree | ☐ |
-| E.4 | [Agentic AI Systems](#e4-agentic-ai-systems) | ReAct, tools, multi-agent, ADK, orchestration | ☐ |
-| E.5 | [LLM Evaluation & Quality](#e5-llm-evaluation--quality) | RAGAS, LLM-as-judge, human eval, A/B testing | ☐ |
-| E.6 | [GenAI Data Pipeline](#e6-genai-data-pipeline-architecture) | Events, labeling, training data, feedback loops | ☐ |
-| E.7 | [Cost Optimization](#e7-cost-optimization-for-genai-systems) | Token economics, model routing, caching | ☐ |
-| E.8 | [Scalability Patterns](#e8-scalability-patterns-for-genai) | Batching, parallelism, quantization, autoscaling | ☐ |
-| E.9 | [Monitoring & Observability](#e9-monitoring--observability-for-genai) | Traces, metrics, drift detection, alerting | ☐ |
-| E.10 | [Security & Guardrails](#e10-security--guardrails) | Model Armor, prompt injection, PII, filters | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| E.1 | [LLM Serving Architecture](#e1-llm-serving-architecture-at-scale) | Inference, batching, KV cache, vLLM, parallelism |
+| E.2 | [RAG Systems](#e2-rag-retrieval-augmented-generation-system) | Chunking, embeddings, vector DB, reranking |
+| E.3 | [RAG vs Fine-Tuning](#e3-rag-vs-fine-tuning-decision-framework) | When to use each; LoRA, PEFT, decision tree |
+| E.4 | [Agentic AI Systems](#e4-agentic-ai-systems) | ReAct, tools, multi-agent, ADK, orchestration |
+| E.5 | [LLM Evaluation & Quality](#e5-llm-evaluation--quality) | RAGAS, LLM-as-judge, human eval, A/B testing |
+| E.6 | [GenAI Data Pipeline](#e6-genai-data-pipeline-architecture) | Events, labeling, training data, feedback loops |
+| E.7 | [Cost Optimization](#e7-cost-optimization-for-genai-systems) | Token economics, model routing, caching |
+| E.8 | [Scalability Patterns](#e8-scalability-patterns-for-genai) | Batching, parallelism, quantization, autoscaling |
+| E.9 | [Monitoring & Observability](#e9-monitoring--observability-for-genai) | Traces, metrics, drift detection, alerting |
+| E.10 | [Security & Guardrails](#e10-security--guardrails) | Model Armor, prompt injection, PII, filters |
 
 ### Part F: Real-World Examples
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| F.1 | [Real-World Examples: Applying the Stack](#f1-real-world-examples-applying-the-stack) | Interview framework + 11 complete system designs | ☐ |
-| F.1.1 | [Example 1: Code Generation Assistant](#example-1-code-generation-assistant-like-github-copilot) | IDE integration, RAG, model routing (e.g. Copilot) | ☐ |
-| F.1.2 | [Example 2: Customer Service Chatbot](#example-2-customer-service-chatbot-with-rag-and-tools) | RAG + tools, ReAct, guardrails | ☐ |
-| F.1.3 | [Example 3: Content Generation Platform](#example-3-content-generation-platform-research-draft-grounding) | Sequential pipeline, research → draft → grounding → SEO | ☐ |
-| F.1.4 | [Example 4: Smart Compose / Email Autocomplete](#example-4-smart-compose--email-autocomplete-like-gmail) | On-device/edge ML, low latency (e.g. Gmail) | ☐ |
-| F.1.5 | [Example 5: Language Translation Service](#example-5-language-translation-service-like-google-translate) | Encoder-decoder, NMT, entity masking (e.g. Translate) | ☐ |
-| F.1.6 | [Example 6: Personal Assistant Chatbot](#example-6-personal-assistant-chatbot-like-chatgpt) | General-purpose chat, RLHF, safety filters (e.g. ChatGPT) | ☐ |
-| F.1.7 | [Example 7: Image Captioning System](#example-7-image-captioning-system) | Multimodal, ViT + LM, beam search | ☐ |
-| F.1.8 | [Example 8: Document Q&A System](#example-8-document-qa-system-like-chatpdf) | RAG-heavy, chunking, hybrid retrieval, reranking (e.g. ChatPDF) | ☐ |
-| F.1.9 | [Example 9: Realistic Face Generation](#example-9-realistic-face-generation-system-like-stylegan) | GAN, StyleGAN, truncation, latent space | ☐ |
-| F.1.10 | [Example 10: Text-to-Image Generation](#example-10-text-to-image-generation-system-like-dall-e-stable-diffusion) | Diffusion, U-Net/DiT, CFG, VAE (e.g. DALL·E, SD) | ☐ |
-| F.1.11 | [Example 11: Text-to-Video Generation](#example-11-text-to-video-generation-system-like-sora-movie-gen) | Temporal diffusion, DiT, FVD (e.g. Sora, Movie Gen) | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| F.1 | [Real-World Examples: Applying the Stack](#f1-real-world-examples-applying-the-stack) | Interview framework + 11 complete system designs |
+| F.1.1 | [Example 1: Code Generation Assistant](#example-1-code-generation-assistant-like-github-copilot) | IDE integration, RAG, model routing (e.g. Copilot) |
+| F.1.2 | [Example 2: Customer Service Chatbot](#example-2-customer-service-chatbot-with-rag-and-tools) | RAG + tools, ReAct, guardrails |
+| F.1.3 | [Example 3: Content Generation Platform](#example-3-content-generation-platform-research-draft-grounding) | Sequential pipeline, research → draft → grounding → SEO |
+| F.1.4 | [Example 4: Smart Compose / Email Autocomplete](#example-4-smart-compose--email-autocomplete-like-gmail) | On-device/edge ML, low latency (e.g. Gmail) |
+| F.1.5 | [Example 5: Language Translation Service](#example-5-language-translation-service-like-google-translate) | Encoder-decoder, NMT, entity masking (e.g. Translate) |
+| F.1.6 | [Example 6: Personal Assistant Chatbot](#example-6-personal-assistant-chatbot-like-chatgpt) | General-purpose chat, RLHF, safety filters (e.g. ChatGPT) |
+| F.1.7 | [Example 7: Image Captioning System](#example-7-image-captioning-system) | Multimodal, ViT + LM, beam search |
+| F.1.8 | [Example 8: Document Q&A System](#example-8-document-qa-system-like-chatpdf) | RAG-heavy, chunking, hybrid retrieval, reranking (e.g. ChatPDF) |
+| F.1.9 | [Example 9: Realistic Face Generation](#example-9-realistic-face-generation-system-like-stylegan) | GAN, StyleGAN, truncation, latent space |
+| F.1.10 | [Example 10: Text-to-Image Generation](#example-10-text-to-image-generation-system-like-dall-e-stable-diffusion) | Diffusion, U-Net/DiT, CFG, VAE (e.g. DALL·E, SD) |
+| F.1.11 | [Example 11: Text-to-Video Generation](#example-11-text-to-video-generation-system-like-sora-movie-gen) | Temporal diffusion, DiT, FVD (e.g. Sora, Movie Gen) |
 
 ### Part G: Reference & Interview Prep
 
-| # | Section | Description | Status |
-|---|---------|-------------|--------|
-| G.1 | [Strategy & Planning](#g1-strategy--planning) | GenAI roadmap, key metrics, staying ahead | ☐ |
-| G.2 | [Interview Quick Reference](#g2-interview-quick-reference) | What interviewers evaluate, 45-min framework, trade-offs | ☐ |
-| G.3 | [Communicating to CxO vs Product/Eng](#g3-communicating-to-cxo-vs-producteng) | 5 full examples: same concept, different audience | ☐ |
-| G.4 | [Worked Example](#g4-worked-example) | Retail chatbot scenario: Scope → Design → Deploy → Communicate | ☐ |
-| G.5 | [Resources](#g5-resources) | Books, docs, links | ☐ |
+| # | Section | Description |
+|---|---------|-------------|
+| G.1 | [Strategy & Planning](#g1-strategy--planning) | GenAI roadmap, key metrics, staying ahead |
+| G.2 | [Interview Quick Reference](#g2-interview-quick-reference) | What interviewers evaluate, 45-min framework, trade-offs |
+| G.3 | [Communicating to CxO vs Product/Eng](#g3-communicating-to-cxo-vs-producteng) | 5 full examples: same concept, different audience |
+| G.4 | [Worked Example](#g4-worked-example) | Retail chatbot scenario: Scope → Design → Deploy → Communicate |
+| G.5 | [Resources](#g5-resources) | Books, docs, links |
 
 ---
 
