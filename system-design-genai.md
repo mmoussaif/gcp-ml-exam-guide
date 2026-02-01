@@ -5364,7 +5364,7 @@ Full precision    Half precision    Integer only      Aggressive
 
 ## E.8 Scalability Patterns for GenAI
 
-**Why LLMs are hard to scale:** Unlike stateless web services, LLMs are GPU-heavy, memory-hungry, and stateful (KV cache). E.7 covered cost per request; here we focus on **requests per second** and **GPU utilization**.
+**Why LLMs are hard to scale:** LLMs are GPU-heavy and memory-hungry. Each request needs the full model in GPU memory plus a KV cache that grows with sequence length. E.7 covered cost per request; here we focus on **requests per second** and **GPU utilization**.
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
