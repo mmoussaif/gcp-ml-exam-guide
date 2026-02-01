@@ -4064,46 +4064,107 @@ User → [Prompt + RAG?] → LLM → Answer      User → Prompt → LLM
 
 ### Agent Frameworks
 
-Choose **no-code** (Vertex AI Agent Builder, Bedrock Agents) when you want to configure agents in a UI with minimal code. Choose **programmatic** (ADK, LangChain, LlamaIndex) when you need custom logic, complex workflows, or fine-grained control.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    AGENT FRAMEWORK LANDSCAPE                              │
+└───────────────────────────────────────────────────────────────────────────┘
 
-| Platform     | Google Cloud                | AWS            | Open Source                    |
-| ------------ | --------------------------- | -------------- | ------------------------------ |
-| No-code      | Vertex AI Agent Builder     | Bedrock Agents | -                              |
-| Programmatic | Agent Development Kit (ADK) | AgentCore      | LangChain, LlamaIndex, AutoGen |
+                         ┌─────────────────────┐
+                         │    YOUR AGENT       │
+                         └──────────┬──────────┘
+                                    │
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│   NO-CODE     │          │ PROGRAMMATIC  │          │  OPEN SOURCE  │
+│  (UI-based)   │          │  (SDK-based)  │          │  (Framework)  │
+├───────────────┤          ├───────────────┤          ├───────────────┤
+│ Agent Builder │          │ Google ADK    │          │ LangChain     │
+│ Bedrock Agents│          │ AWS AgentCore │          │ LlamaIndex    │
+│               │          │               │          │ AutoGen       │
+└───────────────┘          └───────────────┘          └───────────────┘
+     Quick start              Custom logic              Max flexibility
+```
 
-### Playbooks and system instructions
+| Approach | Google Cloud | AWS | Open Source |
+| -------- | ------------ | --- | ----------- |
+| **No-code** | Vertex AI Agent Builder | Bedrock Agents | — |
+| **Programmatic** | Agent Development Kit (ADK) | AgentCore | LangChain, LlamaIndex, AutoGen |
 
-**Playbook (Conversational Agents):** When you build a generative AI agent with **Conversational Agents**, you define a **playbook** for how the agent should behave. In the playbook you set the agent’s **goal** (e.g. customer support, answering questions, generating content), **detailed instructions** on how to act, and **rules** to follow. You can also **link to external tools** (e.g. data stores for RAG). Once the playbook is defined, you test and interact with the agent. In system design terms, the playbook is the **system-level configuration** that shapes every turn.
+**Google ADK** (Agent Development Kit): Open-source, model-agnostic framework optimized for Gemini. Key features:
+- **Multi-agent orchestration**: Hierarchical agents with delegation
+- **Workflow agents**: `SequentialAgent`, `ParallelAgent`, `LoopAgent` for predictable pipelines
+- **Rich tools**: MCP support, code execution, third-party integrations (LangChain, LlamaIndex)
+- **Languages**: Python, TypeScript, Go, Java
+- **Deployment**: Local, Vertex AI Agent Engine, Cloud Run, Docker
 
-**System instructions (general):** The same idea appears elsewhere as **system instructions**: context, **persona**, and **constraints** provided _before_ any user input, so the model’s behavior and responses align with your intent. They help with:
+**AWS AgentCore** (GA Oct 2025): Framework-agnostic platform for deploying agents at scale:
+- **Runtime**: Serverless hosting with up to 8-hour execution windows
+- **Memory**: Session and long-term memory management
+- **Gateway**: MCP server support, transforms APIs/Lambda into agent tools
+- **Observability**: CloudWatch + OpenTelemetry (Datadog, LangSmith, etc.)
+- **Works with**: Any framework (CrewAI, LangGraph, LlamaIndex, ADK, OpenAI Agents SDK)
 
-| Concern         | Role of system instructions                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------- |
-| **Consistency** | Keep tone and persona stable across turns                                                                |
-| **Accuracy**    | Ground the model in specific knowledge; reduce hallucinations                                            |
-| **Relevance**   | Keep responses in the intended domain (e.g. product support only)                                        |
-| **Safety**      | Avoid inappropriate or unhelpful content; set boundaries (e.g. “don’t guess; admit when you don’t know”) |
+**Open Source Frameworks** (complementary, often combined):
 
-**Metaprompting:** A useful technique is **metaprompting**—using the LLM to **generate, modify, or interpret other prompts**. For example: one prompt says “You are an expert at building virtual agent assistants; for the given company and role, produce a system prompt a developer can use.” You run that once, get a **system prompt** (goal + instructions + rules), then use that as the system instructions for your actual agent. Metaprompting makes prompt creation more **dynamic and adaptable** and is common when defining playbooks or system instructions from high-level specs (company, use case, scope, constraints).
+| Framework | Strength | Best For |
+| --------- | -------- | -------- |
+| **LangChain** | Orchestration, chains, memory | General agent workflows, tool integration |
+| **LlamaIndex** | Data indexing, retrieval | RAG systems, document Q&A |
+| **AutoGen** | Multi-agent collaboration | Agent teams, task automation |
 
-**Production note:** Prototyping in **Google AI Studio** (or similar) with system instructions is a good way to explore behavior. For **enterprise** agents you typically need more: **Conversational Agents** (or equivalent) for adversarial defense, tool wiring, guardrails, and observability.
+---
 
-> [!TIP]
-> 💡 **Aha:** The playbook (or system instructions) is the **contract** for your agent: goal + rules + optional tools. Define it first; metaprompting can help you generate it from a short brief (company, role, scope, constraints).
+### System Instructions & Playbooks
+
+**System instructions** = goal + persona + rules + constraints provided before user input. In Google's **Conversational Agents**, this is called a **playbook**.
+
+| Purpose | What to Include |
+| ------- | --------------- |
+| **Consistency** | Tone, persona across turns |
+| **Accuracy** | Domain knowledge, grounding rules |
+| **Relevance** | Scope boundaries ("product support only") |
+| **Safety** | "Don't guess; admit uncertainty" |
+
+**Metaprompting**: Use an LLM to generate system instructions from a brief (company, role, scope). Example: "You are an expert at building agent assistants; produce a system prompt for [company] [role]."
+
+---
 
 ### Tool Types
 
-**Tools** are how the agent interacts with the world: APIs, DBs, search, code. The agent chooses _which_ tool to call and _with what arguments_; the tool runs and returns a result, which the agent uses for the next step.
+Tools let agents interact with the world. Two key execution models:
 
-| Tool Type             | Execution   | Description                                           | Best For                       |
-| --------------------- | ----------- | ----------------------------------------------------- | ------------------------------ |
-| **Extensions (APIs)** | Agent-side  | Standardized bridges to external APIs                 | Multi-service access           |
-| **Function Calling**  | Client-side | Model outputs function name + args; your app executes | Security, audit, human-in-loop |
-| **Data Stores**       | Agent-side  | Connect to vector DBs, knowledge bases                | RAG, real-time info            |
-| **Plugins**           | Agent-side  | Pre-built integrations (calendar, CRM)                | Rapid capability addition      |
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    FUNCTION CALLING vs CODE EXECUTION                     │
+└───────────────────────────────────────────────────────────────────────────┘
+
+FUNCTION CALLING (client-side)              CODE EXECUTION (agent-side)
+──────────────────────────────              ───────────────────────────
+
+User ──► LLM ──► "Call get_order(123)"      User ──► LLM ──► Generates Python
+                      │                                            │
+                      ▼                                            ▼
+              YOUR APP executes              API BACKEND executes (sandboxed)
+                      │                                            │
+                      ▼                                            ▼
+              Result back to LLM                    Result in same response
+
+✓ You control execution                     ✓ Single request (no round-trip)
+✓ Security, audit, human-in-loop            ✓ Simpler setup
+✗ Requires additional request               ✗ Python only, fixed environment
+```
+
+| Tool Type | Execution | Description | Best For |
+| --------- | --------- | ----------- | -------- |
+| **Function Calling** | Client-side | Model outputs function name + args; your app executes | Security, audit, human-in-loop |
+| **Code Execution** | Agent-side | Model generates and runs Python in sandboxed backend | Math, data processing, iterative code |
+| **Data Stores** | Agent-side | Connect to vector DBs, knowledge bases | RAG, real-time info |
+| **MCP Tools** | Either | Tools exposed via Model Context Protocol servers | Portable, cross-framework tooling |
 
 > [!TIP]
-> 💡 **Aha:** **Function calling** (client-side) gives you control: the model outputs a tool name + args, and _your app_ decides whether to run it. Use it when you need security, audit, or human-in-the-loop. **Agent-side** tools run automatically when the model requests them—faster but less control.
+> **When to use which:** Function calling when you need control (security, audit). Code execution when the model can solve it with Python. MCP when you want portable tools across agents.
 
 ---
 
