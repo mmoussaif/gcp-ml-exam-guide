@@ -5525,13 +5525,15 @@ Checkpointing: Save every Nth          → 2-3× less memory, ~20% slower
 
 #### 2. Mixed Precision Training
 
+**AMP** = Automatic Mixed Precision. Automatically uses FP16 where safe, FP32 where needed.
+
 | Precision | Memory | Speed | Quality |
 | --------- | ------ | ----- | ------- |
 | FP32 | Baseline | Baseline | Best |
 | **FP16 (AMP)** | **2× less** | **2-3× faster** | ~Same (with loss scaling) |
 | BF16 | 2× less | 2-3× faster | Better stability than FP16 |
 
-**Why it works:** Most math doesn't need 32-bit precision. Use FP16 for bulk operations, FP32 for sensitive parts (loss, some accumulations).
+**Why it works:** Most math doesn't need 32-bit precision. AMP handles the complexity—use FP16 for bulk operations, FP32 for sensitive parts (loss scaling, gradient accumulation).
 
 ---
 
@@ -5570,6 +5572,9 @@ When: Model fits      When: Layer too big      When: Very deep model
 ---
 
 #### 4. ZeRO and FSDP (Memory Optimization)
+
+- **ZeRO** = Zero Redundancy Optimizer (Microsoft/DeepSpeed)
+- **FSDP** = Fully Sharded Data Parallel (PyTorch native)
 
 **Problem:** Data parallelism duplicates model on every GPU → wasteful.
 
