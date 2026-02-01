@@ -7800,11 +7800,16 @@ Final Video: 5s at 720p, 24fps
 
 | Concern | Tools to reach for |
 | -------- | ------------------ |
-| **Orchestration (RAG, agents, pipelines)** | **LangChain**, **LlamaIndex** (RAG/chains); **Google ADK** (agents, multi-agent, Vertex AI); **LangChain Agents**, **AutoGen** (multi-agent). |
+| **Orchestration (RAG, agents, pipelines)** | **LangChain**, **LlamaIndex** (RAG/chains); **CrewAI**, **Google ADK** (agents, multi-agent, Vertex AI); **LangChain Agents**, **AutoGen**, **LangGraph** (workflows). |
 | **Managed RAG / search** | **Vertex AI RAG Engine**, **Vertex AI Search** (website, commerce, internal KB, grounding + Google Search); **Bedrock Knowledge Bases**; **Pinecone**, **Weaviate**, **pgvector**, **Vertex AI Vector Search**, **FAISS** (vector DBs / retrieval). |
 | **Chunking / document parsing** | **Document AI**, **Textract** (managed OCR/layout); **Layout-Parser**, **PyMuPDF**, **Nougat** (open-source); **LangChain** / **LlamaIndex** text splitters (RecursiveCharacter, semantic). |
+| **OCR / document understanding (closed vs open)** | **Closed:** **Document AI** (Google; forms, tables, handwriting), **Textract** (AWS), **Azure Document Intelligence**, **Google Cloud Vision API** (OCR). **Open:** **Tesseract**, **PaddleOCR**, **EasyOCR** (text in images); **Nougat**, **Donut**, **TrOCR** (document/PDF understanding); **Layout-Parser**, **Dedoc** (layout + OCR). |
 | **Internal knowledge workers** | **Gemini Enterprise** (agents + unified search, plan-verify-execute); **NotebookLM Enterprise** (document Q&A, summarize, audio; can connect to Gemini). |
-| **LLM hosting** | **Vertex AI** (Gemini, Codey), **Bedrock** (Claude, CodeWhisperer, etc.); **vLLM**, **TGI** (Text Generation Inference) for self-hosted; **OpenAI**, **Anthropic** APIs. |
+| **Foundation models (closed vs open)** | **Closed:** GPT-4/4o (OpenAI), Claude (Anthropic), Gemini (Google), Grok (xAI). **Open:** LLaMA (Meta), Mistral, Qwen (Alibaba), DeepSeek, Gemma (Google), Phi (Microsoft), OLMo. |
+| **LLM hosting** | **Vertex AI** (Gemini, Codey), **Bedrock** (Claude, CodeWhisperer, Mistral, etc.); **vLLM**, **TGI** (Text Generation Inference) for self-hosted; **OpenAI**, **Anthropic** APIs; **Hugging Face** (Inference Endpoints, models). |
+| **Image generation** | **Stable Diffusion** (open-source; Diffusers, ComfyUI); **DALL·E** (OpenAI API); **Imagen** (Vertex AI); **Midjourney**; **Replicate** (hosted models); **Runway** (image + video). |
+| **Video generation** | **Runway Gen-3**, **Veo** (Google, Vertex AI), **Sora** (OpenAI); **Pika**, **Luma**; **Replicate** (hosted); **CogVideo**, **Open-Sora** (open-source). |
+| **Vision / image understanding** | **BLIP**, **LLaVA** (captioning, VQA); **CLIP** (image–text alignment, search); **Gemini Vision**, **GPT-4V** (multimodal APIs). |
 | **Evaluation (reference-free)** | **RAGAS** (faithfulness, relevancy, context precision/recall); **LangSmith** (datasets, human annotation, experiments); **Arize Phoenix** (traces, hallucination/relevance/toxicity); **Giskard** (RAG test suite, testset generation); **Braintrust**, **Vectara FaithJudge** (custom scorers, faithfulness benchmarks). |
 | **Observability / tracing** | **Phoenix** (LLM traces, evals); **LangSmith** (traces, runs); **OpenTelemetry** (instrumentation). |
 | **Guardrails** | **Model Armor** (Google), **Bedrock Guardrails** (AWS); **Guardrails AI**, **NeMo Guardrails** (open source); **OpenAI Guardrails**. |
