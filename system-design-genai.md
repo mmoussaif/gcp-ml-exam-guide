@@ -4240,41 +4240,71 @@ Standardizes **communication between agents** from different vendors/frameworks.
 > [!TIP]
 > **MCP** answers "how does this agent get its tools?" **A2A** answers "how do agents from different systems work together?" They complement each other.
 
+
 ---
 
 ### Reasoning Frameworks
 
-**Chain-of-Thought (CoT):** The model generates **intermediate reasoning steps** ("think step-by-step") before the final answer. No tool use—just internal logic. Use when you need interpretability or multi-step reasoning without external data.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    CoT vs ReAct                                           │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**ReAct (Reason + Act):** Combines **reasoning** with **tool use** in a loop. Each turn is either a _Thought_ (what to do next), an _Action_ (tool name + args), or an _Observation_ (tool result). The model keeps going until it can give a final answer.
+CHAIN-OF-THOUGHT (CoT)                    ReAct (REASON + ACT)
+──────────────────────                    ────────────────────
 
-| Phase              | What Happens                                                                 |
-| ------------------ | ---------------------------------------------------------------------------- |
-| **1. Reasoning**   | Agent analyzes task, selects tools                                           |
-| **2. Acting**      | Agent executes selected tool                                                 |
-| **3. Observation** | Agent receives tool output                                                   |
-| **4. Repeat**      | Agent reasons from the observation, then next Thought/Action or final answer |
+User ──► LLM                              User ──► LLM
+          │                                        │
+          ▼                                        ▼
+    "Let me think..."                        Thought: "Need order status"
+    "Step 1: ..."                                   │
+    "Step 2: ..."                                   ▼
+    "Therefore: ..."                          Action: get_order(123)
+          │                                        │
+          ▼                                        ▼
+       Answer                              Observation: "Delivered Jan 15"
+                                                   │
+                                                   ▼
+                                             Thought: "Check policy"
+                                                   │
+                                                   ▼
+                                              Action: search_kb()
+                                                   │
+                                              ... loop ...
+                                                   │
+                                                   ▼
+                                                Answer
+
+Internal reasoning only                   Reasoning + tool use in loop
+No external data                          Grounded in real observations
+```
+
+| Framework | What It Does | When to Use |
+| --------- | ------------ | ----------- |
+| **CoT** | "Think step-by-step" before answering | Math, logic, interpretability—no external data needed |
+| **ReAct** | Thought → Action → Observation loop | Tasks requiring tool calls and real-world data |
+
+---
+
+**ReAct Example:**
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    ReAct LOOP (example)                           │
-│   User: "What's the status of order #123? Can I get a refund?"   │
-│      Thought: I need to look up order #123 first.                 │
-│      Action: get_order_status(order_id="123")                    │
-│      Observation: { "status": "delivered", "date": "2024-01-15" }│
-│      Thought: Delivered. User asked about refund. Check policy.   │
-│      Action: search_knowledge_base(query="refund policy")         │
-│      Observation: "Refunds within 30 days of delivery..."         │
-│      Thought: I have enough. Compose answer.                      │
-│      Answer: "Order #123 was delivered Jan 15. Our policy..."     │
-└─────────────────────────────────────────────────────────────────┘
+User: "What's the status of order #123? Can I get a refund?"
+
+Thought:  I need to look up order #123 first.
+Action:   get_order_status(order_id="123")
+Observe:  { "status": "delivered", "date": "2024-01-15" }
+
+Thought:  Delivered. User asked about refund. Check policy.
+Action:   search_knowledge_base(query="refund policy")
+Observe:  "Refunds within 30 days of delivery..."
+
+Thought:  I have enough info. Compose answer.
+Answer:   "Order #123 was delivered Jan 15. Our policy allows..."
 ```
 
 > [!TIP]
-> 💡 **Aha:** ReAct makes the reasoning **visible** (Thought) and **grounded** (Action → Observation). The model can’t wander off; each step is either "I think…" or "I do X" followed by real tool output. That reduces hallucination in tool use because the next thought is conditioned on actual observations.
-
-
----
+> **Why ReAct reduces hallucination:** Each thought is conditioned on real tool output (observations), not just model imagination. The model can't wander off because every action produces grounding evidence.
 
 ### Agent Design Patterns
 
