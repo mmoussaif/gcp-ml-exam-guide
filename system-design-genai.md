@@ -4273,155 +4273,137 @@ Standardizes **communication between agents** from different vendors/frameworks.
 > [!TIP]
 > 💡 **Aha:** ReAct makes the reasoning **visible** (Thought) and **grounded** (Action → Observation). The model can’t wander off; each step is either "I think…" or "I do X" followed by real tool output. That reduces hallucination in tool use because the next thought is conditioned on actual observations.
 
+
+---
+
 ### Agent Design Patterns
 
-**When to use which:** Start with **Single Agent** (one LLM + all tools). Add **Multi-Agent** or **Hierarchical** when one agent can't handle the diversity of tasks or when you want specialists (e.g. research vs writing vs coding) or clearer separation of concerns.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    AGENT PATTERN OVERVIEW                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+
+SINGLE AGENT              MULTI-AGENT               HIERARCHICAL
+─────────────             ───────────               ────────────
+
+    ┌─────┐               ┌───┐   ┌───┐                 ┌─────────┐
+    │ LLM │               │ A │◄─►│ B │                 │Supervisor│
+    └──┬──┘               └─┬─┘   └─┬─┘                 └────┬────┘
+       │                    │       │                    ┌───┼───┐
+  ┌────┼────┐           ┌───┘       └───┐                ▼   ▼   ▼
+  ▼    ▼    ▼           ▼               ▼              ┌─┐ ┌─┐ ┌─┐
+┌─┐  ┌─┐  ┌─┐         ┌───┐           ┌───┐            │A│ │B│ │C│
+│T│  │T│  │T│         │ C │──►Aggregate│   │            └─┘ └─┘ └─┘
+└─┘  └─┘  └─┘         └───┘           └───┘
+
+One brain,             Many brains,               One boss delegates;
+many tools             peer handoffs              specialists don't talk
+```
+
+**Decision guide:** Start with **Single Agent**. Add Multi-Agent when you need specialists that collaborate. Add Hierarchical when one agent should own the plan.
 
 ---
 
-**1. Single Agent Pattern**
+#### 1. Single Agent
 
-One LLM handles the entire conversation and has access to all tools. The model decides when to call which tool.
+One LLM with access to all tools. The model decides when to call which tool.
 
 ```
-   User ──► LLM (orchestrator) ──► Tool A, Tool B, Tool C
-              ▲         │
-              └─────────┘  (loop until done)
+User ──► LLM ──► Tool A, Tool B, Tool C
+          ▲         │
+          └─────────┘ (loop)
 ```
 
-- ✅ Simple, low latency, easy to debug
-- ❌ Limited capabilities, may struggle with very complex or diverse tasks
-- _Best for_: Simple use cases, single domain (e.g. support bot with KB + CRM + ticketing)
+| Pros | Cons | Best For |
+| ---- | ---- | -------- |
+| Simple, low latency, easy to debug | Limited for diverse/complex tasks | Single domain (support bot, simple workflows) |
 
 ---
 
-**2. Multi-Agent Pattern**
+#### 2. Multi-Agent (Peer-to-Peer)
 
-Multiple specialized agents, each with its own tools. **There is no single "boss."** Agents can **hand off** to each other (e.g. Agent A finishes and passes to B), **work in parallel** (A, B, C run at once and someone aggregates), or **negotiate** who does what. Control and flow are **distributed**—each agent or a lightweight router decides the next step, not one central planner.
+Multiple specialized agents, **no single boss**. Agents hand off to each other, run in parallel, or negotiate. Control is distributed.
 
 ```
-   User ──► [Agent A] ←──► [Agent B] ←──► [Agent C] ──► combined result
-              │               │               │
-           Tools A        Tools B        Tools C
-        (peer-to-peer handoffs or parallel, then aggregate)
+User ──► Agent A ◄──► Agent B ◄──► Agent C ──► Result
+            │            │            │
+         Tools A      Tools B      Tools C
 ```
 
-- ✅ Specialists, parallel execution, modular, flexible routing
-- ❌ Coordination logic lives in handoffs/aggregation; can be harder to reason about
-- _Best for_: Domains where agents **collaborate as peers** (e.g. research agent + writing agent + fact-check agent that hand off or run in parallel; no one agent "owns" the plan)
+| Pros | Cons | Best For |
+| ---- | ---- | -------- |
+| Specialists, parallel execution, modular | Coordination in handoffs; harder to debug | Peer collaboration (research + writing + fact-check) |
 
 ---
 
-**3. Hierarchical Pattern (Supervisor/Manager)**
+#### 3. Hierarchical (Supervisor)
 
-**One supervisor** agent receives the user request, **owns the plan**, and **delegates** to specialist agents. Specialists do the work and **report back only to the supervisor**; they do **not** talk to each other. The supervisor decides the next step, assigns it, waits for the result, then repeats or synthesizes the final answer. Control and flow are **centralized** in the supervisor.
+**One supervisor** owns the plan and delegates to specialists. Specialists report back to supervisor only—they don't talk to each other.
 
 ```
-   User ──► Supervisor (LLM) ──► "Do step 1" ──► Specialist A ──► result ──► Supervisor
-                    │
-                    ├──► "Do step 2" ──► Specialist B ──► result ──► Supervisor
-                    │
-                    └──► synthesize ──► Answer
+User ──► Supervisor ──► "Step 1" ──► Specialist A ──► result ──► Supervisor
+              │
+              ├──► "Step 2" ──► Specialist B ──► result ──► Supervisor
+              │
+              └──► synthesize ──► Answer
 ```
 
-- ✅ Clear ownership of the plan, easier to debug and reason about, scalable workflow
-- ❌ Supervisor is a bottleneck; more latency than flat handoffs when steps are independent
-- _Best for_: Workflows with a **fixed or predictable sequence** (e.g. research → draft → review → publish) where one "conductor" should own the plan
+| Pros | Cons | Best For |
+| ---- | ---- | -------- |
+| Clear plan ownership, easier to debug | Supervisor is bottleneck | Fixed sequences (research → draft → review) |
 
 ---
 
-**Multi-Agent vs Hierarchical: Clear distinction**
+#### Multi-Agent vs Hierarchical
 
-| Aspect                          | Multi-Agent                                                                               | Hierarchical                                                                      |
-| ------------------------------- | ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| **Who decides the plan?**       | Distributed: agents hand off, or a router chooses; no single owner                        | **One supervisor** owns the plan and assigns steps                                |
-| **Who do specialists talk to?** | Each other (handoffs) or an aggregator; flow is peer-to-peer or fan-out                   | **Only the supervisor**; specialists do not talk to each other                    |
-| **Control shape**               | **Flat** or **peer-to-peer**: many agents, shared or emergent coordination                | **Tree**: one node (supervisor) at the top, specialists as children               |
-| **Flow**                        | Emergent (handoffs, parallel, negotiate)                                                  | **Top-down**: Supervisor → assign step → Specialist → result → Supervisor         |
-| **When to use**                 | You want **peers** that hand off or run in parallel and someone (or the group) aggregates | You want **one conductor** that plans and delegates in sequence or in a clear DAG |
+| Aspect | Multi-Agent | Hierarchical |
+| ------ | ----------- | ------------ |
+| **Plan ownership** | Distributed (no single owner) | One supervisor owns the plan |
+| **Specialist communication** | Talk to each other (handoffs) | Only talk to supervisor |
+| **Control shape** | Flat / peer-to-peer | Tree (supervisor at top) |
+| **Flow** | Emergent (handoffs, parallel) | Top-down (assign → execute → report) |
+
+---
+
+#### Orchestration Patterns
+
+Beyond agent count, three common **orchestration shapes**:
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    ORCHESTRATION PATTERNS                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+
+SEQUENTIAL                 PARALLEL FAN-OUT            DEBATE
+──────────                 ────────────────            ──────
+
+┌───┐   ┌───┐   ┌───┐         Query                 ┌─────┐
+│ A │──►│ B │──►│ C │           │               ┌──►│ Pro │──┐
+└───┘   └───┘   └───┘     ┌─────┼─────┐         │   └─────┘  │
+                          ▼     ▼     ▼         │            ▼
+A → B → C              ┌───┐ ┌───┐ ┌───┐      Query      ┌─────┐
+(fixed order)          │ A │ │ B │ │ C │       │         │Judge│
+                       └─┬─┘ └─┬─┘ └─┬─┘       │         └─────┘
+                         └─────┼─────┘         │            ▲
+                               ▼           ┌──►│ Con │──────┘
+                          Aggregate            └─────┘
+```
+
+| Pattern | Architecture | When to Use |
+| ------- | ------------ | ----------- |
+| **Sequential** | A → B → C (fixed order) | Content creation (outline → draft → edit), ETL flows |
+| **Parallel Fan-out** | Query → [A,B,C] → Aggregate | Multi-perspective analysis, ensembles, research |
+| **Debate** | Pro vs Con → Judge | High-stakes decisions, red teaming, stress-testing |
+
+**Sequential**: Each step depends on the previous. Latency = sum of all steps.
+
+**Parallel**: Independent branches run simultaneously. Latency = slowest branch + aggregation.
+
+**Debate**: Adversarial roles argue; judge synthesizes. Surfaces objections, reduces overconfidence.
 
 > [!TIP]
-> 💡 **Aha:** **Multi-agent** = "several agents, no single boss; they hand off or run in parallel." **Hierarchical** = "one boss (supervisor) that assigns tasks to specialists and gets results back; specialists don’t talk to each other." Use multi-agent when control should be shared or emergent; use hierarchical when one agent should own the plan and delegate.
+> **Summary:** Single = one brain, many tools. Multi-Agent = many brains, peer handoffs. Hierarchical = one boss delegates. Then layer on orchestration: sequential for dependencies, parallel for diversity, debate for stress-testing.
 
----
-
-**4. Additional Patterns**
-
-Beyond single-, multi-, and hierarchical agents, three common _orchestration shapes_ show up in production: stages in a fixed order, independent experts run in parallel, and adversarial roles that argue before a judge. Use these when the task has a natural flow (sequence), benefits from multiple viewpoints (fan-out), or must be stress-tested (debate).
-
----
-
-**1. Sequential Pipeline**
-
-**What it is:** A fixed chain of steps, A → B → C. Each stage consumes the prior stage's output and produces input for the next. No parallelism within the pipeline; order is part of the design (e.g. outline before draft, draft before edit).
-
-**How it works:** One agent or model run handles each step. Outputs are passed as context or artifacts to the next. Handoffs are explicit (e.g. "outline," "draft," "edited_draft"). Failures or rewinds usually mean restarting from the failing step or the beginning, depending on your design.
-
-**When to use:** **Content creation** (outline → draft → edit), **ETL-style** flows (extract → transform → load), or any process where step N truly depends on step N−1 and there's no benefit from running steps in parallel.
-
-```
-  ┌─────────┐     ┌─────────┐     ┌─────────┐
-  │Outline  │ ──▶ │ Draft   │ ──▶ │ Edit    │ ──▶ output
-  └─────────┘     └─────────┘     └─────────┘
-       A               B               C
-```
-
----
-
-**2. Parallel Fan-out**
-
-**What it is:** One query (or task) is sent to **multiple agents or tools** at once; each runs independently. A separate **aggregator** (or router) collects their outputs and merges them into one answer or decision.
-
-**How it works:** Fan-out: duplicate the request to A, B, C (and optionally more). No agent waits on another during the parallel phase. Aggregate: combine results via another LLM call (e.g. "synthesize these three analyses") or a rule (e.g. majority vote, weighted average). Latency is dominated by the slowest branch plus aggregation, not the sum of all branches.
-
-**When to use:** **Research** or **multi-perspective analysis** (e.g. legal, market, technical views in parallel), **ensemble** answers (e.g. multiple retrieval strategies or models), or whenever you want **diversity** then **reconciliation** in one round.
-
-```
-       Query
-          │
-    ┌─────┼─────┐
-    ▼     ▼     ▼
-  ┌───┐ ┌───┐ ┌───┐
-  │ A │ │ B │ │ C │   (parallel)
-  └─┬─┘ └─┬─┘ └─┬─┘
-    └─────┼─────┘
-          ▼
-     Aggregate ──▶ final answer
-```
-
----
-
-**3. Debate / Adversarial**
-
-**What it is:** Two (or more) **adversarial roles** argue opposite sides (e.g. Pro vs Con, attacker vs defender). A **judge** (or meta-agent) reads the debate and produces the final decision or output. The goal is to surface objections and reduce overconfidence.
-
-**How it works:** Pro and Con (or Red / Blue) each get the same task and constraints; they may see each other's replies in one or more rounds. The judge receives the full transcript and possibly the original query, then outputs the chosen stance, a synthesis, or a "no decision" with reasons. You can cap rounds (e.g. 1–2) to control cost and latency.
-
-**When to use:** **High-stakes decisions** (e.g. approvals, audits, policy), **red teaming** (stress-test an idea or policy before release), or when you want the system to **explicitly consider counterarguments** instead of one-shot answers.
-
-```
-  ┌─────┐                    ┌─────┐
-  │ Pro │ ──── argue ───────▶│Judge│
-  └─────┘                    └──┬──┘
-       ▲                        │
-       └── argue ──────────────┘
-  ┌─────┐
-  │ Con │
-  └─────┘
-```
-
----
-
-**Quick reference**
-
-| Pattern                 | Architecture                  | Use Case                                                        |
-| ----------------------- | ----------------------------- | --------------------------------------------------------------- |
-| **Sequential Pipeline** | A → B → C (fixed order)       | Content creation (outline → draft → edit), ETL-style flows      |
-| **Parallel Fan-out**    | Query → [A, B, C] → Aggregate | Research, multi-perspective analysis, ensembles                 |
-| **Debate/Adversarial**  | Pro vs Con → Judge            | High-stakes decisions, red teaming, counterargument stress-test |
-
-> [!TIP]
-> 💡 **Aha:** Single agent = one brain, many tools. Multi-agent = many brains, each with its own tools; you need handoffs. Hierarchical = one brain that delegates; specialists don't talk to each other directly.
 
 ### Context Engineering
 
