@@ -4679,150 +4679,216 @@ adk web --port 8000     # Dev web UI
 
 ---
 
+
 ## E.5 LLM Evaluation & Quality
 
-**Why this comes next:** E.1–E.4 gave you the **request path** (serving, RAG, agents). The next question is **did we build the right thing?** This section answers that—quality, grounding, safety—so you can ship with confidence and iterate.
+**Why this comes next:** E.1–E.4 built the request path. Now: **did we build the right thing?**
 
-**What "knowledge quality" means here:** For LLM and RAG systems, quality is **groundedness** (is the answer supported by the context?), **relevance** (does it address the question?), and **retrieval quality** (did we fetch the right chunks?). You rarely have gold labels for every request, so evaluation mixes **reference-free** automated metrics (e.g. faithfulness, relevancy) with **sampled human review** to calibrate and catch edge cases. This section is tool-first: each concept is tied to frameworks you can run today.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    THE EVALUATION QUESTION                                │
+└───────────────────────────────────────────────────────────────────────────┘
 
----
-
-### Evaluation Frameworks & Metrics
-
-**RAGAS** (Python: `pip install ragas`) is the de facto open-source choice for **reference-free** RAG evaluation. You pass a dataset of `(user_input, retrieved_contexts, response)` plus optional `reference`; RAGAS runs LLM-as-judge and embedding-based metrics and returns scores. Used by LangChain, LlamaIndex, and LangSmith integrations.
-
-| Metric                | What It Measures                      | How (in RAGAS)                                                                    | Tool                                                  |
-| --------------------- | ------------------------------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| **Faithfulness**      | Is response grounded in context?      | LLM extracts claims → checks each against retrieved docs                          | `ragas.metrics.Faithfulness`                          |
-| **Answer Relevancy**  | Does answer address the question?     | Inverse of LLM-generated “counterfactual” questions needed to recover answer      | `ragas.metrics.AnswerRelevancy`                       |
-| **Context Precision** | Are relevant docs ranked above noise? | Ground-truth relevant items ranked high → higher score                            | `ragas.metrics.ContextPrecision` (needs ground truth) |
-| **Context Recall**    | Did we retrieve what we need?         | Overlap between answer-supporting context and retrieved context; or vs. reference | `ragas.metrics.ContextRecall` / `LLMContextRecall`    |
-
-**Practical RAGAS workflow:** Build a list of dicts with `user_input`, `retrieved_contexts`, `response`, and optionally `reference`. Load into `EvaluationDataset.from_list(dataset)`, then call `evaluate(dataset=..., metrics=[Faithfulness(), AnswerRelevancy(), ...], llm=evaluator_llm)`. Use a **different** LLM for evaluation than for generation to reduce self-consistency bias. See [RAGAS docs](https://docs.ragas.io/en/stable/getstarted/rag_eval/).
-
-**Other tools:**
-
-- **LangSmith** (LangChain): Predefined RAG evaluators (correctness, relevance, groundedness), dataset runs, human annotation queues, and online feedback. Use `client.run_evaluator` or the LangSmith UI to run evals on logged runs. Strong when your stack is already LangChain.
-- **Giskard** (Python: `pip install giskard`): RAG Evaluation Toolkit (RAGET)—testset generation, knowledge-base–aware tests, and scalar metrics. Good for “test-suite” style regression and CI.
-- **Arize Phoenix** (Python: `pip install arize-phoenix`): Open-source LLM tracing + evals. Phoenix Evals include **hallucination**, relevance, toxicity; they run over OpenTelemetry traces. Use for production monitoring and “eval on sampled traffic.”
-- **Braintrust** (Python: `braintrust`): `Eval()` / `EvalAsync()` over datasets; you define **scorers** (functions that score outputs). Fits custom logic and proprietary benchmarks.
-- **TruLens**: Focus on “RAG triad” (context relevance, grounding, relevance) with minimal config; integrates with LlamaIndex and other frameworks.
+User Query ──► Retrieval ──► LLM ──► Response
+                  │           │          │
+                  ▼           ▼          ▼
+            Did we get    Is answer   Does it
+            the right     grounded?   address
+            chunks?                   the question?
+                  │           │          │
+                  └───────────┴──────────┘
+                              │
+                      EVALUATION METRICS
+```
 
 ---
 
-### Hallucination Detection: Approaches & Tools
+### What We Measure (The RAG Evaluation Triad)
 
-| Approach                            | What It Does                                            | Accuracy | Latency         | Tools / How                                                                                                                                                               |
-| ----------------------------------- | ------------------------------------------------------- | -------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Self-consistency**                | Sample N answers, check agreement                       | Moderate | High (N× calls) | Custom loop or Braintrust/Phoenix over multiple runs                                                                                                                      |
-| **NLI / cross-encoder**             | Entailment model: premise = context, hypothesis = claim | High     | +50–100 ms      | Sentence-transformers NLI, or Phoenix “groundedness”–style evals                                                                                                          |
-| **LLM-as-Judge**                    | “Is this claim supported by the context?”               | High     | +100–200 ms     | **RAGAS** `Faithfulness`, **LangSmith** groundedness, **Phoenix** hallucination template, **Braintrust** custom scorer                                                    |
-| **Specialized faithfulness models** | Fine-tuned “faithfulness vs. hallucination” judge       | Highest  | ~+50 ms         | **Vectara FaithJudge** ([GitHub](https://github.com/vectara/FaithJudge)): benchmark + model for RAG QA/summarization; use when you need max agreement with human judgment |
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    RAG EVALUATION TRIAD                                   │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**Practical tip:** In production, run **fast** checks inline (format, length, toxicity if you have a small classifier), and push **faithfulness / hallucination** to async jobs on a sample (e.g. 5–10%) using RAGAS or Phoenix so cost and latency stay bounded.
+              User Query
+                  │
+                  ▼
+         ┌───────────────┐
+         │   RETRIEVAL   │ ◄─── Context Precision: Right docs ranked high?
+         │               │ ◄─── Context Recall: Got all relevant docs?
+         └───────┬───────┘
+                 │
+                 ▼
+         ┌───────────────┐
+         │   GENERATION  │ ◄─── Faithfulness: Grounded in retrieved docs?
+         │               │ ◄─── Answer Relevancy: Addresses the question?
+         └───────┬───────┘
+                 │
+                 ▼
+              Response
+```
+
+| Metric | Question It Answers | Why It Matters |
+| ------ | ------------------- | -------------- |
+| **Faithfulness** | Is every claim in the response supported by the retrieved context? | Catches **hallucinations** |
+| **Answer Relevancy** | Does the response actually address what the user asked? | Catches **off-topic** answers |
+| **Context Precision** | Are relevant documents ranked above irrelevant ones? | Bad ranking = model sees noise first |
+| **Context Recall** | Did we retrieve all the documents needed to answer? | Missing docs = incomplete/wrong answer |
 
 ---
 
-### How to Run Evaluation in Practice
+### How Metrics Work (Explainability)
 
-1. **Offline / batch (before release or in CI)**
+**Faithfulness (hallucination detection):**
+```
+Response: "The return window is 30 days, and shipping is free."
+                    │                           │
+                    ▼                           ▼
+            LLM extracts claims:         LLM extracts claims:
+            "return window = 30 days"    "shipping is free"
+                    │                           │
+                    ▼                           ▼
+            Check vs. context:           Check vs. context:
+            ✓ Found in docs              ✗ NOT in docs → HALLUCINATION
+```
 
-   - **Data:** List of `(query, retrieved_contexts, response)` or `(query, response)`; optional `reference` for reference-based metrics.
-   - **Run:** RAGAS `evaluate()` on a dataset; or LangSmith “evaluate dataset”; or Braintrust `Eval(dataset, scorers=...)`.
-   - **Use:** Regressions, A/B on prompts or retrievers, and calibration of thresholds.
+**Answer Relevancy:**
+```
+Query: "How do I reset my password?"
+Response: "Our company was founded in 2010..."
 
-2. **Online / production (sampled)**
+LLM asks: "What questions would this response answer?"
+→ Generates: "When was the company founded?"
+→ Compare to original query: LOW MATCH → Low relevancy score
+```
 
-   - **Data:** Log requests and responses (and retrieved contexts if RAG) to **LangSmith**, **Phoenix**, or your own store.
-   - **Run:** Periodic jobs (e.g. cron or queue) that pull a sample (e.g. 5%), run RAGAS or Phoenix evals, and write scores to a dashboard or alerting.
-   - **Use:** Drift detection, “did we build the right thing?” in the wild.
+---
 
-3. **Human loop**
-   - **Data:** Subset of production or offline examples (e.g. 100–500) with labels (good/bad, error type, etc.).
-   - **Tools:** **LangSmith** annotation queue, Label Studio, or internal tooling.
-   - **Use:** Calibrate automated metrics (“at what faithfulness score do humans usually approve?”), build training data for task-specific judges, and categorize failure modes.
+### Tools & Frameworks
 
-> [!TIP]
-> 💡 **Aha:** You don’t need gold labels for every request. **Reference-free** metrics (RAGAS faithfulness, answer relevancy, Phoenix hallucination) answer “is this grounded?” and “does this match the question?” without human annotations. Use them on a sample in production, then a **small human-labeled set** to set thresholds and sanity-check.
+**RAGAS** (`pip install ragas`) — the de facto open-source choice for reference-free RAG evaluation.
+
+```python
+from ragas import evaluate
+from ragas.metrics import Faithfulness, AnswerRelevancy
+
+# Your data: query, retrieved contexts, response
+dataset = EvaluationDataset.from_list([
+    {"user_input": "...", "retrieved_contexts": [...], "response": "..."},
+    ...
+])
+
+# Run evaluation (use different LLM than generation to avoid bias)
+results = evaluate(
+    dataset=dataset,
+    metrics=[Faithfulness(), AnswerRelevancy()],
+    llm=evaluator_llm
+)
+```
+
+| Tool | What It Does | When to Use |
+| ---- | ------------ | ----------- |
+| **RAGAS** | Reference-free RAG metrics | Batch evals, CI, offline benchmarks |
+| **LangSmith** | Evaluators + human annotation | LangChain stack, need UI + feedback |
+| **Phoenix** | Tracing + evals over OTLP | Production monitoring, sampled traffic |
+| **Giskard** | Test suite generation | Regression testing, CI |
+| **Braintrust** | Custom scorers, experiments | Proprietary benchmarks |
+| **FaithJudge** | Specialized faithfulness model | High-stakes, max human agreement |
+
+---
+
+### Hallucination Detection Approaches
+
+| Approach | How It Works | Accuracy | Latency | Tools |
+| -------- | ------------ | -------- | ------- | ----- |
+| **Self-consistency** | Generate N answers, check agreement | Moderate | High (N× calls) | Custom loop |
+| **NLI / Cross-encoder** | Entailment model (context → claim) | High | +50–100ms | Sentence-transformers |
+| **LLM-as-Judge** | "Is claim X supported by context Y?" | High | +100–200ms | RAGAS, LangSmith, Phoenix |
+| **Specialized models** | Fine-tuned faithfulness judge | Highest | +50ms | Vectara FaithJudge |
 
 ---
 
 ### Production Evaluation Strategy
 
+**Key insight:** Not every request gets every metric. Use **tiered evaluation**:
+
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                 EVALUATION PIPELINE                             │
-│                                                                 │
-│   Request → LLM Response                                        │
-│                │                                                │
-│                ├──► Real-time checks (< 50ms budget)             │
-│                │    • Toxicity (e.g. Perspective API, small      │
-│                │      classifier, or rule-based filters)         │
-│                │    • Format validation (schema, length)         │
-│                │    • Length limits                             │
-│                │    Tools: in-process code, light model or API  │
-│                │                                                │
-│                ├──► Async evaluation (sampled, e.g. 5–10%)      │
-│                │    • Faithfulness / grounding → RAGAS, Phoenix  │
-│                │    • Hallucination → Phoenix evals, FaithJudge │
-│                │    • Task-specific metrics → Braintrust, custom │
-│                │    Tools: RAGAS, Phoenix, LangSmith, Braintrust  │
-│                │                                                │
-│                └──► Human evaluation (subset of async or batch) │
-│                     • Quality ratings, error taxonomy            │
-│                     • Calibrate automated score thresholds       │
-│                     Tools: LangSmith annotation, Label Studio   │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TIERED EVALUATION PIPELINE                             │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Request ──► LLM Response
+                │
+                ├──► TIER 1: Real-time (every request, <50ms)
+                │    ├─ Format validation (schema, length)
+                │    ├─ Toxicity (small classifier or rules)
+                │    └─ PII detection
+                │
+                ├──► TIER 2: Async (sampled 5-10%, minutes)
+                │    ├─ Faithfulness (RAGAS, Phoenix)
+                │    ├─ Answer relevancy
+                │    └─ Task-specific metrics
+                │
+                └──► TIER 3: Human review (subset, hours/days)
+                     ├─ Quality ratings
+                     ├─ Error taxonomy
+                     └─ Threshold calibration
 ```
 
-**Key Insight:** Not every request gets every metric. Use **tiered evaluation**—cheap checks inline, expensive ones (RAGAS, hallucination, custom scorers) on a **sample** and/or async, so latency and cost stay under control.
+| Tier | What | When | Tools |
+| ---- | ---- | ---- | ----- |
+| **Real-time** | Format, toxicity, PII | Every request | In-process code, small models |
+| **Async** | Faithfulness, relevancy | 5-10% sample | RAGAS, Phoenix, Braintrust |
+| **Human** | Quality ratings, error types | 100-500 examples | LangSmith, Label Studio |
 
 ---
 
-### Tools Quick Reference
+### Running Evaluation in Practice
 
-| Tool                     | What It Does                                                                   | When to Use                                           |
-| ------------------------ | ------------------------------------------------------------------------------ | ----------------------------------------------------- |
-| **RAGAS**                | Reference-free RAG metrics (faithfulness, relevancy, context precision/recall) | Batch RAG evals, CI, offline benchmarks; Python-first |
-| **LangSmith**            | Evaluators, datasets, runs, human annotation                                   | LangChain-based apps; need UI + queues + feedback     |
-| **Phoenix**              | Tracing + evals (hallucination, relevance, toxicity) over OTLP                 | Production monitoring, eval-on-sampled-traffic        |
-| **Giskard**              | RAG test suite, testset generation, scalar metrics                             | Regression and “test suite” style RAG evaluation      |
-| **Braintrust**           | Custom scorers, `Eval`/`EvalAsync`, experiments                                | Proprietary benchmarks, custom logic, experiments     |
-| **FaithJudge** (Vectara) | Faithfulness/hallucination benchmark + model                                   | High-stakes RAG; max agreement with human judgment    |
+**1. Offline (before release, CI)**
+- Data: `(query, contexts, response)` + optional reference
+- Run: `ragas.evaluate()`, LangSmith dataset eval, Braintrust `Eval()`
+- Use: Regression testing, prompt/retriever A/B
+
+**2. Online (production)**
+- Data: Log to LangSmith, Phoenix, or custom store
+- Run: Cron jobs pull sample → run evals → write to dashboard
+- Use: Drift detection, "did we build the right thing?"
+
+**3. Human loop**
+- Data: 100-500 labeled examples (good/bad, error type)
+- Use: Calibrate thresholds ("at what faithfulness score do humans approve?")
 
 ---
 
-### Evaluation data pipeline at scale
-
-The metrics and tools above assume you have prediction data to evaluate. At scale, you need a **data pipeline**: predictions flow from the LLM → event stream → stream processor → evaluation/metrics layer and time-series store → dashboards and alerting. This is the _evaluation_ pipeline (log predictions, run quality/safety/cost metrics); the _training_ pipeline (user interactions → fine-tuning data) is E.6.
-
-**Use case: Production LLM evaluation system**
-
-**Requirements:** Evaluate model performance continuously; track 100+ metrics (accuracy, latency, cost, safety); process 1M predictions/day; alert on degradation; support A/B testing.
+### Evaluation Data Pipeline at Scale
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                  EVAL DATA PIPELINE (at scale)                  │
-│   ┌──────────────┐     ┌──────────────┐     ┌──────────────┐   │
-│   │    LLM       │────►│ Event Stream │────►│   Stream     │   │
-│   │ Predictions  │     │ Pub/Sub or   │     │ Processor    │   │
-│   └──────────────┘     │ Kinesis      │     └──────┬───────┘   │
-│                        └──────────────┘            │           │
-│                    ┌───────────────────────────────┼───────┐    │
-│                    ▼                               ▼       ▼    │
-│              ┌───────────┐                   ┌───────────────┐ │
-│              │ Evaluation│                   │  Time-Series   │ │
-│              │ (RAGAS,   │                   │  DB → Dashboards│
-│              │ Phoenix…) │                   │  Alerting, A/B │ │
-│              └───────────┘                   └───────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    EVAL PIPELINE AT SCALE                                 │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   LLM    │───►│ Event Stream │───►│   Stream     │───►│  Time-Series │
+│Predictions│   │(Pub/Sub,     │    │  Processor   │    │     DB       │
+└──────────┘    │ Kinesis)     │    └──────┬───────┘    └──────┬───────┘
+                └──────────────┘           │                   │
+                                           ▼                   ▼
+                                    ┌────────────┐      ┌────────────┐
+                                    │ Evaluation │      │ Dashboards │
+                                    │ (RAGAS,    │      │ Alerting   │
+                                    │  Phoenix)  │      │ A/B Tests  │
+                                    └────────────┘      └────────────┘
 ```
 
-**Sampling:** Full (100%) = complete visibility but costly; sampled (e.g. 10%) = cheaper, may miss rare errors; **smart (100% errors + sample successes)** = recommended—capture all failures, sample successes for stats.
+| Aspect | Options | Recommendation |
+| ------ | ------- | -------------- |
+| **Sampling** | Full (100%), Random (10%), Smart | **Smart**: 100% errors + sample successes |
+| **Frequency** | Real-time, Batch, Hybrid | **Hybrid**: real-time for latency, batch for quality |
+| **What to track** | Quality, Latency, Cost, Safety | All four: accuracy, P50/P95/P99, tokens, toxicity |
 
-**Frequency:** Real-time for latency/errors (user-facing); batch (hourly/daily) for quality/cost (expensive metrics); **hybrid** for most production.
-
-**What to track:** Quality (task accuracy, ROUGE/BLEU, human eval), latency (P50/P95/P99), cost (tokens, model tier), safety (toxicity, jailbreak, bias).
+> [!TIP]
+> **Key insight:** You don't need gold labels for every request. Reference-free metrics (faithfulness, relevancy) answer "is this grounded?" and "does this address the question?" without human annotations. Use them on a sample, then calibrate thresholds with a small human-labeled set.
 
 ---
 
