@@ -5453,6 +5453,39 @@ Full precision    Half precision    Integer only      Aggressive
 
 **Why LLMs are hard to scale:** LLMs are GPU-heavy and memory-hungry. Each request needs the full model in GPU memory plus a KV cache that grows with sequence length. E.7 covered cost per request; here we focus on **requests per second** and **GPU utilization**.
 
+### GPU Quick Reference
+
+Understanding GPU generations helps estimate what hardware you need:
+
+| GPU | Generation | Memory | FP16 TFLOPS | Use Case | Cloud Cost |
+|-----|------------|--------|-------------|----------|------------|
+| **V100** | 2017 (Volta) | 16/32 GB | 125 | Legacy training, small inference | ~$2/hr |
+| **A100** | 2020 (Ampere) | 40/80 GB | 312 | Production training & inference | ~$4/hr |
+| **H100** | 2022 (Hopper) | 80 GB | 990 | Large model training, high throughput | ~$8/hr |
+| **H200** | 2024 (Hopper) | 141 GB | 990 | Largest models, massive batch | ~$12/hr |
+| **L4** | 2023 (Ada) | 24 GB | 121 | Cost-effective inference | ~$0.80/hr |
+| **L40S** | 2023 (Ada) | 48 GB | 362 | Balanced inference | ~$2/hr |
+| **TPU v5e** | 2023 | 16 GB HBM | N/A | Google Cloud training/inference | ~$1.20/hr |
+
+**Key insights:**
+- **Memory is often the bottleneck**: A 70B model in FP16 needs ~140GB → requires 2× H100 or 4× A100
+- **H100 vs A100**: 3× faster but 2× cost → worth it for training, evaluate for inference
+- **L4 for inference**: 4× cheaper than A100, good for smaller models (<13B)
+- **TPU**: Competitive on Google Cloud, especially with JAX/TensorFlow
+
+**Quick sizing guide:**
+
+| Model Size | FP16 Memory | Minimum GPUs |
+|------------|-------------|--------------|
+| 7B | ~14 GB | 1× L4 or A100 |
+| 13B | ~26 GB | 1× A100-40GB or 2× L4 |
+| 70B | ~140 GB | 2× H100 or 4× A100-80GB |
+| 405B | ~810 GB | 8× H100 or 16× A100 |
+
+> **Note:** With INT8 quantization, memory requirements halve. With INT4, they quarter.
+
+---
+
 ```
 ┌───────────────────────────────────────────────────────────────────────────┐
 │                    WHY LLM SCALING IS DIFFERENT                           │

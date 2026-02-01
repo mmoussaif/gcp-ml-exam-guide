@@ -320,6 +320,17 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 
 ## 14. SCALABILITY PATTERNS
 
+### GPU Quick Reference
+| GPU | Memory | FP16 TFLOPS | Cost | Best For |
+|-----|--------|-------------|------|----------|
+| **V100** | 16/32 GB | 125 | ~$2/hr | Legacy, small models |
+| **A100** | 40/80 GB | 312 | ~$4/hr | Production standard |
+| **H100** | 80 GB | 990 | ~$8/hr | Large training, high throughput |
+| **L4** | 24 GB | 121 | ~$0.80/hr | Cost-effective inference |
+| **TPU v5e** | 16 GB | — | ~$1.20/hr | Google Cloud |
+
+**Model → GPU sizing**: 7B = 14GB (1× L4) | 70B = 140GB (2× H100) | 405B = 810GB (8× H100)
+
 ### Inference Scaling
 | Pattern | What It Does | When |
 |---------|--------------|------|
