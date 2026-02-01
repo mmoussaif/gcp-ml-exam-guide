@@ -7619,11 +7619,11 @@ _Generate 5-second 720p videos from text prompts. Latent diffusion with DiT, tem
 
 📊 **Rough estimation (text-to-video)**
 
-- **Training data:** 100M videos; after filtering + latent precomputation, ~200TB storage.
-- **Training compute:** DiT on 100M videos: ~months on 6000+ H100 GPUs (Sora-scale).
-- **Compression:** 120 frames × 1280×720 = 110M pixels → with 8×8 compression: 216K (512× smaller).
-- **Inference:** 50 DDIM steps × ~500ms/step = ~25s for latent. + super-resolution: ~2–5 minutes total.
-- **Serving cost:** ~$0.10–1.00 per video depending on duration/resolution.
+- **Training data:** Assume ~100M video–caption pairs (Sora-scale). After quality/NSFW/dedup filtering you keep a large fraction; each 5s 720p video in latent form is ~216K values × 4 bytes ≈ 0.8 MB. 100M × 0.8 MB ≈ 80 TB; add raw or intermediate assets and redundancy → **~200 TB** storage is a plausible ballpark.
+- **Training compute:** DiT over 100M videos, each seen multiple times (epochs), with temporal attention over 15 latent frames. Public estimates for Sora-scale runs are on the order of **months on 6000+ H100s** (tens of exaFLOPs). Exact numbers are undisclosed; use this to reason about “months of cluster time” and budget.
+- **Compression:** One 5s clip at 720p, 24 FPS: **120 frames × 1280 × 720 ≈ 110M pixels**. VAE compresses 8× spatially (160×90 per frame) and ~8× temporally (15 latent frames) → **120 × 1280 × 720 → 15 × 160 × 90 = 216K** latent values, i.e. **~512×** fewer values than pixels. That’s why training runs in latent space.
+- **Inference:** Denoising in latent space: e.g. **50 DDIM steps × ~500 ms/step ≈ 25 s** for the latent video. Then spatial (and optionally temporal) super-resolution back to 720p (or higher) adds **~1–4 minutes** depending on resolution and hardware → **~2–5 minutes total** per video is a reasonable range.
+- **Serving cost:** Dominated by GPU time (latent denoising + super-resolution). At a few dollars per GPU-hour and 2–5 minutes per video, **~$0.10–1.00 per video** is a plausible range; scales with duration, resolution, and provider.
 
 **2. High-Level Architecture (10–15 min)**
 
