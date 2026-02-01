@@ -3255,70 +3255,116 @@ def build_context(session_id, new_message, max_tokens=6000):
 
 ## E.2 RAG (Retrieval-Augmented Generation) System
 
-**Why this comes next:** E.1 gave you **LLM serving** (how to run the model at scale). When the model **lacks knowledge** about your domain (docs, KB, policies) or that knowledge **changes often**, you add **retrieval** at query time—that's **RAG**. Same request path (gateway → orchestration → LLM), but orchestration now includes "retrieve relevant chunks, then generate."
+**Why this comes next:** E.1 gave you LLM serving. When the model **lacks knowledge** about your domain or that knowledge **changes often**, you add **retrieval** at query time—that's RAG.
 
-### Use Case: Design a Document Q&A System
+---
 
-**Requirements:**
-
-- Answer questions from 1M documents
-- Support real-time queries (< 3 seconds)
-- Handle 1,000 **QPS** (queries per second)
-- Ensure factual accuracy (grounding)
-
-**High-Level Design:**
+### The Core Idea
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      RAG ARCHITECTURE                           │
-│                                                                 │
-│   INGESTION PIPELINE                                            │
-│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   │
-│   │Documents │──►│ Chunking │──►│Embedding │──►│ Vector   │   │
-│   │          │   │          │   │  Model   │   │   DB     │   │
-│   └──────────┘   └──────────┘   └──────────┘   └──────────┘   │
-│                                                                 │
-│   QUERY PIPELINE                                                │
-│   ┌──────────┐   ┌──────────┐   ┌──────────┐   ┌──────────┐   │
-│   │  Query   │──►│ Embed    │──►│Similarity│──►│ Top-K    │   │
-│   │          │   │  Query   │   │  Search  │   │  Docs    │   │
-│   └──────────┘   └──────────┘   └──────────┘   └────┬─────┘   │
-│                                                      │         │
-│                                              ┌───────▼───────┐ │
-│                                              │   Reranker    │ │
-│                                              │  (optional)   │ │
-│                                              └───────┬───────┘ │
-│                                                      │         │
-│   ┌──────────────────────────────────────────────────▼───────┐ │
-│   │                        LLM                                │ │
-│   │   Query + Retrieved Context → Generated Answer           │ │
-│   └──────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────────┘
+┌───────────────────────────────────────────────────────────────────────────┐
+│                        WHY RAG EXISTS                                     │
+└───────────────────────────────────────────────────────────────────────────┘
+
+WITHOUT RAG                                  WITH RAG
+──────────                                   ────────
+
+User: "What's our refund policy?"            User: "What's our refund policy?"
+                                                        │
+LLM: "I don't have access to your            ┌──────────▼──────────┐
+      company's specific policies..."        │  1. RETRIEVE        │
+                                             │  Search your docs   │
+Problem: LLM was trained on                  │  for "refund policy"│
+public internet data, not YOUR docs          └──────────┬──────────┘
+                                                        │
+                                             ┌──────────▼──────────┐
+                                             │  2. AUGMENT         │
+                                             │  Add retrieved text │
+                                             │  to the prompt      │
+                                             └──────────┬──────────┘
+                                                        │
+                                             ┌──────────▼──────────┐
+                                             │  3. GENERATE        │
+                                             │  LLM answers using  │
+                                             │  your actual docs   │
+                                             └──────────┬──────────┘
+                                                        │
+                                             LLM: "Our refund policy allows
+                                                   returns within 30 days..."
 ```
 
 > [!TIP]
-> 💡 **Aha:** RAG doesn't cram everything into the model's weights. It keeps the LLM general and **fetches** relevant knowledge at query time. That gives you updatable knowledge, smaller models, and citations—but you must design retrieval and chunking well or the model "makes it up."
+> **Key insight:** RAG = "give the LLM an open-book exam." Instead of memorizing everything, it looks up relevant info at query time. This means updatable knowledge, citations, and smaller models.
+
+---
+
+### Complete RAG Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                              RAG SYSTEM ARCHITECTURE                                     │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════════════════
+                               INGESTION PIPELINE (Offline/Batch)
+═══════════════════════════════════════════════════════════════════════════════════════════
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌─────────┐
+│  Documents   │    │   Parsing    │    │   Chunking   │    │  Embedding   │    │ Vector  │
+│              │    │              │    │              │    │    Model     │    │   DB    │
+│ • PDFs      │───►│ • Extract    │───►│ • Split into │───►│              │───►│         │
+│ • Docs      │    │   text       │    │   512 tokens │    │ • text-emb   │    │ • HNSW  │
+│ • HTML      │    │ • Tables     │    │ • Overlap    │    │ • BGE        │    │ • IVF   │
+│ • DB rows   │    │ • Images     │    │ • Metadata   │    │ • Titan      │    │         │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘    └────┬────┘
+                                                                                      │
+        Google: Document AI                LangChain              Vertex AI           │
+        AWS: Textract                       splitters             Vector Search       │
+                                                                                      │
+═══════════════════════════════════════════════════════════════════════════════════════════
+                               QUERY PIPELINE (Online/Real-time)                       
+═══════════════════════════════════════════════════════════════════════════════════════════
+                                                                                      │
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐         │
+│    User      │    │   Query      │    │   Vector     │    │   Top-K      │         │
+│    Query     │    │  Embedding   │    │   Search     │◄───│   Chunks     │◄────────┘
+│              │───►│              │───►│              │    │              │
+│ "What is our │    │  Same model  │    │  ANN search  │    │  k=20        │
+│  refund      │    │  as ingestion│    │  (HNSW)      │    │  candidates  │
+│  policy?"    │    │              │    │              │    │              │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────┬───────┘
+                                                                   │
+                                                                   ▼
+                                                           ┌──────────────┐
+                                                           │   Reranker   │
+                                                           │  (optional)  │
+                                                           │              │
+                                                           │ Cross-encoder│
+                                                           │ k=20 → top 5 │
+                                                           └──────┬───────┘
+                                                                  │
+                                                                  ▼
+                    ┌─────────────────────────────────────────────────────────────────┐
+                    │                           LLM                                    │
+                    │                                                                  │
+                    │  Prompt: "Given these documents: [chunk1] [chunk2] [chunk3]     │
+                    │           Answer this question: What is our refund policy?"     │
+                    │                                                                  │
+                    │  Output: "Based on the provided documents, your refund policy   │
+                    │           allows returns within 30 days of purchase..."         │
+                    └─────────────────────────────────────────────────────────────────┘
+```
+
+---
 
 ### Key Components
 
-**1. Document Ingestion Pipeline**
-
-| Service       | Google Cloud            | AWS                     |
-| ------------- | ----------------------- | ----------------------- |
-| RAG Engine    | Vertex AI RAG Engine    | Bedrock Knowledge Bases |
-| Vector Search | Vertex AI Vector Search | OpenSearch Serverless   |
-| Processing    | Dataflow                | Glue/EMR                |
-
-**2. Vector Database Options**
-
-- **Managed**: Vertex AI Vector Search, Amazon OpenSearch
-- **Self-hosted**: Pinecone, Weaviate, Qdrant, Milvus
-
-**3. Embedding Models**
-
-- **Google**: text-embedding-004 (Vertex AI)
-- **AWS**: Amazon Titan Embeddings (Bedrock)
-- **Open Source**: sentence-transformers, **BGE** (BAAI General Embeddings)—embedding models from BAAI (Beijing Academy of Artificial Intelligence), e.g. bge-base, BGE-M3 for multilingual
+| Component | Google Cloud | AWS | Open Source |
+| --------- | ------------ | --- | ----------- |
+| **RAG Engine** | Vertex AI RAG Engine | Bedrock Knowledge Bases | LangChain, LlamaIndex |
+| **Vector DB** | Vertex AI Vector Search | OpenSearch Serverless | Pinecone, Weaviate, Qdrant |
+| **Embedding** | text-embedding-004 | Titan Embeddings | BGE, sentence-transformers |
+| **Parsing** | Document AI | Textract | PyMuPDF, Nougat |
 
 ### Search as RAG: the power of search agents
 
@@ -3359,83 +3405,230 @@ Before chunking, PDFs and other documents must be **parsed** to extract text, ta
 > [!TIP]
 > 💡 **Aha:** If your PDFs have **consistent templates** (e.g., invoices, forms), rule-based is faster and cheaper. If layouts **vary widely** (wiki pages, reports, mixed formats), use AI-based parsing—it's worth the extra compute.
 
-### Chunking Strategy Trade-offs
+### Chunking Strategy
 
-| Strategy                     | Pros                | Cons                    | Best For                |
-| ---------------------------- | ------------------- | ----------------------- | ----------------------- |
-| **Fixed-size (512 tokens)**  | Simple, predictable | May split concepts      | Uniform documents       |
-| **Semantic chunking**        | Preserves coherence | Complex, variable sizes | Complex content         |
-| **Hybrid (fixed + overlap)** | Balanced            | More storage            | Most production systems |
+**Why chunking matters:** LLMs have context limits. Your 100-page doc won't fit. You must break it into chunks that are small enough to retrieve precisely but large enough to be meaningful.
 
-**Chunking methods in practice:**
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    CHUNKING: THE PRECISION vs CONTEXT TRADE-OFF           │
+└───────────────────────────────────────────────────────────────────────────┘
 
-| Method | Description | Tool example |
-| ------ | ----------- | ------------ |
-| **Length-based** | Split by character/token count | LangChain `CharacterTextSplitter` |
-| **Recursive** | Split by separators (paragraphs → sentences → words) with overlap | LangChain `RecursiveCharacterTextSplitter` |
-| **Regex-based** | Split on punctuation (., ?, !) for sentence-level chunks | Custom regex splitters |
-| **Structure-aware** | Split at element boundaries (headers, list items, code blocks) | `MarkdownHeaderTextSplitter`, `HTMLHeaderTextSplitter` |
+TOO SMALL (100 tokens)                      TOO LARGE (2000 tokens)
+─────────────────────                       ──────────────────────
 
-**Why chunking matters**: LLMs have context windows. Documents often exceed this, so we must break them into chunks. Smaller chunks improve retrieval precision—a query about "Python loops" matches better to a 500-token chunk about loops than a 5000-token document about Python.
+Query: "Python for loops"                   Query: "Python for loops"
+
+Chunk: "Use for i in range(n)              Chunk: [Entire Python chapter:
+        to iterate..."                             variables, functions,
+                                                   loops, classes, ...]
+✓ Highly relevant                           
+✗ Missing surrounding context               ✓ Has all context
+  (what is range? examples?)                ✗ 90% irrelevant to query
+                                            ✗ Dilutes the signal
+
+
+SWEET SPOT: 300-800 tokens with 50-100 token overlap
+─────────────────────────────────────────────────────
+
+┌────────────────────────────────────────────────────────────────┐
+│ Chunk 1: [Intro to loops] [for loops] [range() function]       │
+└───────────────────────────────────┬────────────────────────────┘
+                          overlap ──┼──
+┌────────────────────────────────────────────────────────────────┐
+│ Chunk 2: [range() function] [for loop examples] [nested loops] │
+└────────────────────────────────────────────────────────────────┘
+
+Overlap ensures concepts at boundaries aren't lost!
+```
+
+| Strategy | Pros | Cons | Best For |
+| -------- | ---- | ---- | -------- |
+| **Fixed-size (512 tokens)** | Simple, predictable | May split concepts | Uniform documents |
+| **Recursive (paragraph → sentence)** | Respects structure | More complex | General use |
+| **Structure-aware (headers)** | Preserves sections | Needs clean markup | Markdown, HTML |
+| **Semantic (embedding-based)** | Groups related content | Expensive, variable | Complex content |
 
 > [!TIP]
-> 💡 **Aha:** Chunk size is a **precision vs context** trade-off. Too small → you retrieve the right idea but maybe miss surrounding explanation. Too large → you get more context but dilute relevance. Overlap and semantic boundaries help keep "one concept per chunk."
+> **Best practice:** Start with recursive chunking (512 tokens, 50 overlap). Tune based on retrieval quality metrics.
 
-### Retrieval Strategy Trade-offs
+### Retrieval Strategy
 
-| Strategy           | Latency | Semantic | Keywords | Best For                 |
-| ------------------ | ------- | -------- | -------- | ------------------------ |
-| **Dense (Vector)** | 10-50ms | ✓        | ✗        | Conceptual queries       |
-| **Sparse (BM25)**  | 1-5ms   | ✗        | ✓        | Exact matches            |
-| **Hybrid**         | 15-60ms | ✓        | ✓        | Production (recommended) |
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DENSE vs SPARSE vs HYBRID RETRIEVAL                    │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**BM25** = keyword-based ranking using term frequency and inverse document frequency; no embeddings, just lexical match.
+Query: "How do I iterate in Python?"
 
-**Why hybrid works**: Dense retrieval captures meaning ("iterate" ≈ "loop"), sparse captures exact keywords ("Python"). Combining both via **RRF (Reciprocal Rank Fusion)** gives best results.
+DENSE (Vector Search)                    SPARSE (BM25/Keyword)
+─────────────────────                    ────────────────────
+
+embed("iterate in Python")               Match keywords: "iterate", "Python"
+         │                                        │
+         ▼                                        ▼
+Find similar vectors:                    Find docs containing words:
+• "Python for loops" ✓                   • "Python iteration" ✓
+• "JavaScript forEach" ✗ (similar       • "Java Iterator class" ✗
+   meaning, wrong language!)               (has "iterate" but wrong!)
+
+✓ Understands "iterate" ≈ "loop"         ✓ Exact match on "Python"
+✗ May miss exact keyword match           ✗ Misses synonyms
+
+
+HYBRID (Best of Both) ← RECOMMENDED
+───────────────────────────────────
+
+     ┌────────────────┐         ┌────────────────┐
+     │  Dense Search  │         │  Sparse Search │
+     │   (semantic)   │         │   (keyword)    │
+     └───────┬────────┘         └───────┬────────┘
+             │                          │
+             │  Rank: [A, B, C, D]       │  Rank: [B, E, A, F]
+             │                          │
+             └──────────┬───────────────┘
+                        │
+                        ▼
+              ┌─────────────────────┐
+              │   RRF (Reciprocal   │
+              │   Rank Fusion)      │
+              │                     │
+              │   Merge rankings:   │
+              │   [B, A, C, E, D, F]│
+              └─────────────────────┘
+
+              B ranked high in BOTH → top result
+```
+
+| Strategy | Latency | Semantic Match | Keyword Match | Use Case |
+| -------- | ------- | -------------- | ------------- | -------- |
+| **Dense** | 10-50ms | ✓ | ✗ | Conceptual queries |
+| **Sparse** | 1-5ms | ✗ | ✓ | Exact terms, names, codes |
+| **Hybrid** | 15-60ms | ✓ | ✓ | **Production default** |
 
 > [!TIP]
-> 💡 **Aha:** **Dense** = "these two _mean_ the same thing" (embedding similarity). **Sparse** = "these two _contain_ the same words" (e.g. BM25). Queries need both: "how do I loop in Python?" benefits from semantic match on "loop" and exact match on "Python." Hybrid + RRF merges the two rank lists without a single embedding doing everything.
+> **Key insight:** Dense = "these mean the same thing." Sparse = "these contain the same words." Real queries need BOTH.
 
-### Reranking Trade-offs
+### Reranking: Two-Stage Retrieval
 
-**No Reranking**: Lower latency, simpler pipeline, but lower quality.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    BI-ENCODER vs CROSS-ENCODER                            │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**Cross-Encoder Reranking**: Much higher accuracy because it processes query-document pairs together (sees interactions), but adds ~10ms per document.
+BI-ENCODER (Fast, used for initial retrieval)
+─────────────────────────────────────────────
 
-✅ **Best practice:** Retrieve K=20, rerank to top 5. The two-stage approach combines speed (bi-encoder retrieval) with accuracy (cross-encoder reranking).
+Query: "refund policy"          Doc: "Returns within 30 days..."
+         │                                    │
+         ▼                                    ▼
+    ┌─────────┐                         ┌─────────┐
+    │ Encoder │                         │ Encoder │
+    └────┬────┘                         └────┬────┘
+         │                                   │
+         ▼                                   ▼
+      [0.2, 0.8, ...]                    [0.3, 0.7, ...]
+         │                                   │
+         └──────────── dot product ──────────┘
+                           │
+                     Score: 0.85
+
+✓ Fast: encode query once, compare to millions
+✗ Never sees query + doc together
+
+
+CROSS-ENCODER (Slow but accurate, used for reranking)
+────────────────────────────────────────────────────
+
+    ┌─────────────────────────────────────────────┐
+    │  "[CLS] refund policy [SEP] Returns within  │
+    │   30 days of purchase are eligible... [SEP]"│
+    └─────────────────────┬───────────────────────┘
+                          │
+                          ▼
+                    ┌───────────┐
+                    │  Encoder  │
+                    │  (joint)  │
+                    └─────┬─────┘
+                          │
+                          ▼
+                    Score: 0.92
+
+✓ Sees query + doc together (more accurate)
+✗ Slow: one forward pass per (query, doc) pair
+
+
+TWO-STAGE PIPELINE (Best of both)
+─────────────────────────────────
+
+Stage 1: Bi-encoder retrieves k=20 candidates (fast)
+                          │
+                          ▼
+Stage 2: Cross-encoder reranks to top 5 (accurate)
+                          │
+                          ▼
+                   Final: 5 best chunks
+```
+
+| Stage | Model | Speed | Accuracy | What it does |
+| ----- | ----- | ----- | -------- | ------------ |
+| **1. Retrieve** | Bi-encoder | Fast | Good | Get k=20 candidates |
+| **2. Rerank** | Cross-encoder | +10ms/doc | Best | Score top 20 → keep top 5 |
 
 > [!TIP]
-> 💡 **Aha:** **Bi-encoder** = query and doc are embedded _separately_; similarity is dot product. Fast (one pass each) but the model never sees "query + doc together." **Cross-encoder** = one forward pass with "[query] [doc]"; the model sees the _pair_ and scores relevance directly. Slower, but much more accurate. So: retrieve broadly with bi-encoder, then rerank the top K with a cross-encoder.
+> **Best practice:** Always rerank. The accuracy gain is worth +50-200ms total.
 
-### Approximate Nearest Neighbor (ANN) Algorithms
+### Vector Search at Scale (ANN Algorithms)
 
-At scale (millions of chunks), **exact nearest neighbor search** (O(N×D)) is too slow. ANN algorithms trade a small accuracy loss for sublinear search time (O(log N × D) or better).
+**Problem:** With 1M chunks, exact search (compare query to ALL vectors) takes seconds. ANN trades tiny accuracy loss for massive speedup.
 
-| Category | How it works | Pros | Cons | Examples |
-| -------- | ------------ | ---- | ---- | -------- |
-| **Tree-based** | Partition space by feature values; search relevant regions | Fast for low dimensions | Degrades in high dimensions (>20) | k-d tree, Annoy |
-| **LSH** (Locality-Sensitive Hashing) | Hash similar points to same bucket | Simple; fast | Lower recall; many hash tables needed | LSH, MinHash |
-| **Clustering-based** | Group vectors into clusters; search by centroid, then within cluster | Balances speed and recall | Cluster quality matters | IVF (FAISS), ScaNN |
-| **Graph-based** | Build proximity graph; navigate from coarse to fine levels | Best recall at high scale | More memory; complex index build | HNSW (Hierarchical Navigable Small World) |
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    HNSW: HOW GRAPH-BASED SEARCH WORKS                     │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**Clustering-based retrieval (two-step):**
-1. **Inter-cluster**: Compare query to cluster centroids → select closest clusters
-2. **Intra-cluster**: Search only within selected clusters
+                     Layer 2 (Coarse - few nodes, long edges)
+                     ┌─────────────────────────────────────┐
+                     │    A ─────────────────── B          │
+                     │          │                          │
+                     └──────────┼──────────────────────────┘
+                                │ descend
+                                ▼
+                     Layer 1 (Medium)
+                     ┌─────────────────────────────────────┐
+                     │    A ──── C ──── D ──── B           │
+                     │    │      │      │      │           │
+                     └────┼──────┼──────┼──────┼───────────┘
+                          │ descend
+                          ▼
+                     Layer 0 (Fine - all nodes, short edges)
+                     ┌─────────────────────────────────────┐
+                     │ A─C─E─F─G─H─I─D─J─K─L─B             │
+                     │       ↑                             │
+                     │    Query lands here!                │
+                     └─────────────────────────────────────┘
 
-**HNSW (graph-based):**
-- Nodes = data points; edges = proximity links
-- Hierarchical layers: start at coarse top layer, descend to fine bottom layer
-- Navigate by following edges to closer nodes at each level
+Search: Start at top layer, greedily follow edges toward query.
+        Descend to finer layers, repeat. O(log N) vs O(N)!
+```
+
+| Algorithm | How it Works | Best For | Latency |
+| --------- | ------------ | -------- | ------- |
+| **HNSW** (graph) | Navigate proximity graph top-down | **Default choice** - best recall | 1-10ms |
+| **IVF** (clustering) | Search only nearest clusters | Large scale, memory-constrained | 5-20ms |
+| **Tree-based** | Partition space by features | Low dimensions only | <1ms |
 
 **Frameworks:**
-- **FAISS** (Meta): IVF, PQ, HNSW; production-ready, GPU support
-- **ScaNN** (Google): Optimized quantization + HNSW
-- **Annoy** (Spotify): Tree-based; simple, read-only index
-- **Elasticsearch**: Vector similarity search with HNSW
-- **Managed**: Vertex AI Vector Search, Amazon OpenSearch, Pinecone, Weaviate, Qdrant
+
+| Framework | Type | Notes |
+| --------- | ---- | ----- |
+| **FAISS** (Meta) | IVF, HNSW | Production-ready, GPU support |
+| **ScaNN** (Google) | Quantization + HNSW | Optimized for serving |
+| **Vertex AI Vector Search** | Managed HNSW | Google Cloud managed |
+| **Pinecone, Weaviate, Qdrant** | Managed | Fully managed vector DBs |
 
 > [!TIP]
-> 💡 **Aha:** For RAG at scale, **HNSW** (graph-based) is the default choice—best recall-latency trade-off. **IVF** (clustering) is good when you need to control index size. **Tree-based** and **LSH** are faster to build but lower recall for high-dimensional embeddings.
+> **Default choice:** HNSW. Best recall-latency trade-off for RAG.
 
 ### Query Expansion
 
@@ -3458,72 +3651,55 @@ User Query → LLM (rewrite/expand) → Expanded Query → Embedding → Vector 
 > [!TIP]
 > 💡 **Aha:** **HyDE** is counterintuitive: instead of embedding the question "What is RAG?", you embed an LLM-generated answer "RAG is a technique that combines retrieval with generation..." The answer's embedding is often closer to relevant documents than the question's embedding.
 
+---
+
 ### Advanced RAG Techniques
 
-These techniques improve retrieval when plain “embed query → top‑k chunks” is not enough: when answers span multiple hops, when queries vary in difficulty, or when user wording doesn’t match document wording.
+When basic "embed query → top-k" isn't enough:
 
----
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    FOUR ADVANCED RAG TECHNIQUES                           │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**1. Graph RAG**
+1. HyDE (Hypothetical Document Embedding)
+─────────────────────────────────────────
+Problem: Query "What is RAG?" doesn't match doc "RAG combines retrieval..."
+Solution: Generate hypothetical answer, embed THAT instead
 
-**What it is:** You build a **knowledge graph** from your corpus (entities as nodes, relations as edges) and combine it with vector search. Retrieval can follow _links_ (e.g. “this person → worked at → this company”) as well as semantic similarity.
+    Query: "What is RAG?" → LLM: "RAG is a technique..." → Embed ANSWER
 
-**How it helps:** Many questions need **multi-hop** reasoning: “Who was the CEO of the company that acquired X?” requires (X → acquired by → company → CEO → person). Flat vector search often returns only one hop. Graph RAG retrieves **subgraphs** (e.g. k-hop neighborhoods) so the LLM sees not just similar text but explicit _who–what–where_ structure.
 
-**When to use:** Strong fit for domains rich in **entities and relations** (people, orgs, products, events) and questions that chain them. Overkill for unstructured long-form text with few named relations.
+2. Query Decomposition
+──────────────────────
+Problem: "How does Python differ from Java?" needs info about BOTH
+Solution: Split into sub-queries, retrieve for each, merge
 
-> [!TIP]
-> 💡 **Aha:** Vector search answers “what text is similar?” Graph RAG adds “how are these things _connected_?” so the model can follow paths, not only similarity.
+    "Python vs Java?" → ["What is Python?", "What is Java?"] → Merge results
 
----
 
-**2. Adaptive Retrieval**
+3. Adaptive Retrieval
+─────────────────────
+Problem: Simple query needs 1 chunk. Complex needs 20.
+Solution: Vary k based on query complexity
 
-**What it is:** Instead of always retrieving the same number of documents (e.g. k=10), you **change k per query**. Simple factoid questions get fewer docs; broad or multi-fact questions get more.
+    Simple → k=3  |  Complex → k=20
 
-**How it helps:** With a **fixed k**, easy questions get unnecessary context (wasted tokens, more noise) and hard questions may get too few (missing evidence). Adaptive retrieval uses a small classifier, heuristics (e.g. query length, question type), or the **shape of similarity scores** (e.g. “biggest drop” between consecutive docs) to choose k. Some methods need no extra model—e.g. set k at the largest score gap in the ranked list.
 
-**When to use:** When your traffic mixes **simple lookups** and **complex / multi-document** questions. Saves tokens and latency on easy queries and improves recall on hard ones.
+4. Graph RAG
+────────────
+Problem: "Who is the CEO of company that acquired Twitter?" (multi-hop)
+Solution: Knowledge graph + vector search
 
-> [!TIP]
-> 💡 **Aha:** One size doesn’t fit all: “What is the capital of France?” needs 1–2 chunks; “Compare the economic policies of France and Germany in the 1980s” needs many. Adaptive k tunes retrieval to each question.
+    [Twitter]──acquired_by──►[X Corp]──CEO──►[Elon Musk]
+```
 
----
-
-**3. Query Decomposition**
-
-**What it is:** Before retrieval, an LLM **splits** the user question into 2–5 **sub-questions** that are answered by different parts of the corpus. You run retrieval once per sub-question, then merge and deduplicate the chunks and pass that combined context to the final answer model.
-
-**How it helps:** Questions like “How does X differ from Y?” or “Which of A, B, C had the highest Z?” don’t match one passage—they need **several**. One query embedding often misses some of them. Decomposing into “What is X?”, “What is Y?”, “How do they differ?” (or “What is Z for A?”, “What is Z for B?”, …) yields focused sub-queries and better coverage.
-
-**When to use:** **Multi-part** or **comparison** questions, and whenever a single embedding tends to retrieve only one “side” of the answer. Adds latency (one LLM call to decompose, then multiple retrievals) but can significantly improve accuracy.
-
-> [!TIP]
-> 💡 **Aha:** One query → one vector → one retrieval set often undersamples. Decomposing “How does A differ from B?” into “What is A?” and “What is B?” (and optionally “How do they differ?”) pulls in the right evidence for each piece, then the model synthesizes.
-
----
-
-**4. HyDE (Hypothetical Document Embeddings)**
-
-**What it is:** You **don’t** embed the user query directly. Instead, you ask an LLM: “Write a short passage that would answer this question.” You get 1–5 such **hypothetical** passages, embed _those_, and (often) **average** their vectors. That single vector is used to search the real document index.
-
-**How it helps:** Query and documents often use **different words** for the same idea (e.g. user: “loop,” docs: “iteration construct”). The query embedding can sit in a different region of the embedding space than the best-matching docs. Hypothetical answers “translate” the question into **passage-like** text, so their embeddings sit closer to real relevant passages. Averaging smooths noise from any one generation.
-
-**When to use:** When **vocabulary mismatch** hurts recall (e.g. lay users vs technical docs, or one language vs translated corpus) and when you can afford one extra LLM call before retrieval. Less useful when queries already look like document sentences.
-
-> [!TIP]
-> 💡 **Aha:** You’re searching with “what an answer would look like” instead of “what the question looks like.” The hypothetical doc is in the same “language” as your corpus, so similarity search works better.
-
----
-
-**Quick reference**
-
-| Technique               | Main idea                                                                               | Best for                                         |
-| ----------------------- | --------------------------------------------------------------------------------------- | ------------------------------------------------ |
-| **Graph RAG**           | Vector search + graph structure (entities, relations); retrieve subgraphs for multi-hop | Entity-heavy domains, “who/what/where” chains    |
-| **Adaptive Retrieval**  | Vary number of retrieved docs (k) by query complexity                                   | Mix of simple and complex questions              |
-| **Query Decomposition** | Split question into sub-questions; retrieve per sub-question; merge context             | Multi-part, comparison, “A vs B” style questions |
-| **HyDE**                | Generate hypothetical answer(s), embed those, search with that vector                   | Vocabulary mismatch between user and corpus      |
+| Technique | When to Use | Trade-off |
+| --------- | ----------- | --------- |
+| **HyDE** | Vocabulary mismatch | +1 LLM call |
+| **Query Decomposition** | Multi-part questions | +N retrievals |
+| **Adaptive Retrieval** | Mixed query complexity | Classifier needed |
+| **Graph RAG** | Entity-rich, multi-hop | Graph construction |
 
 ---
 
