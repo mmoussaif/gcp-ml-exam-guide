@@ -428,6 +428,8 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 | **vLLM** | Open-source LLM serving engine with PagedAttention, continuous batching, and high throughput. The most popular OSS option. | 2-4× better throughput than naive serving. Production-ready. Supports most open models. |
 | **TGI** | Text Generation Inference. Hugging Face's LLM serving solution. Similar capabilities to vLLM. | Good Hugging Face integration. Used by Inference Endpoints. Alternative to vLLM. |
 | **TensorRT** | Tensor Runtime. NVIDIA's library that optimizes neural networks for faster inference on NVIDIA GPUs. Fuses layers, reduces precision, optimizes memory. | Can speed up inference 2-5×. TensorRT-LLM is the LLM-specific version with batching and KV cache optimizations. |
+| **CUDA** | Compute Unified Device Architecture. NVIDIA's parallel computing platform and API for programming GPUs. Used by PyTorch, TensorFlow, vLLM, and most ML frameworks for training and inference on NVIDIA hardware. | All NVIDIA GPU acceleration runs on CUDA. Understanding "GPU-bound" in GenAI means understanding that kernels (matrix ops, attention) are executed via CUDA. |
+| **Triton** | Open-source GPU kernel language and compiler (from OpenAI). Lets you write high-performance GPU kernels in Python-like code; the compiler generates optimized CUDA/GPU code. Used by vLLM, FlashAttention, and others for custom attention and fusion. | Enables writing fast kernels without hand-coding CUDA. Key for inference optimizations (e.g. fused attention, custom ops) in vLLM and similar engines. |
 | **Speculative Decoding** | Use a small "draft" model to predict multiple tokens, then verify with the large model in parallel. Faster if draft model is accurate. | Can speed up generation 2-3× for some model pairs. Works best when draft model is good at predicting the large model. |
 
 ### Parallelism & Scaling
@@ -5476,6 +5478,8 @@ Understanding GPU generations helps estimate what hardware you need:
 - **H100 vs A100**: 3× faster but 2× cost → worth it for training, evaluate for inference
 - **L4 for inference**: 4× cheaper than A100, good for smaller models (<13B)
 - **TPU**: Competitive on Google Cloud, especially with JAX/TensorFlow
+
+**Under the hood:** NVIDIA GPUs run code via **CUDA** (NVIDIA's parallel computing platform); PyTorch, vLLM, and most ML stacks use it. **Triton** (open-source GPU kernel language) is used by vLLM and others to write fast custom kernels (e.g. fused attention) without hand-coding CUDA. See [Glossary: Serving & Performance](#serving--performance) for CUDA and Triton.
 
 **Quick sizing guide:**
 
