@@ -5736,7 +5736,7 @@ Total latency = Network + Preprocessing + Retrieval + LLM inference + Postproces
 | **Cost per request** | Total $ per API call | Budget tracking |
 | **Input tokens** | Tokens in prompt | Context/RAG efficiency |
 | **Output tokens** | Tokens generated | Response verbosity |
-| **Model tier usage** | % by model (Flash/Pro/etc) | Routing effectiveness |
+| **Model tier usage** | % by model (Flash/Pro/Ultra) | Routing effectiveness |
 | **Cache hit rate** | % served from cache | Optimization ROI |
 
 **Alert example:** "Cost per request increased 50% in last hour" → investigate prompt bloat or routing failure.
