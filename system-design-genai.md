@@ -267,15 +267,19 @@ This map shows how the guide fits together. Follow **Parts A → G** in order, o
 │  (Apply it) │     │ & INTERVIEW │
 ├─────────────┤     ├─────────────┤
 │ F.1 Real-   │     │ G.1 Strategy│
-│   World     │     │ G.2 Quick   │
-│   Examples  │     │     Ref     │
-│  - LLM Svc  │     │ G.3 What    │
-│  - Chatbot  │     │   FAANG     │
-│  - Code Ast │     │   Evaluates │
-│  - RAG      │     │ G.4 End-to- │
-│  - Translate│     │   End       │
-│  - ChatGPT  │     │ G.5 Resources
-│  - T2I/T2V  │     │             │
+│   World     │     │     & Plan  │
+│   Examples  │     │ G.2 Interview│
+│   (11 ex.)  │     │   Quick Ref │
+│  - Code Ast │     │ G.3 CxO vs  │
+│  - Chatbot  │     │   Product/Eng│
+│  - Content  │     │ G.4 Worked  │
+│  - Compose  │     │   Example   │
+│  - Translate│     │ G.5 Resources│
+│  - Assistant│     │             │
+│  - Caption  │     │             │
+│  - Doc Q&A  │     │             │
+│  - Face/T2I │     │             │
+│  - T2V      │     │             │
 └─────────────┘     └─────────────┘
 ```
 
