@@ -4435,50 +4435,84 @@ A → B → C              ┌───┐ ┌───┐ ┌───┐      
 > **Summary:** Single = one brain, many tools. Multi-Agent = many brains, peer handoffs. Hierarchical = one boss delegates. Then layer on orchestration: sequential for dependencies, parallel for diversity, debate for stress-testing.
 
 
+
 ### Context Engineering
 
-**The Problem**: As agents run longer, context (chat history, tool outputs, documents) **explodes**. Simply using larger context windows is not a scaling strategy.
+**The problem:** As agents run longer, context (chat history, tool outputs, documents) explodes. Larger context windows are not the answer.
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    THE "LOST IN THE MIDDLE" PROBLEM                       │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Attention
+   ▲
+   │  ████                                              ████
+   │  ████                                              ████
+   │  ████     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        ████
+   │  ████     ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░        ████
+   └──────────────────────────────────────────────────────────► Position
+      START              MIDDLE (ignored)               END
+
+Models attend strongly to START and END of context, weakly to MIDDLE.
+→ Put critical instructions and retrieval at START and END
+```
+
+**Three pressures on context:**
+
+| Pressure | Problem |
+| -------- | ------- |
+| **Cost & latency** | Grow with context size |
+| **Signal degradation** | Irrelevant content distracts model |
+| **Physical limits** | RAG + traces overflow even 1M+ windows |
+
+---
+
+#### The Solution: Tiered Context
+
+Keep **working context** small. Push durable state into separate tiers:
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TIERED CONTEXT MODEL                                   │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+│   WORKING    │    │   SESSION    │    │    MEMORY    │    │  ARTIFACTS   │
+│  (this turn) │    │ (this convo) │    │ (long-term)  │    │(large files) │
+├──────────────┤    ├──────────────┤    ├──────────────┤    ├──────────────┤
+│ System instr │    │ Chat history │    │ Searchable   │    │ Referenced   │
+│ Key docs     │    │ Tool I/O     │    │ facts, prefs │    │ by name, not │
+│ User query   │    │              │    │ Embeddings   │    │ pasted       │
+├──────────────┤    ├──────────────┤    ├──────────────┤    ├──────────────┤
+│  Ephemeral   │    │Per-conversa- │    │Cross-session │    │  On-demand   │
+│              │    │    tion      │    │              │    │              │
+└──────────────┘    └──────────────┘    └──────────────┘    └──────────────┘
+       │                   │                   │                   │
+       └───────────────────┴───────────────────┴───────────────────┘
+                    Only pull what you need into WORKING
+```
+
+| Layer | What Goes Here | Lifecycle |
+| ----- | -------------- | --------- |
+| **Working** | System instructions, key docs, current query | This call only |
+| **Session** | Chat history, tool inputs/outputs | Per conversation |
+| **Memory** | Searchable facts, user preferences | Cross-session |
+| **Artifacts** | Large files (PDFs, code, data) | Referenced by name |
+
+---
+
+#### Multi-Agent Context Scoping
+
+When delegating to sub-agents, control what they see:
+
+| Pattern | What Sub-Agent Sees | When to Use |
+| ------- | ------------------- | ----------- |
+| **Agents as Tools** | Only instructions + inputs you pass | Isolation, security |
+| **Agent Transfer** | Configurable view of Session (e.g., last N turns) | Continuity needed |
 
 > [!TIP]
-> 💡 **Aha:** More context isn’t always better. Models often **underuse** the middle of long prompts ("lost in the middle"). So putting the most important instructions or retrieval at the **start and end** of the context, and keeping working context small and focused, improves both quality and cost. Tiered context (working / session / memory / artifacts) is how you scale _usage_ of context without scaling _size_ of every call.
-
-**The Three-Way Pressure on Context:**
-
-| Pressure                   | Problem                                                         |
-| -------------------------- | --------------------------------------------------------------- |
-| **Cost & latency spirals** | Cost and time-to-first-token grow with context size             |
-| **Signal degradation**     | Irrelevant logs distract the model ("lost in the middle")       |
-| **Physical limits**        | RAG results and traces eventually overflow even largest windows |
-
-**The Solution: Tiered Context Model**
-
-Keep **working context** (the prompt for this turn) small and focused. Push durable state into **Session** (conversation log), **Memory** (searchable, cross-session), and **Artifacts** (large files by reference, not pasted). Put the most important instructions and retrieval at the **start and end** of the prompt.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    TIERED CONTEXT                                 │
-│   WORKING (this turn)   Session (this convo)   Memory (long-term) │
-│   ┌──────────────┐      ┌──────────────────┐  ┌──────────────┐  │
-│   │ System + key │      │ Chat history      │  │ Searchable   │  │
-│   │ docs + query │      │ + tool I/O        │  │ facts, prefs │  │
-│   └──────────────┘      └──────────────────┘  └──────────────┘  │
-│   ARTIFACTS: Large files addressed by name, not pasted           │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-| Layer               | Purpose                         | Lifecycle                     |
-| ------------------- | ------------------------------- | ----------------------------- |
-| **Working Context** | Immediate prompt for this call  | Ephemeral                     |
-| **Session**         | Durable log of events           | Per-conversation              |
-| **Memory**          | Long-lived searchable knowledge | Cross-session                 |
-| **Artifacts**       | Large files                     | Addressed by name, not pasted |
-
-**Multi-Agent Context Scoping:** When one agent delegates to another, control what the sub-agent sees. **Agents as Tools** = sub-agent gets only the instructions and inputs you pass. **Agent Transfer** = sub-agent gets a configurable view over Session (e.g. last N turns).
-
-| Pattern             | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| **Agents as Tools** | Sub-agent sees only specific instructions and inputs |
-| **Agent Transfer**  | Sub-agent inherits a configurable view over Session  |
+> **Key insight:** Scale *usage* of context, not *size*. Keep working context focused, pull from other tiers on demand, place critical info at prompt start/end.
 
 ---
 
