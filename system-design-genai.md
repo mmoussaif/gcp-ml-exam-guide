@@ -71,27 +71,27 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| F.1 | [Real-World Examples](#f1-real-world-examples-applying-the-stack) | Complete system designs with estimations | ☐ |
-| F.1.1 | — LLM Service | High-throughput inference at scale | ☐ |
-| F.1.2 | — Support Chatbot | RAG + agents for customer service | ☐ |
-| F.1.3 | — Code Assistant | IDE integration, code generation | ☐ |
-| F.1.4 | — RAG Pipeline | Document Q&A with evaluation | ☐ |
-| F.1.5 | — Gmail Smart Compose | Real-time text prediction | ☐ |
-| F.1.6 | — Google Translate | Seq2seq, attention, serving at scale | ☐ |
-| F.1.7 | — ChatGPT Clone | Personal assistant architecture | ☐ |
-| F.1.8 | — Image Captioning | Vision + language models | ☐ |
-| F.1.9 | — RAG Deep Dive | Advanced retrieval patterns | ☐ |
-| F.1.10 | — Text-to-Image | Diffusion, CLIP, CFG, evaluation | ☐ |
-| F.1.11 | — Text-to-Video | LDM, temporal layers, FVD | ☐ |
+| F.1 | [Real-World Examples: Applying the Stack](#f1-real-world-examples-applying-the-stack) | Interview framework + 11 complete system designs | ☐ |
+| F.1.1 | [Example 1: Code Generation Assistant](#example-1-code-generation-assistant-like-github-copilot) | IDE integration, RAG, model routing (e.g. Copilot) | ☐ |
+| F.1.2 | [Example 2: Customer Service Chatbot](#example-2-customer-service-chatbot-with-rag-and-tools) | RAG + tools, ReAct, guardrails | ☐ |
+| F.1.3 | [Example 3: Content Generation Platform](#example-3-content-generation-platform-research-draft-grounding) | Sequential pipeline, research → draft → grounding → SEO | ☐ |
+| F.1.4 | [Example 4: Smart Compose / Email Autocomplete](#example-4-smart-compose--email-autocomplete-like-gmail) | On-device/edge ML, low latency (e.g. Gmail) | ☐ |
+| F.1.5 | [Example 5: Language Translation Service](#example-5-language-translation-service-like-google-translate) | Encoder-decoder, NMT, entity masking (e.g. Translate) | ☐ |
+| F.1.6 | [Example 6: Personal Assistant Chatbot](#example-6-personal-assistant-chatbot-like-chatgpt) | General-purpose chat, RLHF, safety filters (e.g. ChatGPT) | ☐ |
+| F.1.7 | [Example 7: Image Captioning System](#example-7-image-captioning-system) | Multimodal, ViT + LM, beam search | ☐ |
+| F.1.8 | [Example 8: Document Q&A System](#example-8-document-qa-system-like-chatpdf) | RAG-heavy, chunking, hybrid retrieval, reranking (e.g. ChatPDF) | ☐ |
+| F.1.9 | [Example 9: Realistic Face Generation](#example-9-realistic-face-generation-system-like-stylegan) | GAN, StyleGAN, truncation, latent space | ☐ |
+| F.1.10 | [Example 10: Text-to-Image Generation](#example-10-text-to-image-generation-system-like-dall-e-stable-diffusion) | Diffusion, U-Net/DiT, CFG, VAE (e.g. DALL·E, SD) | ☐ |
+| F.1.11 | [Example 11: Text-to-Video Generation](#example-11-text-to-video-generation-system-like-sora-movie-gen) | Temporal diffusion, DiT, FVD (e.g. Sora, Movie Gen) | ☐ |
 
 ### Part G: Reference & Interview Prep
 
 | # | Section | Description | Status |
 |---|---------|-------------|--------|
-| G.1 | [Strategy & Planning](#g1-strategy-and-planning-for-integration-and-impact) | ROI, metrics, change management | ☐ |
-| G.2 | [Quick Reference](#g2-quick-reference) | 45-min interview framework | ☐ |
-| G.3 | [Interview Checklist](#what-faang-interviewers-evaluate) | What interviewers look for | ☐ |
-| G.4 | [End-to-End Solutioning](#end-to-end-solutioning-and-rrk-skills) | Scope → Design → Deploy → Communicate | ☐ |
+| G.1 | [Strategy & Planning](#g1-strategy--planning) | GenAI roadmap, key metrics, staying ahead | ☐ |
+| G.2 | [Interview Quick Reference](#g2-interview-quick-reference) | What interviewers evaluate, 45-min framework, trade-offs | ☐ |
+| G.3 | [Communicating to CxO vs Product/Eng](#g3-communicating-to-cxo-vs-producteng) | 5 full examples: same concept, different audience | ☐ |
+| G.4 | [Worked Example](#g4-worked-example) | Retail chatbot scenario: Scope → Design → Deploy → Communicate | ☐ |
 | G.5 | [Resources](#g5-resources) | Books, docs, links | ☐ |
 
 ---
@@ -233,7 +233,6 @@ This map shows how the guide fits together. Follow **Parts A → G** in order, o
 │ D.7  Three-Stage (RLHF)     │
 │ D.8  Sampling Strategies    │
 │ D.9  Evaluation Metrics     │
-│ D.10 Inference Pipeline     │
 └─────────────┬───────────────┘
               │
               ▼
