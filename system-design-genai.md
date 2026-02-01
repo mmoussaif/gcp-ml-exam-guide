@@ -6377,10 +6377,46 @@ _This is a multi-step pipeline: research from the web, then draft, then fact-che
 
 **2. High-Level Architecture (10–15 min)**
 
-- **Flow:** Brief → API gateway → orchestration (sequential pipeline) → [research (search) → draft (LLM) → grounding (RAG/Vertex grounding) → SEO (template or LLM)] → post-process (citations, format) → output.
-- **Components:** API gateway; orchestration = **LangChain** `SequentialChain` or DAG; research = **Tavily** / **Google Search** / Vertex Search; draft = **Vertex AI** (Gemini) or **Bedrock** (Claude); grounding = **Vertex AI grounding** or **Bedrock** retrieval + cite-check; SEO = small LLM or templates.
-- **Data flow:** Brief → research returns snippets → draft LLM with snippets as context → grounding checks claims vs sources → SEO → multi-format output.
-- **Include:** RAG/grounding (sources as retrieval), caching (reuse research for similar briefs if TTL ok), model routing (Flash for research/SEO, Pro for draft).
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    CONTENT GENERATION PIPELINE                            │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Content Brief: "Write 1000-word article about cloud cost optimization"
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    SEQUENTIAL CHAIN (LangChain DAG)                       │
+│                                                                           │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐    ┌─────────┐ │
+│  │  1. RESEARCH │───►│  2. DRAFT    │───►│ 3. GROUNDING │───►│ 4. SEO  │ │
+│  │  (5-10s)     │    │  (15-30s)    │    │  (10-20s)    │    │ (2-5s)  │ │
+│  └──────┬───────┘    └──────┬───────┘    └──────┬───────┘    └────┬────┘ │
+│         │                   │                   │                  │      │
+│    ┌────▼────┐        ┌─────▼────┐        ┌─────▼────┐       ┌────▼────┐ │
+│    │ Tavily/ │        │  Gemini  │        │ Vertex   │       │  Flash  │ │
+│    │ Google  │        │   Pro    │        │Grounding │       │ (small) │ │
+│    │ Search  │        │          │        │          │       │         │ │
+│    └─────────┘        └──────────┘        └──────────┘       └─────────┘ │
+│                                                                           │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────┐
+│ Post-Processing │ ← Citations, formatting, multi-format output
+└────────┬────────┘
+        │
+        ▼
+    Final Article (with source citations)
+```
+
+**Model Routing Strategy:**
+| Step | Model | Why |
+| ---- | ----- | --- |
+| Research | Flash (small) | Fast summarization of snippets |
+| Draft | Pro (large) | Creative, coherent long-form writing |
+| Grounding | Vertex AI | Citation verification per claim |
+| SEO | Flash (small) | Template-based, simple task |
 
 **3. Deep Dive (15–20 min)**
 
@@ -6427,23 +6463,61 @@ _Real-time text completion as users type. Key constraints: imperceptible latency
 **2. High-Level Architecture (10–15 min)**
 
 ```
-User Typing → Triggering Service → Phrase Generator (Beam Search) → Filtering (length, confidence) → Post-Processing (bias) → Display Suggestion
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    EMAIL AUTOCOMPLETE ARCHITECTURE                        │
+└───────────────────────────────────────────────────────────────────────────┘
+
+User typing: "Thanks for your email. I wanted to follow up on the_"
+                                                              │
+                                                              ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         TRIGGERING SERVICE                                │
+│                                                                           │
+│  Check: ✓ 3+ words typed                                                 │
+│         ✓ 100ms pause since last keystroke                               │
+│         ✓ Not in middle of word                                          │
+│                                                                           │
+│  → Trigger = YES                                                         │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│            PHRASE GENERATOR (On-Device / Edge)                            │
+│                                                                           │
+│  ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐         │
+│  │ Small Decoder   │──►│   Beam Search   │──►│ Top-K Results   │         │
+│  │ Transformer     │   │   (width=3)     │   │ + Confidence    │         │
+│  │ (~100M params)  │   │                 │   │                 │         │
+│  └─────────────────┘   └─────────────────┘   └─────────────────┘         │
+│                                                                           │
+│  Candidates:                                                             │
+│    • "meeting last week" (0.82)                                          │
+│    • "project timeline" (0.67)                                           │
+│    • "recent discussion" (0.45)                                          │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    FILTERING + POST-PROCESSING                            │
+│                                                                           │
+│  Filter: ✗ Length > 10 words                                             │
+│          ✗ Confidence < 0.15                                             │
+│          ✗ Duplicate of previous suggestion                              │
+│                                                                           │
+│  Post-process: he/she → they | chairman → chairperson | NSFW blocklist   │
+└───────────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+Display: "Thanks for your email. I wanted to follow up on the [meeting last week]"
+                                                              ↑ (press Tab to accept)
 ```
 
-- **Triggering Service**: Monitors keystrokes. Only triggers model when:
-  - User has typed enough context (e.g., 3+ words)
-  - Pause in typing (e.g., 100ms since last keystroke)
-  - Not in the middle of a word
-- **Phrase Generator**: Decoder-only Transformer with beam search (beam width 3–5). Returns top-k completions with confidence scores.
-- **Filtering**: Remove suggestions that are (a) too long (>10 words), (b) low confidence (<0.15), (c) duplicates.
-- **Post-Processing**: Rule-based bias removal—pronoun neutralization, gender-neutral terms, NSFW filtering.
-- **Response**: Top remaining suggestion (or nothing if all filtered out).
-
-**Components:**
-- **Model**: Small decoder-only Transformer (~100M–1B params), distilled from larger model. Trained in two stages: (1) pretrain on general web text, (2) finetune on email corpus.
-- **Tokenization**: Subword (BPE or SentencePiece) for vocabulary efficiency.
-- **Sampling**: Beam search (deterministic, consistent).
-- **Serving**: On-device (mobile) or edge (low-latency regions). Not practical to hit cloud LLM per keystroke.
+**Why On-Device/Edge?**
+| Approach | Latency | Model Size | Trade-off |
+| -------- | ------- | ---------- | --------- |
+| **On-device** | ~20ms | ~100M params | Fastest, no network, limited model |
+| **Edge (Lambda@Edge)** | ~50ms | ~500M params | Slightly slower, larger model |
+| **Cloud** | ~200ms+ | Any size | Too slow for autocomplete |
 
 **3. Deep Dive (15–20 min)**
 
@@ -6498,25 +6572,64 @@ _Sequence-to-sequence transformation: source language → target language. Uses 
 **2. High-Level Architecture (10–15 min)**
 
 ```
-User Input → Language Detector → Translation Service (Encoder-Decoder + Beam Search) → Post-Processing → Output
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TRANSLATION SERVICE ARCHITECTURE                       │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Input: "The California city, Burlingame, is named after Anson Burlingame."
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  LANGUAGE DETECTOR (Encoder-only + Classification Head)             │
+│                                                                     │
+│  Input → [CLS] embeddings → Softmax → {EN: 0.98, ES: 0.01, ...}    │
+│                                                                     │
+│  Detected: English (confidence 0.98)                               │
+└─────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  NAMED ENTITY MASKING                                               │
+│                                                                     │
+│  "The ENTITY_1 city, ENTITY_2, is named after ENTITY_3."           │
+│       California      Burlingame         Anson Burlingame          │
+└─────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  ENCODER-DECODER TRANSFORMER                                        │
+│                                                                     │
+│  ┌────────────────────────┐      ┌────────────────────────┐        │
+│  │       ENCODER          │      │       DECODER          │        │
+│  │  (Bidirectional)       │      │  (Causal/Masked)       │        │
+│  │                        │      │                        │        │
+│  │  "The ENTITY_1 city"   │─────►│ Cross-Attention        │        │
+│  │        ↑↓              │      │   ↓                    │        │
+│  │  Self-Attention        │      │ "La ville ENTITY_1"    │        │
+│  └────────────────────────┘      └────────────────────────┘        │
+│                                                                     │
+│  Beam Search (width=5) for consistent, high-quality translation    │
+└─────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│  POST-PROCESSING                                                    │
+│                                                                     │
+│  Restore entities: "La ville californienne, Burlingame, porte      │
+│                     le nom d'Anson Burlingame."                    │
+└─────────────────────────────────────────────────────────────────────┘
+        │
+        ▼
+Output: "La ville californienne, Burlingame, porte le nom d'Anson Burlingame."
 ```
 
-**Components:**
+**Bilingual vs Multilingual Model Decision:**
 
-1. **Language Detector**: Encoder-only Transformer + classification head. Classifies input into N languages.
-2. **Translation Service**: Routes to appropriate model based on (source, target) pair.
-   - Option A: **Bilingual models** — One model per language pair (e.g., EN→FR, EN→ES). Higher quality, but N×(N-1) models.
-   - Option B: **Multilingual model** — Single model for all languages. Simpler, but may sacrifice quality.
-3. **Beam Search**: Deterministic decoding for consistent translations.
-4. **Post-Processing**: Handle named entities (restore placeholders), formatting, punctuation.
-
-**Architecture Choice: Encoder-Decoder**
-
-| Component | Why |
-| --------- | --- |
-| **Encoder** | Bidirectional attention; fully understands source before generating |
-| **Decoder** | Causal attention (masked); generates target one token at a time |
-| **Cross-Attention** | Decoder attends to encoder outputs; aligns source with target |
+| Approach | # Models | Quality | Maintenance | Best For |
+| -------- | -------- | ------- | ----------- | -------- |
+| **Bilingual** | N×(N-1) = 12 for 4 langs | Higher | Hard | High-traffic pairs |
+| **Multilingual** | 1 | Lower for rare pairs | Easy | 100+ languages |
+| **Hybrid** | 5-10 | Best of both | Medium | Production at scale |
 
 **3. Deep Dive (15–20 min)**
 
@@ -6582,23 +6695,71 @@ _General-purpose conversational AI. Three-stage training (Pretraining → SFT �
 **2. High-Level Architecture (10–15 min)**
 
 ```
-User Message → Safety Filter → Prompt Enhancer → Session Manager (add history)
-                                                           ↓
-                                              Response Generator (LLM + Top-p)
-                                                           ↓
-                                              Response Safety Evaluator → Output (stream)
-                                                           ↓
-                                              Rejection Response (if unsafe)
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    PERSONAL ASSISTANT ARCHITECTURE                        │
+└───────────────────────────────────────────────────────────────────────────┘
+
+User: "Explain quantum computing in simple terms"
+        │
+        ▼
+┌─────────────────┐
+│  INPUT SAFETY   │ ← Block harmful prompts (Model Armor, Bedrock Guardrails)
+│     FILTER      │
+└────────┬────────┘
+         │ ✓ Safe
+         ▼
+┌─────────────────┐
+│ PROMPT ENHANCER │ ← Fix typos, expand abbreviations, add system prompt
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      SESSION MANAGER                                     │
+│                                                                         │
+│  [System] You are a helpful assistant...                                │
+│  [User] What is AI?                                                     │
+│  [Assistant] AI is the simulation of human intelligence...              │
+│  [User] Explain quantum computing in simple terms  ← Current turn      │
+│                                                                         │
+│  If context > window: summarize older turns or truncate                │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                   RESPONSE GENERATOR                                     │
+│                                                                         │
+│  ┌─────────────┐   ┌─────────────┐   ┌─────────────┐                   │
+│  │  LLM (70B)  │──►│  Top-p      │──►│  Streaming  │                   │
+│  │  Decoder    │   │  Sampling   │   │  Output     │                   │
+│  │             │   │  (T=0.7)    │   │             │                   │
+│  └─────────────┘   └─────────────┘   └─────────────┘                   │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  OUTPUT SAFETY  │ ← Check for toxicity, PII, harmful content
+│    EVALUATOR    │
+└────────┬────────┘
+         │
+    ┌────┴────┐
+    │         │
+ ✓ Safe    ✗ Unsafe
+    │         │
+    ▼         ▼
+ Stream    Polite
+Response   Refusal
 ```
 
-**Components:**
+**Three-Stage Training (Key Differentiator):**
 
-1. **Safety Filter**: Block harmful prompts before LLM (Model Armor, Bedrock Guardrails)
-2. **Prompt Enhancer**: Fix typos, expand abbreviations, add system prompt
-3. **Session Manager**: Maintain conversation history within context window
-4. **Response Generator**: LLM + top-p sampling (temperature 0.7 for balance)
-5. **Response Safety Evaluator**: Check output for toxicity, PII, harmful content
-6. **Rejection Response Generator**: Polite refusal with explanation
+```
+PRETRAINING           SFT                    RLHF
+(Trillions tokens)    (10K-100K pairs)       (Human preferences)
+      │                    │                      │
+      ▼                    ▼                      ▼
+   Raw LLM    →    Instruction-tuned    →    Aligned & Safe
+   (predicts)       (follows format)         (helpful, harmless)
+```
 
 **3. Deep Dive (15–20 min)**
 
