@@ -6263,6 +6263,17 @@ IDE (VSCode, JetBrains)
 
 🛠️ **Stack snapshot:** LangChain/LlamaIndex (RAG + routing) + Vertex Codey or Bedrock + vLLM (optional) + RAGAS/LangSmith/Phoenix (eval) + guardrails.
 
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **TTFT (Time to First Token)** | Latency from request to first completion token | Devs feel lag above 200ms; inline completions must be instant | P95 < 200ms |
+| **Acceptance Rate** | % of suggestions users accept (Tab/Enter) | Direct measure of usefulness; low rate = wasted compute | > 25% |
+| **Compile Rate** | % of accepted completions that compile without errors | Code must be syntactically correct or trust erodes | > 95% |
+| **Context Precision** | How relevant are the retrieved code chunks | Poor retrieval → irrelevant suggestions → low acceptance | > 0.8 |
+| **Cost per Completion** | Tokens × price for each suggestion | 50 completions/dev/day adds up; routing keeps cost controlled | < $0.001 |
+| **Secret Detection Rate** | % of prompts/outputs flagged for secrets | Leaking API keys or credentials is catastrophic | 100% caught |
+
 ---
 
 ### Example 2: Customer Service Chatbot with RAG and Tools
@@ -6351,6 +6362,18 @@ Customer Query: "Where is my order #12345?"
 
 🛠️ **Stack snapshot:** LangChain/LlamaIndex (agent + tools) + Vertex RAG Engine or Bedrock Knowledge Bases + Vertex/Bedrock LLM + RAGAS/LangSmith (eval) + Model Armor/Bedrock Guardrails.
 
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **Faithfulness** | % of response claims supported by retrieved docs/tool outputs | Hallucinated policies (e.g., fake refund rules) cause compliance issues | > 0.9 |
+| **Answer Relevancy** | How well response addresses the customer's actual question | Off-topic answers frustrate users and increase escalations | > 0.85 |
+| **Resolution Rate** | % of conversations resolved without human escalation | Each escalation costs $5-15 in agent time; automation ROI depends on this | > 70% |
+| **CSAT (Customer Satisfaction)** | Post-chat survey score | Ultimate measure of whether the bot is helping or hurting | > 4.0/5.0 |
+| **Tool Success Rate** | % of tool calls that return valid data | Failed order lookups = bad UX; monitor API reliability | > 99% |
+| **PII Leak Rate** | % of responses containing unmasked customer data | One leak can trigger regulatory fines; must be zero | 0% |
+| **Avg Handle Time** | Time from first message to resolution | Faster = better UX and lower cost | < 3 min |
+
 **In production:** Full customer engagement often adds **Agent Assist** (suggested responses, knowledge-base hints, real-time transcribe/summarize when escalating to humans) and **Conversational Insights** (sentiment, topics, Generative FAQ for FAQ gaps and trending questions). A full contact center runs on **CCaaS** (omnichannel, multimodal, agent routing) with Conversational Agents + Agent Assist + Insights on top—see E.4 Customer engagement & contact center.
 
 ---
@@ -6433,6 +6456,18 @@ Content Brief: "Write 1000-word article about cloud cost optimization"
 - **Single vs multi-agent:** One sequential chain (research → draft → grounding → SEO) is the default; splitting into multiple agents (researcher vs writer) adds flexibility and complexity—use only if you need distinct roles.
 
 🛠️ **Stack snapshot:** LangChain (sequential pipeline + tools) + Vertex/Bedrock LLMs + Vertex grounding or RAG + RAGAS (eval) + optional Giskard for regression tests.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **Faithfulness** | % of claims in draft supported by research sources | Ungrounded claims damage credibility; every fact needs a citation | > 0.95 |
+| **Citation Accuracy** | % of citations that correctly link claim to source | Wrong citations are worse than no citations | > 0.90 |
+| **Human Edit Rate** | % of articles requiring manual edits before publish | High edit rate = low automation value | < 20% |
+| **SEO Score** | Keyword density, readability, meta quality | Content must rank; SEO step must actually improve discoverability | > 80/100 |
+| **Cost per Article** | Total tokens × price across all steps | Must stay within budget; routing keeps this predictable | < $0.50 |
+| **End-to-End Latency** | Time from brief submission to final article | Users expect async but not hours; affects throughput planning | < 90s |
+| **Plagiarism Score** | % overlap with existing web content | Generated content must be original to avoid SEO penalties | < 5% |
 
 **Variant: internal knowledge workers (Gemini Enterprise).** For **internal** users (e.g. advisors, analysts), **Gemini Enterprise** offers agents + **unified search** across connected business systems (not just uploaded docs). Use **trusted/curated sources only** (e.g. government reports, internal research). **Plan-then-verify-then-execute:** agent proposes a research plan → human verifies → agent executes (searches, asks new questions, iterates) → output = report + source links + optional **audio summary**. **NotebookLM Enterprise** = deep dive into specific documents/sources (Q&A, summarize); Gemini can connect to it for personalized context (e.g. client notes). See E.4 Enterprise knowledge workers (Gemini Enterprise).
 
@@ -6544,6 +6579,18 @@ Display: "Thanks for your email. I wanted to follow up on the [meeting last week
 - **Triggering sensitivity**: Trigger too often = annoying; too rarely = missed opportunities. A/B test threshold.
 
 🛠️ **Stack snapshot:** Small decoder-only Transformer (distilled) + on-device serving (TFLite, Core ML) or edge (Cloud Run, Lambda@Edge) + beam search + rule-based post-processing + Perplexity/ExactMatch@N eval + acceptance rate monitoring.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **Acceptance Rate** | % of suggestions user accepts (Tab/Enter) | Primary success metric; if users don't accept, feature is useless | > 30% |
+| **Perplexity** | Model's uncertainty on held-out email corpus | Offline proxy for quality; lower = better predictions | < 15 |
+| **ExactMatch@3** | % of 3-word predictions matching ground truth | Measures precision of short completions | > 40% |
+| **P99 Latency** | Time from trigger to suggestion displayed | Must be imperceptible; >100ms breaks typing flow | < 100ms |
+| **Trigger Rate** | % of keystrokes that trigger model inference | Too high = annoying/costly; too low = missed opportunities | 5-15% |
+| **Bias Incident Rate** | % of suggestions flagged for gender/demographic bias | One biased suggestion can go viral; post-processing must catch all | < 0.01% |
+| **Time Saved per Email** | Reduction in typing time for emails using feature | Business value metric; justifies investment | > 10s |
 
 ---
 
@@ -6661,6 +6708,18 @@ Output: "La ville californienne, Burlingame, porte le nom d'Anson Burlingame."
 - **Latency vs quality**: Beam search with beam width 5 is slower but better than greedy. For real-time chat, use beam width 3 or speculative decoding.
 
 🛠️ **Stack snapshot:** Encoder-decoder Transformer (T5, mBART) + SentencePiece tokenization + beam search + language detector (encoder-only) + named entity placeholder system + BLEU/METEOR eval + user feedback loop.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **BLEU** | N-gram precision vs reference translations | Standard benchmark; correlates with human judgment | > 40 |
+| **METEOR** | Semantic similarity (synonyms, stemming) | Captures meaning better than BLEU for paraphrases | > 0.5 |
+| **Language Detection Accuracy** | % of inputs correctly identified | Wrong detection → wrong model → garbage output | > 99% |
+| **Named Entity Preservation** | % of proper nouns correctly preserved | "California" shouldn't become "Californie" | > 95% |
+| **User Edit Rate** | % of translations users manually correct | Lower = better; direct signal of quality | < 10% |
+| **P95 Latency** | Time from input to translated output | Real-time use cases need <500ms | < 500ms |
+| **Low-Resource Pair Quality** | BLEU on rare language pairs (e.g., Swahili→Korean) | Multilingual models often fail on rare pairs; monitor separately | > 25 |
 
 **Base Models to Consider:**
 - **Google T5/mT5**: Text-to-text framework; multilingual
@@ -6786,6 +6845,19 @@ PRETRAINING           SFT                    RLHF
 
 🛠️ **Stack snapshot:** Decoder-only Transformer (LLaMA, Gemini, GPT) + RoPE + three-stage training (Pretrain/SFT/RLHF) + top-p sampling + session management + safety filters (Model Armor) + MMLU/HumanEval/TruthfulQA eval + LMSYS Arena for online eval.
 
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **MMLU** | Multitask accuracy across 57 subjects | Broad capability benchmark; shows general knowledge | > 70% |
+| **HumanEval** | % of coding problems solved correctly | Coding is a key use case; measures reasoning + syntax | > 60% |
+| **TruthfulQA** | % of responses that are factually correct | Hallucination is the #1 user complaint | > 50% |
+| **LMSYS Arena Elo** | Relative ranking from human pairwise comparisons | Best online signal of overall quality | Top 10 |
+| **Toxicity Rate** | % of responses flagged as harmful | One toxic response can cause PR crisis | < 0.1% |
+| **Refusal Rate** | % of legitimate requests incorrectly refused | Over-cautious model frustrates users | < 5% |
+| **Thumbs Up/Down Ratio** | User feedback on individual responses | Direct signal of user satisfaction | > 90% positive |
+| **Session Length** | Avg turns per conversation | Longer = more engaged users | > 5 turns |
+
 **Models to Consider:**
 - **OpenAI GPT-4/GPT-4o**: State-of-the-art; API-only
 - **Google Gemini 1.5**: Long context (1M tokens); API or Vertex AI
@@ -6863,6 +6935,18 @@ Input Image → Preprocessing (resize, normalize) → Image Encoder (ViT/CLIP) �
 - **Beam search vs creativity**: Beam search gives consistent, safe captions. For creative applications, consider top-p sampling.
 
 🛠️ **Stack snapshot:** ViT/CLIP encoder + GPT-2/LLaMA decoder + cross-attention + beam search + CLIP filtering for data + CIDEr/BLEU eval + post-processing filter.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **CIDEr** | Caption similarity to multiple human references | Best correlation with human judgment for captioning | > 100 |
+| **BLEU-4** | 4-gram precision vs reference captions | Measures exact phrase matching | > 30 |
+| **User Edit Rate** | % of suggested captions users modify | Lower = more useful suggestions | < 30% |
+| **Skip Rate** | % of images where no caption is suggested (low confidence) | Too high = missed opportunities; too low = bad suggestions | 10-20% |
+| **Offensive Caption Rate** | % of captions flagged by post-processing filter | One offensive caption can cause harm; must be near zero | < 0.01% |
+| **Latency** | Time from image upload to caption suggestion | Users expect near-instant for file naming | < 1.5s |
+| **Domain Accuracy** | CIDEr on domain-specific images (medical, product) | General models often fail on specialized images | > 80 |
 
 **Models to Consider:**
 - **BLIP-2**: Frozen image encoder + LLM + Q-Former bridge
@@ -6950,6 +7034,18 @@ User Query → Safety Filter → Query Expansion (optional)
 
 🛠️ **Stack snapshot:** Layout-Parser/Document AI + CLIP/text-embedding-004 + FAISS/Pinecone (HNSW) + LangChain RecursiveTextSplitter + cross-encoder rerank + Gemini/GPT-4 + RAGAS eval + citation validation.
 
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **Faithfulness** | % of answer claims supported by retrieved chunks | Employees trust answers as authoritative; hallucinations are dangerous | > 0.9 |
+| **Context Precision** | % of retrieved chunks that are actually relevant | Irrelevant chunks waste context and confuse LLM | > 0.8 |
+| **Context Recall** | % of relevant chunks that were retrieved | Missing key info leads to incomplete answers | > 0.8 |
+| **Citation Accuracy** | % of citations that correctly link to source doc | Wrong citations erode trust; worse than no citation | > 0.95 |
+| **Answer Relevancy** | How well answer addresses the actual question | Off-topic answers = wasted employee time | > 0.85 |
+| **Query Latency** | Time from question to complete answer | Employees expect near-instant for productivity | < 5s |
+| **Index Freshness** | Time lag between doc update and searchability | Stale answers on updated policies are dangerous | < 24h |
+
 **RAFT consideration:** If retrieval is noisy (many similar docs), consider RAFT finetuning—train LLM on (query, mixed golden+distractor context, answer) to ignore irrelevant chunks.
 
 ---
@@ -7023,6 +7119,18 @@ Training Data → Preprocess (resize, normalize, augment) → GAN Training Loop
 - **Deepfake concerns**: Generated faces may be misused. Add watermarks; track usage; implement content policies.
 
 🛠️ **Stack snapshot:** StyleGAN2/StyleGAN3 (NVIDIA) + PyTorch/TensorFlow + 8×V100/A100 GPUs + FID/IS evaluation + human eval pairwise comparison + watermarking.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **FID (Fréchet Inception Distance)** | Distribution similarity between generated and real faces | Lower = more realistic; primary quality metric | < 5 |
+| **Inception Score (IS)** | Quality × diversity of generated images | Higher = better; catches mode collapse | > 4.0 |
+| **Demographic Balance** | Distribution of age, gender, ethnicity in outputs | Biased outputs can cause PR issues | Within 10% of target |
+| **Mode Coverage** | % of latent space that produces distinct faces | Low coverage = mode collapse; generator stuck | > 90% |
+| **Discriminator/Generator Loss Ratio** | Balance between D and G training | If D dominates, G can't learn; if G dominates, quality drops | D/G ≈ 1.0 |
+| **Inference Latency** | Time to generate one face | Real-time apps need <1s | < 50ms |
+| **Watermark Detection Rate** | % of generated images with detectable watermark | Watermarks enable abuse tracking | 100% |
 
 **Models/Resources:**
 - **StyleGAN2-ADA**: Adaptive augmentation for limited data
@@ -7110,6 +7218,19 @@ User Prompt → Prompt Safety → Prompt Enhancement (LLM) → Text Encoder (T5)
 - **Latent diffusion trade-off**: Much faster training/inference, but VAE decoder may lose fine details. Pixel-space diffusion (Imagen) is higher quality but slower.
 
 🛠️ **Stack snapshot:** T5/CLIP text encoder + U-Net/DiT diffusion + DDIM sampler + CFG + super-resolution cascade + CLIP filtering (data) + FID/CLIPScore/DrawBench (eval) + prompt safety classifier + output harm detector.
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **FID** | Visual quality vs real image distribution | Lower = more photorealistic output | < 10 |
+| **CLIPScore** | Alignment between prompt and generated image | Higher = image matches what user asked for | > 0.3 |
+| **Inception Score** | Quality × diversity across generations | Catches mode collapse and low diversity | > 10 |
+| **DrawBench Score** | Performance on curated challenging prompts | Standard benchmark for text-to-image | Top quartile |
+| **Human Preference Win Rate** | % of A/B tests where model wins | Ultimate quality signal; correlates with FID | > 50% |
+| **NSFW Detection Rate** | % of harmful outputs caught by safety filter | One harmful image can cause PR crisis | > 99.9% |
+| **Prompt Rejection Rate** | % of prompts blocked by safety filter | Too high = frustrated users; too low = risk | < 5% |
+| **Generation Latency** | Time from prompt to final image | Users expect <10s for interactive use | < 5s |
 
 **Models to Consider:**
 - **Stable Diffusion**: Open-source; latent diffusion; 512×512 → 1024×1024
@@ -7209,6 +7330,19 @@ Prompt → Safety → Enhancement → Text Encoder (T5)
 - **Super-resolution cascade**: Each stage adds latency but enables higher final quality with cheaper base model.
 
 🛠️ **Stack snapshot:** VAE (compression) + DiT (temporal attention/conv, 3D patches, RoPE) + T5 encoder + DDIM + CFG + spatial/temporal SR + FVD/FID/CLIP eval + distributed training (6000+ GPUs).
+
+📈 **Key Metrics to Track:**
+
+| Metric | What It Measures | Why It Matters Here | Target |
+| ------ | ---------------- | ------------------- | ------ |
+| **FVD (Fréchet Video Distance)** | Video quality vs real video distribution (I3D features) | Primary quality metric for video; captures temporal coherence | < 300 |
+| **FID (per-frame)** | Average visual quality across frames | Catches low-quality individual frames | < 15 |
+| **CLIPScore (per-frame avg)** | Text-video alignment averaged across frames | Measures if video matches the prompt | > 0.25 |
+| **Temporal Consistency** | Smoothness/coherence across frames | Flickering or jumping objects ruin UX | Human eval > 4/5 |
+| **VBench Score** | Comprehensive benchmark (quality, consistency, alignment) | Standard video generation benchmark | Top quartile |
+| **Generation Time** | Minutes from prompt to final video | Users accept minutes but not hours | < 5 min |
+| **Cost per Video** | Compute cost for one 5s 720p video | High cost limits adoption; must optimize | < $1.00 |
+| **Harmful Content Rate** | % of videos containing violence/NSFW | Video moderation is harder than image; critical for safety | < 0.01% |
 
 **Models to Consider:**
 - **Sora** (OpenAI): DiT; variable duration/resolution; "world simulator"
