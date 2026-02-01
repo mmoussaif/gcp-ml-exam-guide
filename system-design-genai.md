@@ -5623,32 +5623,256 @@ Solution stack:
 
 ---
 
+
 ## E.9 Monitoring & Observability for GenAI
 
-**In the big picture** (see [GenAI System: Big Picture](#b1-genai-system-big-picture-frontend-to-backend)), this is **how we observe the system**: metrics, traces, and drift detection across the request path and the evaluation/training pipelines. Quality metrics and eval pipeline are in E.5; here we focus on **what to track** and **which platform services** support it.
+**Why GenAI monitoring is different:** Traditional monitoring tracks latency and errors. GenAI adds new dimensions: **output quality** (is the answer correct?), **safety** (is it harmful?), and **cost** (tokens are money).
 
-**T-shaped summary:** Track quality (task accuracy, safety), performance (latency, throughput), cost (tokens, model tier), reliability (errors, timeouts), and safety (toxicity, jailbreak). Use Cloud Monitoring / CloudWatch, logging, tracing (Trace / X-Ray), and model monitoring for drift. Deep dive below.
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    GENAI OBSERVABILITY STACK                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+                    ┌─────────────────────────────────────┐
+                    │           DASHBOARDS                │
+                    │    Quality │ Latency │ Cost │ Safety│
+                    └─────────────────────────────────────┘
+                                    ▲
+                    ┌───────────────┴───────────────┐
+                    │           ALERTING            │
+                    │  "Faithfulness < 0.7" alarm   │
+                    └───────────────┬───────────────┘
+                                    ▲
+        ┌───────────────────────────┼───────────────────────────┐
+        │                           │                           │
+        ▼                           ▼                           ▼
+┌───────────────┐          ┌───────────────┐          ┌───────────────┐
+│    METRICS    │          │    LOGS       │          │    TRACES     │
+│               │          │               │          │               │
+│ • Latency P99 │          │ • Prompts     │          │ • Request ID  │
+│ • Tokens/req  │          │ • Responses   │          │ • Span timing │
+│ • Error rate  │          │ • Errors      │          │ • Tool calls  │
+│ • Cost/req    │          │ • Feedback    │          │ • RAG hops    │
+└───────────────┘          └───────────────┘          └───────────────┘
+        ▲                           ▲                           ▲
+        └───────────────────────────┴───────────────────────────┘
+                                    │
+                    ┌───────────────┴───────────────┐
+                    │        YOUR LLM SYSTEM        │
+                    │  Gateway → RAG → LLM → Output │
+                    └───────────────────────────────┘
+```
 
 ---
 
-### Key Metrics to Track
+### The Five Monitoring Dimensions
 
-| Category        | Metrics                                             |
-| --------------- | --------------------------------------------------- |
-| **Quality**     | Task accuracy, ROUGE/BLEU, human evaluation         |
-| **Performance** | P50/P95/P99 latency, throughput, tokens/second      |
-| **Cost**        | Cost per request, token usage, model tier breakdown |
-| **Reliability** | Error rate, timeout rate, availability              |
-| **Safety**      | Toxicity score, jailbreak attempts, bias detection  |
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    WHAT TO MONITOR                                        │
+└───────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐
+│   QUALITY   │  │ PERFORMANCE │  │    COST     │  │ RELIABILITY │  │   SAFETY    │
+├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤
+│Is the answer│  │ How fast?   │  │ How much?   │  │ Does it     │  │ Is it safe? │
+│correct?     │  │             │  │             │  │ work?       │  │             │
+├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤  ├─────────────┤
+│• Faithfulness│ │• Latency    │  │• $/request  │  │• Error rate │  │• Toxicity   │
+│• Relevancy  │  │  P50/P95/P99│  │• Tokens in  │  │• Timeout %  │  │• PII leaks  │
+│• Human rating│ │• Throughput │  │• Tokens out │  │• Availability│ │• Jailbreak  │
+│• Task accuracy││• TTFT       │  │• Model tier │  │• Retry rate │  │• Bias       │
+└─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘  └─────────────┘
+```
+
+**TTFT** = Time To First Token (important for streaming responses)
+
+---
+
+### Metrics Deep Dive
+
+#### Quality Metrics
+
+| Metric | What It Measures | How to Collect |
+| ------ | ---------------- | -------------- |
+| **Faithfulness** | Is response grounded in context? | RAGAS, Phoenix (sampled) |
+| **Answer Relevancy** | Does it address the question? | RAGAS, LangSmith (sampled) |
+| **Human rating** | User feedback (👍/👎) | In-app feedback button |
+| **Task accuracy** | Did it complete the task correctly? | Task-specific eval |
+
+**Key insight:** Quality metrics are expensive (LLM-as-judge costs tokens). Run on a **sample** (5-10%), not every request.
+
+---
+
+#### Performance Metrics
+
+| Metric | What It Measures | Alert Threshold Example |
+| ------ | ---------------- | ----------------------- |
+| **P50 latency** | Median response time | < 2s |
+| **P95 latency** | 95th percentile | < 5s |
+| **P99 latency** | Worst case (1 in 100) | < 10s |
+| **TTFT** | Time to first token | < 500ms |
+| **Throughput** | Requests/second | > baseline |
+| **Tokens/second** | Generation speed | Model-dependent |
+
+```
+Latency breakdown for debugging:
+
+Total latency = Network + Preprocessing + Retrieval + LLM inference + Postprocessing
+                  │           │              │            │              │
+                  │           │              │            │              └─ Guardrails
+                  │           │              │            └─ Usually the bottleneck
+                  │           │              └─ Vector search + reranking
+                  │           └─ Tokenization, prompt assembly
+                  └─ Client → server round trip
+```
+
+---
+
+#### Cost Metrics
+
+| Metric | What It Measures | Why It Matters |
+| ------ | ---------------- | -------------- |
+| **Cost per request** | Total $ per API call | Budget tracking |
+| **Input tokens** | Tokens in prompt | Context/RAG efficiency |
+| **Output tokens** | Tokens generated | Response verbosity |
+| **Model tier usage** | % by model (Flash/Pro/etc) | Routing effectiveness |
+| **Cache hit rate** | % served from cache | Optimization ROI |
+
+**Alert example:** "Cost per request increased 50% in last hour" → investigate prompt bloat or routing failure.
+
+---
+
+#### Reliability Metrics
+
+| Metric | What It Measures | Alert Threshold |
+| ------ | ---------------- | --------------- |
+| **Error rate** | % failed requests | < 1% |
+| **Timeout rate** | % exceeding timeout | < 0.5% |
+| **Availability** | Uptime % | > 99.9% |
+| **Retry rate** | % needing retry | < 5% |
+
+---
+
+#### Safety Metrics
+
+| Metric | What It Measures | How to Detect |
+| ------ | ---------------- | ------------- |
+| **Toxicity score** | Harmful content | Perspective API, classifiers |
+| **PII detection** | Personal data in output | Regex + NER |
+| **Jailbreak attempts** | Prompt injection tries | Pattern matching, classifiers |
+| **Refusal rate** | % blocked by guardrails | Count guardrail triggers |
+
+---
+
+### Logging: What to Capture
+
+```python
+# Example: What to log per request
+log_entry = {
+    # Identity
+    "request_id": "uuid-abc123",
+    "timestamp": "2026-01-27T10:30:00Z",
+    "user_id": "user-456",  # hashed/anonymized
+    
+    # Input
+    "prompt_hash": "sha256...",  # don't log raw prompts with PII
+    "input_tokens": 1200,
+    "model": "gemini-2.0-flash",
+    
+    # RAG (if applicable)
+    "retrieved_doc_ids": ["doc1", "doc2", "doc3"],
+    "retrieval_latency_ms": 45,
+    
+    # Output
+    "output_tokens": 350,
+    "response_hash": "sha256...",
+    
+    # Performance
+    "total_latency_ms": 1250,
+    "ttft_ms": 180,
+    
+    # Quality (async, sampled)
+    "faithfulness_score": 0.92,  # added later by eval job
+    
+    # Safety
+    "guardrail_triggered": False,
+    "toxicity_score": 0.02
+}
+```
+
+**Privacy note:** Don't log raw prompts/responses containing PII. Log hashes or sanitized versions.
+
+---
+
+### Tracing: End-to-End Visibility
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DISTRIBUTED TRACE EXAMPLE                              │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Request ID: abc-123
+Total: 1250ms
+
+├─ Gateway (50ms)
+│  └─ Auth, rate limit
+│
+├─ Preprocessing (30ms)
+│  └─ Tokenize, assemble prompt
+│
+├─ RAG Retrieval (120ms)
+│  ├─ Embed query (20ms)
+│  ├─ Vector search (60ms)
+│  └─ Rerank (40ms)
+│
+├─ LLM Inference (1000ms)  ← Bottleneck identified
+│  ├─ Queue wait (200ms)
+│  └─ Generation (800ms)
+│
+└─ Postprocessing (50ms)
+   └─ Guardrails, format
+```
+
+**Tools:** OpenTelemetry → Cloud Trace (GCP) or X-Ray (AWS), Phoenix, LangSmith
+
+---
+
+### Alerting Strategy
+
+| Alert Type | Example | Action |
+| ---------- | ------- | ------ |
+| **Latency spike** | P99 > 10s for 5 min | Check GPU utilization, queue depth |
+| **Error spike** | Error rate > 5% | Check model availability, logs |
+| **Cost anomaly** | Cost 2× normal | Check token counts, prompt bloat |
+| **Quality drop** | Faithfulness < 0.7 | Check RAG, model version |
+| **Safety event** | Jailbreak detected | Review, update guardrails |
+
+---
 
 ### Platform Services
 
-| Function            | Google Cloud                           | AWS                     |
-| ------------------- | -------------------------------------- | ----------------------- |
-| **Metrics**         | Cloud Monitoring, Vertex AI Monitoring | CloudWatch              |
-| **Logging**         | Cloud Logging                          | CloudWatch Logs         |
-| **Tracing**         | Cloud Trace                            | X-Ray                   |
-| **Drift Detection** | Vertex AI Model Monitoring             | SageMaker Model Monitor |
+| Function | Google Cloud | AWS | Open Source |
+| -------- | ------------ | --- | ----------- |
+| **Metrics** | Cloud Monitoring | CloudWatch | Prometheus |
+| **Logging** | Cloud Logging | CloudWatch Logs | ELK Stack |
+| **Tracing** | Cloud Trace | X-Ray | Jaeger |
+| **LLM-specific** | Vertex AI Monitoring | SageMaker Monitor | Phoenix, LangSmith |
+| **Drift detection** | Vertex AI Model Monitoring | SageMaker Model Monitor | Custom |
+
+---
+
+### Monitoring Checklist
+
+| Phase | What to Set Up |
+| ----- | -------------- |
+| **Day 1** | Latency (P50/P95/P99), error rate, cost per request |
+| **Week 1** | TTFT, token counts, cache hit rate |
+| **Month 1** | Quality metrics (sampled), safety alerts |
+| **Ongoing** | Drift detection, A/B metrics, cost optimization tracking |
+
+> [!TIP]
+> **Start simple:** Latency + error rate + cost covers 80% of issues. Add quality and safety metrics as you scale. Always sample expensive metrics (LLM-as-judge) to control costs.
 
 ---
 
