@@ -7798,16 +7798,17 @@ Final Video: 5s at 720p, 24fps
 
 ### Cross-example takeaways
 
-| Concern                                    | Tools to reach for                                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| **Orchestration (RAG, agents, pipelines)** | LangChain, LlamaIndex                                                                                               |
-| **Managed RAG / embeddings**               | Vertex AI RAG Engine, **Vertex AI Search** (website/commerce/internal KB), Bedrock Knowledge Bases                  |
-| **Internal knowledge workers**             | **Gemini Enterprise** (agents + unified search), **NotebookLM Enterprise** (document-focused Q&A, summarize, audio) |
-| **LLM hosting**                            | Vertex AI (Codey, Gemini), Bedrock (Claude, CodeWhisperer, etc.), or vLLM for self-hosted                           |
-| **Evaluation (reference-free)**            | RAGAS (batch), LangSmith (datasets + humans), Phoenix (traces + evals)                                              |
-| **Guardrails**                             | Model Armor (Google), Bedrock Guardrails (AWS), Guardrails AI / NeMo (open source)                                  |
-
-The full **45-min Interview Framework** (Clarify → High-Level Architecture → Deep Dive → Bottlenecks & Trade-offs) is in [G.2 Interview Quick Reference](#g2-interview-quick-reference) (45-Minute Framework). _Note:_ Cost numbers in the examples use illustrative per-token rates; real pricing varies by provider and model—use them to practice estimation, not as exact quotes.
+| Concern | Tools to reach for |
+| -------- | ------------------ |
+| **Orchestration (RAG, agents, pipelines)** | **LangChain**, **LlamaIndex** (RAG/chains); **Google ADK** (agents, multi-agent, Vertex AI); **LangChain Agents**, **AutoGen** (multi-agent). |
+| **Managed RAG / search** | **Vertex AI RAG Engine**, **Vertex AI Search** (website, commerce, internal KB, grounding + Google Search); **Bedrock Knowledge Bases**; **Pinecone**, **Weaviate**, **pgvector**, **Vertex AI Vector Search**, **FAISS** (vector DBs / retrieval). |
+| **Chunking / document parsing** | **Document AI**, **Textract** (managed OCR/layout); **Layout-Parser**, **PyMuPDF**, **Nougat** (open-source); **LangChain** / **LlamaIndex** text splitters (RecursiveCharacter, semantic). |
+| **Internal knowledge workers** | **Gemini Enterprise** (agents + unified search, plan-verify-execute); **NotebookLM Enterprise** (document Q&A, summarize, audio; can connect to Gemini). |
+| **LLM hosting** | **Vertex AI** (Gemini, Codey), **Bedrock** (Claude, CodeWhisperer, etc.); **vLLM**, **TGI** (Text Generation Inference) for self-hosted; **OpenAI**, **Anthropic** APIs. |
+| **Evaluation (reference-free)** | **RAGAS** (faithfulness, relevancy, context precision/recall); **LangSmith** (datasets, human annotation, experiments); **Arize Phoenix** (traces, hallucination/relevance/toxicity); **Giskard** (RAG test suite, testset generation); **Braintrust**, **Vectara FaithJudge** (custom scorers, faithfulness benchmarks). |
+| **Observability / tracing** | **Phoenix** (LLM traces, evals); **LangSmith** (traces, runs); **OpenTelemetry** (instrumentation). |
+| **Guardrails** | **Model Armor** (Google), **Bedrock Guardrails** (AWS); **Guardrails AI**, **NeMo Guardrails** (open source); **OpenAI Guardrails**. |
+| **Agent protocols** | **MCP** (Model Context Protocol — tools/context for LLMs); **A2A** (Agent-to-Agent — delegation between agents). |
 
 ## G.1 Strategy & Planning
 
