@@ -3885,102 +3885,113 @@ HOW IT'S USED:
 
 ## E.3 RAG vs Fine-Tuning Decision Framework
 
-**Why this comes next:** E.2 gave you **RAG** (retrieve, then generate). When do you **also**—or **instead**—**fine-tune**? This section is the decision framework so you choose the right lever for the problem.
+**The core question:** What does the model lack—**knowledge** or **behavior**?
 
-**Key insight:** This is not a binary choice. Think of it as a **spectrum of adaptation**: RAG and fine-tuning solve different problems and are often used **together**. The right question is not "RAG or fine-tuning?" but "What does the model lack—**knowledge** or **behavior**?"
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    RAG vs FINE-TUNING: THE KEY DISTINCTION                │
+└───────────────────────────────────────────────────────────────────────────┘
 
-- **"The model doesn't _know_ X"** → Add knowledge via RAG (or long context, or caching).
-- **"The model doesn't _behave_ like Y"** → Change behavior via fine-tuning (tone, format, schema, jargon).
-- **"We need both fresh facts and consistent style"** → Use both: RAG for what to say, fine-tuning for how to say it.
+"Model doesn't KNOW X"                    "Model doesn't BEHAVE like Y"
+(your docs, policies, data)               (tone, format, jargon)
+           │                                         │
+           ▼                                         ▼
+    ┌─────────────┐                          ┌─────────────┐
+    │     RAG     │                          │ FINE-TUNE   │
+    │             │                          │             │
+    │ • Add docs  │                          │ • Adjust    │
+    │ • Update    │                          │   weights   │
+    │   anytime   │                          │ • Fixed     │
+    │ • Citations │                          │   until     │
+    │             │                          │   retrain   │
+    └─────────────┘                          └─────────────┘
+           │                                         │
+           └───────────────┬─────────────────────────┘
+                           │
+                      Need BOTH?
+                           │
+                           ▼
+                ┌─────────────────┐
+                │  RAG + FINE-TUNE │
+                │                 │
+                │ RAG: what to say│
+                │ FT: how to say  │
+                └─────────────────┘
+```
 
 ---
 
-### When to Use RAG
+### RAG vs Fine-Tuning Comparison
 
-**What RAG fixes:** Gaps in **knowledge** and **freshness**. The model is good at reasoning and language but hasn't seen your data (policies, tickets, docs, logs). RAG injects that at query time: you retrieve relevant chunks and put them in the prompt, so the model "reads" your corpus on demand.
-
-**Use RAG when:** The model **lacks knowledge** about your domain (e.g. internal docs, product specs, support history). Your **data changes often** (e.g. daily reports, new releases, tickets)—RAG lets you update the index without retraining. You want to **reduce hallucinations** by **grounding** answers in retrieved text and to **cite sources** (chunk or doc IDs).
-
-**RAG does _not_ fix:** Tone, format, or jargon. If the base model is too informal or ignores your schema, RAG alone won't change that—you need behavior change (prompts or fine-tuning).
-
----
-
-### When to Use Fine-Tuning
-
-**What fine-tuning fixes:** **Behavior** and **style**. The model "knows" enough from pretraining, but its outputs don't match how you want it to answer: tone (formal vs casual), structure (e.g. JSON with fixed keys), or vocabulary (your domain terms). Fine-tuning adjusts the model's weights so it reliably produces that style.
-
-**Use fine-tuning when:** You need a **specific tone or voice** (e.g. brand guidelines, compliance-friendly wording). You need **strict output format** (e.g. JSON, bullet lists, section headings)—fine-tuning helps the model adhere to schemas. The model **misuses or avoids domain jargon**; training on in-domain examples teaches it to use your terms correctly.
-
-**Fine-tuning does _not_ fix:** Missing or outdated facts. Weights are fixed until the next train run. For fast-changing knowledge, use RAG (or both).
+| Aspect | RAG | Fine-Tuning |
+| ------ | --- | ----------- |
+| **Fixes** | Knowledge gaps, outdated info | Behavior, style, format |
+| **Updates** | Instant (add/edit/delete docs) | Requires retraining |
+| **Use when** | Domain docs, changing data, need citations | Tone, JSON schema, jargon |
+| **Does NOT fix** | Style, format, tone | Missing or outdated facts |
 
 ---
-
-### When to Use Both
-
-**Use RAG + fine-tuning when** you need **accurate, up-to-date content** _and_ **consistent presentation**: RAG supplies the **facts** (from docs, KB, logs); fine-tuning shapes **how** those facts are expressed (tone, format, terminology). Example: A support bot that answers from your knowledge base (RAG) but must always respond in a compliant, on-brand style (fine-tuned). Or a report generator that pulls from live data (RAG) and always outputs the same JSON schema (fine-tuned).
-
----
-
-### Scenario Cheat Sheet
-
-| Scenario                                              | RAG | Fine-Tuning | Both |
-| ----------------------------------------------------- | :-: | :---------: | :--: |
-| Model lacks knowledge about your domain               | ✅  |     ❌      |      |
-| Data changes frequently (docs, tickets, metrics)      | ✅  |     ❌      |      |
-| Need specific tone, style, or brand voice             | ❌  |     ✅      |      |
-| Domain-specific jargon or terminology                 | ❌  |     ✅      |      |
-| Reduce hallucinations by grounding in retrieved text  | ✅  |             |      |
-| Change output format or schema (e.g. JSON, sections)  | ❌  |     ✅      |      |
-| High accuracy _and_ fresh data _and_ consistent style |     |             |  ✅  |
-
-### Cost Comparison
-
-Cost structure is different, not just "cheaper vs more expensive":
-
-| Approach                    | Cost model          | What you pay for                                                      | Example ballpark                                                                                  |
-| --------------------------- | ------------------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **RAG**                     | **Per query**       | Retrieval (embeddings, vector search) + LLM tokens (context + answer) | ≈$0.01-0.05 per query; 1M queries/month ≈ $10-50K                                                 |
-| **Fine-tuning (e.g. LoRA)** | **One-time**        | Training compute + data prep; then inference cost as usual            | ≈$500-2,000 for **LoRA** (Low-Rank Adaptation) on 7-70B model; amortizes over all future requests |
-| **Full fine-tune**          | **One-time, large** | Full training run on your data                                        | $10K-100K+ depending on model size and data                                                       |
-
-**How to think about it:** RAG cost grows with **usage** (every query pays). Fine-tuning cost is **upfront**; after that, marginal cost per request is similar to the base model (or lower if you use a smaller fine-tuned model). Break-even depends on volume: at very high QPS, RAG can exceed the amortized cost of a one-time fine-tune; at low QPS, RAG is often cheaper than investing in fine-tuning.
 
 ### Decision Flow
 
-Start with the **cheapest, fastest** lever (prompts and few-shot examples). Only add RAG or fine-tuning when you've identified a clear gap: knowledge vs behavior.
-
 ```
-Start with: System prompt + few-shot examples
-        │
-        ▼
-Does the model lack KNOWLEDGE about your domain?
-(e.g. your docs, products, policies, tickets)
-        │
-    Yes ─┴─ No
-        │     │
-        ▼     ▼
-   Add RAG   Does the model need BEHAVIOR change?
-            (e.g. tone, format, schema, jargon)
-                    │
-               Yes ─┴─ No
-                    │     │
-                    ▼     ▼
-            Fine-tune   Done
-```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                         DECISION FLOWCHART                                │
+└───────────────────────────────────────────────────────────────────────────┘
 
-You can **add RAG and then fine-tune** (or the reverse) if you need both knowledge and behavior. Many production systems use prompts + RAG + fine-tuning together.
+                    START: Prompt + few-shot examples
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │ Does model lack KNOWLEDGE?  │
+                    │ (your docs, products, data) │
+                    └──────────────┬──────────────┘
+                          YES      │      NO
+                           │       │       │
+                           ▼       │       ▼
+                      ┌────────┐   │   ┌──────────────────────────┐
+                      │Add RAG │   │   │ Does model need BEHAVIOR │
+                      └───┬────┘   │   │ change? (tone, format)   │
+                          │        │   └────────────┬─────────────┘
+                          │        │         YES    │    NO
+                          │        │          │     │     │
+                          │        │          ▼     │     ▼
+                          │        │    ┌──────────┐│  ┌──────┐
+                          │        │    │Fine-tune ││  │ Done │
+                          │        │    └────┬─────┘│  └──────┘
+                          │        │         │      │
+                          └────────┴─────────┴──────┘
+                                        │
+                            Need both? Combine them.
+```
 
 ---
 
-### Best Practice
+### Quick Reference
 
-1. **Start simple:** Prompt engineering + a few examples. Ship and measure.
-2. **Add RAG** when the main gap is "model doesn't know our content" or "content changes often."
-3. **Add fine-tuning** when the main gap is "model doesn't answer in our tone/format/terms."
-4. **Combine** when you need both correct, up-to-date content and consistent presentation.
+| Problem | Solution |
+| ------- | -------- |
+| Model lacks domain knowledge | RAG |
+| Data changes frequently | RAG |
+| Need citations/grounding | RAG |
+| Need specific tone/voice | Fine-tune |
+| Need strict output format (JSON) | Fine-tune |
+| Domain-specific jargon | Fine-tune |
+| Fresh data + consistent style | Both |
+
+---
+
+### Cost Comparison
+
+| Approach | Cost Model | Ballpark |
+| -------- | ---------- | -------- |
+| **RAG** | Per query | $0.01-0.05/query |
+| **LoRA fine-tune** | One-time | $500-2,000 |
+| **Full fine-tune** | One-time | $10K-100K+ |
+
+**Rule of thumb:** RAG cost grows with usage. Fine-tuning is upfront then amortized.
 
 > [!TIP]
-> 💡 **Aha:** RAG = **external memory** you can change without retraining (add docs, edit, delete). Fine-tuning = **internalized behavior** (tone, format, jargon) that’s fixed until the next train run. Use RAG when the world changes; use fine-tuning when you want the model itself to change how it answers.
+> **Key insight:** RAG = external memory (updatable anytime). Fine-tuning = internalized behavior (fixed until retrain). Use RAG when the *world* changes. Use fine-tuning when you want the *model's behavior* to change.
 
 ---
 
