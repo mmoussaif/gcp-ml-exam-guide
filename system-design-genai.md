@@ -2842,17 +2842,11 @@ How it works:
 
 ## E.1 LLM Serving Architecture at Scale
 
-### Use Case: Design a Chatbot Service (like ChatGPT)
+**What this section covers:** How to serve LLMs to millions of users. The challenges: (1) slow (token-by-token), (2) memory-hungry (KV cache), (3) expensive (GPUs). This section covers the optimizations that make production serving possible.
 
-**Requirements:**
+---
 
-- Support 1M concurrent users
-- Average response time < 2 seconds
-- Handle 10,000 requests/second
-- Support multiple models (GPT-4, Claude, Gemini)
-- Cost-effective serving
-
-**High-Level Design:**
+### The Big Picture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -2922,7 +2916,7 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Solution — PagedAttention (vLLM)**: Inspired by OS virtual memory and paging. The KV cache is split into **fixed-size blocks** and stored in non-contiguous memory. That reduces fragmentation and allows sharing (e.g. shared prompt prefix across requests). vLLM reports near-zero wasted KV memory and roughly **2–4× throughput** versus non-paged systems on long sequences and large models.
 
-**5. Speculative Decoding**
+**4. Speculative Decoding**
 
 **Problem**: Token-by-token autoregressive generation is slow because each new token requires a full forward pass of the large model.
 
@@ -2936,13 +2930,23 @@ Time 3: [Request C (50 tokens), Request D (100 tokens)] ← B finished, added D
 
 **Why it works**: The target model verifies **N** candidates in one forward pass (over a sequence of length N). That cost is similar to generating a single token, so you effectively get several tokens per large-model step when the draft is accurate. **Draft latency** (how fast the draft runs) usually matters more for end-to-end speedup than the draft’s raw language quality.
 
-**4. Caching Strategy**
+**5. Caching Strategy**
 
-| Strategy             | Hit Rate                | Latency          | Best For                           |
-| -------------------- | ----------------------- | ---------------- | ---------------------------------- |
-| **Prompt caching**   | High for system prompts | 2-5x speedup     | Common prefixes, few-shot examples |
-| **Response caching** | 10-30%                  | Instant          | Identical requests                 |
-| **Semantic caching** | 30-50%                  | +5-10ms overhead | Paraphrased queries                |
+```
+RESPONSE CACHE               PROMPT CACHE                SEMANTIC CACHE
+──────────────               ────────────                ──────────────
+"What is 2+2?"               Same system prompt          "What's the weather?"
+Exact match →                for all requests?           "How's the weather?"
+Return cached "4"            Cache the KV!               Similar → same answer
+
+Hit rate: 10-30%             Speedup: 2-5× TTFT          Hit rate: 30-50%
+```
+
+| Strategy | Hit Rate | Speedup | Best For |
+| -------- | -------- | ------- | -------- |
+| **Response cache** | 10-30% | Instant | Identical requests |
+| **Prompt cache** | High | 2-5× TTFT | Shared system prompts |
+| **Semantic cache** | 30-50% | +5-10ms | Paraphrased questions |
 
 ### Multi-Turn Session Management
 
