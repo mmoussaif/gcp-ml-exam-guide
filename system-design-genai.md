@@ -7013,21 +7013,66 @@ _Generate descriptive text for images. Multimodal: Image Encoder + Text Decoder 
 **2. High-Level Architecture (10–15 min)**
 
 ```
-Input Image → Preprocessing (resize, normalize) → Image Encoder (ViT/CLIP) → Sequence of Embeddings
-                                                                                      ↓
-                                                          Text Decoder (GPT-style) + Cross-Attention
-                                                                                      ↓
-                                                          Beam Search → Confidence Check → Post-Processing → Caption
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    IMAGE CAPTIONING ARCHITECTURE                          │
+└───────────────────────────────────────────────────────────────────────────┘
+
+Input Image (1024×1024)
+        │
+        ▼
+┌─────────────────┐
+│  Preprocessing  │ ← Resize to 224×224, center-crop, normalize
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        IMAGE ENCODER (ViT/CLIP)                         │
+│                                                                         │
+│   Image → Split into 16×16 patches → 196 patch embeddings              │
+│           ┌───┬───┬───┬───┐                                            │
+│           │ P1│ P2│ P3│...│ → [E1, E2, E3, ..., E196]                  │
+│           ├───┼───┼───┼───┤                                            │
+│           │ P5│ P6│ P7│...│                                            │
+│           └───┴───┴───┴───┘                                            │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         │ 196 embeddings (768-dim each)
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    TEXT DECODER (GPT-style)                             │
+│                                                                         │
+│   ┌─────────────────────────────────────────────────────────┐          │
+│   │  Cross-Attention: "Which patches matter for next word?" │          │
+│   │                                                         │          │
+│   │  [START] → "A" → "golden" → "retriever" → "playing"    │          │
+│   │                         ↑                               │          │
+│   │                  attends to dog patches                 │          │
+│   └─────────────────────────────────────────────────────────┘          │
+│                                                                         │
+│   Beam Search (width=3): Track top 3 sequences at each step            │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Confidence Check│ ← Skip if cumulative probability < 0.15
+└────────┬────────┘
+         │ ✓ Confident
+         ▼
+┌─────────────────┐
+│ Post-Processing │ ← Filter offensive, apply bias corrections
+└────────┬────────┘
+         │
+         ▼
+Caption: "A golden retriever playing in the park"
 ```
 
-**Components:**
-
-1. **Image Preprocessing**: Resize to 256×256 (or 224×224), center-crop to preserve aspect ratio, normalize pixel values
-2. **Image Encoder**: ViT or CLIP encoder → sequence of patch embeddings (e.g., 16×16 patches → 256 embeddings)
-3. **Text Decoder**: Decoder-only Transformer with cross-attention to image embeddings
-4. **Beam Search**: Deterministic decoding (beam width 3–5) for consistent, high-quality captions
-5. **Confidence Check**: If cumulative probability < threshold, skip suggestion
-6. **Post-Processing**: Filter offensive words; replace biased terms with neutral alternatives
+**Key Components:**
+| Component | Purpose | Example |
+|-----------|---------|---------|
+| **Image Encoder** | Extract visual features as embeddings | ViT-B/16, CLIP |
+| **Cross-Attention** | Align image regions with words | "dog" attends to dog patches |
+| **Beam Search** | Deterministic, high-quality decoding | Width 3-5 |
+| **Confidence Filter** | Avoid bad suggestions | Skip if < 0.15 |
 
 **3. Deep Dive (15–20 min)**
 
@@ -7102,35 +7147,101 @@ _Answer employee questions using internal company documents (Wiki, PDFs, forums)
 
 **2. High-Level Architecture (10–15 min)**
 
-**Indexing Pipeline:**
 ```
-PDF/Wiki → Document Parser (AI-based) → Chunks (text, tables, images)
-                                              ↓
-                                        Embedding Model (CLIP for text+images)
-                                              ↓
-                                        Vector Database (FAISS/Pinecone)
-```
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    DOCUMENT Q&A ARCHITECTURE                              │
+└───────────────────────────────────────────────────────────────────────────┘
 
-**Query Pipeline:**
-```
-User Query → Safety Filter → Query Expansion (optional)
-                                    ↓
-                              Text Encoder → ANN Search (HNSW) → Top-20 chunks
-                                                                      ↓
-                                                              Cross-Encoder Rerank → Top-5
-                                                                      ↓
-                                                              Prompt Engineering + LLM
-                                                                      ↓
-                                                              Response with Citations
-```
+═══════════════════════════════════════════════════════════════════════════
+                         INDEXING PIPELINE (Offline)
+═══════════════════════════════════════════════════════════════════════════
 
-**Components:**
-1. **Document Parser**: Layout-Parser or Google Document AI for varied PDF layouts
-2. **Chunking**: Recursive splitting (500 tokens, 200 overlap); preserve section boundaries
-3. **Embedding**: CLIP (shared text-image space) or text-embedding-004
-4. **Vector DB**: FAISS (self-hosted) or Vertex AI Vector Search (managed); use HNSW for scale
-5. **Reranker**: Cross-encoder (e.g., ms-marco-MiniLM) on top-20 → top-5
-6. **LLM**: Gemini or GPT-4 with retrieved context + citation instructions
+PDFs, Wiki, Forums (5M pages)
+        │
+        ▼
+┌─────────────────┐
+│ Document Parser │ ← Layout-Parser / Document AI
+│ (AI-based)      │   Handles tables, columns, images
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         CHUNKING                                        │
+│                                                                         │
+│   Document → [Chunk 1] [Chunk 2] [Chunk 3] ...                         │
+│              500 tokens  500 tokens  500 tokens                        │
+│                   ←200 overlap→                                        │
+│                                                                         │
+│   Metadata: {doc_id, page_num, section_header} ← for citations        │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Text Embedding  │     │ Image Embedding │
+│ (text-embed-004)│     │ (CLIP)          │
+└────────┬────────┘     └────────┬────────┘
+         │                       │
+         └───────────┬───────────┘
+                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    VECTOR DATABASE (40M vectors)                        │
+│                                                                         │
+│   HNSW Index: Fast ANN search (~10ms for 40M vectors)                  │
+│   Storage: FAISS (self-hosted) or Vertex AI Vector Search (managed)    │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                         QUERY PIPELINE (Online)
+═══════════════════════════════════════════════════════════════════════════
+
+User Query: "What is our refund policy for international orders?"
+        │
+        ▼
+┌─────────────────┐
+│  Safety Filter  │ ← Block harmful queries
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Query Expansion │ ← Optional: LLM rewrites + HyDE
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         RETRIEVAL                                       │
+│                                                                         │
+│   Query → Embed → HNSW Search → Top-20 candidates                      │
+│                        │                                                │
+│                        ▼                                                │
+│             ┌─────────────────────┐                                    │
+│             │  Hybrid Retrieval   │  Dense + BM25 → RRF merge          │
+│             └──────────┬──────────┘                                    │
+│                        ▼                                                │
+│             ┌─────────────────────┐                                    │
+│             │  Cross-Encoder      │  Rerank top-20 → top-5             │
+│             │  (ms-marco-MiniLM)  │                                    │
+│             └──────────┬──────────┘                                    │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         │ Top-5 chunks with metadata
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                         GENERATION                                      │
+│                                                                         │
+│   Prompt = System instructions                                         │
+│          + [Chunk 1: doc_id=policy.pdf, page=3]                       │
+│          + [Chunk 2: doc_id=faq.md, section=refunds]                  │
+│          + ...                                                         │
+│          + User query                                                  │
+│          + "Cite your sources"                                         │
+│                        │                                                │
+│                        ▼                                                │
+│                   LLM (Gemini/GPT-4)                                   │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+Response: "International orders can be refunded within 30 days [policy.pdf, p.3]..."
+```
 
 **3. Deep Dive (15–20 min)**
 
@@ -7195,25 +7306,77 @@ _Generate diverse, high-quality synthetic faces for entertainment, marketing, or
 **2. High-Level Architecture (10–15 min)**
 
 ```
-User Request → Face Generator Service → [Sample Noise] → Generator (StyleGAN) → Output Image
-                     ↓ (optional)
-              Attribute Control → Modify Latent Vector → Generator
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    STYLEGAN FACE GENERATION                               │
+└───────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                         TRAINING (Adversarial)
+═══════════════════════════════════════════════════════════════════════════
+
+                    Real Face Images (70K)
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      DISCRIMINATOR (D)                                  │
+│                                                                         │
+│   Input Image → Conv → Conv → Conv → ... → "Real or Fake?" (0-1)      │
+│   (1024×1024)   ↓512   ↓256   ↓128                                     │
+│                                                                         │
+│   Goal: Learn to tell real from generated                              │
+└──────────────────────────────┬──────────────────────────────────────────┘
+                               │ Feedback (gradients)
+                               ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      GENERATOR (G) - StyleGAN                          │
+│                                                                         │
+│   ┌──────────┐      ┌────────────────────────────────────────────┐    │
+│   │  Noise   │      │         MAPPING NETWORK                     │    │
+│   │ z ~ N(0,1)│ ───► │  8 FC layers → Style vector w (512-dim)    │    │
+│   │ (512-dim)│      └──────────────────┬─────────────────────────┘    │
+│   └──────────┘                         │                               │
+│                                        ▼ Inject style at each level   │
+│              ┌─────────────────────────────────────────────────┐      │
+│              │        SYNTHESIS NETWORK                         │      │
+│              │                                                  │      │
+│              │   4×4 → 8×8 → 16×16 → ... → 512×512 → 1024×1024│      │
+│              │    ↑      ↑      ↑              ↑         ↑     │      │
+│              │   [w]    [w]    [w]            [w]       [w]    │      │
+│              │                                                  │      │
+│              │   Each level: ConvTranspose + AdaIN + style     │      │
+│              └─────────────────────────────────────────────────┘      │
+│                                        │                               │
+│                                        ▼                               │
+│                              Generated Face (1024×1024)               │
+└─────────────────────────────────────────────────────────────────────────┘
+
+Training Loop: D tries to catch fakes → G improves to fool D → repeat
+
+═══════════════════════════════════════════════════════════════════════════
+                         INFERENCE (Generation)
+═══════════════════════════════════════════════════════════════════════════
+
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│ Sample noise│ ──► │  Generator  │ ──► │ Output Face │
+│ z ~ N(0,1)  │     │  (trained)  │     │ (1024×1024) │
+└─────────────┘     └─────────────┘     └─────────────┘
+       │
+       │ (Optional) Attribute Control
+       ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│   Find "age direction" in latent space: w_old = w + α × age_vector     │
+│   Find "smile direction": w_smile = w + β × smile_vector               │
+│   → Modify attributes while preserving identity                        │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Training Pipeline:**
-```
-Training Data → Preprocess (resize, normalize, augment) → GAN Training Loop
-                                                              ↓
-                                        Generator ←→ Discriminator (adversarial)
-                                                              ↓
-                                        Evaluation (FID, IS) → Deploy if improved
-```
-
-**Components:**
-1. **Generator**: Upsampling blocks (ConvTranspose2D → BatchNorm → ReLU) × N → Tanh output
-2. **Discriminator**: Downsampling blocks (Conv2D → BatchNorm → LeakyReLU) × N → Sigmoid
-3. **Latent Space**: 512-dim noise vector sampled from N(0,1)
-4. **StyleGAN extensions**: Style mapping network for attribute control
+**Key GAN Concepts:**
+| Concept | What It Means | Why It Matters |
+|---------|---------------|----------------|
+| **Adversarial** | G and D compete | Drives quality improvement |
+| **Mode Collapse** | G produces same face | Use minibatch discrimination |
+| **Truncation ψ** | Trade diversity for quality | ψ=0.7 for higher quality |
+| **Style Injection** | Control at each resolution | Coarse (pose) vs fine (texture) |
 
 **3. Deep Dive (15–20 min)**
 
@@ -7285,31 +7448,103 @@ _Generate images from text prompts. Diffusion-based approach with text condition
 
 **2. High-Level Architecture (10–15 min)**
 
-**Training Pipeline:**
 ```
-Raw Data (images + captions) → Filtering (NSFW, quality, dedup) → Caption Enhancement (CLIP, BLIP-3)
-                                                                           ↓
-                                           Text Encoder (T5/CLIP) → Pre-compute + Cache Embeddings
-                                                                           ↓
-                                           Diffusion Training (U-Net or DiT) + Super-Resolution Training
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TEXT-TO-IMAGE DIFFUSION                                │
+└───────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                    HOW DIFFUSION WORKS
+═══════════════════════════════════════════════════════════════════════════
+
+TRAINING (Learn to denoise):
+┌─────────┐    Add noise     ┌─────────┐    Model predicts    ┌─────────┐
+│ Clean   │ ───────────────► │ Noisy   │ ──────────────────► │Predicted│
+│ Image   │   (T steps)      │ Image   │   noise to remove    │ Noise   │
+└─────────┘                  └─────────┘                      └─────────┘
+                                  ↑
+                         Loss = MSE(true noise, predicted noise)
+
+INFERENCE (Generate from noise):
+┌─────────┐    Denoise       ┌─────────┐    Denoise          ┌─────────┐
+│ Pure    │ ───────────────► │ Less    │ ──────────────────► │ Clean   │
+│ Noise   │   (step 1)       │ Noisy   │   (steps 2...50)    │ Image   │
+└─────────┘                  └─────────┘                      └─────────┘
+                                  ↑
+                         Conditioned on text embeddings
+
+═══════════════════════════════════════════════════════════════════════════
+                    FULL INFERENCE PIPELINE
+═══════════════════════════════════════════════════════════════════════════
+
+User Prompt: "A cat astronaut floating in space, digital art"
+        │
+        ▼
+┌─────────────────┐
+│  Prompt Safety  │ ← Block harmful prompts
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│    Prompt       │ ← "A cat astronaut..." → "A fluffy orange cat
+│  Enhancement    │    wearing a white NASA spacesuit, floating
+│    (LLM)        │    weightlessly among stars, Earth visible
+└────────┬────────┘    in background, digital art style..."
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      TEXT ENCODER (T5 or CLIP)                         │
+│                                                                         │
+│   "A fluffy orange cat..." → [text embeddings: 77 × 768]              │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DIFFUSION MODEL (U-Net or DiT)                      │
+│                                                                         │
+│   ┌──────────┐                                                         │
+│   │  Noise   │ ← Sample from N(0,1)                                   │
+│   │ (64×64)  │                                                         │
+│   └────┬─────┘                                                         │
+│        │                                                                │
+│        ▼   DDIM Loop (20-50 steps)                                     │
+│   ┌─────────────────────────────────────────────────────────────┐     │
+│   │  Step t: Predict noise │ Subtract │ Less noisy image        │     │
+│   │                        │                                     │     │
+│   │  Cross-attention: "Which text tokens matter for this patch?"│     │
+│   │                   "cat" → cat patches, "space" → background │     │
+│   │                                                              │     │
+│   │  CFG (w=7-15): Balance text adherence vs diversity          │     │
+│   └─────────────────────────────────────────────────────────────┘     │
+│        │                                                                │
+│        ▼                                                                │
+│   Clean latent (64×64)                                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SUPER-RESOLUTION CASCADE                            │
+│                                                                         │
+│   64×64 ──────► 256×256 ──────► 1024×1024                             │
+│        SR Model #1      SR Model #2                                    │
+│   (conditioned on low-res input)                                       │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│ Harm Detection  │ ← NSFW classifier on output
+└────────┬────────┘
+         │
+         ▼
+Final Image (1024×1024)
 ```
 
-**Inference Pipeline:**
-```
-User Prompt → Prompt Safety → Prompt Enhancement (LLM) → Text Encoder (T5)
-                                                              ↓
-                                   [Noise] + Text Embeddings → Diffusion Model (DDIM + CFG)
-                                                              ↓
-                                              64×64 → Super-Res #1 → 256×256 → Super-Res #2 → 1024×1024
-                                                              ↓
-                                                        Harm Detection → Final Image
-```
-
-**Components:**
-1. **Text Encoder**: T5 or CLIP; converts prompt to embeddings
-2. **Diffusion Model**: U-Net or DiT; predicts noise conditioned on text
-3. **Super-Resolution**: Cascade of 2–3 models to upscale
-4. **Safety Filters**: Prompt classifier + output image classifier
+**Key Diffusion Concepts:**
+| Concept | What It Does | Typical Value |
+|---------|--------------|---------------|
+| **DDIM Steps** | More = higher quality, slower | 20-50 |
+| **CFG Scale (w)** | Higher = more text adherence | 7-15 |
+| **Latent Diffusion** | Work in compressed space | 64×64 latent → 512×512 pixel |
 
 **3. Deep Dive (15–20 min)**
 
@@ -7388,34 +7623,118 @@ _Generate 5-second 720p videos from text prompts. Latent diffusion with DiT, tem
 
 **2. High-Level Architecture (10–15 min)**
 
-**Training Pipeline:**
 ```
-Videos → Filter (quality, NSFW, dedup) → Standardize (5s clips, 24fps, 720p)
-                                              ↓
-                        VAE Encoder → Precompute Latents → Storage (200TB)
-                                              ↓
-                        Captions → Re-caption (LLaVA) → Text Encoder → Cache Embeddings
-                                              ↓
-                        DiT Training (latent space) + Image-Video Joint Training
+┌───────────────────────────────────────────────────────────────────────────┐
+│                    TEXT-TO-VIDEO GENERATION (Sora-style)                  │
+└───────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                    VIDEO vs IMAGE: WHAT'S DIFFERENT
+═══════════════════════════════════════════════════════════════════════════
+
+Image Diffusion:                    Video Diffusion:
+┌─────────────┐                     ┌─────────────────────────────────────┐
+│   2D Grid   │                     │   3D Grid (space + time)            │
+│   (H × W)   │                     │   (H × W × T frames)                │
+└─────────────┘                     │                                     │
+                                    │   Frame 1 → Frame 2 → ... → Frame T│
+                                    │   Must be CONSISTENT across time   │
+                                    └─────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                    TRAINING PIPELINE
+═══════════════════════════════════════════════════════════════════════════
+
+Raw Videos (100M)
+        │
+        ▼
+┌─────────────────┐
+│    Filtering    │ ← Quality, NSFW, dedup, motion quality
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    VAE COMPRESSION (512× smaller)                       │
+│                                                                         │
+│   Video (5s, 720p, 24fps)           Latent                             │
+│   ┌───────────────────────┐         ┌───────────────────────┐          │
+│   │ 1280 × 720 × 120      │   ───►  │ 160 × 90 × 15         │          │
+│   │ (110M values)         │         │ (216K values)         │          │
+│   └───────────────────────┘         └───────────────────────┘          │
+│        8×8 spatial               8× temporal compression               │
+└─────────────────────────────────────────────────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DiT WITH TEMPORAL LAYERS                            │
+│                                                                         │
+│   Standard DiT blocks + NEW temporal components:                       │
+│                                                                         │
+│   ┌─────────────────────────────────────────────────────────────┐     │
+│   │  TEMPORAL ATTENTION                                          │     │
+│   │  Each spatial patch attends across ALL frames                │     │
+│   │                                                              │     │
+│   │  Frame 1    Frame 2    Frame 3    Frame 4                   │     │
+│   │  [patch] ←→ [patch] ←→ [patch] ←→ [patch]                   │     │
+│   │     └──────────┴──────────┴──────────┘                      │     │
+│   │              "Is this patch consistent?"                     │     │
+│   └─────────────────────────────────────────────────────────────┘     │
+│                                                                         │
+│   ┌─────────────────────────────────────────────────────────────┐     │
+│   │  TEMPORAL CONVOLUTION (3D Conv)                              │     │
+│   │  Captures local motion patterns (objects moving smoothly)    │     │
+│   └─────────────────────────────────────────────────────────────┘     │
+│                                                                         │
+│   ┌─────────────────────────────────────────────────────────────┐     │
+│   │  3D POSITIONAL ENCODING (RoPE)                               │     │
+│   │  Position = (x, y, t) → model knows where AND when          │     │
+│   └─────────────────────────────────────────────────────────────┘     │
+└─────────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════
+                    INFERENCE PIPELINE
+═══════════════════════════════════════════════════════════════════════════
+
+Prompt: "A golden retriever running through a meadow, slow motion"
+        │
+        ▼
+┌─────────────────┐     ┌─────────────────┐
+│  Prompt Safety  │ ──► │    Prompt       │
+│  & Enhancement  │     │  Embedding (T5) │
+└─────────────────┘     └────────┬────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    DiT DENOISING (50 steps)                            │
+│                                                                         │
+│   3D Noise ────► Step 1 ────► Step 2 ────► ... ────► Clean Latent     │
+│   (160×90×15)                                        (160×90×15)       │
+│                         + CFG (w=7-15)                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SUPER-RESOLUTION                                     │
+│                                                                         │
+│   Latent ──► VAE Decode ──► Spatial SR ──► Temporal SR ──► Final      │
+│                   │              │               │                      │
+│              160×90@8fps    1280×720@8fps   1280×720@24fps             │
+│                                                                         │
+│   Spatial SR: Diffusion model upscales each frame                      │
+│   Temporal SR: Frame interpolation (generate in-between frames)        │
+└─────────────────────────────────────────────────────────────────────────┘
+                                 │
+                                 ▼
+Final Video: 5s at 720p, 24fps
 ```
 
-**Inference Pipeline:**
-```
-Prompt → Safety → Enhancement → Text Encoder (T5)
-                                       ↓
-             Noise → DiT (LDM) + CFG → Denoised Latent
-                                       ↓
-             VAE Decoder → Low-res Video (160×90 @ 8fps)
-                                       ↓
-             Spatial SR (720p) → Temporal SR (24fps) → Harm Detection → Final Video
-```
-
-**Components:**
-1. **VAE (Compression Network)**: Compress 512× for efficient training
-2. **DiT with Temporal Layers**: Temporal attention + temporal convolution
-3. **Text Encoder**: T5 for text embeddings
-4. **Spatial Super-Resolution**: Upscale 160×90 → 1280×720
-5. **Temporal Super-Resolution**: Interpolate 8fps → 24fps
+**Key Video Generation Concepts:**
+| Concept | Purpose | Challenge |
+|---------|---------|-----------|
+| **Temporal Attention** | Consistency across frames | Compute-heavy |
+| **3D Patches** | Treat video as spacetime | More parameters |
+| **Latent Compression** | Make training feasible | 512× reduction |
+| **Joint Image-Video Training** | Leverage image data | Images are abundant |
 
 **3. Deep Dive (15–20 min)**
 
