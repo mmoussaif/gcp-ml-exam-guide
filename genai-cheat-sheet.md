@@ -4,8 +4,6 @@
 
 ## 1. ML FOUNDATIONS
 
-_AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, and broken apps. This section follows the article structure: **Intelligence & Models**, **3 Ways Computers Can Learn** (ML → DL → RL), **Data**, plus vocabulary and GenAI links._
-
 ### Intelligence & models
 
 - **Intelligence** = having an internal model of the world that lets you make predictions. Better model → more accurate predictions.
