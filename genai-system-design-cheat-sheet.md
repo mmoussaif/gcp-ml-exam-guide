@@ -346,6 +346,8 @@ $$\mathcal{L}_{DPO} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\
 
 ## 5. Key Techniques
 
+**The GenAI toolbox:** These are the techniques you'll combine to build real applications. RAG grounds answers in your data. Fine-tuning customizes model behavior. Agents let models take actions. The art is knowing which to use when—and they often work best together.
+
 | Technique | What It Does | When to Use |
 |-----------|--------------|-------------|
 | **RAG** | Retrieve docs → inject into prompt | Ground answers in your data |
@@ -389,6 +391,8 @@ Reduction: 256× fewer parameters!
 
 ### 🗜️ QLoRA
 
+**LoRA on a budget:** QLoRA combines quantization (shrinking the model to 4-bit) with LoRA adapters. This lets you fine-tune a 65B model on a single 48GB GPU instead of needing 130GB+. The magic: quantize the base model to 4-bit, but keep the LoRA adapters in higher precision.
+
 - **4-bit NormalFloat (NF4)**: Optimal for normally distributed weights
 - **Double Quantization**: Quantize the quantization constants
 - **Paged Optimizers**: CPU offload for memory spikes
@@ -421,6 +425,8 @@ flowchart LR
 
 ### 📦 RAG Components
 
+**The building blocks you choose:** Each component in the RAG pipeline has multiple options with different trade-offs. Chunking strategy affects how much context fits; embedding model affects semantic understanding; vector index affects speed vs. memory; retrieval method affects precision vs. recall.
+
 | Component | Options | Notes |
 |-----------|---------|-------|
 | **Chunking** | 500 tokens, 200 overlap | RecursiveTextSplitter |
@@ -431,6 +437,8 @@ flowchart LR
 
 ### 📊 RAG Evaluation (RAGAS)
 
+**Measure RAG quality without gold-standard answers:** RAGAS evaluates your RAG pipeline using the LLM itself as a judge. It checks four dimensions: Is the answer faithful to the retrieved context? Is it relevant to the question? Did we retrieve the right chunks? Did we retrieve enough of the relevant chunks?
+
 | Metric | Measures | Formula/Target |
 |--------|----------|----------------|
 | **Faithfulness** | Claims supported by context | $\frac{\text{supported claims}}{\text{total claims}} > 0.9$ |
@@ -439,6 +447,8 @@ flowchart LR
 | **Context Recall** | Relevant chunks retrieved | > 0.8 |
 
 ### 🔍 Retrieval Metrics
+
+**Classic IR metrics for measuring retrieval quality:** These formulas help you understand if your vector search is returning the right documents. Precision asks "of what we retrieved, how much was relevant?" Recall asks "of what was relevant, how much did we retrieve?" MRR and NDCG care about ranking—good results should appear first.
 
 $$\text{Precision@K} = \frac{|\text{relevant} \cap \text{top-K}|}{K}$$
 
@@ -481,6 +491,8 @@ flowchart TB
 
 ### 🔧 Tool Types
 
+**How agents interact with the world:** Tools are the bridge between LLM reasoning and real actions. Function calling runs code on your server. Code execution runs in a sandbox. MCP (Model Context Protocol) provides a standardized way to connect to external services.
+
 | Type | Execution | Example |
 |------|-----------|---------|
 | **Function Calling** | Client-side | API calls, DB queries |
@@ -514,6 +526,8 @@ flowchart LR
 
 ## 8. Serving & Optimization
 
+**Make LLMs fast and cheap in production:** Raw LLM inference is slow and expensive. These techniques let you serve millions of requests without breaking the bank. The key insight: LLMs are memory-bandwidth bound (moving data is slower than computing), so optimizations focus on reducing memory movement and maximizing GPU utilization.
+
 ### ⚡ Key Optimization Techniques
 
 | Technique | What It Does | Benefit |
@@ -526,6 +540,8 @@ flowchart LR
 
 ### 📊 Quantization Levels
 
+**Trade precision for speed and memory:** Quantization reduces the number of bits used to store each weight. FP32 → FP16 is nearly free. INT8 gives 4× memory savings with minimal quality loss. INT4 is aggressive but enables running 70B models on consumer GPUs.
+
 | Level | Memory | Speed | Quality Loss |
 |-------|--------|-------|--------------|
 | FP32 | 1× | 1× | None |
@@ -534,6 +550,8 @@ flowchart LR
 | INT4 | 0.125× | 3× | 3-5% |
 
 ### 🔀 Parallelism Strategies
+
+**Spread the work across multiple GPUs:** When a model doesn't fit on one GPU, you need parallelism. Data parallelism duplicates the model. Tensor parallelism splits layers horizontally. Pipeline parallelism splits layers vertically. ZeRO/FSDP shards optimizer state to train models that would otherwise be impossible.
 
 | Strategy | What It Does | When to Use |
 |----------|--------------|-------------|
@@ -665,7 +683,11 @@ flowchart LR
 
 ## 12. All Metrics
 
+**How to know if your GenAI system is working:** Metrics are your feedback loop. Without them, you're flying blind. Different modalities need different metrics—text quality differs from image quality differs from video quality. Safety and performance metrics apply to all.
+
 ### 📝 Text Generation
+
+**Measuring text quality:** Perplexity measures how "surprised" the model is—lower means better language modeling. BLEU and ROUGE compare generated text to references using word overlap. BERTScore uses embeddings for semantic similarity, catching paraphrases that word-overlap metrics miss.
 
 | Metric | Formula | Measures |
 |--------|---------|----------|
@@ -677,6 +699,8 @@ flowchart LR
 
 ### 🖼️ Image Generation
 
+**Measuring image quality:** FID compares the distribution of generated images to real images—lower means generated images look more realistic. Inception Score measures both quality and diversity. CLIPScore checks if the image matches the text prompt. LPIPS measures perceptual similarity (how humans see differences).
+
 | Metric | Target | Measures |
 |--------|--------|----------|
 | **FID** | < 10 | Distribution similarity |
@@ -686,6 +710,8 @@ flowchart LR
 
 ### 🎬 Video Generation
 
+**Measuring video quality:** Video adds the temporal dimension—frames must be good individually AND consistent across time. FVD extends FID to videos. Temporal consistency measures smoothness (no flickering or jumpy motion).
+
 | Metric | Target | Measures |
 |--------|--------|----------|
 | **FVD** | < 300 | Fréchet Video Distance |
@@ -694,6 +720,8 @@ flowchart LR
 
 ### 🔒 Safety
 
+**Measuring harm prevention:** Safety metrics track how often your system produces harmful outputs. Toxicity rate measures offensive content. PII leak rate measures privacy violations. Jailbreak success rate measures how often attackers bypass safety controls. All should be as close to zero as possible.
+
 | Metric | Target |
 |--------|--------|
 | **Toxicity Rate** | < 0.1% |
@@ -701,6 +729,8 @@ flowchart LR
 | **Jailbreak Success** | < 1% |
 
 ### ⚡ Performance
+
+**Measuring speed and throughput:** TTFT (Time To First Token) is what users feel as "responsiveness"—how long until the model starts typing. Latency percentiles (P50/P95/P99) show the distribution of response times. Throughput measures tokens per second across all requests—your system's capacity.
 
 | Metric | What It Measures |
 |--------|------------------|
@@ -712,7 +742,11 @@ flowchart LR
 
 ## 13. Cost & Optimization
 
+**LLM costs add up fast at scale:** Unlike traditional APIs where compute is cheap, LLM costs are dominated by token processing. A single GPT-4 request might cost $0.03—multiply by millions of users and you have a serious budget problem. Understanding and optimizing token economics is essential.
+
 ### 💰 Cost Formula
+
+**The basic equation:** You pay separately for input tokens (your prompt + context) and output tokens (the model's response). Output tokens typically cost 2-3× more than input tokens. Long prompts with short answers are cheaper than short prompts with long answers.
 
 $$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \times p_{out})$$
 
@@ -724,6 +758,8 @@ $$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \tim
 ```
 
 ### 💡 Cost Optimization
+
+**The levers you can pull:** Caching avoids redundant calls. Model routing sends easy questions to cheap models. Prompt optimization reduces input tokens. Quantization lets you self-host at lower cost. Combine these for 50-80% cost reduction at scale.
 
 | Lever | Savings | How |
 |-------|---------|-----|
@@ -738,6 +774,8 @@ $$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \tim
 ## 14. Security & Guardrails
 
 ### 🛡️ Threat Model
+
+**Know your enemies:** LLMs introduce new attack surfaces. Direct injection manipulates through user input. Indirect injection hides malicious instructions in retrieved documents. Jailbreaking tricks the model into ignoring safety training. Data leakage extracts training data. Tool abuse exploits agent capabilities.
 
 | Attack | Vector | Defense |
 |--------|--------|---------|
@@ -770,7 +808,11 @@ flowchart LR
 
 ## 15. Scalability Patterns
 
+**Right-sizing your infrastructure:** GPU choice and configuration dramatically affect both cost and capability. Understand the memory requirements of your models, match them to appropriate hardware, and know when to scale horizontally vs. vertically.
+
 ### 🖥️ GPU Quick Reference
+
+**The GPU landscape:** V100 is legacy but still works. A100 is the production workhorse with 40GB or 80GB options. H100 is the new king for training but expensive. L4 is the cost-effective choice for inference workloads.
 
 | GPU | Memory | FP16 TFLOPS | Cost/hr | Best For |
 |-----|--------|-------------|---------|----------|
@@ -780,6 +822,8 @@ flowchart LR
 | **L4** | 24 GB | 121 | ~$0.80 | Cost-effective inference |
 
 ### 📐 Model → GPU Sizing
+
+**Rule of thumb: 2 bytes per parameter in FP16.** A 7B model needs ~14GB, a 70B model needs ~140GB. For inference, you need the model weights plus KV cache. For training, multiply by 16-20× for gradients and optimizer states.
 
 | Model Size | Memory (FP16) | GPUs Needed |
 |------------|---------------|-------------|
@@ -792,7 +836,11 @@ flowchart LR
 
 ## 16. Back-of-Envelope Calculations
 
+**Quick math for system design interviews:** These formulas let you estimate model sizes, memory requirements, and training costs without a calculator. Memorize the key rules of thumb: 12×L×d² for parameters, 2 bytes per param in FP16, 6×P×T for training FLOPs.
+
 ### 🧮 Model Size
+
+**Estimate parameters from architecture:** Most parameters are in the Transformer layers. Each layer has 4d² for attention and 8d² for FFN, totaling 12d² per layer. Multiply by layer count L. Add V×d for embeddings (usually small compared to layers).
 
 **Quick Formula:**
 $$\text{Params} \approx 12 \times L \times d^2$$
@@ -806,6 +854,8 @@ $$\text{Params} \approx 12 \times L \times d^2$$
 
 ### 💾 Memory
 
+**Training uses way more memory than inference:** Inference only needs model weights + KV cache. Training needs weights + gradients + optimizer states (8× for Adam) + activations for backprop. That's why training a 7B model needs 8× A100s but inference runs on a single L4.
+
 **Training Memory:**
 $$\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}$$
 
@@ -818,6 +868,8 @@ $$\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}$$
 
 ### ⏱️ Training FLOPs
 
+**How long will training take?** Chinchilla showed the optimal ratio is ~20 tokens per parameter. Total FLOPs = 6 × parameters × tokens (forward + backward pass). Divide by your GPU's TFLOPS to get training time. An H100 at 990 FP16 TFLOPS can train a 7B model on 140B tokens in ~1 day.
+
 **Chinchilla Optimal:**
 $$\text{Tokens} \approx 20 \times \text{Parameters}$$
 
@@ -825,6 +877,8 @@ $$\text{Tokens} \approx 20 \times \text{Parameters}$$
 $$\text{FLOPs} = 6 \times P \times T$$
 
 ### 📐 Attention Complexity
+
+**Where's the bottleneck?** Self-attention is O(n²×d)—quadratic in sequence length. FFN is O(n×d²)—linear in sequence length but quadratic in model dimension. For typical d=4096, attention dominates once context exceeds ~4K tokens. This is why long-context models need attention optimizations.
 
 | Component | Complexity | Dominant When |
 |-----------|------------|---------------|
@@ -837,6 +891,8 @@ For d=4096, crossover at n=4096 tokens.
 
 ## 17. Platform Comparison
 
+**GCP vs AWS for GenAI:** Both clouds offer managed LLM services, but with different models and ecosystems. Google has Gemini on Vertex AI; AWS has Claude on Bedrock. Both provide RAG infrastructure, guardrails, and agent frameworks. Choose based on your existing cloud footprint and which models you need.
+
 | | Google Cloud | AWS |
 |--|--------------|-----|
 | **Models** | Gemini (Vertex AI) | Claude, Titan (Bedrock) |
@@ -848,6 +904,8 @@ For d=4096, crossover at n=4096 tokens.
 | **Video Gen** | Veo | - |
 
 ### 🛠️ Detailed Tools by Category
+
+**The ecosystem at a glance:** This table maps tools to use cases. For LLM serving: vLLM for self-hosted, Vertex/Bedrock for managed. For orchestration: LangChain for prototyping, ADK for production. For RAG: managed services for speed, FAISS/pgvector for control.
 
 | Category | Tool / Stack | Purpose | When to Use |
 |----------|--------------|---------|-------------|
@@ -879,6 +937,8 @@ For d=4096, crossover at n=4096 tokens.
 
 ## 18. Model Quick Reference
 
+**The major players:** This table summarizes the leading models. GPT-4o and Gemini 1.5 Pro are multimodal SOTA. Claude 3.5 excels at reasoning. LLaMA 3 and Mixtral are the best open-source options. Stable Diffusion and Sora lead image/video generation.
+
 | Model | Type | Params | Notes |
 |-------|------|--------|-------|
 | **GPT-4o** | Decoder-only | ~1.7T (rumored MoE) | Multimodal, SOTA |
@@ -893,7 +953,11 @@ For d=4096, crossover at n=4096 tokens.
 
 ## 19. Interview Framework
 
+**How to ace a GenAI system design interview:** Structure your time, cover the essentials, and show you understand the unique challenges of LLM systems: token economics, quality evaluation, and safety. The best candidates discuss trade-offs rather than presenting a single "right" answer.
+
 ### ⏱️ 45-Minute Structure
+
+**Pace yourself:** Spend the first 5-10 minutes clarifying requirements—tokens per day, latency targets, quality bar, cost budget, safety needs. Then draw the architecture. Deep dive into 1-2 areas. End with trade-offs to show depth.
 
 | Phase | Time | What to Cover |
 |-------|------|---------------|
@@ -903,6 +967,8 @@ For d=4096, crossover at n=4096 tokens.
 | **Trade-offs** | 5-10 min | Quality vs cost, latency vs throughput |
 
 ### 🚨 Red Flags
+
+**Avoid these rookie mistakes:** Interviewers look for candidates who understand the real challenges of production GenAI. Saying "just use GPT-4 for everything" shows you don't understand cost. Skipping guardrails shows you don't understand risk. Having no evaluation plan shows you can't iterate.
 
 | Red Flag | Better Answer |
 |----------|---------------|
@@ -915,6 +981,8 @@ For d=4096, crossover at n=4096 tokens.
 | "Real-time video gen" | Minutes is realistic |
 
 ### ✅ Quick Decision Guide
+
+**Map requirements to solutions:** When the interviewer describes a use case, quickly pattern-match to the right technique. Need factual accuracy? RAG. Need style customization? Fine-tuning. Need actions? Agents. Need speed? Caching + small models. Most real systems combine multiple techniques.
 
 | Need | Solution |
 |------|----------|
