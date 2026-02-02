@@ -1,5 +1,4 @@
 # GenAI System Design Cheat Sheet
-
 ---
 
 ## 📑 Table of Contents
@@ -522,6 +521,95 @@ flowchart LR
 
 > **Three patterns:** **Sequential** chains agents like an assembly line—each refines the previous output (e.g., research → draft → edit). **Parallel** runs agents simultaneously when tasks are independent (e.g., search multiple sources at once). **Debate** has agents argue and critique each other to improve quality through adversarial collaboration.
 
+### 🚀 ADK (Agent Development Kit)
+
+**Google's production-ready agent framework:** ADK provides the building blocks for enterprise agents—structured workflows, multi-agent orchestration, tool integration, and deployment to Vertex AI Agent Engine. Unlike LangChain (prototyping), ADK is designed for production scale and reliability.
+
+```mermaid
+flowchart TB
+    subgraph ADK["ADK Components"]
+        AG[Agent] --> WF[Workflows]
+        AG --> TL[Tools]
+        AG --> MM[Memory]
+        WF --> SEQ[Sequential]
+        WF --> PAR[Parallel]
+        WF --> LOOP[Loop]
+    end
+
+    subgraph Deploy["Deployment"]
+        AG --> VAE[Vertex Agent Engine]
+        VAE --> SCALE[Auto-scaling]
+        VAE --> MON[Monitoring]
+    end
+```
+
+| ADK Feature | What It Does | Production Benefit |
+|-------------|--------------|-------------------|
+| **Workflows** | Orchestrate multi-step tasks | Reliable execution, error handling |
+| **Tool Registry** | Manage agent capabilities | Version control, access control |
+| **Session Memory** | Persist conversation state | Multi-turn conversations |
+| **Callbacks** | Hook into agent lifecycle | Logging, tracing, guardrails |
+| **Vertex Agent Engine** | Managed deployment | Auto-scale, monitoring, SLAs |
+
+> **ADK vs LangChain:** LangChain is great for prototyping—fast iteration, huge ecosystem. ADK is for production—type safety, structured workflows, native GCP integration. Many teams prototype in LangChain, then rebuild in ADK for deployment.
+
+### 🏭 Production Scaling for Agents & RAG
+
+**From prototype to millions of users:** Production systems need horizontal scaling, fault tolerance, observability, and cost controls. The architecture differs significantly from a Jupyter notebook demo.
+
+```mermaid
+flowchart LR
+    subgraph Ingress["Load Balancing"]
+        LB[Cloud Load Balancer]
+    end
+
+    subgraph Agents["Agent Layer"]
+        A1[Agent Pod 1]
+        A2[Agent Pod 2]
+        A3[Agent Pod N...]
+    end
+
+    subgraph RAG["RAG Infrastructure"]
+        VS[(Vector DB<br/>Replicated)]
+        EMB[Embedding<br/>Service]
+        RR[Reranker<br/>Service]
+    end
+
+    subgraph LLMs["LLM Backend"]
+        API[Vertex AI /<br/>Bedrock]
+        SELF[Self-hosted<br/>vLLM Cluster]
+    end
+
+    LB --> Agents
+    Agents --> RAG
+    Agents --> LLMs
+```
+
+#### Production Checklist
+
+| Concern | Solution | Tools |
+|---------|----------|-------|
+| **Horizontal Scaling** | Stateless agents, load balancing | GKE, EKS, Cloud Run |
+| **Vector DB Scaling** | Sharding, replication | Vertex Vector Search, OpenSearch |
+| **Rate Limiting** | Token buckets, quotas | API Gateway, Envoy |
+| **Cost Controls** | Budgets, model routing | Cloud billing alerts |
+| **Observability** | Traces, metrics, logs | Cloud Trace, OpenTelemetry |
+| **Failover** | Circuit breakers, retries | Istio, Cloud Armor |
+| **Caching** | Response + semantic cache | Redis, Memorystore |
+
+#### Open Source Production Stack
+
+| Layer | Google Cloud | AWS | Open Source |
+|-------|--------------|-----|-------------|
+| **Orchestration** | ADK | Bedrock Agents | LangGraph, CrewAI |
+| **LLM Serving** | Vertex AI | Bedrock | vLLM, TGI, Ollama |
+| **Vector DB** | Vertex Vector Search | OpenSearch | Qdrant, Weaviate, Milvus |
+| **Embeddings** | text-embedding-004 | Titan Embeddings | e5, BGE, Instructor |
+| **Reranking** | — | — | ms-marco, bge-reranker |
+| **Guardrails** | Model Armor | Bedrock Guardrails | Guardrails AI, NeMo |
+| **Observability** | Cloud Trace | X-Ray | Langfuse, Phoenix, Langsmith |
+| **Agent Memory** | Firestore | DynamoDB | Redis, PostgreSQL |
+
 ---
 
 ## 8. Serving & Optimization
@@ -625,7 +713,10 @@ flowchart LR
 > **The adversarial dance:** The Discriminator maximizes its ability to correctly classify real vs. fake. The Generator minimizes the Discriminator's success. This minimax game reaches equilibrium when generated images are indistinguishable from real ones. GANs dominated before diffusion models; StyleGAN still produces the sharpest faces.
 
 **GAN Objective:**
-$$\min_G \max_D \mathbb{E}_{x}[\log D(x)] + \mathbb{E}_{z}[\log(1-D(G(z)))]$$
+
+$$\min_G \max_D \, \underset{x \sim p_{data}}{\mathbb{E}}[\log D(x)] + \underset{z \sim p_z}{\mathbb{E}}[\log(1-D(G(z)))]$$
+
+> **Reading the formula:** G (Generator) minimizes while D (Discriminator) maximizes. The first term is the expected log-probability that D correctly identifies real samples x. The second term is the expected log-probability that D correctly rejects fake samples G(z).
 
 ---
 
@@ -803,6 +894,63 @@ flowchart LR
 ```
 <<DATA>>retrieved document content<</DATA>>
 ```
+
+### 🔐 Agent Safety Checks
+
+**Agents are high-risk:** Unlike chatbots, agents take real actions—calling APIs, executing code, modifying databases. A compromised agent can cause real damage. Safety must be built into every layer.
+
+```mermaid
+flowchart TB
+    subgraph PreExecution["Before Tool Call"]
+        TC[Tool Call Request] --> TV[Tool Validator]
+        TV --> PC[Permission Check]
+        PC --> RL[Rate Limiter]
+    end
+
+    subgraph Execution["Sandboxed Execution"]
+        RL --> SB[Sandbox]
+        SB --> TOOL[Tool Execution]
+    end
+
+    subgraph PostExecution["After Tool Call"]
+        TOOL --> OV[Output Validator]
+        OV --> LOG[Audit Log]
+        LOG --> RES[Return Result]
+    end
+```
+
+| Safety Layer | What It Checks | Implementation |
+|--------------|----------------|----------------|
+| **Tool Allowlist** | Only approved tools can run | ADK Tool Registry, Bedrock Action Groups |
+| **Permission Scoping** | Least privilege per tool | IAM roles, OAuth scopes |
+| **Input Validation** | Tool arguments are safe | JSON Schema, type checking |
+| **Sandboxing** | Isolate code execution | gVisor, Firecracker, Docker |
+| **Output Validation** | Results don't leak secrets | Regex filters, PII detection |
+| **Rate Limiting** | Prevent runaway agents | Token buckets per user/agent |
+| **Human-in-the-Loop** | Approve high-risk actions | Confirmation prompts, approval queues |
+| **Audit Logging** | Track all actions | Cloud Logging, SIEM integration |
+
+### 🛡️ RAG Safety Checks
+
+**RAG inherits document risks:** Retrieved content can contain prompt injections, outdated info, or confidential data. Sanitize before including in context.
+
+| Risk | Example | Mitigation |
+|------|---------|------------|
+| **Indirect Injection** | "Ignore instructions above..." in doc | Content sanitization, instruction hierarchy |
+| **Data Poisoning** | Malicious docs in corpus | Source verification, content moderation |
+| **PII Exposure** | SSN in retrieved chunk | PII detection/redaction before retrieval |
+| **Outdated Info** | Old policy docs | Document versioning, freshness scoring |
+| **Confidential Leakage** | User A sees User B's docs | Access control at retrieval time |
+
+### 🔧 Guardrail Tools
+
+| Tool | Provider | Capabilities |
+|------|----------|--------------|
+| **Model Armor** | Google Cloud | Injection detection, jailbreak prevention, topic blocking |
+| **Bedrock Guardrails** | AWS | Content filters, denied topics, word filters, PII redaction |
+| **Guardrails AI** | Open Source | Validators, structured output, custom rules |
+| **NeMo Guardrails** | NVIDIA (OSS) | Topical rails, fact-checking, moderation |
+| **LlamaGuard** | Meta (OSS) | Safety classification model |
 
 ---
 
