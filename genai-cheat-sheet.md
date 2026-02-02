@@ -14,6 +14,103 @@
 
 ---
 
+## ML FOUNDATIONS (FOR AI ENGINEERS)
+
+_AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, and broken apps. This section follows the article structure: **Intelligence & Models**, **3 Ways Computers Can Learn** (ML → DL → RL), **Data**, plus vocabulary and GenAI links._
+
+### Intelligence & models
+
+- **Intelligence** = having an internal model of the world that lets you make predictions. Better model → more accurate predictions.
+- **Model** = something that lets you make predictions (e.g. a function with parameters). Computers learn models from data; humans learn from experience and others.
+- In traditional software, programmers write explicit rules. In **ML**, programmers curate examples and the computer learns from them.
+
+### Two phases of ML (Way 1: Machine Learning)
+
+| Phase         | What it is                                                                                                                                                                                            | GenAI analogue                                                     |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| **Training**  | Fit model to reality: choose parameters that minimize **loss** (discrepancy between predictions and data). Uses a **training dataset**, **loss function**, and **optimizer** (e.g. gradient descent). | Pretraining, SFT, RLHF training                                    |
+| **Inference** | Apply the trained model to **new data** to make predictions. No parameter updates.                                                                                                                    | What happens when you call an LLM API or run a model in production |
+
+**Core idea:** Training = find parameters (e.g. via gradient of loss) so predictions match reality. Inference = use those parameters on new inputs.
+
+### Way 2: Deep Learning (DL)
+
+- **DL** = training **neural networks** that learn useful **features** from raw data without hand-crafted feature engineering.
+- **Neuron** = linear combination of inputs + **nonlinear activation** (e.g. ReLU). Stacking neurons in **layers** lets NNs approximate complex functions.
+- **Training NNs:** Loss is usually **non-convex** → use **gradient descent** (or variants) to iteratively update parameters; **optimizer** and **hyperparameters** (learning rate, batch size) guide the process.
+- **Feature engineering** = manually defining input variables; important in classical ML, less so in DL (NNs learn features).
+
+### Way 3: Reinforcement Learning (RL)
+
+- **RL** = learning through **trial and error**; no ground-truth labels—only a **reward signal** (e.g. win/lose, human preference).
+- **Key difference vs supervised:** In supervised we minimize loss vs explicit targets. In RL we **maximize** cumulative reward; updates use **gradient ascent** (e.g. REINFORCE).
+- **Examples:** AlphaGo (learned by playing itself); **RLHF** (reward from human preferences to align LLMs); o1 / deep research (RL-based reasoning).
+
+### Data: quantity and quality
+
+- **Quantity:** More (good) data usually helps; **insufficient data** is a leading cause of **overfitting** (model memorizes training set, fails on new data).
+- **Quality:** **Accuracy** (labels and values correct) and **diversity** (data covers the scenarios where the model must work). “Garbage in, garbage out.”
+- **Train / validation / test:** Train = fit model; validation = tune hyperparameters / early stopping; test = final evaluation on held-out data.
+
+### Summary: 3 ways computers learn
+
+| Way    | What it is                                                                         | Key idea                                                              | GenAI analogue                           |
+| ------ | ---------------------------------------------------------------------------------- | --------------------------------------------------------------------- | ---------------------------------------- |
+| **ML** | Learn tasks from data; two phases: training (minimize loss) + inference (predict). | Curate examples; computer fits model via loss + gradient.             | Pretraining, SFT; inference = API calls. |
+| **DL** | ML using neural networks that learn features automatically.                        | NNs = stacked neurons + nonlinearity; optimize with gradient descent. | LLMs, diffusion models are deep nets.    |
+| **RL** | Learn from trial and error using a reward signal (no ground truth).                | Maximize reward; e.g. REINFORCE, PPO.                                 | RLHF, preference-based alignment.        |
+
+### By learning signal (supervised / unsupervised / reinforcement)
+
+| Way               | What it is                                              | Data                  | Goal                             | GenAI analogue                                                     |
+| ----------------- | ------------------------------------------------------- | --------------------- | -------------------------------- | ------------------------------------------------------------------ |
+| **Supervised**    | Learn from labeled examples (input → correct output)    | Labeled pairs         | Minimize error on labels         | Fine-tuning (SFT): (prompt, response) pairs                        |
+| **Unsupervised**  | Learn structure/patterns without labels                 | Unlabeled data        | Compression, clustering, density | Pretraining: next-token prediction on raw text (no “answer” label) |
+| **Reinforcement** | Learn from trial and reward (agent acts, gets feedback) | Rewards / preferences | Maximize long-term reward        | RLHF: human preferences → reward model → policy update             |
+
+**For builders:** (1) **Use a pre-trained model + prompting** — no training; fast. (2) **Fine-tune** — adapt with your data (SFT, LoRA). (3) **Train from scratch** — data curation, pretraining, scaling (rare; use only when necessary).
+
+### Intelligence and models (cheat-sheet view)
+
+| Concept            | Meaning                                                                                                                            |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------- |
+| **Model**          | A parameterized function (e.g. neural net) whose parameters are **learned from data**; inference = run the function on new inputs. |
+| **Training**       | Update parameters to minimize **loss** (error on data); needs data, compute, and an optimizer.                                     |
+| **Inference**      | Run the trained model on new inputs; no parameter updates; this is what you pay for in APIs.                                       |
+| **Generalization** | Model performs well on **unseen** data; the opposite of memorizing the training set.                                               |
+| **Overfitting**    | Model fits training data too closely and fails on new data; fix with more data, regularization, or simpler models.                 |
+| **Underfitting**   | Model too simple to capture patterns; high error on train and test; fix with more capacity or more training.                       |
+| **Loss**           | Scalar that measures error (e.g. cross-entropy, MSE); training minimizes it.                                                       |
+| **Optimizer**      | Algorithm that updates parameters from gradients (e.g. Adam, SGD); learning rate controls step size.                               |
+| **Epoch**          | One full pass over the training data.                                                                                              |
+| **Batch**          | Subset of data used for one gradient update; batch size trades off speed vs stability.                                             |
+
+### Key ML vocabulary (cheat-sheet)
+
+| Term                     | Meaning                                                                      |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| **Parameters / weights** | Numbers inside the model learned during training; 7B model = 7B parameters.  |
+| **Hyperparameters**      | Settings you choose (learning rate, batch size, layers); not learned.        |
+| **Gradient**             | Direction to change parameters to reduce loss; backprop computes it.         |
+| **Learning rate**        | Step size for parameter updates; too high = unstable; too low = slow.        |
+| **Regularization**       | Penalties (e.g. weight decay, dropout) to reduce overfitting.                |
+| **Train / val / test**   | Train = fit model; validation = tune/early-stop; test = final eval (unseen). |
+
+### For builders (three options)
+
+| Option                      | What you do                             | When to use                                 |
+| --------------------------- | --------------------------------------- | ------------------------------------------- |
+| **Pre-trained + prompting** | Use an existing model; no training      | Fast iteration, general tasks, limited data |
+| **Fine-tune**               | Adapt with your data (SFT, LoRA, QLoRA) | Custom style/domain, RAG not enough         |
+| **Train from scratch**      | Data curation, pretraining, scaling     | Rare; only when you need a new foundation   |
+
+### Link to GenAI
+
+- **Pretraining** = unsupervised-style (next-token prediction; no explicit labels). **SFT** = supervised (instruction/response pairs). **RLHF** = reinforcement (preference reward).
+- When you **prompt** an LLM, you’re doing **inference**. When you **fine-tune**, you’re doing **training** (usually supervised). Keeping this straight avoids confusion about cost, latency, and where failures come from.
+
+---
+
 ## 1. CORE COMPONENTS
 
 | Component          | What It Is                                   | Purpose                              | Key Choice                   |
