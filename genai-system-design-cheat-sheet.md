@@ -941,6 +941,13 @@ flowchart LR
 | **ROUGE-L** | Based on LCS | Longest common subsequence |
 | **BERTScore** | Embedding similarity | Semantic match |
 
+> **Terms:**
+> - **Perplexity:** N = number of tokens, $w_i$ = word/token at position i, $P(w_i)$ = model's predicted probability for that token. Lower perplexity = model is less "surprised" = better predictions.
+> - **BLEU:** BP = brevity penalty (penalizes short outputs), $w_n$ = weight for n-gram size (usually 0.25 each for 1-4 grams), $p_n$ = precision of n-grams (what fraction of generated n-grams appear in reference).
+> - **ROUGE-N:** "overlap n-grams" = n-grams appearing in both generated and reference, "reference n-grams" = total n-grams in reference. Measures recall (did we cover the reference?).
+> - **ROUGE-L:** LCS = Longest Common Subsequence between generated and reference text. Captures sentence-level structure.
+> - **BERTScore:** Computes cosine similarity between BERT embeddings of generated and reference tokens, then aggregates. Catches semantic equivalence that word-overlap misses.
+
 ### 🖼️ Image Generation
 
 **Measuring image quality:** FID compares the distribution of generated images to real images—lower means generated images look more realistic. Inception Score measures both quality and diversity. CLIPScore checks if the image matches the text prompt. LPIPS measures perceptual similarity (how humans see differences).
