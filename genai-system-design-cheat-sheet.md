@@ -142,9 +142,15 @@ $$
 
 ```mermaid
 flowchart LR
-    A[Agent] -->|Action| E[Environment]
-    E -->|State, Reward| A
-    A -->|Policy π| A
+    subgraph Agent["🤖 Agent"]
+        P["Policy π<br/>(s → a)"]
+    end
+
+    Agent -->|"Action (a)"| E["🌍 Environment"]
+    E -->|"State (s)"| Agent
+    E -->|"Reward (r)"| Agent
+
+    P -.->|"update"| P
 ```
 
 > **The RL loop:** The agent observes the current state, chooses an action based on its policy, receives a reward from the environment, and updates its policy to get better rewards next time. RLHF uses this loop with human preferences as rewards to make LLMs helpful and safe.
