@@ -377,83 +377,103 @@ Quick reference for key terms. Organized by category for easier navigation. **St
 
 ## B.1 GenAI System: Big Picture (Frontend to Backend)
 
-This is the end-to-end shape of a GenAI system. Every request follows this path:
+Every GenAI request follows the same high-level path: **user → gateway → orchestration → model(s) → response**. Orchestration is where RAG (retrieval) and agents (tools, multi-step logic) live; the model does the actual generation.
 
 ```
-  User / Frontend
-        │
-        ▼
-  ┌─────────────────┐
-  │  API Gateway    │  Auth, rate limit, route
-  └────────┬────────┘
-           │
-           ▼
-  ┌─────────────────┐
-  │  Orchestration  │  RAG retrieval, agent logic, tool calls (E.2, E.4)
-  │  (Agent / RAG)  │
-  └────────┬────────┘
-           │
-           ▼
-  ┌─────────────────┐
-  │  LLM(s)         │  Inference, model routing (E.1)
-  └────────┬────────┘
-           │
-           ▼
-  Response (→ user, or → tools, then back into orchestration)
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    GENAI REQUEST PATH (End-to-End)                            │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   User / Frontend
+         │
+         ▼
+   ┌──────────────┐
+   │ API Gateway  │  Auth, rate limit, routing
+   └──────┬───────┘
+          │
+          ▼
+   ┌──────────────┐
+   │ Orchestration│  RAG (retrieve docs), agents (tools, reasoning)  ← E.2, E.4
+   │ (Agent/RAG)  │
+   └──────┬───────┘
+          │
+          ▼
+   ┌──────────────┐
+   │   LLM(s)     │  Inference, model routing  ← E.1
+   └──────┬───────┘
+          │
+          ▼
+   Response  →  user  (or → tools, then back to orchestration)
 ```
 
-The remaining Part E sections (E.5–E.10) are cross-cutting concerns that surround this path: evaluation, data pipelines, cost, scale, monitoring, and security.
+**Around this path:** Evaluation (E.5), data pipelines (E.6), cost (E.7), scale (E.8), monitoring (E.9), and security (E.10) are cross-cutting—they apply to the whole system, not a single box.
 
 ---
 
 ## B.2 GenAI vs Traditional ML
 
-Think of the difference like this:
+**Mental model:** Traditional ML is like a **calculator**—one input, one output, instant. GenAI is like a **person typing**—one prompt, then tokens appear one after another; time and length vary. That difference drives how you design, scale, and pay for systems.
 
-- **Traditional ML** = A calculator. You press "=" and instantly get one answer. "Is this email spam?" → "Yes" (done in 5ms).
-- **GenAI/LLM** = A person typing a response. They think, then type word... by... word. "Write me an email" → takes seconds, length varies.
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                    TRADITIONAL ML  vs  GENAI                                 │
+└─────────────────────────────────────────────────────────────────────────────┘
 
-This fundamental difference changes everything about how you design, scale, and pay for these systems.
+  TRADITIONAL ML                               GENAI / LLM
+  ───────────────                              ───────────
 
-### The Key Differences Explained
+  Input  ──►  Model  ──►  Output               Prompt  ──►  Model  ──►  token₁
+  (one shot)   (5–50ms)   (one label)                    (think)      token₂
+                                                                      token₃
+  "Spam?"  ──►  Classifier  ──►  "Yes"                   "Write email"  ──►  ...
+  Predictable, fixed cost                        Variable length, per-token cost
+```
 
-| Aspect         | Traditional ML                                 | GenAI/LLM                                                                       | Everyday Analogy                                            |
-| -------------- | ---------------------------------------------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **Prediction** | Single forward pass — one input, one output    | Token-by-token — generates one word at a time, each depending on previous words | Calculator vs. person typing                                |
-| **Latency**    | Fixed and fast (5-50ms)                        | Variable (500ms to 2 minutes) — depends on response length                      | Instant answer vs. waiting for someone to finish writing    |
-| **Memory**     | Just the model weights                         | Model weights + KV cache (remembers the conversation)                           | A photo vs. a video recording                               |
-| **Batching**   | Static — wait for N requests, process together | Dynamic — requests join/leave mid-batch as they finish                          | Bus that waits until full vs. subway that runs continuously |
-| **Cost**       | Per request (flat fee)                         | Per token — longer prompts and responses cost more                              | Flat-rate parking vs. metered parking                       |
-| **Control**    | Fixed — same input always gives same output    | Adjustable — temperature, top-p, top-k change creativity                        | Vending machine vs. asking a chef                           |
+### The Key Differences
+
+| Aspect         | Traditional ML                        | GenAI/LLM                                                |
+| -------------- | ------------------------------------- | -------------------------------------------------------- |
+| **Prediction** | One input → one output                | One prompt → stream of tokens (each depends on previous) |
+| **Latency**    | Fixed, fast (5–50ms)                  | Variable (hundreds of ms to minutes)                     |
+| **Memory**     | Model weights only                    | Model weights + KV cache (grows with context)            |
+| **Batching**   | Static (N requests, process together) | Dynamic (requests join/leave as they finish)             |
+| **Cost**       | Per request (flat)                    | Per token (input + output)                               |
+| **Control**    | Deterministic                         | Tunable (temperature, top-p, top-k)                      |
 
 ### Why This Matters for System Design
 
-**1. You can't predict response time**
-
-- Traditional ML: "Image classification takes 20ms" — plan capacity easily
-- GenAI: "Could be 500ms or 30 seconds" — depends on how much the model writes
-- _Impact:_ Need streaming (show words as they generate), timeouts, and flexible capacity
-
-**2. Memory grows during the request**
-
-- Traditional ML: Memory is constant (just model weights)
-- GenAI: KV cache grows with every token — a 10K token conversation uses 10× more memory than a 1K conversation
-- _Impact:_ Long conversations can exhaust GPU memory; need to limit context or use pagination
-
-**3. Every word costs money**
-
-- Traditional ML: $0.001 per image classified (fixed)
-- GenAI: $0.01 per 1K input tokens + $0.03 per 1K output tokens (variable)
-- _Impact:_ A chatty system that writes long responses costs 10× more than a concise one
-
-**4. Same question can give different answers**
-
-- Traditional ML: Deterministic — same input = same output
-- GenAI: Probabilistic — controlled by temperature (0 = deterministic, 1 = creative)
-- _Impact:_ Need evaluation strategies since you can't just "unit test" outputs
+1. **Unpredictable response time** — You need streaming, timeouts, and flexible capacity; you can't assume "20ms per request."
+2. **Memory grows per request** — KV cache scales with context length; long conversations can exhaust GPU memory.
+3. **Cost scales with tokens** — Long prompts and long answers cost more; design for token budgets.
+4. **Non-deterministic outputs** — Same prompt → different answers; you need evaluation strategies, not just unit tests.
 
 > [!TIP]
-> Traditional ML is "one input → one prediction" (like a calculator). GenAI is "one prompt → a stream of tokens, each depending on the last" (like a person typing). This shifts bottlenecks from raw compute to memory (KV cache), latency (time-to-first-token matters), and cost (every single token is billed).
+> Traditional ML = "one input → one prediction." GenAI = "one prompt → a stream of tokens." That shifts bottlenecks to **memory** (KV cache), **latency** (time-to-first-token), and **cost** (every token billed).
+
+**Next:** Part C explains the **generative algorithms** behind these systems (VAE, GAN, Diffusion, Autoregressive) and how they map to text, image, and video—then C.1 (text-to-video) and C.2 (multimodal/vision-language).
+
+---
+
+## Part C: Generative Models (Overview)
+
+Part B gave the **request path** and **how GenAI differs** from traditional ML. Part C covers **what powers generation**: the main algorithm families and where they're used, then deep dives into **text-to-video** (C.1) and **multimodal/vision-language** (C.2).
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│  HOW PART C FITS                                                             │
+│  B = request path + GenAI vs ML   →   C = algorithms that power generation  │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+   Part B (system)                    Part C (algorithms)
+   ─────────────────                  ────────────────────
+   User → Gateway → Orchestration     Algorithm classes (table below)
+            → LLM → Response                 │
+   Calculator vs person typing                ▼
+                                      GAN, Diffusion, Text-to-Image (deep dives)
+                                                 │
+                                                 ▼
+                                      C.1 Text-to-Video   │   C.2 Multimodal / Vision-Language
+```
 
 ### Generative Algorithm Classes
 
