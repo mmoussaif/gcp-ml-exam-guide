@@ -645,35 +645,7 @@ Quick lookup: which tool to use for what. Aligned with full guide (E.1–E.10, D
 
 ---
 
-## COVERAGE: WHY NO GOLD CONCEPT IS MISSING
-
-Every major concept from the full _system-design-genai_ guide is either in the body above or in the **Glossary (Adapted)** below. This table maps full-guide structure → key concepts → where they appear here.
-
-| Full guide               | Key concepts                                                                          | In this doc                                                 |
-| ------------------------ | ------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| **A.1 Intro**            | Mental model (3 questions), GenAI vs ML, six challenges, what’s in the guide          | Intro + §1–19, Glossary                                     |
-| **B.1 Big picture**      | Request path: User → Gateway → Orchestration → LLM → Response; E.1–E.10 cross-cutting | Intro (mental model), §4 (techniques), §16 (decision guide) |
-| **B.2 GenAI vs ML**      | Calculator vs person typing; latency, memory, cost, control; design impact            | Intro (GenAI vs ML), §1 (KV cache, context), §7 (serving)   |
-| **Part C (algorithms)**  | VAE, GAN, Diffusion, Autoregressive; text-to-image, video, multimodal                 | §8 (image), §9 (video), §10 (multimodal), Glossary          |
-| **Part D (LLM)**         | Tokenization, architectures, pretraining/SFT/RLHF, sampling, eval metrics             | §1–3, §11 (metrics), Glossary                               |
-| **E.1 Serving**          | KV cache, batching, vLLM, parallelism                                                 | §1, §7, §14, Glossary                                       |
-| **E.2 RAG**              | Chunking, embeddings, vector DB, HNSW/IVF, rerank, RAGAS                              | §5, §11 (RAG metrics), Glossary                             |
-| **E.3 RAG vs fine-tune** | When RAG vs when fine-tune; LoRA, PEFT                                                | §4, §16, Glossary                                           |
-| **E.4 Agents**           | ReAct, tools, multi-agent, ADK, MCP                                                   | §6, §17 (platform), Glossary                                |
-| **E.5 Evaluation**       | RAGAS, LLM-as-judge, human eval, A/B                                                  | §5 (RAGAS), §11 (all metrics), Glossary                     |
-| **E.6 Data pipeline**    | Events, labeling, feedback loops                                                      | §4 (techniques), Glossary (implicit in fine-tune/RAG)       |
-| **E.7 Cost**             | Per-token pricing, routing, caching                                                   | §12, §16, Glossary                                          |
-| **E.8 Scalability**      | Batching, parallelism, ZeRO/FSDP, GPU sizing                                          | §7, §14, Glossary                                           |
-| **E.9 Monitoring**       | TTFT, latency, throughput, drift                                                      | §11 (performance), Glossary                                 |
-| **E.10 Security**        | Guardrails, injection, jailbreak, spotlighting                                        | §13, Glossary                                               |
-| **Part F (examples)**    | 11 system designs (Copilot, chatbot, RAG, etc.)                                       | §16 (decision guide), §17 (platform)                        |
-| **Part G (interview)**   | 45-min framework, trade-offs, red flags                                               | §15, §19                                                    |
-
-**Glossary role:** Terms that appear only in the full guide’s deep dives (e.g. PagedAttention, Triton, DPO, nprobe, CIDEr, RoPE, bi-encoder vs cross-encoder) are in **Glossary (Adapted)** so meaning and “why it matters” are still available here without re-reading the long doc.
-
----
-
-## GLOSSARY (ADAPTED)
+## 21. GLOSSARY (ADAPTED)
 
 Short definitions for terms used in the full guide. **Why** = why it matters for system design.
 
