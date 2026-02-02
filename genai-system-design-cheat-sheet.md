@@ -1,4 +1,11 @@
-# GenAI System Design Cheat Sheet
+<div align="center">
+
+# 🤖 GenAI System Design Cheat Sheet
+
+**The complete reference for building production GenAI systems**
+
+</div>
+
 ---
 
 ## 📑 Table of Contents
