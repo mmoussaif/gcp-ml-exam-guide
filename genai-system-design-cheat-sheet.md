@@ -85,11 +85,15 @@ $$
 \mathcal{L}_{\text{MSE}} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2
 $$
 
+> **Terms:** n = number of samples, $y_i$ = actual value, $\hat{y}_i$ = predicted value
+
 **Cross-Entropy (Classification):**
 
 $$
 \mathcal{L}_{\text{CE}} = -\sum_{i=1}^{C} y_i \log(\hat{y}_i)
 $$
+
+> **Terms:** C = number of classes, $y_i$ = true label (0 or 1), $\hat{y}_i$ = predicted probability for class i
 
 **Language Model Loss:**
 
@@ -97,11 +101,15 @@ $$
 \mathcal{L}_{\text{LM}} = -\frac{1}{T}\sum_{t=1}^{T} \log P(x_t | x_{<t})
 $$
 
+> **Terms:** T = sequence length, $x_t$ = token at position t, $x_{<t}$ = all tokens before position t, $P(x_t | x_{<t})$ = probability of next token given context
+
 #### Gradient Descent Update
 
 $$
 \theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)
 $$
+
+> **Terms:** $\theta$ = model parameters (weights), $\eta$ = learning rate, $\nabla_\theta \mathcal{L}$ = gradient of loss with respect to parameters
 
 > **💡 Intuition:** Move parameters in the direction that reduces loss. Learning rate η controls step size.
 
@@ -160,6 +168,8 @@ $$
 r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)}
 $$
 
+> **Terms:** $\pi_\theta$ = current policy, $\pi_{\text{old}}$ = previous policy, $a_t$ = action at time t, $s_t$ = state at time t
+
 ### 📚 Three Ways Computers Learn
 
 | Way | Signal | Data | GenAI Example |
@@ -200,6 +210,8 @@ $$
 $$
 \theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
 $$
+
+> **Terms:** $m_t$ = first moment (mean of gradients), $v_t$ = second moment (variance of gradients), $\beta_1, \beta_2$ = decay rates, $g_t$ = gradient at step t, $\hat{m}_t, \hat{v}_t$ = bias-corrected moments, $\epsilon$ = small constant to prevent division by zero
 
 ---
 
@@ -281,6 +293,8 @@ $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
+> **Terms:** Q = Query matrix (what I'm looking for), K = Key matrix (what tokens offer), V = Value matrix (actual content), $d_k$ = dimension of keys (scaling factor prevents large dot products)
+
 #### Multi-Head Attention
 
 $$
@@ -291,6 +305,8 @@ $$
 \text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)
 $$
 
+> **Terms:** h = number of attention heads, $W^O$ = output projection matrix, $W_i^Q, W_i^K, W_i^V$ = learned projection matrices for head i
+
 #### Positional Encoding
 
 $$
@@ -300,6 +316,8 @@ $$
 $$
 PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)
 $$
+
+> **Terms:** pos = position in sequence, i = dimension index, d = model dimension. Sine for even dimensions, cosine for odd. The 10000 base creates different frequencies so the model can learn relative positions.
 
 ### 📊 Architecture Comparison
 
@@ -375,6 +393,8 @@ $$
 J(\pi_\theta) = \mathbb{E}_{x,y}\left[R(x,y) - \beta \cdot D_{KL}(\pi_\theta \| \pi_{\text{ref}})\right]
 $$
 
+> **Terms:** $J$ = objective to maximize, $\pi_\theta$ = policy being trained, $\mathbb{E}$ = expected value, R(x,y) = reward for response y to prompt x, $\beta$ = KL penalty weight, $D_{KL}$ = KL divergence (measures how much policy changed), $\pi_{\text{ref}}$ = reference policy (usually SFT model)
+
 - **R(x,y)**: Reward model score
 - **β**: KL penalty (prevents reward hacking)
 - **π_ref**: Reference policy (SFT model)
@@ -384,6 +404,8 @@ $$
 $$
 \mathcal{L}_{\text{DPO}} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right]\right)
 $$
+
+> **Terms:** $\sigma$ = sigmoid function, $y_w$ = winning/preferred response, $y_l$ = losing/rejected response, x = prompt, $\beta$ = temperature parameter, $\pi_\theta$ = model being trained, $\pi_{\text{ref}}$ = reference model
 
 > **💡 DPO Advantage:** No separate reward model needed, more stable training
 
@@ -418,6 +440,8 @@ $$
 $$
 W_0 \in \mathbb{R}^{d \times k}, \quad B \in \mathbb{R}^{d \times r}, \quad A \in \mathbb{R}^{r \times k}
 $$
+
+> **Terms:** $W_0$ = original frozen weights, $\Delta W = BA$ = low-rank update, d = output dimension, k = input dimension, r = rank (typically 8-64, much smaller than d,k), $\mathbb{R}$ = real numbers
 
 ```mermaid
 flowchart LR
@@ -516,6 +540,8 @@ $$
 $$
 \text{NDCG@K} = \frac{\text{DCG@K}}{\text{IDCG@K}}
 $$
+
+> **Terms for all retrieval metrics:** K = number of results to consider, "relevant" = ground truth relevant documents, "top-K" = retrieved documents, $\text{rank}_i$ = position of first relevant result for query i, |Q| = number of queries, DCG = Discounted Cumulative Gain (relevance weighted by position), IDCG = Ideal DCG (perfect ranking)
 
 ---
 
@@ -744,11 +770,15 @@ $$
 q(x_t|x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)
 $$
 
+> **Terms:** $x_t$ = image at timestep t, $\mathcal{N}$ = Gaussian distribution, $\beta_t$ = noise schedule (how much noise to add at step t), I = identity matrix
+
 **Reverse Process (Denoise):**
 
 $$
 p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
 $$
+
+> **Terms:** $p_\theta$ = learned reverse process, $\mu_\theta$ = predicted mean (learned by neural network), $\Sigma_\theta$ = predicted variance, $\theta$ = model parameters
 
 ### 🔧 Diffusion Components
 
@@ -765,6 +795,8 @@ $$
 $$
 \hat{\epsilon}(x_t, c) = \epsilon(x_t, \emptyset) + w \cdot (\epsilon(x_t, c) - \epsilon(x_t, \emptyset))
 $$
+
+> **Terms:** $\hat{\epsilon}$ = guided noise prediction, $\epsilon(x_t, c)$ = conditional prediction (with text prompt c), $\epsilon(x_t, \emptyset)$ = unconditional prediction (no prompt), w = guidance scale (typically 7-15, higher = follows prompt more strictly)
 
 ### 🎭 GANs
 
@@ -786,6 +818,8 @@ flowchart LR
 $$
 \min_G \max_D \, \underset{x \sim p_{\text{data}}}{\mathbb{E}}[\log D(x)] + \underset{z \sim p_z}{\mathbb{E}}[\log(1-D(G(z)))]
 $$
+
+> **Terms:** G = Generator network, D = Discriminator network, x = real image sampled from data distribution, z = random noise vector, $p_z$ = noise distribution (usually Gaussian), G(z) = fake image generated from noise, D(x) = probability that x is real (0-1)
 
 > **Reading the formula:** G (Generator) minimizes while D (Discriminator) maximizes. The first term is the expected log-probability that D correctly identifies real samples x. The second term is the expected log-probability that D correctly rejects fake samples G(z).
 
@@ -913,6 +947,8 @@ flowchart LR
 $$
 \text{Cost} = (\text{Input tokens} \times p_{\text{in}}) + (\text{Output tokens} \times p_{\text{out}})
 $$
+
+> **Terms:** Input tokens = prompt + context tokens, Output tokens = generated response tokens, $p_{\text{in}}$ = price per input token, $p_{\text{out}}$ = price per output token (usually 2-3× higher than input)
 
 **📝 Example:**
 ```
@@ -1069,6 +1105,8 @@ $$
 \text{Params} \approx 12 \times L \times d^2
 $$
 
+> **Terms:** L = number of Transformer layers, d = model dimension (hidden size), 12 = 4 (attention) + 8 (FFN) parameters per layer
+
 | Component | Formula |
 |-----------|---------|
 | Embedding | V × d |
@@ -1085,6 +1123,8 @@ $$
 $$
 \text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}
 $$
+
+> **Terms:** 16-20× accounts for: weights (2 bytes in FP16) + gradients (2 bytes) + optimizer states (8 bytes for Adam) + activations (variable). For inference only: ~2× model size.
 
 | Component | Size (FP16) |
 |-----------|-------------|
@@ -1103,11 +1143,15 @@ $$
 \text{Tokens} \approx 20 \times \text{Parameters}
 $$
 
+> **Terms:** This is the "Chinchilla optimal" ratio—train on 20 tokens per parameter for best efficiency. A 7B model should see ~140B tokens.
+
 **Total FLOPs:**
 
 $$
 \text{FLOPs} = 6 \times P \times T
 $$
+
+> **Terms:** P = number of parameters, T = number of training tokens, 6 = 2 (forward pass) + 4 (backward pass, roughly 2× forward). For inference: FLOPs ≈ 2 × P per token.
 
 ### 📐 Attention Complexity
 
