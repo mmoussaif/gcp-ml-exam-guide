@@ -1460,6 +1460,9 @@ For d=4096, crossover at n=4096 tokens.
 | **FSDP** | Fully Sharded Data Parallel | PyTorch's implementation of ZeRO |
 | **GPU** | Graphics Processing Unit | Specialized chip for parallel processing; runs AI models fast |
 | **TPU** | Tensor Processing Unit | Google's custom AI chip for neural networks |
+| **FLOPs** | Floating Point Operations | Count of math operations (adds, multiplies); measures total compute needed |
+| **FLOPS** | Floating Point Operations Per Second | Speed of a chip (e.g., H100 = 990 TFLOPS = 990 trillion ops/sec) |
+| **TFLOPS** | Tera-FLOPS | Trillion floating point operations per second; used to compare GPUs |
 
 ### Quantization (Model Compression)
 
