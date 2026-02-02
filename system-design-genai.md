@@ -18,11 +18,10 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 ### Part A: Getting Started
 
-| #   | Section                                  | Description                                   |
-| --- | ---------------------------------------- | --------------------------------------------- |
-| A.1 | [Introduction](#a1-introduction)         | Why GenAI is different; how to use this guide |
-| A.2 | [Visual Guide Map](#a2-visual-guide-map) | Diagram showing how sections connect          |
-| A.3 | [Glossary](#a3-glossary)                 | 80+ terms organized by category               |
+| #   | Section                          | Description                                   |
+| --- | -------------------------------- | --------------------------------------------- |
+| A.1 | [Introduction](#a1-introduction) | Why GenAI is different; how to use this guide |
+| A.2 | [Glossary](#a2-glossary)         | 80+ terms organized by category               |
 
 ### Part B: System Overview
 
@@ -121,7 +120,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 | Goal          | Path                                                      |
 | ------------- | --------------------------------------------------------- |
-| **Learn**     | Map (A.2) → B → C → D → E                                 |
+| **Learn**     | A → B → C → D → E                                         |
 | **Interview** | Glossary + E.1–E.4 + F.1 (3–4 examples) + Part G          |
 | **Build**     | Closest F.1 example → relevant E.x → Glossary / Resources |
 
@@ -141,98 +140,7 @@ GenAI system design boils down to three questions: **Non-determinism**—how do 
 
 ---
 
-## A.2 Visual Guide Map
-
-This map shows how the guide fits together. Follow **Parts A → G** in order, or jump to what you need.
-
-```
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                           GenAI SYSTEM DESIGN GUIDE                                 │
-└─────────────────────────────────────────────────────────────────────────────────────┘
-
-  START HERE
-      │
-      ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   PART A    │     │   PART B    │     │   PART C    │
-│  GETTING    │────▶│   SYSTEM    │────▶│ GENERATIVE  │
-│  STARTED    │     │  OVERVIEW   │     │   MODELS    │
-├─────────────┤     ├─────────────┤     ├─────────────┤
-│ A.1 Intro   │     │ B.1 Big     │     │ C.1 Text-to │
-│ A.2 Map     │     │     Picture │     │     -Video  │
-│ A.3 Glossary│     │ B.2 GenAI   │     │ C.2 Multi-  │
-│             │     │     vs ML   │     │     modal   │
-└─────────────┘     └─────────────┘     └─────────────┘
-                                              │
-      ┌───────────────────────────────────────┘
-      ▼
-┌─────────────┐
-│   PART D    │
-│    LLM      │
-│FUNDAMENTALS │
-├─────────────┤
-│ D.1  Models & Sampling      │
-│ D.2  Google GenAI Tools     │
-│ D.3  Tokenization           │
-│ D.4  Transformers           │
-│ D.5  Pretraining Objectives │
-│ D.6  Two-Stage Training     │
-│ D.7  Three-Stage (RLHF)     │
-│ D.8  Sampling Strategies    │
-│ D.9  Evaluation Metrics     │
-└─────────────┬───────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────────────────────────────────────────────────┐
-│                            PART E: CORE SYSTEM DESIGN                               │
-│                              (the main content)                                     │
-├────────────────┬────────────────┬────────────────┬──────────────────────────────────┤
-│   SERVING      │   KNOWLEDGE    │   QUALITY      │          OPERATIONS              │
-├────────────────┼────────────────┼────────────────┼──────────────────────────────────┤
-│ E.1 LLM        │ E.2 RAG        │ E.5 Evaluation │ E.6 Data Pipeline                │
-│     Serving    │     System     │     & Quality  │ E.7 Cost Optimization            │
-│   - Batching   │   - Chunking   │   - RAGAS      │ E.8 Scalability                  │
-│   - KV Cache   │   - Embeddings │   - Human Eval │ E.9 Monitoring                   │
-│   - vLLM       │   - Vector DB  │   - A/B Test   │                                  │
-│                │   - Reranking  │                │                                  │
-│                │                │ E.10 Security  │                                  │
-│                │ E.3 RAG vs     │    & Guardrails│                                  │
-│                │     Fine-tune  │   - Model Armor│                                  │
-│                │   - LoRA/PEFT  │   - PII Filter │                                  │
-│                │                │                │                                  │
-│                │ E.4 Agentic AI │                │                                  │
-│                │   - ReAct      │                │                                  │
-│                │   - Tools      │                │                                  │
-│                │   - Multi-agent│                │                                  │
-│                │   - ADK        │                │                                  │
-└────────────────┴────────────────┴────────────────┴──────────────────────────────────┘
-              │
-              ▼
-┌─────────────┐     ┌─────────────┐
-│   PART F    │     │   PART G    │
-│  EXAMPLES   │────▶│  REFERENCE  │
-│  (Apply it) │     │ & INTERVIEW │
-├─────────────┤     ├─────────────┤
-│ F.1 Real-   │     │ G.1 Strategy│
-│   World     │     │     & Plan  │
-│   Examples  │     │ G.2 Interview│
-│   (11 ex.)  │     │   Quick Ref │
-│  - Code Ast │     │ G.3 CxO vs  │
-│  - Chatbot  │     │   Product/Eng│
-│  - Content  │     │ G.4 Worked  │
-│  - Compose  │     │   Example   │
-│  - Translate│     │ G.5 Resources│
-│  - Assistant│     │             │
-│  - Caption  │     │             │
-│  - Doc Q&A  │     │             │
-│  - Face/T2I │     │             │
-│  - T2V      │     │             │
-└─────────────┘     └─────────────┘
-```
-
----
-
-## A.3 Glossary
+## A.2 Glossary
 
 Quick reference for key terms. Organized by category for easier navigation. **Start here if you're new** — the Fundamentals section explains basic computing terms.
 
