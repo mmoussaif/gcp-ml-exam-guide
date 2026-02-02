@@ -1,4 +1,4 @@
-# 🧠 GenAI System Design Cheat Sheet
+# GenAI System Design Cheat Sheet
 
 ---
 
@@ -44,6 +44,8 @@ Better model → More accurate predictions
 
 ### 📊 Two Phases of ML
 
+**The core ML lifecycle:** First you **train** (teach the model by showing it examples and adjusting its parameters to minimize errors), then you **infer** (use the trained model to make predictions on new data). Training is expensive and done once; inference is cheap and done millions of times.
+
 ```mermaid
 flowchart LR
     subgraph Training["🎯 Training Phase"]
@@ -59,6 +61,8 @@ flowchart LR
 
     P --> M
 ```
+
+> **How it works:** During training, data flows through the model, the loss function measures how wrong the predictions are, and the optimizer adjusts parameters to reduce that error. Once trained, those parameters are frozen and the model is deployed for inference—new inputs go in, predictions come out.
 
 | Phase | What It Is | GenAI Analogue |
 |-------|-----------|----------------|
@@ -109,12 +113,16 @@ $$\theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)$$
 
 ### 🎮 Reinforcement Learning
 
+**Learning by doing:** Unlike supervised learning where you have "correct answers," RL learns through trial and error. An agent takes actions, observes rewards, and gradually learns a policy (strategy) that maximizes long-term reward. Think of it like training a dog with treats—no one tells the dog the "right" answer, it learns what works.
+
 ```mermaid
 flowchart LR
     A[Agent] -->|Action| E[Environment]
     E -->|State, Reward| A
     A -->|Policy π| A
 ```
+
+> **The RL loop:** The agent observes the current state, chooses an action based on its policy, receives a reward from the environment, and updates its policy to get better rewards next time. RLHF uses this loop with human preferences as rewards to make LLMs helpful and safe.
 
 **Key Difference from Supervised Learning:**
 - Supervised: Minimize loss vs explicit labels
@@ -168,6 +176,8 @@ $$\theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}$$
 
 ## 2. Core Components
 
+**The GenAI request pipeline:** Every LLM request follows the same path—text goes in, gets chopped into tokens, converted to embeddings, processed by the model (using cached computations for efficiency), and tokens come out one by one until the response is complete.
+
 ```mermaid
 flowchart TB
     subgraph Input["📥 Input"]
@@ -190,6 +200,8 @@ flowchart TB
     KV --> LLM
     LLM --> G --> R
 ```
+
+> **Why the KV Cache matters:** Without caching, generating token N would require recomputing attention for all previous tokens (O(N²) work). The KV cache stores these computations so each new token only needs O(N) work. This is why memory grows with context length—you're storing more cached values.
 
 | Component | What It Is | Key Choice |
 |-----------|-----------|------------|
@@ -219,6 +231,8 @@ Transformer (base architecture, 2017)
 
 ### 🔄 Transformer Core
 
+**The building block of all LLMs:** A Transformer is just this layer repeated N times (N=32 for 7B models, N=80+ for 70B+). Each layer has two parts: **attention** (lets tokens "look at" other tokens to understand context) and **feed-forward** (processes each token independently). Residual connections (+) let gradients flow during training.
+
 ```mermaid
 flowchart TB
     subgraph Layer["Transformer Layer ×N"]
@@ -229,6 +243,8 @@ flowchart TB
         AN2 --> O[Output]
     end
 ```
+
+> **How attention works:** Each token asks "what should I pay attention to?" by computing Query (what I'm looking for), Key (what I have to offer), and Value (my actual content). The softmax picks which tokens to focus on, weighted by relevance.
 
 #### Self-Attention Formula
 
@@ -255,6 +271,8 @@ $$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)$$
 
 ### 🎯 MoE (Mixture of Experts)
 
+**Get big model quality at small model cost:** Instead of running every input through all parameters, MoE models have multiple "expert" networks and a router that picks which 2-3 experts should handle each token. It's like a hospital with specialists—you don't see every doctor, just the ones relevant to your case.
+
 ```mermaid
 flowchart LR
     I[Input Token] --> R[Router/Gating]
@@ -265,6 +283,8 @@ flowchart LR
     E2 --> C
     C --> O[Output]
 ```
+
+> **How the router works:** Each token's embedding passes through a learned gating function that outputs weights for each expert. Only the top-K (usually 2) are activated, their outputs are weighted and combined. This sparsity is why Mixtral 8×7B has 56B parameters but runs like a 14B model.
 
 **Key Insight:**
 - Mixtral 8×7B = **56B total params**, but only **~14B active** per token
@@ -280,6 +300,8 @@ flowchart LR
 ---
 
 ## 4. Training Stages
+
+**From raw text to helpful assistant:** Training an LLM is a three-stage journey. First, pretrain on the entire internet to learn language (expensive, done by labs). Then, fine-tune on instruction examples to learn to follow directions. Finally, use human feedback to align the model—making it helpful, harmless, and honest.
 
 ```mermaid
 flowchart LR
@@ -297,6 +319,8 @@ flowchart LR
 
     D --> E["✅ Aligned Model"]
 ```
+
+> **Why each stage matters:** Pretraining gives the model knowledge and language ability but no "personality." SFT teaches it to be helpful (follow instructions) but it may still give harmful answers. RLHF/DPO teach it to refuse harmful requests and prefer safe, accurate responses—this is the "alignment" that makes ChatGPT different from GPT-3.
 
 | Stage | Data | Objective | Output |
 |-------|------|-----------|--------|
@@ -334,6 +358,8 @@ $$\mathcal{L}_{DPO} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\
 
 ### ⚡ LoRA (Low-Rank Adaptation)
 
+**Fine-tune a 70B model on a single GPU:** The key insight is that weight updates during fine-tuning have low "rank"—they can be compressed into two small matrices multiplied together. Instead of updating millions of parameters, you freeze the original model and train tiny adapter layers. Same quality, 256× fewer trainable parameters.
+
 **Weight Update:**
 $$W' = W_0 + \Delta W = W_0 + BA$$
 
@@ -349,6 +375,8 @@ flowchart LR
     B --> ADD
     ADD --> H[Output]
 ```
+
+> **How it works:** The input goes through both paths—the frozen original weights W₀ and the tiny adapter (A→B). Outputs are added together. At inference, you can merge BA into W₀ for zero latency cost, or swap different adapters for different tasks.
 
 **📝 Example:**
 ```
@@ -375,6 +403,8 @@ Reduction: 256× fewer parameters!
 
 ## 6. RAG Pipeline
 
+**Ground answers in your data:** LLMs hallucinate because they rely only on training data. RAG (Retrieval-Augmented Generation) fixes this by finding relevant documents first, then giving them to the LLM as context. Think of it as giving the model an open-book exam instead of closed-book.
+
 ```mermaid
 flowchart LR
     Q[Query] --> E1[Embed Query]
@@ -386,6 +416,8 @@ flowchart LR
     Q --> LLM
     LLM --> A[Answer + Citations]
 ```
+
+> **The retrieval-then-generate pattern:** Your documents are pre-chunked and converted to embeddings (vectors). When a query arrives, it's also embedded and used to find similar chunks via vector search. A reranker sorts by relevance. The top chunks become context for the LLM, which generates an answer grounded in your actual documents.
 
 ### 📦 RAG Components
 
@@ -420,6 +452,8 @@ $$\text{NDCG@K} = \frac{DCG@K}{IDCG@K}$$
 
 ## 7. Agent Patterns
 
+**LLMs that take actions:** A bare LLM just predicts text. An agent wraps the LLM in a loop where it can think, use tools (search, code execution, APIs), observe results, and iterate. This turns a chatbot into an autonomous assistant that can actually accomplish tasks in the real world.
+
 ```mermaid
 flowchart TB
     subgraph ReAct["ReAct Loop"]
@@ -432,6 +466,8 @@ flowchart TB
     F -->|No| T
     F -->|Yes| R[Response]
 ```
+
+> **The ReAct loop:** The LLM first produces a "Thought" (reasoning about what to do), then an "Action" (which tool to call with what arguments), then receives an "Observation" (the tool's output). This cycle repeats until the task is done. The key insight: separating thinking from acting makes the agent more reliable.
 
 ### 🤖 Agent = LLM in a Loop
 
@@ -453,6 +489,8 @@ flowchart TB
 
 ### 🏗️ Multi-Agent Patterns
 
+**Divide and conquer:** Complex tasks often benefit from multiple specialized agents working together. Like a software team with different roles (architect, developer, tester), multi-agent systems let you compose experts rather than building one monolithic agent.
+
 ```mermaid
 flowchart LR
     subgraph Sequential
@@ -469,6 +507,8 @@ flowchart LR
         C1[Agent 1] <--> C2[Agent 2]
     end
 ```
+
+> **Three patterns:** **Sequential** chains agents like an assembly line—each refines the previous output (e.g., research → draft → edit). **Parallel** runs agents simultaneously when tasks are independent (e.g., search multiple sources at once). **Debate** has agents argue and critique each other to improve quality through adversarial collaboration.
 
 ---
 
@@ -515,6 +555,8 @@ flowchart LR
 
 ### 🎨 Diffusion Models
 
+**Learn to remove noise, generate from pure noise:** The brilliant insight behind Stable Diffusion, DALL-E, and Midjourney. During training, you add noise to images step by step until they're pure static, and teach a neural network to reverse this process. At generation time, start with random noise and iteratively denoise it into a coherent image guided by text.
+
 ```mermaid
 flowchart LR
     subgraph Training
@@ -527,6 +569,8 @@ flowchart LR
         T[Text Prompt] --> D
     end
 ```
+
+> **Why it works:** The model never learns to generate images directly—it learns to predict and remove noise. This is easier to train and gives remarkable quality. The text prompt guides the denoising: at each step, the model removes noise in a direction that makes the image more consistent with "a cat wearing a hat."
 
 **Forward Process (Add Noise):**
 $$q(x_t|x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)$$
@@ -549,6 +593,8 @@ $$\hat{\epsilon}(x_t, c) = \epsilon(x_t, \emptyset) + w \cdot (\epsilon(x_t, c) 
 
 ### 🎭 GANs
 
+**The art forger vs. detective game:** GANs pit two networks against each other. The Generator tries to create fake images that look real; the Discriminator tries to spot the fakes. As both improve through competition, the Generator eventually produces images so good the Discriminator can't tell them from real photos.
+
 ```mermaid
 flowchart LR
     Z[Noise z] --> G[Generator]
@@ -558,12 +604,16 @@ flowchart LR
     D --> RF[Real/Fake?]
 ```
 
+> **The adversarial dance:** The Discriminator maximizes its ability to correctly classify real vs. fake. The Generator minimizes the Discriminator's success. This minimax game reaches equilibrium when generated images are indistinguishable from real ones. GANs dominated before diffusion models; StyleGAN still produces the sharpest faces.
+
 **GAN Objective:**
 $$\min_G \max_D \mathbb{E}_{x}[\log D(x)] + \mathbb{E}_{z}[\log(1-D(G(z)))]$$
 
 ---
 
 ## 10. Video Generation
+
+**Diffusion extended through time:** Video generation (Sora, Veo) applies the same denoising principle but adds temporal consistency—each frame must look good AND connect smoothly to adjacent frames. The architecture adds temporal attention layers that let the model "see" across frames, not just within each one.
 
 ```mermaid
 flowchart LR
@@ -573,6 +623,8 @@ flowchart LR
     SSR --> TSR[Temporal SR]
     TSR --> F[Final Video]
 ```
+
+> **The cascade approach:** Generate at low resolution and frame rate first (easier, captures structure), then super-resolve spatially (sharper details) and temporally (smoother motion). This coarse-to-fine approach is computationally tractable and produces better results than direct high-resolution generation.
 
 ### 🎬 Video Components
 
@@ -588,6 +640,8 @@ flowchart LR
 
 ## 11. Multimodal (Vision-Language)
 
+**Teaching LLMs to see:** Vision-language models bridge images and text. They encode images into the same "language" that LLMs understand (embeddings), then let the LLM process both together. This enables describing images, answering questions about photos, and reasoning over visual content.
+
 ```mermaid
 flowchart LR
     I[Image] --> VE[ViT Encoder]
@@ -598,6 +652,8 @@ flowchart LR
     CA --> D[Decoder]
     D --> A[Answer]
 ```
+
+> **The vision-language bridge:** The image goes through a Vision Transformer (ViT) that converts it to patch embeddings—essentially treating each image region as a "visual token." These merge with text tokens via cross-attention, letting the decoder attend to both the question and relevant image regions to generate the answer.
 
 | Model | Architecture | Use Case |
 |-------|--------------|----------|
@@ -693,6 +749,8 @@ $$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \tim
 
 ### 🏰 Defense Layers
 
+**Defense in depth:** No single layer stops all attacks. The pattern is: authenticate first (who is this?), filter inputs (is this prompt safe?), let the LLM process, then filter outputs (is this response safe to show?). Each layer catches different attack types—input guardrails catch injections, output guardrails catch harmful generations.
+
 ```mermaid
 flowchart LR
     H[HTTP/Auth] --> IG[Input Guardrails]
@@ -700,6 +758,8 @@ flowchart LR
     LLM --> OG[Output Guardrails]
     OG --> R[Response]
 ```
+
+> **What each layer does:** HTTP/Auth stops unauthorized access. Input guardrails detect prompt injection, jailbreak attempts, and toxic content before it reaches the model. Output guardrails catch hallucinations, PII leaks, and harmful content before showing users. The model itself is the weakest link—that's why we wrap it with defenses.
 
 **Spotlighting:** Mark external content as data, not instructions
 ```
