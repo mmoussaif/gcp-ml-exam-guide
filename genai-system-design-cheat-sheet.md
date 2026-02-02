@@ -155,20 +155,68 @@ flowchart LR
 
 #### RL Algorithms for LLMs
 
-| Algorithm | Key Idea | Formula |
-|-----------|----------|---------|
-| **REINFORCE** | Monte Carlo policy gradient | $\nabla J(\theta) = \mathbb{E}[\nabla \log \pi_\theta(a|s) \cdot R]$ |
-| **PPO** | Clipped surrogate objective | $L^{CLIP} = \min(r_t A_t, \text{clip}(r_t, 1-\epsilon, 1+\epsilon) A_t)$ |
-| **TRPO** | Trust region constraint | Subject to $D_{KL}(\pi_{old} \| \pi) \leq \delta$ |
-| **GRPO** | Group relative advantages | Used in DeepSeek, LLM alignment |
+| Algorithm | Key Idea |
+|-----------|----------|
+| **REINFORCE** | Monte Carlo policy gradient—compute gradients from full episode returns |
+| **PPO** | Clipped surrogate objective—stable updates with bounded policy changes |
+| **TRPO** | Trust region constraint—guaranteed monotonic improvement |
+| **GRPO** | Group relative advantages—used in DeepSeek for LLM alignment |
+
+---
+
+**REINFORCE (Policy Gradient):**
+
+$
+\nabla J(\theta) = \mathbb{E}[\nabla \log \pi_\theta(a|s) \cdot R]
+$
+
+> **Terms:**
+> - **J(θ)** = objective function (expected cumulative reward)
+> - **∇** = gradient operator (direction to improve)
+> - **π_θ(a|s)** = policy—probability of taking action **a** in state **s** under parameters **θ**
+> - **R** = total reward (return) from the episode
+> - **𝔼** = expected value (average over many trials)
+
+---
+
+**PPO Clipped Objective:**
+
+$
+L^{\text{CLIP}} = \min(r_t \cdot A_t, \text{clip}(r_t, 1-\epsilon, 1+\epsilon) \cdot A_t)
+$
+
+> **Terms:**
+> - **L^CLIP** = clipped loss function (what PPO minimizes)
+> - **r_t** = probability ratio (new policy / old policy)
+> - **A_t** = advantage—how much better this action was vs average
+> - **ε (epsilon)** = clip range (typically 0.1–0.2), limits how much policy can change
+> - **clip(r_t, 1-ε, 1+ε)** = constrains ratio to [0.8, 1.2] range (if ε=0.2)
 
 **PPO Probability Ratio:**
 
-$$
+$
 r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)}
-$$
+$
 
-> **Terms:** $\pi_\theta$ = current policy, $\pi_{\text{old}}$ = previous policy, $a_t$ = action at time t, $s_t$ = state at time t
+> **Terms:**
+> - **π_θ** = current (new) policy after update
+> - **π_old** = previous policy before update
+> - **a_t** = action taken at time step t
+> - **s_t** = state observed at time step t
+
+---
+
+**TRPO Trust Region Constraint:**
+
+$
+D_{\text{KL}}(\pi_{\text{old}} \| \pi_\theta) \leq \delta
+$
+
+> **Terms:**
+> - **D_KL** = Kullback-Leibler divergence—measures how different two distributions are
+> - **π_old** = old policy distribution
+> - **π_θ** = new policy distribution
+> - **δ (delta)** = maximum allowed divergence (trust region size), typically 0.01
 
 ### 📚 Three Ways Computers Learn
 
