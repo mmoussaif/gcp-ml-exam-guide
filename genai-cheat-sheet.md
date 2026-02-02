@@ -1,20 +1,8 @@
-# GenAI System Design Cheat Sheet (Complete Interview Prep)
-
-**Purpose:** Essential GenAI system design in a 3-pager style: mental model, system shape, architectures, RAG, agents, serving, image/video/multimodal, metrics, cost, security, scalability, interview. **All gold concepts** from the full guide are covered below or in the **Glossary (Adapted)** at the end. Use the **Coverage** section to verify nothing is missing.
-
-### Mental model (full guide core)
-
-**Three questions:** (1) **Non-determinism** — evaluate and control probabilistic outputs. (2) **Token economics** — cost and latency scale with length. (3) **Orchestration** — combine models, retrieval, and tools.
-
-**GenAI vs traditional ML:** Traditional ML = one input → one output (calculator). GenAI = one prompt → stream of tokens (person typing). So: variable latency, KV cache growth, per-token cost, non-determinism → need streaming, token budgets, evaluation, guardrails.
-
-**Six challenges:** Non-determinism (E.5 eval, E.10 guardrails) | Token economics (E.7 cost, caching, routing) | Memory pressure (E.1 serving, E.8 KV cache) | Hallucinations (E.2 RAG, E.5 eval) | Orchestration (E.4 agents, tools) | Scale unpredictability (E.8 batching, capacity). Each addressed in sections below.
-
-**Request path (full guide B.1):** User/Frontend → API Gateway (auth, rate limit) → Orchestration (RAG + agents, E.2/E.4) → LLM(s) (E.1) → Response. Cross-cutting: E.5 eval, E.6 data, E.7 cost, E.8 scale, E.9 monitoring, E.10 security.
+# GenAI System Design Cheat Sheet
 
 ---
 
-## ML FOUNDATIONS (FOR AI ENGINEERS)
+## 1. ML FOUNDATIONS
 
 _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, and broken apps. This section follows the article structure: **Intelligence & Models**, **3 Ways Computers Can Learn** (ML → DL → RL), **Data**, plus vocabulary and GenAI links._
 
@@ -24,7 +12,7 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 - **Model** = something that lets you make predictions (e.g. a function with parameters). Computers learn models from data; humans learn from experience and others.
 - In traditional software, programmers write explicit rules. In **ML**, programmers curate examples and the computer learns from them.
 
-### Two phases of ML (Way 1: Machine Learning)
+### Two phases of ML (Machine Learning)
 
 | Phase         | What it is                                                                                                                                                                                            | GenAI analogue                                                     |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -33,14 +21,14 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 
 **Core idea:** Training = find parameters (e.g. via gradient of loss) so predictions match reality. Inference = use those parameters on new inputs.
 
-### Way 2: Deep Learning (DL)
+### Deep Learning (DL)
 
 - **DL** = training **neural networks** that learn useful **features** from raw data without hand-crafted feature engineering.
 - **Neuron** = linear combination of inputs + **nonlinear activation** (e.g. ReLU). Stacking neurons in **layers** lets NNs approximate complex functions.
 - **Training NNs:** Loss is usually **non-convex** → use **gradient descent** (or variants) to iteratively update parameters; **optimizer** and **hyperparameters** (learning rate, batch size) guide the process.
 - **Feature engineering** = manually defining input variables; important in classical ML, less so in DL (NNs learn features).
 
-### Way 3: Reinforcement Learning (RL)
+### Reinforcement Learning (RL)
 
 - **RL** = learning through **trial and error**; no ground-truth labels—only a **reward signal** (e.g. win/lose, human preference).
 - **Key difference vs supervised:** In supervised we minimize loss vs explicit targets. In RL we **maximize** cumulative reward; updates use **gradient ascent** (e.g. REINFORCE).
@@ -111,7 +99,7 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 
 ---
 
-## 1. CORE COMPONENTS
+## 2. CORE COMPONENTS
 
 | Component          | What It Is                                   | Purpose                              | Key Choice                   |
 | ------------------ | -------------------------------------------- | ------------------------------------ | ---------------------------- |
@@ -123,7 +111,7 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 | **Context Window** | Max tokens model can process (4K-1M)         | Limits input + output length         | Cost grows with length       |
 | **KV Cache**       | Stores computed attention keys/values        | Avoid recomputation                  | Grows with context length    |
 
-## 2. ARCHITECTURES
+## 3. ARCHITECTURES
 
 ### Where they sit (taxonomy)
 
@@ -198,7 +186,7 @@ Causal attention      Bidirectional          Cross-attention         Top-K exper
 
 **MoE key insight:** 8×7B model = 56B total params, but only ~14B active per token → capacity of large, cost of small. Memory is the catch: you still load all experts.
 
-## 3. TRAINING STAGES
+## 4. TRAINING STAGES
 
 ```
 PRETRAINING              SFT                      RLHF
@@ -215,7 +203,7 @@ Next-token prediction    Same objective           Reward model + PPO
 | **SFT**         | 10K-100K (prompt, response) pairs      | Next-token on instruction format | Instruction-tuned           |
 | **RLHF**        | Human preference rankings              | Maximize reward model score      | Aligned (helpful, harmless) |
 
-## 4. KEY TECHNIQUES
+## 5. KEY TECHNIQUES
 
 | Technique              | What It Does                       | When to Use                  | Trade-off                 |
 | ---------------------- | ---------------------------------- | ---------------------------- | ------------------------- |
@@ -229,7 +217,7 @@ Next-token prediction    Same objective           Reward model + PPO
 
 **RAG vs fine-tune (when):** RAG when data changes often or you need citations; fine-tune when you need custom style/domain or RAG isn’t accurate enough. LoRA/PEFT for cheaper fine-tune.
 
-## 5. RAG PIPELINE (Most Common Pattern)
+## 6. RAG PIPELINE (Most Common Pattern)
 
 ```
 Query → Embed → Vector Search → Rerank → Top-K chunks → LLM + context → Answer
@@ -253,7 +241,7 @@ Query → Embed → Vector Search → Rerank → Top-K chunks → LLM + context 
 | **Context Precision** | % retrieved chunks relevant | > 0.8 |
 | **Context Recall** | % relevant chunks retrieved | > 0.8 |
 
-## 6. AGENT PATTERNS
+## 7. AGENT PATTERNS
 
 ```
 SINGLE AGENT              MULTI-AGENT               ORCHESTRATION
@@ -278,7 +266,7 @@ ReAct loop                Handoffs between          DAG of steps
 | **Code Execution** | Agent sandbox | Python, SQL |
 | **MCP Tools** | External servers | Standardized tool protocol |
 
-## 7. SERVING & OPTIMIZATION
+## 8. SERVING & OPTIMIZATION
 
 | Concept                  | What It Is                            | Why It Matters                          |
 | ------------------------ | ------------------------------------- | --------------------------------------- |
@@ -298,7 +286,7 @@ ReAct loop                Handoffs between          DAG of steps
 | INT8 | 0.25× | 2× | 1-2% loss |
 | INT4 | 0.125× | 3× | 3-5% loss |
 
-## 8. IMAGE GENERATION
+## 9. IMAGE GENERATION
 
 ### Diffusion Models (DALL-E, Stable Diffusion, Imagen)
 
@@ -341,7 +329,7 @@ Training: G tries to fool D, D tries to catch G → adversarial
 | **Truncation (ψ)** | Trade diversity for quality          |
 | **Latent Space**   | 512-dim noise vector → style control |
 
-## 9. VIDEO GENERATION (Sora, Movie Gen)
+## 10. VIDEO GENERATION (Sora, Movie Gen)
 
 ```
 Text → DiT with Temporal Layers → Low-res video → Spatial SR → Temporal SR → Final
@@ -357,7 +345,7 @@ Text → DiT with Temporal Layers → Low-res video → Spatial SR → Temporal 
 | **Spatial Super-Resolution**  | 160×90 → 1280×720                        |
 | **Temporal Super-Resolution** | 8fps → 24fps                             |
 
-## 10. MULTIMODAL (Vision-Language)
+## 11. MULTIMODAL (Vision-Language)
 
 ```
 IMAGE CAPTIONING:
@@ -373,7 +361,7 @@ Image + Question → Encoder + Cross-attention → Decoder → Answer
 | **LLaVA**         | ViT + LLaMA                     | Open-source VQA |
 | **Gemini Vision** | Multimodal encoder + decoder    | Everything      |
 
-## 11. ALL METRICS YOU NEED TO KNOW
+## 12. ALL METRICS YOU NEED TO KNOW
 
 ### Text Generation
 
@@ -454,7 +442,7 @@ Image + Question → Encoder + Cross-attention → Decoder → Answer
 | **Latency P50/P95/P99** | Response time distribution       |
 | **Throughput**          | Requests/second or tokens/second |
 
-## 12. COST FORMULA
+## 13. COST FORMULA
 
 ```
 Cost = (Input tokens × input price) + (Output tokens × output price)
@@ -472,7 +460,7 @@ Example: 2K input + 500 output @ Gemini Pro ($0.50/1M in, $1.50/1M out)
 | **Prompt Optimization** | 10-30% | Shorter prompts |
 | **Quantization** | 20-40% | INT8/INT4 models |
 
-## 13. SECURITY & GUARDRAILS
+## 14. SECURITY & GUARDRAILS
 
 ### Threat Model
 
@@ -505,7 +493,7 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 | **PII Detection** | Cloud DLP      | Amazon Macie       |
 | **Secrets**       | Secret Manager | Secrets Manager    |
 
-## 14. SCALABILITY PATTERNS
+## 15. SCALABILITY PATTERNS
 
 ### GPU Quick Reference
 
@@ -546,7 +534,7 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 | ZeRO-2 | + Gradients | ~8× |
 | ZeRO-3 | + Parameters | ~N× (N = GPUs) |
 
-## 15. INTERVIEW FRAMEWORK (45 min)
+## 16. INTERVIEW FRAMEWORK (45 min)
 
 | Phase               | Time      | What to Cover                                |
 | ------------------- | --------- | -------------------------------------------- |
@@ -557,7 +545,7 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 
 **Always do**: Back-of-envelope (tokens × price, latency breakdown)
 
-## 16. QUICK DECISION GUIDE
+## 17. QUICK DECISION GUIDE
 
 | Need                 | Solution                                     |
 | -------------------- | -------------------------------------------- |
@@ -573,7 +561,7 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 | Generate video       | **DiT + temporal layers** (Sora)             |
 | Generate faces       | **StyleGAN**                                 |
 
-## 17. PLATFORM COMPARISON
+## 18. PLATFORM COMPARISON
 
 |                | Google Cloud               | AWS                       |
 | -------------- | -------------------------- | ------------------------- |
@@ -585,7 +573,7 @@ HTTP Layer → Auth → INPUT GUARDRAILS → LLM → OUTPUT GUARDRAILS → Respo
 | **Image Gen**  | Imagen 3                   | Titan Image, SD           |
 | **Video Gen**  | Veo                        | -                         |
 
-## 17b. TABLE OF TOOLS (by category)
+## 18b. TABLE OF TOOLS (by category)
 
 Quick lookup: which tool to use for what. Aligned with full guide (E.1–E.10, D.2, F.1).
 
@@ -619,7 +607,7 @@ Quick lookup: which tool to use for what. Aligned with full guide (E.1–E.10, D
 
 **Stack snapshots (full guide):** Real-world examples in F.1 combine these (e.g. Document AI + LangChain chunking + Vertex Vector Search + Gemini + RAGAS; or vLLM on GKE + LangChain + Pinecone).
 
-## 18. MODEL QUICK REFERENCE
+## 19. MODEL QUICK REFERENCE
 
 | Model                | Type             | Params                 | Notes              |
 | -------------------- | ---------------- | ---------------------- | ------------------ |
@@ -631,7 +619,7 @@ Quick lookup: which tool to use for what. Aligned with full guide (E.1–E.10, D
 | **Stable Diffusion** | Latent Diffusion | ~1B                    | Open-source images |
 | **Sora**             | DiT + temporal   | Undisclosed            | Video generation   |
 
-## 19. RED FLAGS IN INTERVIEWS
+## 20. RED FLAGS IN INTERVIEWS
 
 | Red Flag              | Better Answer                 |
 | --------------------- | ----------------------------- |
