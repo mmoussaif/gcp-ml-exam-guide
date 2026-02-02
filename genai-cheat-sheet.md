@@ -28,6 +28,28 @@
 
 ## 2. ARCHITECTURES
 
+### Where they sit (taxonomy)
+
+- **Transformer** = the base architecture (2017): stacked layers of **self-attention** + **feed-forward (FFN)**. Everything below is built on it.
+- **Decoder-only, encoder-only, encoder-decoder** = **Transformer variants** (which stacks you use and how attention is masked):
+  - They are **not** separate architectures; they are **configurations** of the Transformer: use only the decoder stack (causal), only the encoder stack (bidirectional), or both with cross-attention.
+  - So: same building blocks (attention, FFN), different **layout** and **attention pattern**.
+- **MoE** = a **technique** applied _inside_ a Transformer layer, not a replacement for it:
+  - You keep a standard variant (usually **decoder-only**). In each layer, the **FFN block** is replaced by a **MoE block**: a small router + many “expert” FFNs; only top-K experts run per token.
+  - So: MoE is a **submodel/module** (the FFN is replaced by router + experts); the rest (embedding, attention, prediction head) is unchanged. Mixtral is a **decoder-only Transformer with MoE FFNs**.
+
+**One-line:** Transformer = base. Decoder/encoder/encoder-decoder = variants (which stack + attention pattern). MoE = technique that swaps the FFN for a sparse MoE block inside a Transformer layer.
+
+```
+Transformer (base)
+├── Variants (which stack + attention)
+│   ├── Decoder-only   → causal self-attention only (GPT, LLaMA, Claude)
+│   ├── Encoder-only   → bidirectional self-attention only (BERT)
+│   └── Encoder-decoder → encoder (bidir.) + decoder (causal + cross-attn) (T5)
+└── Optional modification inside a variant
+    └── MoE → replace dense FFN with router + expert FFNs (Mixtral, Gemini 1.5)
+```
+
 ```
 DECODER-ONLY          ENCODER-ONLY           ENCODER-DECODER         MoE (Mixture of Experts)
 (GPT, LLaMA, Gemini)  (BERT, RoBERTa)        (T5, BART)              (Mixtral, Gemini 1.5)
@@ -37,7 +59,47 @@ Causal attention      Bidirectional          Cross-attention         Top-K exper
 → Chatbots, code      → Classification       → Translation           → High capacity, low cost
 ```
 
-**MoE Key Insight**: 8×7B model = 56B total params, but only ~14B active per token → capacity of large, cost of small
+### What each architecture does
+
+| Architecture        | What it does                                                                                          | Attention                                                                | Best for                                           | Examples                              |
+| ------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------ | -------------------------------------------------- | ------------------------------------- |
+| **Decoder-only**    | Generates output token-by-token; one stack of layers                                                  | **Causal**: each token sees only past tokens (no future)                 | Text generation, chatbots, code completion         | GPT-4, LLaMA, Claude, Gemini (text)   |
+| **Encoder-only**    | Processes entire input at once; outputs a representation or label                                     | **Bidirectional**: each token sees all tokens                            | Classification, NER, embeddings, search, reranking | BERT, RoBERTa, DeBERTa                |
+| **Encoder-decoder** | Encoder reads input; decoder generates output; they’re separate stacks                                | Encoder: bidirectional. Decoder: causal + **cross-attention** to encoder | Translation, summarization, Q&A as text-to-text    | T5, BART, mT5                         |
+| **MoE**             | Decoder-only (or encoder-decoder) but FFN is replaced by many “experts”; router picks top-K per token | Same as base (causal); compute is **sparse** in the FFN                  | High capability without proportional compute cost  | Mixtral 8×7B, Gemini 1.5, DeepSeek-V2 |
+
+**Attention in one line:** Causal = “see only the past” (for generation). Bidirectional = “see full sentence” (for understanding). Cross-attention = “decoder looks at encoder output” (for input→output tasks).
+
+### Decoder-only (LLMs you use daily)
+
+- **Flow:** Input tokens → embedding + position → many layers of (self-attention + FFN) → prediction head → next-token probabilities.
+- **Self-attention:** Each position can attend only to positions **to the left** (causal mask). So the model can’t “see the future” and is suitable for autoregressive generation.
+- **Use when:** Chat, code completion, any “generate the next token” task. This is the default for GPT, LLaMA, Claude, Gemini (for text).
+
+### Encoder-only (understanding, not generation)
+
+- **Flow:** Input tokens → embedding + position → many layers of (self-attention + FFN) → pooled or per-token representation (or classification head).
+- **Self-attention:** Each position can attend to **all** positions (bidirectional). Full context in one pass.
+- **Use when:** Classification, NER, embeddings (e.g. for RAG), or as a **cross-encoder** for reranking (query + document in one forward pass).
+
+### Encoder-decoder (input → output transformation)
+
+- **Flow:** Encoder: input → bidirectional self-attention → encoder output (context). Decoder: previous output tokens → causal self-attention → **cross-attention to encoder output** → FFN → next-token prediction.
+- **Cross-attention:** Decoder token “asks” which encoder positions to focus on (e.g. “hello” → “bonjour”). Lets the decoder align output to input.
+- **Use when:** Translation, summarization, or any task where input and output are different lengths and the model must “read then write.” T5 frames many tasks as text-to-text.
+
+### MoE (Mixture of Experts) in more detail
+
+- **Idea:** Keep one shared **attention** stack, but replace the single **FFN** with many small FFNs (“experts”). For each token, a small **router** (gating network) picks the **top-K experts** (e.g. K=2); only those run. Their outputs are combined by router weights.
+- **Dense vs sparse:** Dense = every token uses the same full FFN. MoE = every token uses only a subset of experts → **capacity** (many params) with **cost** proportional to active params.
+- **Numbers:** 8×7B with top-2 → 56B total params, ~14B active per token. So: “capacity of a large model, compute of a smaller one.”
+- **Trade-offs:**
+  - **Pros:** Higher quality at similar latency; better scaling.
+  - **Cons:** Full model still in memory (all experts loaded); router can be imbalanced (load-balancing loss in training); fine-tuning is trickier.
+- **When to choose:** Use **MoE** when you want more capability without a proportional latency increase. Use **dense** when memory is tight (e.g. edge) or you need simpler fine-tuning.
+- **Notable MoE:** Mixtral 8×7B (8 experts, top-2, ~47B total, ~13B active); Mixtral 8×22B (~141B total, ~39B active); DeepSeek-V2 (236B total, ~21B active, 160 experts top-6); Gemini 1.5 (MoE-based); GPT-4 (rumored MoE).
+
+**MoE key insight:** 8×7B model = 56B total params, but only ~14B active per token → capacity of large, cost of small. Memory is the catch: you still load all experts.
 
 ## 3. TRAINING STAGES
 
