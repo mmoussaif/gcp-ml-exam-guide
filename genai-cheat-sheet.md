@@ -28,11 +28,59 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 - **Training NNs:** Loss is usually **non-convex** → use **gradient descent** (or variants) to iteratively update parameters; **optimizer** and **hyperparameters** (learning rate, batch size) guide the process.
 - **Feature engineering** = manually defining input variables; important in classical ML, less so in DL (NNs learn features).
 
+### Neurons, activations, layers, networks (zoo)
+
+**Neurons**
+
+| Name        | Description                                                                   |
+| ----------- | ----------------------------------------------------------------------------- |
+| **Vanilla** | Basic unit computing weighted sum + activation; used in FFNNs and CNNs        |
+| **LSTM**    | Advanced neuron with memory and gates for long-term dependencies in sequences |
+
+**Activations**
+
+| Name        | Description                                                                           |
+| ----------- | ------------------------------------------------------------------------------------- |
+| **ReLU**    | max(0, x); fast, widely used in deep networks                                         |
+| **Sigmoid** | S-shaped, output in (0, 1); used in binary classification                             |
+| **Tanh**    | Like sigmoid but centered at 0; output in (-1, 1)                                     |
+| **Softmax** | Outputs a probability distribution; used in final layer of multi-class classification |
+
+**Layers**
+
+| Name                | Description                                                                   |
+| ------------------- | ----------------------------------------------------------------------------- |
+| **Fully Connected** | Standard layer where each neuron connects to all inputs                       |
+| **Recurrent**       | Maintains memory across timesteps; used in RNNs, LSTMs                        |
+| **Convolutional**   | Extracts spatial features using filters; used in image data                   |
+| **Attention**       | Computes weighted importance of different inputs; key in Transformers         |
+| **Pooling**         | Downsamples spatial data; used in CNNs to reduce size and noise               |
+| **Normalization**   | Stabilizes training by normalizing activations; includes BatchNorm, LayerNorm |
+| **Dropout**         | Randomly deactivates neurons during training to prevent overfitting           |
+
+**Networks**
+
+| Name                   | Description                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------- |
+| **Feedforward (FFNN)** | Basic architecture with no loops; used for static input–output tasks                        |
+| **RNN**                | Handles sequential data using recurrence; remembers previous inputs                         |
+| **CNN**                | Uses convolutions to process grid-like data such as images                                  |
+| **Transformer**        | Uses self-attention to model sequences without recurrence; state-of-the-art in NLP & beyond |
+
 ### Reinforcement Learning (RL)
 
 - **RL** = learning through **trial and error**; no ground-truth labels—only a **reward signal** (e.g. win/lose, human preference).
 - **Key difference vs supervised:** In supervised we minimize loss vs explicit targets. In RL we **maximize** cumulative reward; updates use **gradient ascent** (e.g. REINFORCE).
 - **Examples:** AlphaGo (learned by playing itself); **RLHF** (reward from human preferences to align LLMs); o1 / deep research (RL-based reasoning).
+
+### Popular RL algorithms
+
+| Name                                          | Key idea                                                                           | Objective / note                                                                                                                         |
+| --------------------------------------------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **REINFORCE**                                 | Monte Carlo policy gradient using full returns                                     | Maximize \( J(\theta) = \mathbb{E}_t[\nabla_\theta \log \pi\_\theta(a_t \mid s_t) \cdot R_t] \)                                          |
+| **TRPO** (Trust Region Policy Optimization)   | Constrain policy updates with a KL-divergence trust region for stable improvements | Subject to \( \mathbb{E}_t[D_{KL}(\pi*{\theta*{\text{old}}} \| \pi\_\theta)] \leq \delta \)                                              |
+| **PPO** (Proximal Policy Optimization)        | Approximates TRPO with a clipped surrogate objective; practical and stable         | Clip ratio \( r*t(\theta) = \pi*\theta(a*t \mid s_t) / \pi*{\theta\_{\text{old}}}(a_t \mid s_t) \) to \([1-\varepsilon, 1+\varepsilon]\) |
+| **GRPO** (Group Relative Policy Optimization) | Encourages exploration by optimizing relative advantages within action groups      | Used in LLM alignment (e.g. group-wise advantage); no global baseline                                                                    |
 
 ### Data: quantity and quality
 
@@ -57,6 +105,17 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 | **Reinforcement** | Learn from trial and reward (agent acts, gets feedback) | Rewards / preferences | Maximize long-term reward        | RLHF: human preferences → reward model → policy update             |
 
 **For builders:** (1) **Use a pre-trained model + prompting** — no training; fast. (2) **Fine-tune** — adapt with your data (SFT, LoRA). (3) **Train from scratch** — data curation, pretraining, scaling (rare; use only when necessary).
+
+### Popular supervised learning techniques
+
+| Name                             | Description                                                                           | Loss function                                                | Type           |
+| -------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------ | -------------- |
+| **Linear Regression**            | Predicts continuous output by fitting a linear relationship between inputs and output | Mean Squared Error (MSE)                                     | Regression     |
+| **Logistic Regression**          | Models the probability of a binary outcome using a logistic (sigmoid) function        | Binary Cross-Entropy (Log Loss)                              | Classification |
+| **Decision Tree**                | Splits data into branches based on feature values to make predictions                 | Impurity measures (e.g. Gini, Entropy, MSE)                  | Both           |
+| **Random Forest**                | Ensemble of decision trees averaged (regression) or voted (classification)            | Same as Decision Tree                                        | Both           |
+| **XGBoost**                      | Gradient boosting framework that builds trees sequentially to correct prior errors    | Customizable; often Log Loss or MSE                          | Both           |
+| **SVM** (Support Vector Machine) | Finds the optimal hyperplane that separates classes or fits data                      | Hinge loss (classification), ε-insensitive loss (regression) | Both           |
 
 ### Intelligence and models (cheat-sheet view)
 
@@ -83,6 +142,24 @@ _AI is built on ML; skipping fundamentals leads to technical debt, bottlenecks, 
 | **Learning rate**        | Step size for parameter updates; too high = unstable; too low = slow.        |
 | **Regularization**       | Penalties (e.g. weight decay, dropout) to reduce overfitting.                |
 | **Train / val / test**   | Train = fit model; validation = tune/early-stop; test = final eval (unseen). |
+
+### Common optimizers
+
+| Name                                  | Description                                                          | Data sampled               | Key hyperparameters                                       |
+| ------------------------------------- | -------------------------------------------------------------------- | -------------------------- | --------------------------------------------------------- |
+| **Gradient Descent**                  | Updates parameters using the gradient on the entire dataset          | Full dataset (batch)       | Learning rate (γ)                                         |
+| **SGD** (Stochastic Gradient Descent) | Updates parameters using the gradient from a single random example   | One data point at a time   | Learning rate (γ)                                         |
+| **Mini-Batch Gradient Descent**       | Combines efficiency and noise reduction using small random batches   | Batch of data (e.g. 8, 16) | Learning rate (γ), batch size                             |
+| **Adam** (Adaptive Moment Estimation) | Combines momentum and RMSProp; adaptive learning rates per parameter | Mini-batches (usually)     | Learning rate (γ), β₁ (momentum), β₂ (RMS), ε (stability) |
+
+### Common hyperparameters
+
+| Name                  | Description                                                                    |
+| --------------------- | ------------------------------------------------------------------------------ |
+| **Epoch**             | Number of times the entire dataset is passed through the model during training |
+| **Learning rate (γ)** | Controls how much to adjust weights with respect to the gradient               |
+| **Batch size**        | Number of samples used to compute each update to the model’s weights           |
+| **Dropout**           | Fraction of neurons randomly set to 0 during training to prevent overfitting   |
 
 ### For builders (three options)
 
@@ -648,6 +725,34 @@ Short definitions for terms used in the full guide. **Why** = why it matters for
 | **Inference**               | Running a trained model (prompt → response).                                                | Most cost is inference, not training.                                              |
 | **Attention / Transformer** | Mechanism to focus on relevant input; architecture behind LLMs.                             | Enables long context and reasoning; KV cache is the main memory cost.              |
 | **Encoder / Decoder**       | Encoder = understand (BERT). Decoder = generate (GPT). Encoder-decoder = transform (T5).    | Decoder-only for chat/code; encoder-decoder for translation/summarization.         |
+
+### Classical ML, NN & RL acronyms
+
+| Term              | Definition                                                                               | Why                                                                         |
+| ----------------- | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| **MSE**           | Mean Squared Error; loss for regression (average of squared residuals).                  | Default loss for linear regression; differentiable, penalizes large errors. |
+| **Log Loss**      | Binary Cross-Entropy; loss for binary classification (log probability of correct class). | Standard for logistic regression and binary classifiers.                    |
+| **SVM**           | Support Vector Machine; finds optimal separating hyperplane (or fit in regression).      | Strong baseline for tabular data; hinge/ε-insensitive loss.                 |
+| **XGBoost**       | Extreme Gradient Boosting; gradient boosting with regularization.                        | Dominant for tabular ML; sequential trees correct prior errors.             |
+| **FFNN**          | Feedforward Neural Network; layers with no loops, static input → output.                 | Basic deep net; used in MLPs and as sub-blocks in Transformers.             |
+| **CNN**           | Convolutional Neural Network; uses convolution filters for grid-like data (e.g. images). | Standard for vision; spatial feature extraction.                            |
+| **RNN**           | Recurrent Neural Network; recurrence over time; maintains hidden state.                  | Classic sequence model; superseded by Transformers for long context.        |
+| **LSTM**          | Long Short-Term Memory; RNN with gates to capture long-range dependencies.               | Reduces vanishing gradients in RNNs; used in older sequence models.         |
+| **ReLU**          | Rectified Linear Unit; activation max(0, x).                                             | Default activation in deep nets; fast, avoids some vanishing gradients.     |
+| **Sigmoid**       | S-shaped activation, output in (0, 1).                                                   | Binary classification output; probability.                                  |
+| **Tanh**          | Hyperbolic tangent; like sigmoid but output in (-1, 1), centered at 0.                   | Used in gates (e.g. LSTM); zero-centered.                                   |
+| **Softmax**       | Converts logits to a probability distribution over classes.                              | Final layer for multi-class classification.                                 |
+| **BatchNorm**     | Batch Normalization; normalizes activations over the batch dimension.                    | Stabilizes training; standard in CNNs.                                      |
+| **LayerNorm**     | Layer Normalization; normalizes over feature dimension (per token).                      | Standard in Transformers; stable for variable batch/length.                 |
+| **NLP**           | Natural Language Processing; models and systems for text/speech.                         | Transformers are state-of-the-art in NLP.                                   |
+| **SGD**           | Stochastic Gradient Descent; parameter updates from (mini-)batch gradient.               | Base optimizer; learning rate γ.                                            |
+| **Adam**          | Adaptive Moment Estimation; combines momentum and per-parameter adaptive learning rates. | Default optimizer for deep learning; γ, β₁, β₂, ε.                          |
+| **RMSProp**       | Root Mean Square Propagation; adaptive learning rate from squared gradient.              | Component of Adam; good for non-stationary objectives.                      |
+| **REINFORCE**     | Monte Carlo policy gradient; maximize return using full episode gradient.                | Basic RL policy gradient; high variance.                                    |
+| **TRPO**          | Trust Region Policy Optimization; policy updates constrained by KL to old policy.        | Stable RL; used in robotics and alignment.                                  |
+| **PPO**           | Proximal Policy Optimization; clipped surrogate objective approximating TRPO.            | Default for RLHF and many RL tasks; stable and practical.                   |
+| **GRPO**          | Group Relative Policy Optimization; relative advantages within groups (e.g. for LLMs).   | Used in LLM alignment; group-wise baselines.                                |
+| **KL-divergence** | Kullback–Leibler divergence; measure of difference between two distributions.            | Used in TRPO/PPO to limit policy change; in RLHF for regularization.        |
 
 ### Tokens & generation
 
