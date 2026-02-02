@@ -1,0 +1,1080 @@
+# 🧠 GenAI System Design Cheat Sheet
+
+---
+
+## 📑 Table of Contents
+
+1. [ML Foundations](#1-ml-foundations)
+2. [Core Components](#2-core-components)
+3. [Architectures](#3-architectures)
+4. [Training Stages](#4-training-stages)
+5. [Key Techniques](#5-key-techniques)
+6. [RAG Pipeline](#6-rag-pipeline)
+7. [Agent Patterns](#7-agent-patterns)
+8. [Serving & Optimization](#8-serving--optimization)
+9. [Image Generation](#9-image-generation)
+10. [Video Generation](#10-video-generation)
+11. [Multimodal](#11-multimodal-vision-language)
+12. [All Metrics](#12-all-metrics)
+13. [Cost & Optimization](#13-cost--optimization)
+14. [Security & Guardrails](#14-security--guardrails)
+15. [Scalability Patterns](#15-scalability-patterns)
+16. [Back-of-Envelope Calculations](#16-back-of-envelope-calculations)
+17. [Platform Comparison](#17-platform-comparison)
+18. [Model Quick Reference](#18-model-quick-reference)
+19. [Interview Framework](#19-interview-framework)
+20. [Glossary](#20-glossary)
+
+---
+
+## 1. ML Foundations
+
+### 🧠 Intelligence & Models
+
+```
+Intelligence = Internal model of the world → Make predictions
+Better model → More accurate predictions
+```
+
+| Concept | Traditional Software | Machine Learning |
+|---------|---------------------|------------------|
+| **How it works** | Programmers write explicit rules | Computer learns from examples |
+| **Input** | Rules + Data | Examples (Data) |
+| **Output** | Predictions | Model + Predictions |
+
+### 📊 Two Phases of ML
+
+```mermaid
+flowchart LR
+    subgraph Training["🎯 Training Phase"]
+        D[Data] --> L[Loss Function]
+        L --> O[Optimizer]
+        O --> P[Parameters]
+    end
+
+    subgraph Inference["🚀 Inference Phase"]
+        I[New Input] --> M[Trained Model]
+        M --> PR[Prediction]
+    end
+
+    P --> M
+```
+
+| Phase | What It Is | GenAI Analogue |
+|-------|-----------|----------------|
+| **Training** | Fit model to data by minimizing **loss** | Pretraining, SFT, RLHF |
+| **Inference** | Apply trained model to new data | API calls, production serving |
+
+### 🔢 Key Formulas
+
+#### Loss Functions
+
+**Mean Squared Error (Regression):**
+$$\mathcal{L}_{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2$$
+
+**Cross-Entropy (Classification):**
+$$\mathcal{L}_{CE} = -\sum_{i=1}^{C} y_i \log(\hat{y}_i)$$
+
+**Language Model Loss:**
+$$\mathcal{L}_{LM} = -\frac{1}{T}\sum_{t=1}^{T} \log P(x_t | x_{<t})$$
+
+#### Gradient Descent Update
+
+$$\theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)$$
+
+> **💡 Intuition:** Move parameters in the direction that reduces loss. Learning rate η controls step size.
+
+### 🧬 Deep Learning Building Blocks
+
+#### Neurons & Activations
+
+| Activation | Formula | Use Case |
+|------------|---------|----------|
+| **ReLU** | $\max(0, x)$ | Default in deep nets |
+| **Sigmoid** | $\frac{1}{1+e^{-x}}$ | Binary classification, gates |
+| **Tanh** | $\frac{e^x - e^{-x}}{e^x + e^{-x}}$ | Centered output (-1, 1) |
+| **Softmax** | $\frac{e^{x_i}}{\sum_j e^{x_j}}$ | Multi-class probabilities |
+| **GELU** | $x \cdot \Phi(x)$ | Transformers (smoother ReLU) |
+
+#### Layer Types
+
+| Layer | Purpose | Used In |
+|-------|---------|---------|
+| **Fully Connected** | All-to-all connections | MLPs, classification heads |
+| **Convolutional** | Spatial feature extraction | CNNs, image processing |
+| **Recurrent** | Sequential memory | RNNs, LSTMs (legacy) |
+| **Attention** | Weighted importance | Transformers |
+| **LayerNorm** | Normalize per-token | Transformers |
+| **Dropout** | Regularization | Training only |
+
+### 🎮 Reinforcement Learning
+
+```mermaid
+flowchart LR
+    A[Agent] -->|Action| E[Environment]
+    E -->|State, Reward| A
+    A -->|Policy π| A
+```
+
+**Key Difference from Supervised Learning:**
+- Supervised: Minimize loss vs explicit labels
+- RL: **Maximize** cumulative reward through trial and error
+
+#### RL Algorithms for LLMs
+
+| Algorithm | Key Idea | Formula |
+|-----------|----------|---------|
+| **REINFORCE** | Monte Carlo policy gradient | $\nabla J(\theta) = \mathbb{E}[\nabla \log \pi_\theta(a|s) \cdot R]$ |
+| **PPO** | Clipped surrogate objective | $L^{CLIP} = \min(r_t A_t, \text{clip}(r_t, 1-\epsilon, 1+\epsilon) A_t)$ |
+| **TRPO** | Trust region constraint | Subject to $D_{KL}(\pi_{old} \| \pi) \leq \delta$ |
+| **GRPO** | Group relative advantages | Used in DeepSeek, LLM alignment |
+
+**PPO Probability Ratio:**
+$$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{old}(a_t|s_t)}$$
+
+### 📚 Three Ways Computers Learn
+
+| Way | Signal | Data | GenAI Example |
+|-----|--------|------|---------------|
+| **Supervised** | Labels | (input, output) pairs | SFT fine-tuning |
+| **Unsupervised** | None | Raw data | Pretraining (next-token) |
+| **Reinforcement** | Rewards | Actions + feedback | RLHF alignment |
+
+### 📈 Popular Supervised Learning Techniques
+
+| Name | Description | Loss Function | Type |
+|------|-------------|---------------|------|
+| **Linear Regression** | Predicts continuous output via linear relationship | MSE: $\frac{1}{n}\sum(y_i - \hat{y}_i)^2$ | Regression |
+| **Logistic Regression** | Models binary outcome probability via sigmoid | Binary Cross-Entropy | Classification |
+| **Decision Tree** | Splits data by feature values | Gini, Entropy, MSE | Both |
+| **Random Forest** | Ensemble of trees (averaged/voted) | Same as Decision Tree | Both |
+| **XGBoost** | Gradient boosting with regularization | Customizable (Log Loss, MSE) | Both |
+| **SVM** | Finds optimal separating hyperplane | Hinge loss, ε-insensitive | Both |
+
+### 🔧 Common Optimizers
+
+| Optimizer | Description | Key Hyperparameters |
+|-----------|-------------|---------------------|
+| **SGD** | Basic gradient descent | Learning rate (η) |
+| **Adam** | Adaptive moments | η, β₁=0.9, β₂=0.999, ε=1e-8 |
+| **AdamW** | Adam + weight decay | Same + weight decay |
+
+**Adam Update:**
+$$m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$$
+$$v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$$
+$$\theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}$$
+
+---
+
+## 2. Core Components
+
+```mermaid
+flowchart TB
+    subgraph Input["📥 Input"]
+        Q[Query/Prompt]
+        T[Tokenizer]
+    end
+
+    subgraph Processing["⚙️ Processing"]
+        E[Embeddings]
+        LLM[LLM]
+        KV[KV Cache]
+    end
+
+    subgraph Output["📤 Output"]
+        G[Generation]
+        R[Response]
+    end
+
+    Q --> T --> E --> LLM
+    KV --> LLM
+    LLM --> G --> R
+```
+
+| Component | What It Is | Key Choice |
+|-----------|-----------|------------|
+| **LLM** | Large language model (GPT, Gemini, Claude) | Size vs cost vs latency |
+| **Embeddings** | Dense vector representation | Dimension (768-3072) |
+| **Vector DB** | Similarity search database | FAISS, Pinecone, Vertex AI |
+| **Tokenizer** | Text → tokens (BPE, SentencePiece) | Vocab size, subword handling |
+| **Prompt** | Instructions + context | System prompt, few-shot |
+| **Context Window** | Max tokens (4K-2M) | Cost grows with length |
+| **KV Cache** | Stored attention keys/values | Grows with context |
+
+---
+
+## 3. Architectures
+
+### 🏗️ Architecture Taxonomy
+
+```
+Transformer (base architecture, 2017)
+├── Variants (which stack + attention pattern)
+│   ├── Decoder-only   → Causal attention (GPT, LLaMA, Claude)
+│   ├── Encoder-only   → Bidirectional (BERT)
+│   └── Encoder-decoder → Cross-attention (T5, BART)
+└── Modifications
+    └── MoE → Replace FFN with router + experts (Mixtral, Gemini 1.5)
+```
+
+### 🔄 Transformer Core
+
+```mermaid
+flowchart TB
+    subgraph Layer["Transformer Layer ×N"]
+        I[Input] --> ATT[Multi-Head Attention]
+        ATT --> AN1[Add & Norm]
+        AN1 --> FFN[Feed-Forward Network]
+        FFN --> AN2[Add & Norm]
+        AN2 --> O[Output]
+    end
+```
+
+#### Self-Attention Formula
+
+$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+
+#### Multi-Head Attention
+
+$$\text{MultiHead}(Q, K, V) = \text{Concat}(head_1, ..., head_h)W^O$$
+$$head_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$$
+
+#### Positional Encoding
+
+$$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)$$
+$$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)$$
+
+### 📊 Architecture Comparison
+
+| Architecture | Attention | Best For | Examples |
+|--------------|-----------|----------|----------|
+| **Decoder-only** | Causal (see past only) | Text generation, chat | GPT-4, LLaMA, Claude |
+| **Encoder-only** | Bidirectional | Classification, embeddings | BERT, RoBERTa |
+| **Encoder-decoder** | Cross-attention | Translation, summarization | T5, BART |
+| **MoE** | Same + sparse FFN | High capacity, lower cost | Mixtral, Gemini 1.5 |
+
+### 🎯 MoE (Mixture of Experts)
+
+```mermaid
+flowchart LR
+    I[Input Token] --> R[Router/Gating]
+    R -->|Top-K| E1[Expert 1]
+    R -->|Top-K| E2[Expert 2]
+    R -.->|Not selected| E3[Expert 3...]
+    E1 --> C[Combine]
+    E2 --> C
+    C --> O[Output]
+```
+
+**Key Insight:**
+- Mixtral 8×7B = **56B total params**, but only **~14B active** per token
+- Capacity of large model, compute cost of smaller one
+- Trade-off: All experts must be in memory
+
+| Model | Total Params | Active Params | Experts |
+|-------|-------------|---------------|---------|
+| Mixtral 8×7B | 47B | ~13B | 8, top-2 |
+| Mixtral 8×22B | 141B | ~39B | 8, top-2 |
+| DeepSeek-V2 | 236B | ~21B | 160, top-6 |
+
+---
+
+## 4. Training Stages
+
+```mermaid
+flowchart LR
+    subgraph PT["Stage 1: Pretraining"]
+        A["Web, Books, Code<br/>(Trillions tokens)"] --> B["Next-token prediction"]
+    end
+
+    subgraph SFT["Stage 2: SFT"]
+        B --> C["Instruction pairs<br/>(10K-100K)"]
+    end
+
+    subgraph RLHF["Stage 3: RLHF/DPO"]
+        C --> D["Human preferences<br/>Reward model + PPO"]
+    end
+
+    D --> E["✅ Aligned Model"]
+```
+
+| Stage | Data | Objective | Output |
+|-------|------|-----------|--------|
+| **Pretraining** | Trillions of tokens | Next-token prediction | Base model |
+| **SFT** | 10K-100K (prompt, response) | Same, instruction format | Instruction-tuned |
+| **RLHF** | Human preference rankings | Maximize reward | Aligned (helpful, harmless) |
+
+### 🎯 RLHF Objective
+
+$$J(\pi_\theta) = \mathbb{E}_{x,y}\left[R(x,y) - \beta \cdot D_{KL}(\pi_\theta \| \pi_{ref})\right]$$
+
+- **R(x,y)**: Reward model score
+- **β**: KL penalty (prevents reward hacking)
+- **π_ref**: Reference policy (SFT model)
+
+### 🎯 DPO (Direct Preference Optimization)
+
+$$\mathcal{L}_{DPO} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right]\right)$$
+
+> **💡 DPO Advantage:** No separate reward model needed, more stable training
+
+---
+
+## 5. Key Techniques
+
+| Technique | What It Does | When to Use |
+|-----------|--------------|-------------|
+| **RAG** | Retrieve docs → inject into prompt | Ground answers in your data |
+| **Fine-tuning** | Train model on your data | Specialized style/domain |
+| **Prompt Engineering** | Craft instructions | Quick iteration, no training |
+| **Function Calling** | LLM outputs structured tool calls | Connect to APIs, DBs |
+| **Agents** | LLM loop: think → act → observe | Multi-step tasks |
+| **Guardrails** | Filter input/output | Safety, compliance |
+| **Grounding** | Verify claims against sources | Reduce hallucination |
+
+### ⚡ LoRA (Low-Rank Adaptation)
+
+**Weight Update:**
+$$W' = W_0 + \Delta W = W_0 + BA$$
+
+**Dimensions:**
+$$W_0 \in \mathbb{R}^{d \times k}, \quad B \in \mathbb{R}^{d \times r}, \quad A \in \mathbb{R}^{r \times k}$$
+
+```mermaid
+flowchart LR
+    X[Input] --> W0["W₀ (Frozen)"]
+    X --> A["A (r×k)"]
+    A --> B["B (d×r)"]
+    W0 --> ADD((+))
+    B --> ADD
+    ADD --> H[Output]
+```
+
+**📝 Example:**
+```
+d = 4096, k = 4096, r = 8
+
+Full fine-tune: 4096 × 4096 = 16.7M params
+LoRA: (4096×8) + (8×4096) = 65K params
+Reduction: 256× fewer parameters!
+```
+
+### 🗜️ QLoRA
+
+- **4-bit NormalFloat (NF4)**: Optimal for normally distributed weights
+- **Double Quantization**: Quantize the quantization constants
+- **Paged Optimizers**: CPU offload for memory spikes
+
+| Metric | LoRA | QLoRA |
+|--------|------|-------|
+| Base model precision | 16-bit | 4-bit |
+| Memory (65B model) | ~130GB | ~48GB |
+| Quality | Baseline | ~Same |
+
+---
+
+## 6. RAG Pipeline
+
+```mermaid
+flowchart LR
+    Q[Query] --> E1[Embed Query]
+    E1 --> VS[Vector Search]
+    DB[(Vector DB)] --> VS
+    VS --> RR[Rerank]
+    RR --> TOP[Top-K Chunks]
+    TOP --> LLM[LLM + Context]
+    Q --> LLM
+    LLM --> A[Answer + Citations]
+```
+
+### 📦 RAG Components
+
+| Component | Options | Notes |
+|-----------|---------|-------|
+| **Chunking** | 500 tokens, 200 overlap | RecursiveTextSplitter |
+| **Embeddings** | text-embedding-004, OpenAI, BGE | 768-3072 dimensions |
+| **Vector Index** | HNSW (fast), IVF (memory efficient) | HNSW for <100M vectors |
+| **Retrieval** | Dense, BM25, Hybrid (RRF) | Hybrid often best |
+| **Reranking** | Cross-encoder (ms-marco) | Top-20 → Top-5 |
+
+### 📊 RAG Evaluation (RAGAS)
+
+| Metric | Measures | Formula/Target |
+|--------|----------|----------------|
+| **Faithfulness** | Claims supported by context | $\frac{\text{supported claims}}{\text{total claims}} > 0.9$ |
+| **Answer Relevancy** | Response addresses question | > 0.85 |
+| **Context Precision** | Retrieved chunks relevant | > 0.8 |
+| **Context Recall** | Relevant chunks retrieved | > 0.8 |
+
+### 🔍 Retrieval Metrics
+
+$$\text{Precision@K} = \frac{|\text{relevant} \cap \text{top-K}|}{K}$$
+
+$$\text{Recall@K} = \frac{|\text{relevant} \cap \text{top-K}|}{|\text{relevant}|}$$
+
+$$\text{MRR} = \frac{1}{|Q|}\sum_{i=1}^{|Q|}\frac{1}{rank_i}$$
+
+$$\text{NDCG@K} = \frac{DCG@K}{IDCG@K}$$
+
+---
+
+## 7. Agent Patterns
+
+```mermaid
+flowchart TB
+    subgraph ReAct["ReAct Loop"]
+        T[Thought] --> A[Action]
+        A --> O[Observation]
+        O --> T
+    end
+
+    O --> F{Done?}
+    F -->|No| T
+    F -->|Yes| R[Response]
+```
+
+### 🤖 Agent = LLM in a Loop
+
+**Reason → Act → Observe → Repeat**
+
+| Framework | How It Works | Best For |
+|-----------|--------------|----------|
+| **CoT** | "Think step by step" | Math, logic |
+| **ReAct** | Reason + Act + Observe | Tool use, multi-step |
+| **Tree of Thoughts** | Explore multiple paths | Complex reasoning |
+
+### 🔧 Tool Types
+
+| Type | Execution | Example |
+|------|-----------|---------|
+| **Function Calling** | Client-side | API calls, DB queries |
+| **Code Execution** | Sandbox | Python, SQL |
+| **MCP Tools** | External servers | Standardized protocol |
+
+### 🏗️ Multi-Agent Patterns
+
+```mermaid
+flowchart LR
+    subgraph Sequential
+        A1[Agent 1] --> A2[Agent 2] --> A3[Agent 3]
+    end
+
+    subgraph Parallel
+        B1[Agent 1]
+        B2[Agent 2]
+        B3[Agent 3]
+    end
+
+    subgraph Debate
+        C1[Agent 1] <--> C2[Agent 2]
+    end
+```
+
+---
+
+## 8. Serving & Optimization
+
+### ⚡ Key Optimization Techniques
+
+| Technique | What It Does | Benefit |
+|-----------|--------------|---------|
+| **KV Cache** | Store attention keys/values | Avoid recomputation |
+| **Continuous Batching** | Dynamic batch management | Better GPU utilization |
+| **PagedAttention** | Non-contiguous KV cache | 2-4× throughput (vLLM) |
+| **Quantization** | Reduce precision | Smaller, faster |
+| **Speculative Decoding** | Draft model + verify | 2-3× speedup |
+
+### 📊 Quantization Levels
+
+| Level | Memory | Speed | Quality Loss |
+|-------|--------|-------|--------------|
+| FP32 | 1× | 1× | None |
+| FP16/BF16 | 0.5× | 1.5× | Negligible |
+| INT8 | 0.25× | 2× | 1-2% |
+| INT4 | 0.125× | 3× | 3-5% |
+
+### 🔀 Parallelism Strategies
+
+| Strategy | What It Does | When to Use |
+|----------|--------------|-------------|
+| **Data Parallelism** | Same model, different data | Training |
+| **Tensor Parallelism** | Split layers across GPUs | Model > 1 GPU |
+| **Pipeline Parallelism** | Split layers sequentially | Very large models |
+| **ZeRO/FSDP** | Shard optimizer states | Train 70B+ |
+
+**ZeRO Stages:**
+| Stage | Shards | Memory Reduction |
+|-------|--------|------------------|
+| ZeRO-1 | Optimizer states | ~4× |
+| ZeRO-2 | + Gradients | ~8× |
+| ZeRO-3 | + Parameters | ~N× (N = GPUs) |
+
+---
+
+## 9. Image Generation
+
+### 🎨 Diffusion Models
+
+```mermaid
+flowchart LR
+    subgraph Training
+        I[Image] --> N1[Add Noise ×T] --> NI[Noisy Image]
+        NI --> M[Model learns to denoise]
+    end
+
+    subgraph Inference
+        PN[Pure Noise] --> D[Denoise ×T] --> GI[Generated Image]
+        T[Text Prompt] --> D
+    end
+```
+
+**Forward Process (Add Noise):**
+$$q(x_t|x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)$$
+
+**Reverse Process (Denoise):**
+$$p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$$
+
+### 🔧 Diffusion Components
+
+| Component | Purpose |
+|-----------|---------|
+| **Text Encoder** | CLIP/T5 → text embeddings |
+| **U-Net / DiT** | Predicts noise to remove |
+| **DDIM Sampler** | Faster sampling (20-50 steps) |
+| **CFG** | Balance text vs diversity (w=7-15) |
+| **VAE** | Latent space compression (512×) |
+
+**Classifier-Free Guidance:**
+$$\hat{\epsilon}(x_t, c) = \epsilon(x_t, \emptyset) + w \cdot (\epsilon(x_t, c) - \epsilon(x_t, \emptyset))$$
+
+### 🎭 GANs
+
+```mermaid
+flowchart LR
+    Z[Noise z] --> G[Generator]
+    G --> FI[Fake Image]
+    RI[Real Image] --> D[Discriminator]
+    FI --> D
+    D --> RF[Real/Fake?]
+```
+
+**GAN Objective:**
+$$\min_G \max_D \mathbb{E}_{x}[\log D(x)] + \mathbb{E}_{z}[\log(1-D(G(z)))]$$
+
+---
+
+## 10. Video Generation
+
+```mermaid
+flowchart LR
+    T[Text] --> DIT[DiT + Temporal]
+    DIT --> LR[Low-res Video]
+    LR --> SSR[Spatial SR]
+    SSR --> TSR[Temporal SR]
+    TSR --> F[Final Video]
+```
+
+### 🎬 Video Components
+
+| Component | Purpose |
+|-----------|---------|
+| **Temporal Attention** | Consistency across frames |
+| **Temporal Convolution** | Local motion patterns |
+| **VAE Compression** | 8× temporal + 8×8 spatial |
+| **Spatial SR** | 160×90 → 1280×720 |
+| **Temporal SR** | 8fps → 24fps |
+
+---
+
+## 11. Multimodal (Vision-Language)
+
+```mermaid
+flowchart LR
+    I[Image] --> VE[ViT Encoder]
+    VE --> PE[Patch Embeddings]
+    PE --> CA[Cross-Attention]
+    Q[Question] --> TE[Text Encoder]
+    TE --> CA
+    CA --> D[Decoder]
+    D --> A[Answer]
+```
+
+| Model | Architecture | Use Case |
+|-------|--------------|----------|
+| **BLIP-2** | Frozen encoder + Q-Former + LLM | Captioning, VQA |
+| **LLaVA** | ViT + LLaMA | Open-source VQA |
+| **Gemini Vision** | Multimodal native | Everything |
+
+---
+
+## 12. All Metrics
+
+### 📝 Text Generation
+
+| Metric | Formula | Measures |
+|--------|---------|----------|
+| **Perplexity** | $PPL = \exp\left(-\frac{1}{N}\sum\log P(w_i)\right)$ | Model uncertainty (↓ better) |
+| **BLEU** | $BP \cdot \exp(\sum w_n \log p_n)$ | N-gram precision |
+| **ROUGE-N** | $\frac{\text{overlap n-grams}}{\text{reference n-grams}}$ | N-gram recall |
+| **ROUGE-L** | Based on LCS | Longest common subsequence |
+| **BERTScore** | Embedding similarity | Semantic match |
+
+### 🖼️ Image Generation
+
+| Metric | Target | Measures |
+|--------|--------|----------|
+| **FID** | < 10 | Distribution similarity |
+| **IS** | > 10 | Quality × diversity |
+| **CLIPScore** | > 0.3 | Text-image alignment |
+| **LPIPS** | Lower | Perceptual similarity |
+
+### 🎬 Video Generation
+
+| Metric | Target | Measures |
+|--------|--------|----------|
+| **FVD** | < 300 | Fréchet Video Distance |
+| **FID (per-frame)** | < 15 | Average frame quality |
+| **Temporal Consistency** | > 4/5 | Smoothness |
+
+### 🔒 Safety
+
+| Metric | Target |
+|--------|--------|
+| **Toxicity Rate** | < 0.1% |
+| **PII Leak Rate** | 0% |
+| **Jailbreak Success** | < 1% |
+
+### ⚡ Performance
+
+| Metric | What It Measures |
+|--------|------------------|
+| **TTFT** | Time to first token |
+| **Latency P50/P95/P99** | Response time distribution |
+| **Throughput** | Tokens/second |
+
+---
+
+## 13. Cost & Optimization
+
+### 💰 Cost Formula
+
+$$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \times p_{out})$$
+
+**📝 Example:**
+```
+2K input + 500 output @ Gemini Pro ($0.50/1M in, $1.50/1M out)
+= 2000 × $0.0000005 + 500 × $0.0000015
+= $0.00175/request
+```
+
+### 💡 Cost Optimization
+
+| Lever | Savings | How |
+|-------|---------|-----|
+| **Response Cache** | 30-50% | Cache exact matches |
+| **Semantic Cache** | 20-30% | Cache similar queries |
+| **Model Routing** | 40-60% | Small model for easy |
+| **Prompt Optimization** | 10-30% | Shorter prompts |
+| **Quantization** | 20-40% | INT8/INT4 models |
+
+---
+
+## 14. Security & Guardrails
+
+### 🛡️ Threat Model
+
+| Attack | Vector | Defense |
+|--------|--------|---------|
+| **Direct Injection** | User input | Input filter, spotlighting |
+| **Indirect Injection** | Retrieved docs | Sanitize, instruction hierarchy |
+| **Jailbreaking** | Trick model | RLHF, guardrails |
+| **Data Leakage** | Training data | Differential privacy |
+| **Tool Abuse** | Agent APIs | Least privilege |
+
+### 🏰 Defense Layers
+
+```mermaid
+flowchart LR
+    H[HTTP/Auth] --> IG[Input Guardrails]
+    IG --> LLM[LLM]
+    LLM --> OG[Output Guardrails]
+    OG --> R[Response]
+```
+
+**Spotlighting:** Mark external content as data, not instructions
+```
+<<DATA>>retrieved document content<</DATA>>
+```
+
+---
+
+## 15. Scalability Patterns
+
+### 🖥️ GPU Quick Reference
+
+| GPU | Memory | FP16 TFLOPS | Cost/hr | Best For |
+|-----|--------|-------------|---------|----------|
+| **V100** | 16/32 GB | 125 | ~$2 | Legacy |
+| **A100** | 40/80 GB | 312 | ~$4 | Production |
+| **H100** | 80 GB | 990 | ~$8 | Large training |
+| **L4** | 24 GB | 121 | ~$0.80 | Cost-effective inference |
+
+### 📐 Model → GPU Sizing
+
+| Model Size | Memory (FP16) | GPUs Needed |
+|------------|---------------|-------------|
+| 7B | ~14GB | 1× L4/A10 |
+| 13B | ~26GB | 1× A100-40GB |
+| 70B | ~140GB | 2× H100 |
+| 405B | ~810GB | 8× H100 |
+
+---
+
+## 16. Back-of-Envelope Calculations
+
+### 🧮 Model Size
+
+**Quick Formula:**
+$$\text{Params} \approx 12 \times L \times d^2$$
+
+| Component | Formula |
+|-----------|---------|
+| Embedding | V × d |
+| Per Layer (Attention) | 4 × d² |
+| Per Layer (FFN) | 8 × d² |
+| **Total per Layer** | **12 × d²** |
+
+### 💾 Memory
+
+**Training Memory:**
+$$\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}$$
+
+| Component | Size (FP16) |
+|-----------|-------------|
+| Weights | 2 × P bytes |
+| Gradients | 2 × P bytes |
+| Optimizer (Adam) | 8 × P bytes |
+| Activations | 2-4 × weights |
+
+### ⏱️ Training FLOPs
+
+**Chinchilla Optimal:**
+$$\text{Tokens} \approx 20 \times \text{Parameters}$$
+
+**Total FLOPs:**
+$$\text{FLOPs} = 6 \times P \times T$$
+
+### 📐 Attention Complexity
+
+| Component | Complexity | Dominant When |
+|-----------|------------|---------------|
+| Self-Attention | O(n² × d) | n > d |
+| Feed-Forward | O(n × d²) | n < d |
+
+For d=4096, crossover at n=4096 tokens.
+
+---
+
+## 17. Platform Comparison
+
+| | Google Cloud | AWS |
+|--|--------------|-----|
+| **Models** | Gemini (Vertex AI) | Claude, Titan (Bedrock) |
+| **RAG** | Vertex RAG Engine | Bedrock Knowledge Bases |
+| **Agents** | ADK, Conversational Agents | AgentCore, Bedrock Agents |
+| **Vector DB** | Vertex AI Vector Search | OpenSearch, Pinecone |
+| **Guardrails** | Model Armor | Bedrock Guardrails |
+| **Image Gen** | Imagen 3 | Titan Image, SD |
+| **Video Gen** | Veo | - |
+
+### 🛠️ Detailed Tools by Category
+
+| Category | Tool / Stack | Purpose | When to Use |
+|----------|--------------|---------|-------------|
+| **LLM Serving** | **vLLM** | OSS inference; PagedAttention, continuous batching | Self-hosted, high throughput, open models |
+| | **TGI** (Text Generation Inference) | Hugging Face serving; similar to vLLM | HF ecosystem, Inference Endpoints |
+| | **TensorRT-LLM** | NVIDIA-optimized inference | Max perf on NVIDIA GPUs |
+| | **Vertex AI / Bedrock** | Managed model hosting | No infra; enterprise; Gemini/Claude |
+| **Orchestration** | **LangChain** | Chains, agents, tools, RAG helpers | Rapid prototyping; broad ecosystem |
+| | **LlamaIndex** | RAG-focused; data loaders, indices | Document-heavy RAG, diverse data sources |
+| | **ADK** (Agent Development Kit) | Google agent framework; workflows, multi-agent | GCP; production agents; Vertex Agent Engine |
+| **RAG / Vector** | **Vertex AI RAG Engine** | Managed RAG (ingest, index, query) | GCP; minimal RAG plumbing |
+| | **Bedrock Knowledge Bases** | Managed RAG on AWS | AWS; same idea as Vertex RAG |
+| | **FAISS** | OSS vector search (HNSW, IVF) | Self-hosted; library inside your app |
+| | **Pinecone / Weaviate / Qdrant** | Managed or OSS vector DBs | Production vector search; scale |
+| | **pgvector** | Postgres extension for vectors | Already on Postgres; smaller scale |
+| **Embeddings** | **text-embedding-004** (Vertex) | Google embeddings | GCP RAG |
+| | **OpenAI text-embedding-3** | OpenAI embeddings | When using OpenAI models |
+| | **e5 / BGE** (OSS) | Open-source embed models | Self-hosted; no API cost |
+| **Document Parsing** | **Document AI** (GCP) | PDF/docs → text, tables, structure | GCP; high-quality parsing |
+| | **Textract** (AWS) | Same idea on AWS | AWS |
+| | **PyMuPDF / pdfplumber** | Rule-based PDF extraction | Simple, consistent layouts |
+| **Guardrails** | **Model Armor** (GCP) | Input/output safety; injection, jailbreak | Vertex AI apps |
+| | **Bedrock Guardrails** | Same on AWS | Bedrock apps |
+| **Evaluation** | **RAGAS** | RAG metrics (faithfulness, relevancy, context) | RAG quality without gold answers |
+| **Dev / Experimentation** | **Google AI Studio** | Play with Gemini; quick prototypes | Learning; no production |
+| | **Vertex AI Studio** | Enterprise; fine-tune, eval, deploy | Move from AI Studio to production |
+
+---
+
+## 18. Model Quick Reference
+
+| Model | Type | Params | Notes |
+|-------|------|--------|-------|
+| **GPT-4o** | Decoder-only | ~1.7T (rumored MoE) | Multimodal, SOTA |
+| **Gemini 1.5 Pro** | MoE | Undisclosed | 1M context |
+| **Claude 3.5** | Decoder-only | Undisclosed | Strong reasoning |
+| **LLaMA 3** | Decoder-only | 8B-405B | Open-source |
+| **Mixtral 8×22B** | MoE | 141B total, 39B active | Open-source |
+| **Stable Diffusion** | Latent Diffusion | ~1B | Open-source images |
+| **Sora** | DiT + temporal | Undisclosed | Video generation |
+
+---
+
+## 19. Interview Framework
+
+### ⏱️ 45-Minute Structure
+
+| Phase | Time | What to Cover |
+|-------|------|---------------|
+| **Requirements** | 5-10 min | Tokens, latency, quality, cost, safety |
+| **Architecture** | 10-15 min | Draw: API → Orchestration → LLM → Response |
+| **Deep Dive** | 15-20 min | RAG, model choice, eval, security |
+| **Trade-offs** | 5-10 min | Quality vs cost, latency vs throughput |
+
+### 🚨 Red Flags
+
+| Red Flag | Better Answer |
+|----------|---------------|
+| "No RAG needed" | How prevent hallucination? |
+| "One model for all" | What about cost optimization? |
+| "Skip guardrails" | Prompt injection? PII? |
+| "No eval plan" | How know it's working? |
+| "Unbounded context" | Cost and latency? |
+| "Train from scratch" | Why not fine-tune? |
+| "Real-time video gen" | Minutes is realistic |
+
+### ✅ Quick Decision Guide
+
+| Need | Solution |
+|------|----------|
+| Ground in docs | **RAG** |
+| Real-time tools | **Function calling / Agents** |
+| Custom style | **Fine-tuning (SFT)** |
+| Ultra-low latency | **Small model + edge + cache** |
+| Reduce hallucination | **RAG + grounding + citations** |
+| Multi-step reasoning | **Agents (ReAct)** |
+| Cost at scale | **Routing + caching + quantization** |
+
+---
+
+## 20. Glossary
+
+<details>
+<summary><b>Click to expand full glossary (all acronyms spelled out, no jargon)</b></summary>
+
+### Core Concepts
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **AI** | Artificial Intelligence | Machines that perform tasks requiring human-like intelligence |
+| **ML** | Machine Learning | Computers learning patterns from data instead of being explicitly programmed |
+| **GenAI** | Generative AI | AI that creates new content (text, images, video) rather than just classifying |
+| **LLM** | Large Language Model | AI trained on massive text to predict and generate human-like text (GPT, Claude, Gemini) |
+| **NLP** | Natural Language Processing | Teaching computers to understand and generate human language |
+| **API** | Application Programming Interface | A way for software to communicate; how you call LLMs from your code |
+| **Token** | — | Smallest text unit the model reads (~4 characters or ~0.75 words); you pay per token |
+| **Context Window** | — | Maximum tokens a model can process in one request (ranges from 4K to 2M tokens) |
+| **Inference** | — | Using a trained model to get predictions; what happens when you call an LLM API |
+
+### Architecture Terms
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **Transformer** | — | The neural network design behind all modern LLMs; processes text using "attention" |
+| **MoE** | Mixture of Experts | Model design where only some "expert" parts activate per input, saving compute |
+| **FFN** | Feed-Forward Network | Simple neural network layer inside Transformers; data flows one direction |
+| **FFNN** | Feed-Forward Neural Network | Basic neural network with no loops; data goes input → hidden layers → output |
+| **CNN** | Convolutional Neural Network | Neural network for images; finds patterns using sliding filters |
+| **RNN** | Recurrent Neural Network | Neural network with memory for sequences; older approach replaced by Transformers |
+| **LSTM** | Long Short-Term Memory | Improved RNN that remembers longer sequences using "gates" to control what to keep/forget |
+| **ViT** | Vision Transformer | Transformer adapted for images by treating image patches as "tokens" |
+| **DiT** | Diffusion Transformer | Transformer used in image/video generation (Sora) instead of U-Net |
+| **U-Net** | — | Neural network shaped like a "U" used to remove noise in image generation |
+| **VAE** | Variational Autoencoder | Neural network that compresses images to smaller size and reconstructs them |
+| **GAN** | Generative Adversarial Network | Two networks competing: one creates fakes, one detects them |
+
+### Training Methods
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **SFT** | Supervised Fine-Tuning | Teaching a model using examples with correct answers (question → ideal answer pairs) |
+| **RLHF** | Reinforcement Learning from Human Feedback | Training models using human preferences ("this answer is better than that one") |
+| **DPO** | Direct Preference Optimization | Simpler alternative to RLHF; directly learns from preference pairs |
+| **RL** | Reinforcement Learning | Learning by trial and error with rewards, like training a dog with treats |
+| **PPO** | Proximal Policy Optimization | Algorithm for RLHF; updates the model carefully to avoid breaking what works |
+| **TRPO** | Trust Region Policy Optimization | RL algorithm that limits how much the model can change per update |
+| **GRPO** | Group Relative Policy Optimization | RL algorithm used in some LLMs (DeepSeek) for making models helpful |
+
+### Fine-Tuning Methods
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **LoRA** | Low-Rank Adaptation | Cheap way to customize a model by training small "adapter" layers instead of the whole model |
+| **QLoRA** | Quantized LoRA | LoRA applied to a compressed (4-bit) model; even cheaper customization |
+| **PEFT** | Parameter-Efficient Fine-Tuning | General term for methods that train only a small part of the model |
+
+### Optimizers (Training Algorithms)
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **SGD** | Stochastic Gradient Descent | Basic algorithm to update model weights using random data samples |
+| **Adam** | Adaptive Moment Estimation | Popular training algorithm that adapts learning speed for each parameter |
+| **AdamW** | Adam with Weight Decay | Adam with added penalty to prevent memorizing training data |
+| **RMSProp** | Root Mean Square Propagation | Training algorithm that adjusts speed based on recent history |
+| **AMP** | Automatic Mixed Precision | Using both 16-bit and 32-bit numbers during training to save memory |
+
+### Loss Functions & Activations
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **MSE** | Mean Squared Error | Average squared difference between predictions and actual values |
+| **CE** | Cross-Entropy | Measures how wrong predicted probabilities are; used for classification |
+| **BCE** | Binary Cross-Entropy | Cross-Entropy for yes/no decisions |
+| **ReLU** | Rectified Linear Unit | Simple function: outputs input if positive, zero otherwise |
+| **GELU** | Gaussian Error Linear Unit | Smoother version of ReLU used in Transformers |
+| **Softmax** | — | Converts raw scores into probabilities that sum to 1 |
+| **Sigmoid** | — | S-shaped function outputting values between 0 and 1 |
+| **Tanh** | Hyperbolic Tangent | S-shaped function outputting values between -1 and 1 |
+| **BatchNorm** | Batch Normalization | Normalizes data across the batch; stabilizes training |
+| **LayerNorm** | Layer Normalization | Normalizes data within each example; standard in Transformers |
+
+### RAG & Retrieval
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **RAG** | Retrieval-Augmented Generation | Finding relevant documents and giving them to an LLM to answer accurately |
+| **Embedding** | — | Converting text into numbers (a vector) where similar meanings are close together |
+| **Vector DB** | Vector Database | Database for finding similar embeddings quickly (Pinecone, FAISS) |
+| **HNSW** | Hierarchical Navigable Small World | Fast algorithm for finding similar vectors; default choice |
+| **IVF** | Inverted File Index | Vector search using clusters; uses less memory |
+| **ANN** | Approximate Nearest Neighbor | Finding "close enough" matches quickly instead of exact search |
+| **BM25** | Best Matching 25 | Classic keyword search based on word frequency |
+| **RRF** | Reciprocal Rank Fusion | Method to combine vector and keyword search results |
+| **RAGAS** | RAG Assessment | Framework for measuring RAG quality |
+
+### Evaluation Metrics
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **BLEU** | Bilingual Evaluation Understudy | Measures text similarity by comparing word sequences |
+| **ROUGE** | Recall-Oriented Understudy for Gisting Evaluation | Measures how much reference text appears in output |
+| **FID** | Fréchet Inception Distance | Measures how realistic generated images are; lower is better |
+| **IS** | Inception Score | Measures image quality and diversity; higher is better |
+| **FVD** | Fréchet Video Distance | Like FID but for videos |
+| **CIDEr** | Consensus-based Image Description Evaluation | Measures caption quality vs human references |
+| **LPIPS** | Learned Perceptual Image Patch Similarity | Measures how similar two images look to humans |
+| **NDCG** | Normalized Discounted Cumulative Gain | Measures ranking quality (best results at top?) |
+| **MRR** | Mean Reciprocal Rank | Average of 1/(position of first correct answer) |
+| **PPL** | Perplexity | How "surprised" a model is by text; lower = better |
+
+### Serving & Performance
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **TTFT** | Time To First Token | How long until the model starts responding |
+| **TPS** | Tokens Per Second | Speed of text generation |
+| **KV Cache** | Key-Value Cache | Stored computations so the model doesn't redo work for each token |
+| **vLLM** | — | Popular open-source software for running LLMs efficiently |
+| **TGI** | Text Generation Inference | Hugging Face's software for running LLMs |
+| **TRT-LLM** | TensorRT-LLM | NVIDIA's optimized library for running LLMs |
+
+### Parallelism & Scaling
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **DP** | Data Parallelism | Same model on multiple GPUs, each processing different data |
+| **TP** | Tensor Parallelism | Splitting each layer across GPUs; for models too big for one GPU |
+| **PP** | Pipeline Parallelism | Different layers on different GPUs; data flows through in sequence |
+| **ZeRO** | Zero Redundancy Optimizer | Technique to train huge models by distributing memory across GPUs |
+| **FSDP** | Fully Sharded Data Parallel | PyTorch's implementation of ZeRO |
+| **GPU** | Graphics Processing Unit | Specialized chip for parallel processing; runs AI models fast |
+| **TPU** | Tensor Processing Unit | Google's custom AI chip for neural networks |
+
+### Quantization (Model Compression)
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **FP32** | 32-bit Floating Point | Full precision; most accurate but uses most memory |
+| **FP16** | 16-bit Floating Point | Half precision; uses half memory with minimal quality loss |
+| **BF16** | Brain Float 16 | Google's 16-bit format; better for training than FP16 |
+| **INT8** | 8-bit Integer | Quarter precision; 4× less memory, ~1-2% quality loss |
+| **INT4** | 4-bit Integer | Aggressive compression; 8× less memory, ~3-5% quality loss |
+| **NF4** | 4-bit NormalFloat | Optimized 4-bit format used in QLoRA |
+
+### Image & Video Generation
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **CFG** | Classifier-Free Guidance | Makes images follow the text prompt more closely (typical: 7-15) |
+| **DDPM** | Denoising Diffusion Probabilistic Model | Original diffusion method; removes noise gradually (1000 steps) |
+| **DDIM** | Denoising Diffusion Implicit Model | Faster diffusion (20-50 steps); used in production |
+| **LDM** | Latent Diffusion Model | Diffusion in compressed space; what Stable Diffusion uses |
+| **CLIP** | Contrastive Language-Image Pre-training | Model understanding both text and images; guides image generation |
+| **SD** | Stable Diffusion | Popular open-source image generation model |
+
+### Agents & Reasoning
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **CoT** | Chain-of-Thought | Asking the model to "think step by step" improves reasoning |
+| **ReAct** | Reasoning + Acting | Agent pattern: think, act, observe result, repeat |
+| **ToT** | Tree of Thoughts | Exploring multiple reasoning paths and picking the best |
+| **MCP** | Model Context Protocol | Standard for connecting LLMs to external tools |
+| **ADK** | Agent Development Kit | Google's framework for building AI agents |
+
+### Safety & Security
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **PII** | Personally Identifiable Information | Data that can identify someone (name, email, SSN) |
+| **DLP** | Data Loss Prevention | Systems that detect and block sensitive data from leaking |
+
+### Tokenization Methods
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **BPE** | Byte Pair Encoding | Splits text into tokens by finding common character pairs; used by GPT |
+| **SentencePiece** | — | Google's tokenization that works with any language |
+| **WordPiece** | — | Similar to BPE; used by BERT |
+
+### Cloud Platforms
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **GCP** | Google Cloud Platform | Google's cloud computing services |
+| **AWS** | Amazon Web Services | Amazon's cloud computing services |
+| **Vertex AI** | — | Google's managed platform for AI/ML |
+| **Bedrock** | — | AWS's managed service for foundation models |
+
+### Other Common Terms
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **SOTA** | State of the Art | The best current performance on a task |
+| **OSS** | Open Source Software | Software with publicly available code |
+| **EOS** | End of Sequence | Special token that tells the model to stop |
+| **OOM** | Out of Memory | Error when GPU/system runs out of memory |
+| **KL** | Kullback-Leibler (Divergence) | Measures how different two distributions are; used in RLHF |
+
+</details>
+
+---
+
+<div align="center">
+
+**GenAI Design = Traditional System Design + Token Economics + Quality Eval + Safety**
+
+⭐ Star this repo if it helped you!
+
+</div>
