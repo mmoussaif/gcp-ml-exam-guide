@@ -80,17 +80,28 @@ flowchart LR
 #### Loss Functions
 
 **Mean Squared Error (Regression):**
-$$\mathcal{L}_{MSE} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2$$
+
+$$
+\mathcal{L}_{\text{MSE}} = \frac{1}{n}\sum_{i=1}^{n}(y_i - \hat{y}_i)^2
+$$
 
 **Cross-Entropy (Classification):**
-$$\mathcal{L}_{CE} = -\sum_{i=1}^{C} y_i \log(\hat{y}_i)$$
+
+$$
+\mathcal{L}_{\text{CE}} = -\sum_{i=1}^{C} y_i \log(\hat{y}_i)
+$$
 
 **Language Model Loss:**
-$$\mathcal{L}_{LM} = -\frac{1}{T}\sum_{t=1}^{T} \log P(x_t | x_{<t})$$
+
+$$
+\mathcal{L}_{\text{LM}} = -\frac{1}{T}\sum_{t=1}^{T} \log P(x_t | x_{<t})
+$$
 
 #### Gradient Descent Update
 
-$$\theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)$$
+$$
+\theta_{t+1} = \theta_t - \eta \nabla_\theta \mathcal{L}(\theta_t)
+$$
 
 > **💡 Intuition:** Move parameters in the direction that reduces loss. Learning rate η controls step size.
 
@@ -144,7 +155,10 @@ flowchart LR
 | **GRPO** | Group relative advantages | Used in DeepSeek, LLM alignment |
 
 **PPO Probability Ratio:**
-$$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{old}(a_t|s_t)}$$
+
+$$
+r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)}
+$$
 
 ### 📚 Three Ways Computers Learn
 
@@ -174,9 +188,18 @@ $$r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{old}(a_t|s_t)}$$
 | **AdamW** | Adam + weight decay | Same + weight decay |
 
 **Adam Update:**
-$$m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t$$
-$$v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2$$
-$$\theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}$$
+
+$$
+m_t = \beta_1 m_{t-1} + (1-\beta_1) g_t
+$$
+
+$$
+v_t = \beta_2 v_{t-1} + (1-\beta_2) g_t^2
+$$
+
+$$
+\theta_t = \theta_{t-1} - \eta \frac{\hat{m}_t}{\sqrt{\hat{v}_t} + \epsilon}
+$$
 
 ---
 
@@ -254,17 +277,29 @@ flowchart TB
 
 #### Self-Attention Formula
 
-$$\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V$$
+$$
+\text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
+$$
 
 #### Multi-Head Attention
 
-$$\text{MultiHead}(Q, K, V) = \text{Concat}(head_1, ..., head_h)W^O$$
-$$head_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)$$
+$$
+\text{MultiHead}(Q, K, V) = \text{Concat}(\text{head}_1, ..., \text{head}_h)W^O
+$$
+
+$$
+\text{head}_i = \text{Attention}(QW_i^Q, KW_i^K, VW_i^V)
+$$
 
 #### Positional Encoding
 
-$$PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)$$
-$$PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)$$
+$$
+PE_{(pos, 2i)} = \sin\left(\frac{pos}{10000^{2i/d}}\right)
+$$
+
+$$
+PE_{(pos, 2i+1)} = \cos\left(\frac{pos}{10000^{2i/d}}\right)
+$$
 
 ### 📊 Architecture Comparison
 
@@ -336,7 +371,9 @@ flowchart LR
 
 ### 🎯 RLHF Objective
 
-$$J(\pi_\theta) = \mathbb{E}_{x,y}\left[R(x,y) - \beta \cdot D_{KL}(\pi_\theta \| \pi_{ref})\right]$$
+$$
+J(\pi_\theta) = \mathbb{E}_{x,y}\left[R(x,y) - \beta \cdot D_{KL}(\pi_\theta \| \pi_{\text{ref}})\right]
+$$
 
 - **R(x,y)**: Reward model score
 - **β**: KL penalty (prevents reward hacking)
@@ -344,7 +381,9 @@ $$J(\pi_\theta) = \mathbb{E}_{x,y}\left[R(x,y) - \beta \cdot D_{KL}(\pi_\theta \
 
 ### 🎯 DPO (Direct Preference Optimization)
 
-$$\mathcal{L}_{DPO} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\pi_{ref}(y_w|x)} - \log\frac{\pi_\theta(y_l|x)}{\pi_{ref}(y_l|x)}\right]\right)$$
+$$
+\mathcal{L}_{\text{DPO}} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \log\frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)}\right]\right)
+$$
 
 > **💡 DPO Advantage:** No separate reward model needed, more stable training
 
@@ -369,10 +408,16 @@ $$\mathcal{L}_{DPO} = -\log\sigma\left(\beta\left[\log\frac{\pi_\theta(y_w|x)}{\
 **Fine-tune a 70B model on a single GPU:** The key insight is that weight updates during fine-tuning have low "rank"—they can be compressed into two small matrices multiplied together. Instead of updating millions of parameters, you freeze the original model and train tiny adapter layers. Same quality, 256× fewer trainable parameters.
 
 **Weight Update:**
-$$W' = W_0 + \Delta W = W_0 + BA$$
+
+$$
+W' = W_0 + \Delta W = W_0 + BA
+$$
 
 **Dimensions:**
-$$W_0 \in \mathbb{R}^{d \times k}, \quad B \in \mathbb{R}^{d \times r}, \quad A \in \mathbb{R}^{r \times k}$$
+
+$$
+W_0 \in \mathbb{R}^{d \times k}, \quad B \in \mathbb{R}^{d \times r}, \quad A \in \mathbb{R}^{r \times k}
+$$
 
 ```mermaid
 flowchart LR
@@ -456,13 +501,21 @@ flowchart LR
 
 **Classic IR metrics for measuring retrieval quality:** These formulas help you understand if your vector search is returning the right documents. Precision asks "of what we retrieved, how much was relevant?" Recall asks "of what was relevant, how much did we retrieve?" MRR and NDCG care about ranking—good results should appear first.
 
-$$\text{Precision@K} = \frac{|\text{relevant} \cap \text{top-K}|}{K}$$
+$$
+\text{Precision@K} = \frac{|\text{relevant} \cap \text{top-K}|}{K}
+$$
 
-$$\text{Recall@K} = \frac{|\text{relevant} \cap \text{top-K}|}{|\text{relevant}|}$$
+$$
+\text{Recall@K} = \frac{|\text{relevant} \cap \text{top-K}|}{|\text{relevant}|}
+$$
 
-$$\text{MRR} = \frac{1}{|Q|}\sum_{i=1}^{|Q|}\frac{1}{rank_i}$$
+$$
+\text{MRR} = \frac{1}{|Q|}\sum_{i=1}^{|Q|}\frac{1}{\text{rank}_i}
+$$
 
-$$\text{NDCG@K} = \frac{DCG@K}{IDCG@K}$$
+$$
+\text{NDCG@K} = \frac{\text{DCG@K}}{\text{IDCG@K}}
+$$
 
 ---
 
@@ -686,10 +739,16 @@ flowchart LR
 > **Why it works:** The model never learns to generate images directly—it learns to predict and remove noise. This is easier to train and gives remarkable quality. The text prompt guides the denoising: at each step, the model removes noise in a direction that makes the image more consistent with "a cat wearing a hat."
 
 **Forward Process (Add Noise):**
-$$q(x_t|x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)$$
+
+$$
+q(x_t|x_{t-1}) = \mathcal{N}(x_t; \sqrt{1-\beta_t}x_{t-1}, \beta_t I)
+$$
 
 **Reverse Process (Denoise):**
-$$p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))$$
+
+$$
+p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta(x_t, t))
+$$
 
 ### 🔧 Diffusion Components
 
@@ -702,7 +761,10 @@ $$p_\theta(x_{t-1}|x_t) = \mathcal{N}(x_{t-1}; \mu_\theta(x_t, t), \Sigma_\theta
 | **VAE** | Latent space compression (512×) |
 
 **Classifier-Free Guidance:**
-$$\hat{\epsilon}(x_t, c) = \epsilon(x_t, \emptyset) + w \cdot (\epsilon(x_t, c) - \epsilon(x_t, \emptyset))$$
+
+$$
+\hat{\epsilon}(x_t, c) = \epsilon(x_t, \emptyset) + w \cdot (\epsilon(x_t, c) - \epsilon(x_t, \emptyset))
+$$
 
 ### 🎭 GANs
 
@@ -721,7 +783,9 @@ flowchart LR
 
 **GAN Objective:**
 
-$$\min_G \max_D \, \underset{x \sim p_{data}}{\mathbb{E}}[\log D(x)] + \underset{z \sim p_z}{\mathbb{E}}[\log(1-D(G(z)))]$$
+$$
+\min_G \max_D \, \underset{x \sim p_{\text{data}}}{\mathbb{E}}[\log D(x)] + \underset{z \sim p_z}{\mathbb{E}}[\log(1-D(G(z)))]
+$$
 
 > **Reading the formula:** G (Generator) minimizes while D (Discriminator) maximizes. The first term is the expected log-probability that D correctly identifies real samples x. The second term is the expected log-probability that D correctly rejects fake samples G(z).
 
@@ -846,7 +910,9 @@ flowchart LR
 
 **The basic equation:** You pay separately for input tokens (your prompt + context) and output tokens (the model's response). Output tokens typically cost 2-3× more than input tokens. Long prompts with short answers are cheaper than short prompts with long answers.
 
-$$\text{Cost} = (\text{Input tokens} \times p_{in}) + (\text{Output tokens} \times p_{out})$$
+$$
+\text{Cost} = (\text{Input tokens} \times p_{\text{in}}) + (\text{Output tokens} \times p_{\text{out}})
+$$
 
 **📝 Example:**
 ```
@@ -998,7 +1064,10 @@ flowchart TB
 **Estimate parameters from architecture:** Most parameters are in the Transformer layers. Each layer has 4d² for attention and 8d² for FFN, totaling 12d² per layer. Multiply by layer count L. Add V×d for embeddings (usually small compared to layers).
 
 **Quick Formula:**
-$$\text{Params} \approx 12 \times L \times d^2$$
+
+$$
+\text{Params} \approx 12 \times L \times d^2
+$$
 
 | Component | Formula |
 |-----------|---------|
@@ -1012,7 +1081,10 @@ $$\text{Params} \approx 12 \times L \times d^2$$
 **Training uses way more memory than inference:** Inference only needs model weights + KV cache. Training needs weights + gradients + optimizer states (8× for Adam) + activations for backprop. That's why training a 7B model needs 8× A100s but inference runs on a single L4.
 
 **Training Memory:**
-$$\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}$$
+
+$$
+\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}
+$$
 
 | Component | Size (FP16) |
 |-----------|-------------|
@@ -1026,10 +1098,16 @@ $$\text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}$$
 **How long will training take?** Chinchilla showed the optimal ratio is ~20 tokens per parameter. Total FLOPs = 6 × parameters × tokens (forward + backward pass). Divide by your GPU's TFLOPS to get training time. An H100 at 990 FP16 TFLOPS can train a 7B model on 140B tokens in ~1 day.
 
 **Chinchilla Optimal:**
-$$\text{Tokens} \approx 20 \times \text{Parameters}$$
+
+$$
+\text{Tokens} \approx 20 \times \text{Parameters}
+$$
 
 **Total FLOPs:**
-$$\text{FLOPs} = 6 \times P \times T$$
+
+$$
+\text{FLOPs} = 6 \times P \times T
+$$
 
 ### 📐 Attention Complexity
 
