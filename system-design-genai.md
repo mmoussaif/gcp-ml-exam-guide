@@ -121,7 +121,7 @@ Use this numbered list to track your progress. Check off sections as you complet
 
 | Goal          | Path                                                      |
 | ------------- | --------------------------------------------------------- |
-| **Learn**     | Map (A.2) → B → D → E                                     |
+| **Learn**     | Map (A.2) → B → C → D → E                                 |
 | **Interview** | Glossary + E.1–E.4 + F.1 (3–4 examples) + Part G          |
 | **Build**     | Closest F.1 example → relevant E.x → Glossary / Resources |
 
