@@ -166,9 +166,9 @@ flowchart LR
 
 **REINFORCE (Policy Gradient):**
 
-$
+$$
 \nabla J(\theta) = \mathbb{E}[\nabla \log \pi_\theta(a|s) \cdot R]
-$
+$$
 
 > **Terms:**
 > - **J(θ)** = objective function (expected cumulative reward)
@@ -181,9 +181,9 @@ $
 
 **PPO Clipped Objective:**
 
-$
+$$
 L^{\text{CLIP}} = \min(r_t \cdot A_t, \text{clip}(r_t, 1-\epsilon, 1+\epsilon) \cdot A_t)
-$
+$$
 
 > **Terms:**
 > - **L^CLIP** = clipped loss function (what PPO minimizes)
@@ -194,9 +194,9 @@ $
 
 **PPO Probability Ratio:**
 
-$
+$$
 r_t(\theta) = \frac{\pi_\theta(a_t|s_t)}{\pi_{\text{old}}(a_t|s_t)}
-$
+$$
 
 > **Terms:**
 > - **π_θ** = current (new) policy after update
@@ -208,9 +208,9 @@ $
 
 **TRPO Trust Region Constraint:**
 
-$
+$$
 D_{\text{KL}}(\pi_{\text{old}} \| \pi_\theta) \leq \delta
-$
+$$
 
 > **Terms:**
 > - **D_KL** = Kullback-Leibler divergence—measures how different two distributions are
