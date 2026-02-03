@@ -1555,19 +1555,17 @@ flowchart TB
 
 ## 16. Back-of-Envelope Calculations
 
-**Quick math for system design interviews:** These formulas let you estimate model sizes, memory requirements, and training costs without a calculator. Memorize the key rules of thumb: 12×L×d² for parameters, 2 bytes per param in FP16, 6×P×T for training FLOPs.
+**Quick math for system design interviews:** Estimate model sizes, memory, and training costs without a calculator. Memorize: **12×L×d²** for parameters, **2 bytes/param** in FP16, **6×P×T** for training FLOPs.
 
 ### 🧮 Model Size
 
-**Estimate parameters from architecture:** Most parameters are in the Transformer layers. Each layer has 4d² for attention and 8d² for FFN, totaling 12d² per layer. Multiply by layer count L. Add V×d for embeddings (usually small compared to layers).
-
-**Quick Formula:**
+**Estimate parameters from architecture:** Most parameters live in Transformer layers. Each layer: 4d² (attention) + 8d² (FFN) = 12d². Multiply by layer count L. Embeddings (V×d) are usually negligible.
 
 $$
 \text{Params} \approx 12 \times L \times d^2
 $$
 
-> **Terms:** L = number of Transformer layers, d = model dimension (hidden size), 12 = 4 (attention) + 8 (FFN) parameters per layer
+> **Terms:** L = Transformer layers, d = hidden dimension, 12 = 4 (attention) + 8 (FFN) per layer
 
 | Component             | Formula     |
 | --------------------- | ----------- |
@@ -1576,9 +1574,11 @@ $$
 | Per Layer (FFN)       | 8 × d²      |
 | **Total per Layer**   | **12 × d²** |
 
+**📝 Example:** LLaMA-7B (L=32, d=4096) ≈ 12 × 32 × 4096² ≈ 6.4B params (close to actual 7B)
+
 ### 💾 Memory
 
-**Training uses way more memory than inference:** Inference only needs model weights + KV cache. Training needs weights + gradients + optimizer states (8× for Adam) + activations for backprop. That's why training a 7B model needs 8× A100s but inference runs on a single L4.
+**Training vs inference:** Inference needs weights + KV cache (~2× model size). Training needs weights + gradients + optimizer states + activations (**16-20× model size**).
 
 **Training Memory:**
 
@@ -1586,7 +1586,7 @@ $$
 \text{Memory} \approx 16\text{-}20 \times \text{Model Size (bytes)}
 $$
 
-> **Terms:** 16-20× accounts for: weights (2 bytes in FP16) + gradients (2 bytes) + optimizer states (8 bytes for Adam) + activations (variable). For inference only: ~2× model size.
+> **Terms:** 16-20× = weights (2×) + gradients (2×) + Adam optimizer (8×) + activations (4-8×). Inference: ~2× model size (weights + KV cache).
 
 | Component        | Size (FP16)   |
 | ---------------- | ------------- |
@@ -1595,9 +1595,11 @@ $$
 | Optimizer (Adam) | 8 × P bytes   |
 | Activations      | 2-4 × weights |
 
+**📝 Example:** 7B model → 14GB weights → ~224-280GB training memory → needs 2-4× A100-80GB
+
 ### ⏱️ Training FLOPs
 
-**How long will training take?** Chinchilla showed the optimal ratio is ~20 tokens per parameter. Total FLOPs = 6 × parameters × tokens (forward + backward pass). Divide by your GPU's TFLOPS to get training time. An H100 at 990 FP16 TFLOPS can train a 7B model on 140B tokens in ~1 day.
+**Estimate training time:** Chinchilla optimal = **20 tokens per parameter**. Total FLOPs = 6 × params × tokens. Divide by GPU TFLOPS for wall-clock time.
 
 **Chinchilla Optimal:**
 
@@ -1605,7 +1607,7 @@ $$
 \text{Tokens} \approx 20 \times \text{Parameters}
 $$
 
-> **Terms:** This is the "Chinchilla optimal" ratio—train on 20 tokens per parameter for best efficiency. A 7B model should see ~140B tokens.
+> **Terms:** Optimal training data ratio. 7B model → ~140B tokens.
 
 **Total FLOPs:**
 
@@ -1613,18 +1615,20 @@ $$
 \text{FLOPs} = 6 \times P \times T
 $$
 
-> **Terms:** P = number of parameters, T = number of training tokens, 6 = 2 (forward pass) + 4 (backward pass, roughly 2× forward). For inference: FLOPs ≈ 2 × P per token.
+> **Terms:** P = parameters, T = tokens, 6 = 2 (forward) + 4 (backward). Inference: ~2 × P per token.
+
+**📝 Example:** 7B model, 140B tokens → 6 × 7B × 140B = 5.88 × 10²¹ FLOPs. H100 (990 TFLOPS) → ~1 day.
 
 ### 📐 Attention Complexity
 
-**Where's the bottleneck?** Self-attention is O(n²×d)—quadratic in sequence length. FFN is O(n×d²)—linear in sequence length but quadratic in model dimension. For typical d=4096, attention dominates once context exceeds ~4K tokens. This is why long-context models need attention optimizations.
+**Bottleneck analysis:** Self-attention is O(n²×d)—quadratic in sequence length. FFN is O(n×d²)—linear in sequence length. For d=4096, attention dominates when n > 4096 tokens.
 
 | Component      | Complexity | Dominant When |
 | -------------- | ---------- | ------------- |
 | Self-Attention | O(n² × d)  | n > d         |
 | Feed-Forward   | O(n × d²)  | n < d         |
 
-For d=4096, crossover at n=4096 tokens.
+> **Crossover point:** For d=4096, attention dominates beyond ~4K tokens. This is why long-context models (32K+) need attention optimizations (Flash Attention, sparse attention).
 
 ---
 
