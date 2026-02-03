@@ -14,21 +14,25 @@ For **ML and GenAI system design** (LLM serving, **RAG** (retrieval-augmented ge
 
 ## Table of Contents
 
-- [Core Concepts](#core-concepts)
-- [Cloud Computing & Security](#cloud-computing--security)
-- [Networking & VPC](#networking--vpc)
-- [Key Components](#key-components)
-- [Databases](#databases)
-- [Caching](#caching)
-- [Message Queues & Pub/Sub](#message-queues--pubsub)
-- [Storage](#storage)
-- [Scalability Patterns](#scalability-patterns)
-- [Distributed System Patterns](#distributed-system-patterns)
-- [Capacity Estimation](#capacity-estimation)
+- [Core Concepts](#core-concepts) — ACID, CAP, Reliability/Scalability/Maintainability, Concurrency
+- [Cloud Computing & Security](#cloud-computing--security) — IAM, Encryption, Network Security, 3-Tier
+- [Networking & VPC](#networking--vpc) — VPC, DNS, TCP/IP, Proxies
+- [Key Components](#key-components) — Load Balancers, API Gateway, Rate Limiting
+- [Databases](#databases) — SQL vs NoSQL, Replication, Sharding
+- [Caching](#caching) — Strategies, Redis vs Memcached
+- [Message Queues & Pub/Sub](#message-queues--pubsub) — Kafka, Dead Letter Queues
+- [Storage](#storage) — Block/File/Object, CDN
+- [Scalability Patterns](#scalability-patterns) — Horizontal vs Vertical, Microservices, DR
+- [Distributed System Patterns](#distributed-system-patterns) — Consistent Hashing, Quorum, Leader Election
+- [Capacity Estimation](#capacity-estimation) — Latencies, QPS, Formulas
 - [Common Design Examples](#common-design-examples)
+  - [URL Shortener](#url-shortener) — Key-value, Base62, Caching
+  - [Chat Application](#chat-application) — WebSocket, Presence, Message Routing
+  - [Notification System](#notification-system) — Multi-channel, Fanout, Delivery Tracking
 - [Quick Reference](#quick-reference)
   - [Interview Checklist](#system-design-interview-checklist)
-  - [Beyond Pattern Matching](#beyond-pattern-matching-the-interview-mindset)
+  - [Interview Mindset](#beyond-pattern-matching-the-interview-mindset)
+  - [Component Failure Analysis](#component-failure-analysis-framework)
   - [Trade-off Matrix](#trade-off-decision-matrix)
 
 ---
@@ -37,96 +41,40 @@ For **ML and GenAI system design** (LLM serving, **RAG** (retrieval-augmented ge
 
 ### ACID Properties
 
-**ACID** (Atomicity, Consistency, Isolation, Durability) describes four fundamental properties database transactions must satisfy to ensure data integrity, especially in systems handling financial transactions, inventory management, or any scenario where partial updates could lead to inconsistent states.
+**ACID** (Atomicity, Consistency, Isolation, Durability) ensures data integrity in database transactions—critical for financial systems, inventory, or any scenario where partial updates cause inconsistent states.
 
-**Atomicity** ensures that a transaction is treated as a single, indivisible unit. Consider a bank transfer: if money is debited from Account A but the credit to Account B fails, atomicity guarantees the entire transaction rolls back—you'll never have money disappear into thin air.
-
-**Consistency** guarantees that a transaction brings the database from one valid state to another. If your business rule says account balances can't be negative, the database will reject any transaction that would violate this constraint.
-
-**Isolation** prevents concurrent transactions from interfering with each other. When two users try to book the last seat on a flight simultaneously, isolation ensures only one succeeds while the other receives an appropriate error.
-
-**Durability** promises that once a transaction commits, it stays committed—even if the server crashes immediately after. This is typically achieved through write-ahead logging and redundant storage.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ACID PROPERTIES                          │
-├────────────────┬────────────────────────────────────────────────┤
-│   ATOMICITY    │  All-or-nothing: entire transaction succeeds   │
-│                │  or entire transaction rolls back              │
-├────────────────┼────────────────────────────────────────────────┤
-│  CONSISTENCY   │  Data always valid according to all rules      │
-│                │  and constraints                               │
-├────────────────┼────────────────────────────────────────────────┤
-│   ISOLATION    │  Concurrent transactions don't interfere       │
-│                │  (appear sequential)                           │
-├────────────────┼────────────────────────────────────────────────┤
-│   DURABILITY   │  Committed data persists even after            │
-│                │  system failure                                │
-└────────────────┴────────────────────────────────────────────────┘
-```
+| Property | Description | Example |
+|----------|-------------|---------|
+| **Atomicity** | All-or-nothing transactions | Bank transfer: debit fails → credit rolls back |
+| **Consistency** | Data always valid per rules | Balances can't go negative |
+| **Isolation** | Concurrent txns don't interfere | Two users booking last seat → one succeeds |
+| **Durability** | Committed = permanent | Survives crashes via write-ahead logging |
 
 ### CAP Theorem
 
-The CAP theorem (Brewer's theorem) states that a distributed system can only guarantee two of three properties simultaneously: **Consistency**, **Availability**, and **Partition Tolerance**. Since network partitions are inevitable in distributed systems, you're essentially choosing between consistency and availability.
+The CAP theorem states distributed systems can only guarantee **two of three** properties: **Consistency**, **Availability**, **Partition Tolerance**. Since network partitions are inevitable, you're choosing between C and A.
 
-**Why can't we have all three?** Imagine two database nodes that lose network connectivity (a partition). When a write comes in, you have two choices:
-1. **Accept the write** on the available node (choose Availability) → but now the nodes have different data (sacrifice Consistency)
-2. **Reject the write** until nodes can sync (choose Consistency) → but now the system is unavailable (sacrifice Availability)
-
-**CP systems** (like HBase, MongoDB in certain configurations) will refuse to serve requests during network issues to maintain consistency. Use these when correctness matters more than uptime—financial systems, inventory tracking, or coordination services.
-
-**AP systems** (like Cassandra, DynamoDB) remain available but may return stale data. Use these when uptime is critical and eventual consistency is acceptable—social media feeds, shopping carts, or analytics.
+**The trade-off**: During a network split, you either accept writes (stay available, sacrifice consistency) or reject writes (stay consistent, sacrifice availability).
 
 ```
-                      CONSISTENCY
-                          ╱╲
-                         ╱  ╲
-                        ╱    ╲
-                       ╱  CP  ╲
-                      ╱        ╲
-                     ╱──────────╲
-                    ╱            ╲
-                   ╱      CA      ╲
-                  ╱   (impossible  ╲
-                 ╱   in distributed)╲
-                ╱                    ╲
-               ╱────────────────────╲
-              ╱          AP          ╲
-             ╱                        ╲
-            ╱                          ╲
-    AVAILABILITY ──────────────────── PARTITION
-                                      TOLERANCE
-
-    CP: HBase, MongoDB, Redis         AP: Cassandra, DynamoDB, CouchDB
+┌──────────────────────────────────────────────────────────────┐
+│  CP (Consistency + Partition)  │  AP (Availability + Partition)   │
+├────────────────────────────────┼──────────────────────────────────┤
+│  Reject requests during split  │  Accept requests, may be stale   │
+│  HBase, MongoDB, Redis         │  Cassandra, DynamoDB, CouchDB    │
+│  Use: Financial, inventory     │  Use: Social feeds, analytics    │
+└────────────────────────────────┴──────────────────────────────────┘
 ```
 
 ### Reliability, Scalability, Maintainability
 
-These three qualities define whether a system will succeed in production. A system that's fast but crashes constantly is useless. A system that's reliable but can't handle growth will eventually fail. A system that works but nobody can understand or modify will become a liability.
+These three qualities define production success:
 
-**Reliability** means the system continues functioning correctly even when things go wrong. Hardware fails, software has bugs, and humans make mistakes. Netflix's Chaos Monkey deliberately kills production servers to ensure the system can handle failures gracefully. Key techniques include redundancy, monitoring, graceful degradation, and comprehensive testing.
-
-**Scalability** is the system's ability to handle increased load. This could mean more users, more data, or more complex operations. The two approaches are vertical scaling (bigger machines) and horizontal scaling (more machines). Most modern systems prefer horizontal scaling because it has no theoretical limit and provides better fault tolerance.
-
-**Maintainability** determines whether your team can effectively operate, understand, and evolve the system. Good operability means easy deployment, monitoring, and debugging. Simplicity means new engineers can understand the system quickly. Evolvability means you can adapt to changing requirements without a complete rewrite.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SYSTEM QUALITIES                             │
-├─────────────────┬───────────────────────────────────────────────┤
-│   RELIABILITY   │  • Functions correctly despite faults         │
-│                 │  • Hardware, software, human error tolerance  │
-│                 │  • Techniques: Chaos Monkey, monitoring       │
-├─────────────────┼───────────────────────────────────────────────┤
-│   SCALABILITY   │  • Handles growth without degradation         │
-│                 │  • Vertical (scale up) or Horizontal (out)    │
-│                 │  • Auto-scaling, load balancing               │
-├─────────────────┼───────────────────────────────────────────────┤
-│ MAINTAINABILITY │  • Operability: Easy to run                   │
-│                 │  • Simplicity: Easy to understand             │
-│                 │  • Evolvability: Easy to change               │
-└─────────────────┴───────────────────────────────────────────────┘
-```
+| Quality | Definition | Key Techniques |
+|---------|------------|----------------|
+| **Reliability** | Functions correctly despite faults | Redundancy, monitoring, Chaos Monkey, graceful degradation |
+| **Scalability** | Handles growth in users/data/load | Vertical (bigger) or horizontal (more machines) scaling |
+| **Maintainability** | Easy to operate, understand, evolve | Good docs, simple architecture, modular design |
 
 ### Concurrency Control
 
@@ -187,66 +135,27 @@ If T3 fails, the saga executes C2, then C1, rolling back the entire business tra
 
 ### Cloud Computing Overview
 
-Cloud computing fundamentally changed how we build and deploy applications. Instead of purchasing physical servers, estimating capacity years in advance, and managing data centers, you can provision resources on-demand and pay only for what you use.
+On-demand IT resources with pay-as-you-go pricing. Three main categories:
 
-The three main service categories are:
-- **Compute**: Virtual servers (EC2), containers (ECS/EKS), or serverless functions (Lambda)
-- **Storage**: Object storage (S3), block storage (EBS), or file systems (EFS)
-- **Database**: Managed relational databases (RDS), NoSQL (DynamoDB), or caching (ElastiCache)
+| Category | Services | Examples |
+|----------|----------|----------|
+| **Compute** | VMs, containers, serverless | EC2, ECS/EKS, Lambda |
+| **Storage** | Object, block, file | S3, EBS, EFS |
+| **Database** | Relational, NoSQL, cache | RDS, DynamoDB, ElastiCache |
 
-All these services communicate through a **networking layer** (**VPC**, virtual private cloud) that you configure with your own IP ranges, subnets, and routing rules. This gives you the flexibility of the cloud with the isolation of a private data center.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CLOUD COMPUTING                              │
-│                                                                 │
-│   On-demand delivery of IT resources via internet               │
-│   with pay-as-you-go pricing                                    │
-│                                                                 │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐            │
-│   │   COMPUTE   │  │   STORAGE   │  │  DATABASE   │            │
-│   │  EC2/Lambda │  │  S3/EBS/EFS │  │  RDS/Dynamo │            │
-│   └─────────────┘  └─────────────┘  └─────────────┘            │
-│          │                │                │                    │
-│          └────────────────┼────────────────┘                    │
-│                           ▼                                     │
-│                  ┌─────────────────┐                            │
-│                  │   NETWORKING    │                            │
-│                  │   VPC/Route53   │                            │
-│                  └─────────────────┘                            │
-└─────────────────────────────────────────────────────────────────┘
-```
+All services communicate through **VPC** (Virtual Private Cloud)—your isolated network with custom IP ranges, subnets, and routing.
 
 ### Security Fundamentals (Defense in Depth)
 
-Security should never be an afterthought—it must be built into the architecture from day one. The **Defense in Depth** approach layers multiple security controls so that if one fails, others still protect your assets.
+Layer multiple security controls—if one fails, others protect your assets:
 
-Cloud security rests on three fundamental pillars:
+| Pillar | What It Does | Key Components |
+|--------|--------------|----------------|
+| **IAM** | Controls who can do what | Users, Groups, Roles, Policies, MFA |
+| **Encryption** | Protects data at rest & transit | KMS (at rest), TLS/SSL (transit), HSM |
+| **Network** | Controls traffic flow | VPC, Subnets, Security Groups, NACLs |
 
-**IAM (Identity and Access Management)** controls WHO can do WHAT. Create users for individuals, groups for teams, and roles for services. Every permission should follow the principle of least privilege—grant only the minimum access needed for the task. Enable MFA for all human users.
-
-**Encryption** protects data both at rest and in transit. Use KMS (Key Management Service) to encrypt data stored in databases and S3. Use TLS/SSL for all network communication. For the most sensitive workloads, consider HSM (Hardware Security Modules) for key storage.
-
-**Network Security** controls traffic flow. VPCs isolate your resources, subnets segment your network into public and private zones, Security Groups act as instance-level firewalls, and NACLs provide subnet-level filtering.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│              CLOUD SECURITY - THREE PILLARS                     │
-│                                                                 │
-│    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐        │
-│    │     IAM      │  │  ENCRYPTION  │  │   NETWORK    │        │
-│    │              │  │              │  │   SECURITY   │        │
-│    ├──────────────┤  ├──────────────┤  ├──────────────┤        │
-│    │ • Users      │  │ • At Rest    │  │ • VPC        │        │
-│    │ • Groups     │  │   (KMS)      │  │ • Subnets    │        │
-│    │ • Roles      │  │ • In Transit │  │ • Security   │        │
-│    │ • Policies   │  │   (TLS/SSL)  │  │   Groups     │        │
-│    │ • MFA        │  │ • HSM        │  │ • NACLs      │        │
-│    └──────────────┘  └──────────────┘  └──────────────┘        │
-│                                                                 │
-│              PRINCIPLE: LEAST PRIVILEGE                         │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Principle**: Least privilege—grant only minimum access needed for each task.
 
 ### 3-Tier Application Security
 
@@ -504,32 +413,14 @@ The TCP/IP model describes how data travels across networks in layers, with each
 
 ### Proxies
 
-Proxies are intermediaries that sit between clients and servers, providing various benefits like security, caching, and load distribution. The key distinction is which side of the connection they represent.
-
-**Forward Proxy** acts on behalf of clients. When you configure your browser to use a corporate proxy, all your requests go through it first. The destination server sees the proxy's IP, not yours. Use cases include content filtering (blocking certain websites), anonymous browsing, bypassing geo-restrictions, and caching frequently accessed content.
-
-**Reverse Proxy** acts on behalf of servers—clients don't even know it exists. When you visit a website, you might actually connect to a reverse proxy that then forwards your request to one of many backend servers. Common reverse proxies include Nginx, HAProxy, and AWS ALB. Use cases include load balancing (distributing traffic across servers), SSL termination (handling encryption centrally), caching (reducing load on backend servers), and security (hiding backend infrastructure and providing WAF capabilities).
+| Type | Acts For | Use Cases | Examples |
+|------|----------|-----------|----------|
+| **Forward Proxy** | Clients | Mask IP, content filtering, caching, geo-bypass | Corporate proxy |
+| **Reverse Proxy** | Servers | Load balancing, SSL termination, caching, WAF | Nginx, HAProxy, ALB |
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      PROXY TYPES                                │
-│                                                                 │
-│   FORWARD PROXY                    REVERSE PROXY                │
-│   (Client-side)                    (Server-side)                │
-│                                                                 │
-│   ┌──────┐   ┌───────┐            ┌───────┐   ┌──────┐         │
-│   │Client│──►│Forward│──►         │Reverse│◄──│Server│         │
-│   └──────┘   │ Proxy │   Internet │ Proxy │   └──────┘         │
-│              └───────┘            └───────┘                     │
-│                  │                    │                         │
-│                  ▼                    ▼                         │
-│   • Masks client IP           • Load balancing                 │
-│   • Content filtering         • SSL termination                │
-│   • Caching                   • Caching                        │
-│   • Access control            • Security (WAF)                 │
-│                                                                 │
-│   Example: Corporate proxy    Example: Nginx, HAProxy          │
-└─────────────────────────────────────────────────────────────────┘
+Client → Forward Proxy → Internet → Reverse Proxy → Server
+         (client-side)               (server-side)
 ```
 
 ---
@@ -736,45 +627,18 @@ Rate limiting protects your services from being overwhelmed by too many requests
 
 ### SQL vs NoSQL
 
-The choice between SQL and NoSQL isn't about which is "better"—it's about which fits your use case. Understanding the fundamental differences helps you make the right choice.
+| Aspect | SQL (Relational) | NoSQL (Non-relational) |
+|--------|------------------|------------------------|
+| **Schema** | Fixed, predefined | Flexible, evolving |
+| **Consistency** | ACID (strong) | BASE (eventual) |
+| **Queries** | Complex JOINs | Simple key-based |
+| **Scaling** | Vertical (traditionally) | Horizontal |
+| **Examples** | MySQL, PostgreSQL | Redis, MongoDB, Cassandra |
 
-**SQL databases** (MySQL, PostgreSQL, Oracle) store data in tables with predefined schemas. Every row has the same columns. They excel at complex queries with JOINs across multiple tables and provide strong ACID guarantees. However, they're traditionally harder to scale horizontally because JOINs across partitions are expensive.
+**Choose SQL when**: Transactions critical, complex queries, relational data, data integrity paramount.
+**Choose NoSQL when**: Massive scale, flexible schema, simple access patterns, high write throughput.
 
-*Choose SQL when*: You need transactions (banking, e-commerce), complex queries, or your data is highly relational with many-to-many relationships.
-
-**NoSQL databases** embrace flexibility. They allow different "documents" to have different structures, making them ideal for rapidly evolving schemas. They're designed for horizontal scaling—add more nodes to handle more data or traffic. The trade-off is usually eventual consistency and limited query capabilities.
-
-*Choose NoSQL when*: You need massive scale, flexible schemas, or your data access patterns are simple (key-based lookups rather than complex queries).
-
-**Important nuance**: The lines are blurring. PostgreSQL now has excellent JSON support. Google Spanner offers SQL semantics with global scale. AWS Aurora provides MySQL compatibility with impressive scalability. Don't choose NoSQL just because "it scales"—modern SQL databases scale well for most use cases.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SQL vs NoSQL                                 │
-│                                                                 │
-│   SQL (Relational)               NoSQL (Non-relational)         │
-│   ┌─────────────────┐            ┌─────────────────┐           │
-│   │ ┌───┬───┬───┐   │            │   Key-Value     │           │
-│   │ │ID │Name│Age│   │            │ ┌─────┬───────┐ │           │
-│   │ ├───┼───┼───┤   │            │ │key1 │value1 │ │           │
-│   │ │1  │John│25 │   │            │ │key2 │value2 │ │           │
-│   │ │2  │Jane│30 │   │            │ └─────┴───────┘ │           │
-│   │ └───┴───┴───┘   │            └─────────────────┘           │
-│   └─────────────────┘                                          │
-│                                                                 │
-│   • Fixed schema                 • Flexible schema              │
-│   • ACID compliant               • Eventual consistency (BASE) │
-│   • Complex joins                • Simple queries               │
-│   • Vertical scaling             • Horizontal scaling           │
-│   • MySQL, PostgreSQL            • Redis, MongoDB, Cassandra    │
-│                                                                 │
-│   Choose SQL when:               Choose NoSQL when:             │
-│   • Need transactions            • Need massive scale           │
-│   • Complex queries/JOINs        • Flexible/evolving schema     │
-│   • Data integrity critical      • Simple access patterns       │
-│   • Relational data              • High write throughput        │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Note**: Lines are blurring—PostgreSQL has JSON support, Spanner offers SQL at scale. Don't choose NoSQL just because "it scales."
 
 ### NoSQL Types
 
@@ -1039,49 +903,15 @@ Different write strategies offer trade-offs between consistency, performance, an
 
 ### Redis vs Memcached
 
-Both Redis and Memcached are in-memory data stores used for caching, but they serve different use cases.
+| Feature | Redis | Memcached |
+|---------|-------|-----------|
+| **Data Types** | Strings, Lists, Sets, Hashes, Sorted Sets | Strings only |
+| **Persistence** | Yes (RDB + AOF) | No (volatile) |
+| **Replication** | Built-in | No |
+| **Threading** | Single (100K+ ops/s) | Multi-threaded |
+| **Use Cases** | Sessions, queues, leaderboards, pub/sub | Simple caching, large objects |
 
-**Memcached** is the simpler, more focused solution. It stores string key-value pairs in memory, optimized for simplicity and raw performance. It's multi-threaded, making excellent use of multi-core systems. However, it lacks persistence (data is lost on restart), replication, and advanced data structures.
-
-*Choose Memcached when*: You need simple caching of large objects, you're already multi-threaded, and you don't need persistence or complex operations.
-
-**Redis** is a full-featured data structure server. Beyond simple strings, it supports lists (for queues), sets (for unique collections), sorted sets (for leaderboards), hashes (for objects), and more. Redis provides persistence through RDB snapshots and AOF (append-only file), built-in replication, and Lua scripting for complex atomic operations.
-
-*Choose Redis when*: You need data structures beyond simple strings, want persistence, need pub/sub messaging, or require atomic operations on complex data.
-
-**Performance note**: Redis is single-threaded (by design, to avoid locking complexity), but it's so fast that this rarely matters—a single Redis instance can handle 100,000+ operations per second. For higher throughput, run multiple Redis instances or use Redis Cluster.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                   REDIS vs MEMCACHED                            │
-│                                                                 │
-│   ┌─────────────────────────┬─────────────────────────┐        │
-│   │         REDIS           │       MEMCACHED         │        │
-│   ├─────────────────────────┼─────────────────────────┤        │
-│   │ Data Types:             │ Data Types:             │        │
-│   │ • Strings               │ • Strings only          │        │
-│   │ • Lists (queues)        │                         │        │
-│   │ • Sets (unique items)   │                         │        │
-│   │ • Hashes (objects)      │                         │        │
-│   │ • Sorted Sets (ranks)   │                         │        │
-│   ├─────────────────────────┼─────────────────────────┤        │
-│   │ Persistence: YES        │ Persistence: NO         │        │
-│   │ • RDB Snapshots         │ (data lost on restart)  │        │
-│   │ • AOF (append-only)     │                         │        │
-│   ├─────────────────────────┼─────────────────────────┤        │
-│   │ Replication: Built-in   │ Replication: No         │        │
-│   ├─────────────────────────┼─────────────────────────┤        │
-│   │ Threading: Single       │ Threading: Multi        │        │
-│   │ (but still 100K+ ops/s) │ (better multicore use)  │        │
-│   ├─────────────────────────┼─────────────────────────┤        │
-│   │ Use: Sessions, queues,  │ Use: Simple caching,    │        │
-│   │ leaderboards, pub/sub   │ large objects (>100KB)  │        │
-│   └─────────────────────────┴─────────────────────────┘        │
-│                                                                 │
-│   Rule of thumb: Start with Redis unless you have a specific   │
-│   reason to use Memcached (simpler ops, multi-threaded needs)  │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Rule of thumb**: Start with Redis unless you specifically need multi-threaded caching of simple strings.
 
 ---
 
@@ -1247,164 +1077,43 @@ When message processing fails repeatedly, you need a strategy to prevent one "po
 
 ### Storage Types Comparison
 
-Cloud storage comes in three fundamental types, each optimized for different access patterns and use cases.
+| Type | How It Works | Characteristics | Use Cases |
+|------|--------------|-----------------|-----------|
+| **Block (EBS)** | Raw blocks, mount as volume | Single EC2, lowest latency, highest IOPS | Databases, OS boot volumes |
+| **File (EFS/FSx)** | NFS/SMB file system | Shared across instances, auto-scales | CMS, shared data, containers |
+| **Object (S3)** | HTTP API, flat namespace | Unlimited capacity, 11 9s durability | Media, backups, data lakes |
 
-**Block Storage (EBS)** presents storage as raw blocks, like a hard drive attached to your computer. The operating system formats it with a file system (ext4, NTFS) and mounts it as a volume. Block storage offers the lowest latency and highest IOPS, making it ideal for databases and operating systems. However, it can only be attached to one EC2 instance at a time (within the same AZ).
-
-*Use for*: Boot volumes, databases, applications requiring raw device access.
-
-**File Storage (EFS/FSx)** provides a managed file system accessible via standard protocols (NFS for Linux, SMB for Windows). Multiple instances can mount the same file system simultaneously, seeing the same files. It scales automatically and replicates across AZs.
-
-*Use for*: Shared application data, content management, big data analytics, container storage.
-
-**Object Storage (S3)** stores data as objects in a flat namespace (buckets). Each object consists of data, metadata, and a unique key. Objects are accessed via HTTP APIs, not mounted as file systems. S3 offers virtually unlimited capacity and exceptional durability (99.999999999%—eleven 9s).
-
-*Use for*: Static assets (images, videos), backups, data lakes, static website hosting. NOT for operating systems or databases (no POSIX interface, higher latency).
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    STORAGE TYPES                                │
-│                                                                 │
-│   BLOCK STORAGE (EBS)                                           │
-│   ┌─────────────────────────────────────┐                      │
-│   │ ┌───┐ ┌───┐ ┌───┐ ┌───┐ ┌───┐      │  Raw blocks like a   │
-│   │ │ 1 │ │ 2 │ │ 3 │ │ 4 │ │ 5 │ ...  │  hard drive          │
-│   │ └───┘ └───┘ └───┘ └───┘ └───┘      │                      │
-│   └─────────────────────────────────────┘                      │
-│   • Attached to single EC2 (same AZ)    • Lowest latency       │
-│   • Format with file system             • Best for DBs, OS     │
-│                                                                 │
-│   FILE STORAGE (EFS/FSx)                                        │
-│   ┌─────────────────────────────────────┐                      │
-│   │         /root                        │  Hierarchical file  │
-│   │        /     \                       │  system (NFS/SMB)   │
-│   │      /dir1   /dir2                   │                      │
-│   │      /   \      \                    │                      │
-│   │   file1 file2  file3                 │                      │
-│   └─────────────────────────────────────┘                      │
-│   • Shared across instances             • Regional scope       │
-│   • Auto-scales                         • Good for CMS, data   │
-│                                                                 │
-│   OBJECT STORAGE (S3)                                           │
-│   ┌─────────────────────────────────────┐                      │
-│   │  BUCKET                              │  Flat key-value     │
-│   │  ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   │  accessed via API    │
-│   │  │obj1 │ │obj2 │ │obj3 │ │obj4 │   │                      │
-│   │  └─────┘ └─────┘ └─────┘ └─────┘   │                      │
-│   └─────────────────────────────────────┘                      │
-│   • Unlimited capacity                  • 11 9s durability     │
-│   • HTTP API access                     • NOT for OS or DBs    │
-│   • Use for: media, backups, data lakes                        │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Key insight**: Block for performance, File for sharing, Object for scale. S3 is NOT for databases (no POSIX, higher latency).
 
 ### Storage Performance Comparison
 
-Understanding storage performance helps you choose the right type for your workload.
+| Metric | Block (EBS) | File (EFS) | Object (S3) |
+|--------|-------------|------------|-------------|
+| **Latency** | <1ms | 1-10ms | 100-200ms |
+| **Max IOPS** | 256,000 | Scales | N/A |
+| **Throughput** | 4,000 MB/s | Scales | Unlimited (parallel) |
+| **Access** | Single EC2 | Multiple | HTTP API |
+| **Scope** | AZ | Regional | Regional |
+| **Cost** | $$ | $$$ | $ |
 
-**IOPS (I/O Operations Per Second)** measures how many read/write operations storage can handle. Databases with many small transactions need high IOPS.
-
-**Throughput** measures data transfer rate (MB/s). Large file transfers or streaming need high throughput.
-
-**Latency** measures the delay between requesting data and receiving it. Real-time applications need low latency.
-
-Block storage (EBS) provides the lowest latency (sub-millisecond for SSD-backed volumes) and can be provisioned for high IOPS (up to 256,000 for io2 volumes). It's limited to one EC2 instance but delivers consistent, predictable performance.
-
-File storage (EFS) adds a network hop, increasing latency slightly. However, it supports concurrent access from thousands of instances, and throughput scales with file system size.
-
-Object storage (S3) has the highest latency (typically 100-200ms) because it's accessed over HTTP. However, it offers massive aggregate throughput—you can read many objects in parallel from many clients simultaneously.
-
-**Cost-performance trade-off**: S3 is cheapest, followed by EFS, then EBS. Choose based on access patterns: S3 for infrequent access to large data, EBS for frequent access to hot data, EFS when you need shared access.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 STORAGE PERFORMANCE                             │
-│                                                                 │
-│   Latency      Block        File         Object                 │
-│      ▲         (EBS)        (EFS)         (S3)                  │
-│      │                                                          │
-│   High│                                    ●  ~100-200ms        │
-│      │                                                          │
-│   Med │                       ●  ~1-10ms                        │
-│      │                                                          │
-│   Low │           ●  <1ms                                       │
-│      │                                                          │
-│      └──────────────────────────────────────►                   │
-│                    Concurrent Access                            │
-│                                                                 │
-│   ┌─────────────────────────────────────────────────────────┐  │
-│   │ Metric      │  Block (EBS) │  File (EFS) │ Object (S3) │  │
-│   ├─────────────┼──────────────┼─────────────┼─────────────┤  │
-│   │ Latency     │  <1ms        │  1-10ms     │ 100-200ms   │  │
-│   │ Max IOPS    │  256,000     │  Scales     │ N/A         │  │
-│   │ Throughput  │  4,000 MB/s  │  Scales     │ Unlimited*  │  │
-│   │ Access      │  Single EC2  │  Multiple   │ Via API     │  │
-│   │ Scope       │  AZ          │  Regional   │ Regional    │  │
-│   │ Cost        │  $$          │  $$$        │ $           │  │
-│   └─────────────┴──────────────┴─────────────┴─────────────┘  │
-│                                                                 │
-│   * S3 throughput unlimited in aggregate (parallel requests)   │
-│                                                                 │
-│   Choose: EBS for DBs, EFS for shared files, S3 for archives  │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Choose**: EBS for databases (latency), EFS for shared files (concurrency), S3 for archives (cost/scale).
 
 ### CDN Architecture
 
-A Content Delivery Network (CDN) caches content at edge locations around the world, serving users from the nearest location rather than your origin server. This dramatically reduces latency and offloads traffic from your infrastructure.
-
-**How it works**: When a user in Tokyo requests an image from your US-based server, without a CDN they'd wait for a round-trip across the Pacific (~150ms just for network latency). With a CDN, the request goes to a Tokyo edge server. If the content is cached, it's served immediately (~5ms). If not, the edge server fetches it from your origin, caches it, and serves it—subsequent Tokyo users get the cached version.
-
-**Push vs Pull CDN**:
-- **Pull (Origin Pull)**: The CDN fetches content from your origin when first requested, then caches it. Simple to set up—just point the CDN at your origin. Content may be stale for the TTL duration.
-- **Push (Origin Push)**: You proactively upload content to the CDN before users request it. Better for large files or predictable content but requires more management.
-
-**CDN benefits beyond caching**:
-- **DDoS protection**: Edge servers absorb attack traffic, protecting your origin
-- **SSL termination**: Handle HTTPS at the edge, reducing certificate management overhead
-- **Image optimization**: Automatically resize and compress images per device
-- **Geographic load balancing**: Route users to the nearest healthy origin
-
-**AWS CloudFront** integrates with Shield (DDoS), WAF (web application firewall), and Lambda@Edge (run code at edge locations).
+Caches content at edge locations worldwide, serving users from the nearest location.
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CDN ARCHITECTURE                             │
-│                                                                 │
-│   Without CDN: User → 150ms → Origin → 150ms → User (300ms)    │
-│   With CDN:    User → 5ms → Edge (cache hit!) → User (5ms)     │
-│                                                                 │
-│   ┌──────┐                                        ┌──────┐     │
-│   │User A│ (Tokyo)                        (NYC)   │User B│     │
-│   └──┬───┘                                        └──┬───┘     │
-│      │                                               │          │
-│      ▼                                               ▼          │
-│   ┌─────────┐                                  ┌─────────┐     │
-│   │  Edge   │  Cache hit?                      │  Edge   │     │
-│   │ Server  │  Yes → Serve immediately         │ Server  │     │
-│   │ (Tokyo) │  No  → Fetch from origin         │ (NYC)   │     │
-│   └────┬────┘                                  └────┬────┘     │
-│        │              Cache Miss                    │          │
-│        │                  │                         │          │
-│        └──────────────────┼─────────────────────────┘          │
-│                           │                                     │
-│                           ▼                                     │
-│                    ┌────────────┐                               │
-│                    │   ORIGIN   │                               │
-│                    │  SERVER    │                               │
-│                    │ (S3/EC2)   │                               │
-│                    └────────────┘                               │
-│                                                                 │
-│   CDN Benefits:                                                 │
-│   • Reduced latency (serve from nearby edge)                   │
-│   • Offload origin (80%+ traffic from cache)                   │
-│   • DDoS protection (absorb attacks at edge)                   │
-│   • SSL termination at edge                                    │
-│                                                                 │
-│   Push CDN: Upload content proactively (predictable content)   │
-│   Pull CDN: Fetch on first request (most common, simpler)      │
-└─────────────────────────────────────────────────────────────────┘
+Without CDN: User → 150ms → Origin → 150ms → User (300ms round-trip)
+With CDN:    User → 5ms → Edge (cache hit!) → User (5ms total)
 ```
+
+| CDN Type | How It Works | Best For |
+|----------|--------------|----------|
+| **Pull** | Fetches on first request, then caches | Most use cases (simpler) |
+| **Push** | You upload content proactively | Large files, predictable content |
+
+**Benefits beyond caching**: DDoS protection, SSL termination, image optimization, geo-load balancing.
+**AWS CloudFront**: Integrates with Shield (DDoS), WAF, Lambda@Edge.
 
 ---
 
@@ -1412,66 +1121,25 @@ A Content Delivery Network (CDN) caches content at edge locations around the wor
 
 ### Horizontal vs Vertical Scaling
 
-When your system can't handle the load, you have two fundamental approaches: make machines bigger or add more machines.
+| Approach | How | Pros | Cons |
+|----------|-----|------|------|
+| **Vertical (Up)** | Bigger servers | Simple, no code changes | Hardware limits, expensive, SPOF |
+| **Horizontal (Out)** | More servers | No limit, fault tolerant | Stateless design, distributed complexity |
 
-**Vertical Scaling (Scale Up)** means adding more resources to existing servers—more CPU, more RAM, faster disks. It's the simpler approach: no code changes, no distributed systems complexity. Your application runs on one powerful machine.
-
-*Limitations*: Hardware has physical limits (you can't buy a 1000-core CPU). It's expensive—high-end servers cost disproportionately more. And it's a single point of failure—if that one server dies, everything dies.
-
-**Horizontal Scaling (Scale Out)** means adding more servers. Instead of one big machine, you run many smaller machines behind a load balancer. This approach has no theoretical limit—need more capacity? Add more servers.
-
-*Requirements*: Your application must be designed for horizontal scaling. State must be externalized (sessions in Redis, not in memory). Requests must be stateless or use sticky sessions. Database scaling requires additional strategies (read replicas, sharding).
-
-**The reality**: Most systems use both. Scale vertically until it's too expensive or risky, then scale horizontally. A common pattern is vertical scaling for databases (easier consistency) and horizontal scaling for stateless application servers.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    SCALING STRATEGIES                           │
-│                                                                 │
-│   VERTICAL (Scale Up)              HORIZONTAL (Scale Out)       │
-│                                                                 │
-│   ┌─────────────┐                 ┌───┐ ┌───┐ ┌───┐ ┌───┐      │
-│   │             │                 │   │ │   │ │   │ │   │      │
-│   │             │                 │ S │ │ S │ │ S │ │ S │      │
-│   │   BIGGER    │                 │ E │ │ E │ │ E │ │ E │      │
-│   │   SERVER    │                 │ R │ │ R │ │ R │ │ R │      │
-│   │             │                 │ V │ │ V │ │ V │ │ V │      │
-│   │  More CPU   │                 │ E │ │ E │ │ E │ │ E │      │
-│   │  More RAM   │                 │ R │ │ R │ │ R │ │ R │      │
-│   │             │                 │   │ │   │ │   │ │   │      │
-│   └─────────────┘                 └───┘ └───┘ └───┘ └───┘      │
-│                                                                 │
-│   Pros:                           Pros:                         │
-│   ✓ Simple, no code changes       ✓ No theoretical limit        │
-│   ✓ No distributed complexity     ✓ Fault tolerant              │
-│   ✓ Easier consistency            ✓ Cost-effective at scale     │
-│                                                                 │
-│   Cons:                           Cons:                         │
-│   ✗ Hardware limits               ✗ Stateless design required   │
-│   ✗ Expensive at high end         ✗ Distributed complexity      │
-│   ✗ Single point of failure       ✗ Data consistency harder     │
-│                                                                 │
-│   Reality: Use both. Vertical for DBs, horizontal for apps.    │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Reality**: Use both. Vertical for databases (easier consistency), horizontal for stateless app servers.
 
 ### Microservices Architecture
 
-Microservices decompose a monolithic application into small, independent services that communicate over the network. Each service owns its data and can be developed, deployed, and scaled independently.
+Small, independent services that communicate over the network. Each owns its data and can scale independently.
 
-**Why microservices?**
-- **Independent scaling**: Scale only the services that need it. If your image processing is bottleneck, scale just that service.
-- **Technology diversity**: Each service can use the best tool for its job—Python for ML, Go for performance, Node for real-time.
-- **Fault isolation**: A bug in one service doesn't crash the whole system.
-- **Team autonomy**: Small teams own services end-to-end, moving faster without coordination overhead.
+| Benefits | Challenges |
+|----------|------------|
+| Independent scaling | Network complexity (failures, timeouts) |
+| Technology diversity | Data consistency (sagas, eventual) |
+| Fault isolation | Operational overhead |
+| Team autonomy | Debugging (need distributed tracing) |
 
-**The challenges are significant**:
-- **Network complexity**: What was a function call becomes a network request that can fail, timeout, or return errors.
-- **Data consistency**: Without a shared database, maintaining consistency across services requires careful design (sagas, eventual consistency).
-- **Operational overhead**: More services mean more deployments, more logs, more monitoring, more things that can fail.
-- **Debugging difficulty**: A user request might touch 10 services—tracing issues requires distributed tracing (Jaeger, Zipkin).
-
-**When to use microservices**: Large teams working on a large application with different scaling needs. NOT for startups or small teams—start with a monolith and extract services when needed.
+**When to use**: Large teams, large apps, different scaling needs. NOT for startups—start with a monolith, extract services when needed.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1712,40 +1380,19 @@ Many distributed systems need a single "leader" to coordinate activities—proce
 
 ### Key Latencies & QPS
 
-**QPS** (queries per second) is the standard rate metric. Before designing a system, you need rough estimates for capacity planning. These reference numbers help you reason about bottlenecks.
+| Operation | Latency | Typical QPS |
+|-----------|---------|-------------|
+| L1 Cache | 0.5 ns | - |
+| L2 Cache | 7 ns | - |
+| Main Memory | 100 ns | - |
+| SSD Random Read | 150 μs | - |
+| Network Round Trip | 500 μs | - |
+| MySQL Query | 1-10 ms | ~1,000 |
+| Key-Value (Redis) | <1 ms | ~10,000 |
+| In-Memory Cache | <0.1 ms | ~100K-1M |
 
-**Why key-value stores are faster than SQL**: Key-value stores like Redis use simple `GET/PUT` operations with O(1) hash lookups. SQL databases must parse queries, create execution plans, traverse B-tree indexes, and potentially JOIN multiple tables. The overhead adds up—even a simple SELECT has more work than a hash lookup.
-
-**The memory hierarchy matters**: CPU operations are fastest, memory is ~10x slower, SSD is ~100x slower, and network is ~1000x slower. This is why caching works so well—moving data closer to compute dramatically improves performance.
-
-**Why 86,400?** There are 86,400 seconds in a day (24 × 60 × 60). This constant appears frequently in capacity calculations when converting daily volumes to per-second rates.
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 LATENCY & QPS REFERENCE                         │
-│                                                                 │
-│   Operation                    Latency        QPS Capacity      │
-│   ─────────────────────────────────────────────────────────     │
-│   L1 Cache Reference           0.5 ns         -                 │
-│   L2 Cache Reference           7 ns           -                 │
-│   Main Memory Reference        100 ns         -                 │
-│   SSD Random Read              150 μs         -                 │
-│   HDD Seek                     10 ms          -                 │
-│   Network Round Trip           500 μs         -                 │
-│   ─────────────────────────────────────────────────────────     │
-│   MySQL Query                  1-10 ms        ~1,000            │
-│   Key-Value Store (Redis)      < 1 ms         ~10,000           │
-│   In-Memory Cache              < 0.1 ms       ~100,000 - 1M     │
-│                                                                 │
-│   Why is Key-Value 10x faster than SQL?                        │
-│   • Simple GET/PUT vs query parsing                            │
-│   • O(1) hash lookup vs B-tree traversal                       │
-│   • No query planning overhead                                 │
-│   • No JOINs or complex operations                             │
-│                                                                 │
-│   Key constant: 86,400 seconds per day (24 × 60 × 60)          │
-└─────────────────────────────────────────────────────────────────┘
-```
+**Why KV is 10x faster than SQL**: O(1) hash lookup vs B-tree traversal, no query parsing, no JOINs.
+**Key constant**: 86,400 seconds/day (24 × 60 × 60)—use for converting daily volume to QPS.
 
 ### Estimation Formulas
 
@@ -1911,6 +1558,70 @@ A chat application requires real-time bidirectional communication—fundamentall
 │   • TTL-based presence with heartbeats                         │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Notification System
+
+A notification system sends messages across multiple channels (push, SMS, email) to millions of users. Key challenges include high write volume, fanout to many recipients, and handling delivery failures gracefully.
+
+**Key design decisions**:
+
+1. **Decouple ingestion from delivery**: Accept notification requests quickly into a queue, process asynchronously. This prevents downstream failures from blocking the sender.
+
+2. **Channel-specific workers**: Email, SMS, and push notifications have different rate limits, failure modes, and retry strategies. Use separate worker pools for each channel.
+
+3. **Rate limiting**: Third-party providers (Twilio, SendGrid) have rate limits. Build rate limiting into your workers, not just at the API gateway.
+
+4. **Delivery status tracking**: Store delivery status per notification per channel. Users need visibility into "was my notification delivered?"
+
+5. **Template management**: Separate notification content from delivery logic. Support variables, localization, and A/B testing.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   NOTIFICATION SYSTEM                           │
+│                                                                 │
+│   ┌──────────┐     ┌─────────────┐     ┌───────────────────┐   │
+│   │Trigger   │────►│Notification │────►│ Priority Queue    │   │
+│   │Service   │     │   Service   │     │ (Kafka/SQS)       │   │
+│   └──────────┘     └──────┬──────┘     └─────────┬─────────┘   │
+│                           │                       │             │
+│                           ▼                       │             │
+│                    ┌──────────────┐               │             │
+│                    │  Templates   │               │             │
+│                    │  + User      │               │             │
+│                    │  Preferences │               │             │
+│                    └──────────────┘               │             │
+│                                                   │             │
+│           ┌───────────────┬───────────────┬──────┴──────┐      │
+│           ▼               ▼               ▼             ▼      │
+│   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
+│   │Push Worker  │ │Email Worker │ │ SMS Worker  │ │  DLQ    │ │
+│   │   (FCM/     │ │ (SendGrid/  │ │  (Twilio)   │ │         │ │
+│   │    APNs)    │ │   SES)      │ │             │ │         │ │
+│   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └─────────┘ │
+│          │               │               │                      │
+│          └───────────────┴───────────────┘                      │
+│                          │                                      │
+│                          ▼                                      │
+│                   ┌─────────────┐                               │
+│                   │  Delivery   │  Track: sent, delivered,      │
+│                   │   Status    │  opened, failed, retrying     │
+│                   │     DB      │                               │
+│                   └─────────────┘                               │
+│                                                                 │
+│   Key Design Decisions:                                         │
+│   • Async processing (queue decouples sender from delivery)    │
+│   • Channel-specific workers (different rate limits, retries)  │
+│   • User preferences (opt-out, channel priority, quiet hours)  │
+│   • Deduplication (prevent duplicate notifications)            │
+│   • Delivery tracking (sent → delivered → opened)              │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Scaling considerations**:
+- **Write-heavy**: Most operations are writes (send notification), reads are status checks
+- **Fanout pattern**: One event (new follower post) → millions of notifications
+- **Batch vs real-time**: Marketing emails can batch, security alerts must be real-time
+- **Priority queues**: Separate queues for transactional (password reset) vs marketing
 
 ---
 
@@ -2425,4 +2136,4 @@ When the interviewer asks **"What happens when X fails?"**, use this structure:
 
 *This guide provides foundational knowledge for system design. Real-world systems combine these patterns based on specific requirements, constraints, and trade-offs. The best design is the simplest one that meets your needs.*
 
-*Last updated: January 2026*
+*Last updated: February 2026*
