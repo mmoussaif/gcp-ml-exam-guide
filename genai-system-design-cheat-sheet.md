@@ -395,6 +395,25 @@ flowchart TB
 | **Context Window** | Max tokens (4K-2M)                         | Cost grows with length       |
 | **KV Cache**       | Stored attention keys/values               | Grows with context           |
 
+### 🎛️ Generation Parameters
+
+**Control output without retraining:** These parameters adjust how the model selects tokens during generation. They're the "knobs and dials" that let you tune creativity, determinism, and length without modifying the model itself.
+
+| Parameter           | What It Does                                                    | Typical Values                                        | Use Case                                                |
+| ------------------- | --------------------------------------------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
+| **Temperature (T)** | Controls randomness by rescaling logits before softmax          | 0.0-0.3 (factual), 0.7-1.0 (chat), 1.0-1.5 (creative) | T→0 = deterministic; T>1 = more random                  |
+| **Top-p (Nucleus)** | Samples from smallest set of tokens covering probability mass p | 0.9-0.95                                              | Adaptive—expands when uncertain, narrows when confident |
+| **Top-k**           | Only considers k most likely tokens                             | 10-50                                                 | Prevents rare/weird tokens; simpler than top-p          |
+| **Max Tokens**      | Maximum output length (generation stops here)                   | 100-4000+                                             | Controls cost and prevents rambling                     |
+
+**How they work together:**
+
+- **Factual Q&A**: T=0.2, top-p=0.95, max_tokens=500 → deterministic, accurate
+- **Creative writing**: T=1.2, top-p=0.95, max_tokens=2000 → diverse, creative
+- **Code generation**: T=0.0 (greedy), max_tokens=1000 → deterministic, correct syntax
+
+> **💡 Key insight:** Temperature rescales probabilities (T<1 sharpens, T>1 flattens). Top-p adapts to distribution shape (confident = few tokens, uncertain = many). Top-k is fixed-size filtering. Max tokens controls cost and prevents infinite generation.
+
 ---
 
 ## 3. Architectures
@@ -1200,6 +1219,8 @@ flowchart LR
 ## 8. Serving & Optimization
 
 **Make LLMs fast and cheap in production:** Raw LLM inference is slow and expensive. These techniques let you serve millions of requests without breaking the bank. The key insight: LLMs are memory-bandwidth bound (moving data is slower than computing), so optimizations focus on reducing memory movement and maximizing GPU utilization.
+
+**Generation parameters impact:** Temperature, top-p, and max_tokens affect both quality and cost. Lower temperature (deterministic) enables caching; higher max_tokens increases compute cost linearly. Tune these per use case—see [Core Components: Generation Parameters](#-generation-parameters).
 
 ### ⚡ Key Optimization Techniques
 
@@ -2045,6 +2066,15 @@ $$
 | **Microsoft Foundry** | —                           | Microsoft's unified AI platform; includes Azure OpenAI, GPT-5.2, reasoning models, AI agents                  |
 | **Anthropic**         | —                           | AI company offering Claude models; available via Bedrock, Azure, or direct API; strong reasoning capabilities |
 | **OpenAI**            | —                           | AI company offering GPT models; available via Azure OpenAI or direct API; DALL-E, Whisper, GPT-5.2            |
+
+### Generation Parameters
+
+| Acronym        | Full Name             | Definition                                                                                                                                                           |
+| -------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **T**          | Temperature           | Controls randomness in token selection; rescales logits before softmax; T→0 = deterministic (greedy), T=1 = original distribution, T>1 = more random/creative        |
+| **Top-p**      | Nucleus Sampling      | Samples from smallest set of tokens whose cumulative probability ≥ p; adaptive—expands when uncertain, narrows when confident; alternative/complement to temperature |
+| **Top-k**      | Top-K Sampling        | Only considers k most likely tokens at each step; prevents rare/weird token selection; simpler than top-p but not adaptive to distribution shape                     |
+| **Max Tokens** | Maximum Output Length | Maximum number of tokens to generate before stopping; controls cost and prevents infinite generation; also called "max_new_tokens" or "output_length"                |
 
 ### Other Common Terms
 
