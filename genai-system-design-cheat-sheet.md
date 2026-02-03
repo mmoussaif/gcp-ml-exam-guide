@@ -1748,7 +1748,7 @@ $$
 
 ### Core Concepts
 
-| Acronym            | Full Name                         | Plain English Definition                                                                 |
+| Acronym            | Full Name                         | Definition                                                                               |
 | ------------------ | --------------------------------- | ---------------------------------------------------------------------------------------- |
 | **AI**             | Artificial Intelligence           | Machines that perform tasks requiring human-like intelligence                            |
 | **ML**             | Machine Learning                  | Computers learning patterns from data instead of being explicitly programmed             |
@@ -1762,7 +1762,7 @@ $$
 
 ### Architecture Terms
 
-| Acronym         | Full Name                      | Plain English Definition                                                                                                        |
+| Acronym         | Full Name                      | Definition                                                                                                                      |
 | --------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
 | **Transformer** | —                              | The neural network design behind all modern LLMs; processes text using "attention"                                              |
 | **MoE**         | Mixture of Experts             | Model design where only some "expert" parts activate per input, saving compute                                                  |
@@ -1779,19 +1779,19 @@ $$
 
 ### Training Methods
 
-| Acronym  | Full Name                                  | Plain English Definition                                                                                                                        |
-| -------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| **SFT**  | Supervised Fine-Tuning                     | Teaching a model using examples with correct answers (question → ideal answer pairs)                                                            |
-| **RLHF** | Reinforcement Learning from Human Feedback | Training models using human preferences; requires a separate reward model trained on preferences, then uses RL (PPO) to optimize the main model |
-| **DPO**  | Direct Preference Optimization             | Simpler alternative to RLHF; directly learns from preference pairs without needing a separate reward model; more stable than RLHF               |
-| **RL**   | Reinforcement Learning                     | Learning by trial and error with rewards, like training a dog with treats                                                                       |
-| **PPO**  | Proximal Policy Optimization               | RL algorithm used in RLHF; optimizes the main model using rewards from a separate reward model; updates carefully to avoid breaking what works  |
-| **TRPO** | Trust Region Policy Optimization           | RL algorithm that limits how much the model can change per update                                                                               |
-| **GRPO** | Group Relative Policy Optimization         | RL algorithm used in some LLMs (DeepSeek) for making models helpful                                                                             |
+| Acronym  | Full Name                                  | Definition                                                                                                                                                                                                      |
+| -------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SFT**  | Supervised Fine-Tuning                     | Teaching a model using examples with correct answers (question → ideal answer pairs)                                                                                                                            |
+| **RLHF** | Reinforcement Learning from Human Feedback | Training models using human preferences; requires a separate reward model trained on preferences, then uses RL (PPO) to optimize the main model                                                                 |
+| **DPO**  | Direct Preference Optimization             | Simpler alternative to RLHF; directly learns from preference pairs without needing a separate reward model; more stable than RLHF                                                                               |
+| **RL**   | Reinforcement Learning                     | Learning by trial and error with rewards, like training a dog with treats                                                                                                                                       |
+| **PPO**  | Proximal Policy Optimization               | RL algorithm used in RLHF; optimizes the main model using rewards from a separate reward model; updates carefully to avoid breaking what works                                                                  |
+| **TRPO** | Trust Region Policy Optimization           | RL algorithm that constrains policy updates using KL-divergence; ensures monotonic improvement by limiting how much the new policy can deviate from the old one; more stable than vanilla policy gradients      |
+| **GRPO** | Group Relative Policy Optimization         | Efficient RL algorithm that eliminates the need for a separate critic model (unlike PPO); computes advantages by comparing responses within groups; used by DeepSeek R1; 50% less VRAM and 2-3× faster than PPO |
 
 ### Fine-Tuning Methods
 
-| Acronym   | Full Name                       | Plain English Definition                                                                     |
+| Acronym   | Full Name                       | Definition                                                                                   |
 | --------- | ------------------------------- | -------------------------------------------------------------------------------------------- |
 | **LoRA**  | Low-Rank Adaptation             | Cheap way to customize a model by training small "adapter" layers instead of the whole model |
 | **QLoRA** | Quantized LoRA                  | LoRA applied to a compressed (4-bit) model; even cheaper customization                       |
@@ -1799,32 +1799,32 @@ $$
 
 ### Optimizers (Training Algorithms)
 
-| Acronym     | Full Name                    | Plain English Definition                                                 |
-| ----------- | ---------------------------- | ------------------------------------------------------------------------ |
-| **SGD**     | Stochastic Gradient Descent  | Basic algorithm to update model weights using random data samples        |
-| **Adam**    | Adaptive Moment Estimation   | Popular training algorithm that adapts learning speed for each parameter |
-| **AdamW**   | Adam with Weight Decay       | Adam with added penalty to prevent memorizing training data              |
-| **RMSProp** | Root Mean Square Propagation | Training algorithm that adjusts speed based on recent history            |
-| **AMP**     | Automatic Mixed Precision    | Using both 16-bit and 32-bit numbers during training to save memory      |
+| Acronym     | Full Name                    | Definition                                                                                                                                                                                                 |
+| ----------- | ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SGD**     | Stochastic Gradient Descent  | Updates weights after each sample or small batch (not entire dataset); faster for large datasets; noisy gradients help escape local minima                                                                 |
+| **Adam**    | Adaptive Moment Estimation   | Combines momentum (exponentially weighted gradient averages) with adaptive learning rates per parameter; uses first and second moment estimates; good for non-stationary objectives                        |
+| **AdamW**   | Adam with Weight Decay       | Adam variant that decouples weight decay from gradient updates (unlike Adam's L2 regularization); applies uniform multiplicative decay; improves generalization vs standard Adam                           |
+| **RMSProp** | Root Mean Square Propagation | Adapts learning rate per parameter using exponentially decaying average of squared gradients; prevents learning rate from becoming too small; effective for non-stationary objectives                      |
+| **AMP**     | Automatic Mixed Precision    | Uses FP16 for most operations and FP32 only where needed (e.g., loss accumulation); requires loss scaling to prevent gradient underflow; reduces memory ~2× and speeds up training up to 3× on modern GPUs |
 
 ### Loss Functions & Activations
 
-| Acronym       | Full Name                  | Plain English Definition                                                |
-| ------------- | -------------------------- | ----------------------------------------------------------------------- |
-| **MSE**       | Mean Squared Error         | Average squared difference between predictions and actual values        |
-| **CE**        | Cross-Entropy              | Measures how wrong predicted probabilities are; used for classification |
-| **BCE**       | Binary Cross-Entropy       | Cross-Entropy for yes/no decisions                                      |
-| **ReLU**      | Rectified Linear Unit      | Simple function: outputs input if positive, zero otherwise              |
-| **GELU**      | Gaussian Error Linear Unit | Smoother version of ReLU used in Transformers                           |
-| **Softmax**   | —                          | Converts raw scores into probabilities that sum to 1                    |
-| **Sigmoid**   | —                          | S-shaped function outputting values between 0 and 1                     |
-| **Tanh**      | Hyperbolic Tangent         | S-shaped function outputting values between -1 and 1                    |
-| **BatchNorm** | Batch Normalization        | Normalizes data across the batch; stabilizes training                   |
-| **LayerNorm** | Layer Normalization        | Normalizes data within each example; standard in Transformers           |
+| Acronym       | Full Name                  | Definition                                                                                                                                                                                                      |
+| ------------- | -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **MSE**       | Mean Squared Error         | Regression loss: average squared difference between predictions and actual values; penalizes large errors heavily (sensitive to outliers); default for regression tasks                                         |
+| **CE**        | Cross-Entropy              | Classification loss: measures divergence between predicted probabilities and true labels; penalizes confident wrong predictions more than uncertain ones; produces informative gradients for faster convergence |
+| **BCE**       | Binary Cross-Entropy       | Cross-Entropy for binary classification (2 classes); used with sigmoid output; single probability output for positive class                                                                                     |
+| **ReLU**      | Rectified Linear Unit      | Activation: outputs input if positive, zero otherwise; computationally efficient but can cause "dying ReLU" problem; common in CNNs                                                                             |
+| **GELU**      | Gaussian Error Linear Unit | Activation: smoother than ReLU, weights inputs by value rather than gating by sign; probabilistic nature aligns with attention mechanisms; standard in Transformers (BERT, GPT)                                 |
+| **Softmax**   | —                          | Activation: converts vector of raw scores into probability distribution (sums to 1); used for multiclass classification output layer; extends sigmoid to multiple classes                                       |
+| **Sigmoid**   | —                          | Activation: S-shaped function outputting values between 0 and 1; used for binary classification output layer; avoid in hidden layers due to vanishing gradients                                                 |
+| **Tanh**      | Hyperbolic Tangent         | Activation: S-shaped function outputting values between -1 and 1; centered around zero (better than sigmoid for hidden layers); can still suffer vanishing gradients                                            |
+| **BatchNorm** | Batch Normalization        | Normalization: normalizes across batch dimension using batch statistics; effective for CNNs but inconsistent between training/inference; struggles with variable sequence lengths                               |
+| **LayerNorm** | Layer Normalization        | Normalization: normalizes across feature dimension per sample (independent of batch); works with variable sequence lengths; standard in Transformers; effectiveness comes from gradient re-centering/re-scaling |
 
 ### RAG & Retrieval
 
-| Acronym         | Full Name                          | Plain English Definition                                                          |
+| Acronym         | Full Name                          | Definition                                                                        |
 | --------------- | ---------------------------------- | --------------------------------------------------------------------------------- |
 | **RAG**         | Retrieval-Augmented Generation     | Finding relevant documents and giving them to an LLM to answer accurately         |
 | **HyDE**        | Hypothetical Document Embeddings   | Generate a hypothetical answer first, then use its embedding for retrieval        |
@@ -1845,24 +1845,24 @@ $$
 
 ### Evaluation Metrics
 
-| Acronym       | Full Name                                                   | Plain English Definition                                     |
-| ------------- | ----------------------------------------------------------- | ------------------------------------------------------------ |
-| **BLEU**      | Bilingual Evaluation Understudy                             | Measures translation quality by n-gram precision (2002)      |
-| **ROUGE**     | Recall-Oriented Understudy for Gisting Evaluation           | Measures summary quality by n-gram recall (2004)             |
-| **METEOR**    | Metric for Evaluation of Translation with Explicit ORdering | Like BLEU but matches synonyms and stems (2005)              |
-| **BERTScore** | BERT-based Score                                            | Semantic similarity using neural embeddings (2019)           |
-| **FID**       | Fréchet Inception Distance                                  | Measures how realistic generated images are; lower is better |
-| **IS**        | Inception Score                                             | Measures image quality and diversity; higher is better       |
-| **FVD**       | Fréchet Video Distance                                      | Like FID but for videos                                      |
-| **CIDEr**     | Consensus-based Image Description Evaluation                | Measures caption quality vs human references                 |
-| **LPIPS**     | Learned Perceptual Image Patch Similarity                   | Measures how similar two images look to humans               |
-| **NDCG**      | Normalized Discounted Cumulative Gain                       | Measures ranking quality (best results at top?)              |
-| **MRR**       | Mean Reciprocal Rank                                        | Average of 1/(position of first correct answer)              |
-| **PPL**       | Perplexity                                                  | How "surprised" a model is by text; lower = better           |
+| Acronym       | Full Name                                                   | Definition                                                                                                                                                                                                                              |
+| ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **BLEU**      | Bilingual Evaluation Understudy                             | Translation metric: measures n-gram precision (how much of generated text appears in reference); geometric mean of 1-4 gram matches with brevity penalty; fast but measures similarity not translation quality (2002)                   |
+| **ROUGE**     | Recall-Oriented Understudy for Gisting Evaluation           | Summarization metric: measures n-gram recall (how much of reference appears in generated text); complementary to BLEU (recall vs precision); ROUGE-L uses longest common subsequence (2004)                                             |
+| **METEOR**    | Metric for Evaluation of Translation with Explicit ORdering | Translation metric: improves on BLEU by matching synonyms (WordNet) and stems; word-level alignment with multiple matching modules; better human correlation than BLEU (2005)                                                           |
+| **BERTScore** | BERT-based Score                                            | Semantic similarity metric: uses contextual BERT embeddings to compute token-level cosine similarities; captures paraphrases and semantic equivalence that word-overlap metrics miss; better human correlation (2019)                   |
+| **FID**       | Fréchet Inception Distance                                  | Image generation metric: compares feature distributions (Inception v3) of real vs generated images using Fréchet distance; lower is better; captures both quality and diversity; standard for GANs/diffusion models                     |
+| **IS**        | Inception Score                                             | Image generation metric: measures quality (via Inception classifier confidence) and diversity (via entropy of predicted classes); higher is better; replaced by FID which better captures distribution similarity                       |
+| **FVD**       | Fréchet Video Distance                                      | Video generation metric: extends FID to videos by comparing feature distributions across temporal sequences; lower is better; standard for video generation evaluation                                                                  |
+| **CIDEr**     | Consensus-based Image Description Evaluation                | Captioning metric: measures consensus between generated and reference captions using TF-IDF weighted n-grams; emphasizes informative words; good for image captioning tasks                                                             |
+| **LPIPS**     | Learned Perceptual Image Patch Similarity                   | Image similarity metric: uses deep network features to measure perceptual similarity (how humans see differences); lower is better; better than pixel-level metrics for human perception                                                |
+| **NDCG**      | Normalized Discounted Cumulative Gain                       | Ranking metric: evaluates how well items are ordered by relevance; applies position discount (top results matter more); normalized by ideal ranking; ranges 0-1; accounts for graded relevance levels                                   |
+| **MRR**       | Mean Reciprocal Rank                                        | Ranking metric: focuses on position of first relevant result; average of 1/(rank of first correct answer); useful when finding first correct answer quickly is the goal; simpler than NDCG                                              |
+| **PPL**       | Perplexity                                                  | Language model metric: measures prediction uncertainty (exponentiation of average negative log-likelihood); lower = better; represents "number of options" model considers; only for autoregressive models, not masked models like BERT |
 
 ### Serving & Performance
 
-| Acronym      | Full Name                 | Plain English Definition                                          |
+| Acronym      | Full Name                 | Definition                                                        |
 | ------------ | ------------------------- | ----------------------------------------------------------------- |
 | **TTFT**     | Time To First Token       | How long until the model starts responding                        |
 | **TPS**      | Tokens Per Second         | Speed of text generation                                          |
@@ -1873,7 +1873,7 @@ $$
 
 ### Parallelism & Scaling
 
-| Acronym    | Full Name                            | Plain English Definition                                                   |
+| Acronym    | Full Name                            | Definition                                                                 |
 | ---------- | ------------------------------------ | -------------------------------------------------------------------------- |
 | **DP**     | Data Parallelism                     | Same model on multiple GPUs, each processing different data                |
 | **TP**     | Tensor Parallelism                   | Splitting each layer across GPUs; for models too big for one GPU           |
@@ -1888,7 +1888,7 @@ $$
 
 ### Quantization (Model Compression)
 
-| Acronym  | Full Name             | Plain English Definition                                   |
+| Acronym  | Full Name             | Definition                                                 |
 | -------- | --------------------- | ---------------------------------------------------------- |
 | **FP32** | 32-bit Floating Point | Full precision; most accurate but uses most memory         |
 | **FP16** | 16-bit Floating Point | Half precision; uses half memory with minimal quality loss |
@@ -1899,18 +1899,18 @@ $$
 
 ### Image & Video Generation
 
-| Acronym  | Full Name                               | Plain English Definition                                                                          |
-| -------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| **CFG**  | Classifier-Free Guidance                | Makes images follow the text prompt more closely (typical: 7-15)                                  |
-| **DDPM** | Denoising Diffusion Probabilistic Model | Original diffusion method; removes noise gradually (1000 steps)                                   |
-| **DDIM** | Denoising Diffusion Implicit Model      | Faster diffusion (20-50 steps); used in production                                                |
-| **LDM**  | Latent Diffusion Model                  | Diffusion in compressed space; what Stable Diffusion uses                                         |
-| **CLIP** | Contrastive Language-Image Pre-training | Model understanding both text and images; guides image generation                                 |
-| **SD**   | Stable Diffusion                        | Popular open-source image generation model; latest is Stable Diffusion 3 Medium (2B params, 2024) |
+| Acronym  | Full Name                               | Definition                                                                                                                                                                                                                    |
+| -------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **CFG**  | Classifier-Free Guidance                | Conditional generation technique: combines conditional (text-guided) and unconditional (pure noise) predictions; guidance scale (7-15 typical) controls strength; no separate classifier needed; standard in DALL-E 3, Imagen |
+| **DDPM** | Denoising Diffusion Probabilistic Model | Original diffusion method: uses Markovian reverse process (each step depends on previous); requires ~1000 denoising steps; slower but high quality; foundational approach                                                     |
+| **DDIM** | Denoising Diffusion Implicit Model      | Faster diffusion variant: uses non-Markovian deterministic process; reduces steps from 1000 to 20-50; 10-50× faster generation; same training as DDPM; enables quality/compute trade-off                                      |
+| **LDM**  | Latent Diffusion Model                  | Diffusion in compressed latent space (via VAE encoder-decoder) rather than pixel space; reduces computation and memory; enables high-resolution generation; what Stable Diffusion uses                                        |
+| **CLIP** | Contrastive Language-Image Pre-training | Multimodal model: trains text and image encoders in shared embedding space; contrastive learning aligns similar text-image pairs; enables zero-shot image classification and text-image matching; guides diffusion models     |
+| **SD**   | Stable Diffusion                        | Popular open-source image generation model implementing LDM; latest is Stable Diffusion 3 Medium (2B params, 2024); uses VAE compression, CLIP text encoder, and U-Net/DiT denoiser                                           |
 
 ### Agents & Reasoning
 
-| Acronym   | Full Name              | Plain English Definition                                    |
+| Acronym   | Full Name              | Definition                                                  |
 | --------- | ---------------------- | ----------------------------------------------------------- |
 | **CoT**   | Chain-of-Thought       | Asking the model to "think step by step" improves reasoning |
 | **ReAct** | Reasoning + Acting     | Agent pattern: think, act, observe result, repeat           |
@@ -1920,14 +1920,14 @@ $$
 
 ### Safety & Security
 
-| Acronym | Full Name                           | Plain English Definition                                  |
+| Acronym | Full Name                           | Definition                                                |
 | ------- | ----------------------------------- | --------------------------------------------------------- |
 | **PII** | Personally Identifiable Information | Data that can identify someone (name, email, SSN)         |
 | **DLP** | Data Loss Prevention                | Systems that detect and block sensitive data from leaking |
 
 ### Tokenization Methods
 
-| Acronym           | Full Name          | Plain English Definition                                               |
+| Acronym           | Full Name          | Definition                                                             |
 | ----------------- | ------------------ | ---------------------------------------------------------------------- |
 | **BPE**           | Byte Pair Encoding | Splits text into tokens by finding common character pairs; used by GPT |
 | **SentencePiece** | —                  | Google's tokenization that works with any language                     |
@@ -1935,16 +1935,22 @@ $$
 
 ### Cloud Platforms
 
-| Acronym       | Full Name             | Plain English Definition                    |
-| ------------- | --------------------- | ------------------------------------------- |
-| **GCP**       | Google Cloud Platform | Google's cloud computing services           |
-| **AWS**       | Amazon Web Services   | Amazon's cloud computing services           |
-| **Vertex AI** | —                     | Google's managed platform for AI/ML         |
-| **Bedrock**   | —                     | AWS's managed service for foundation models |
+| Acronym               | Full Name                   | Definition                                                                                                    |
+| --------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| **GCP**               | Google Cloud Platform       | Google's cloud computing services; includes Vertex AI for AI/ML workloads                                     |
+| **AWS**               | Amazon Web Services         | Amazon's cloud computing services; includes Bedrock for foundation models                                     |
+| **Azure**             | Microsoft Azure             | Microsoft's cloud computing platform; includes Azure OpenAI (Microsoft Foundry) for AI services               |
+| **OCI**               | Oracle Cloud Infrastructure | Oracle's cloud platform; strong NVIDIA GPU integration for AI training/inference                              |
+| **Vertex AI**         | —                           | Google's managed AI/ML platform; Gemini models, 2M token context, multimodal, open-source friendly            |
+| **Bedrock**           | —                           | AWS's managed foundation model service; multiple vendors (Claude, Llama, Mistral, Cohere), high customization |
+| **Azure OpenAI**      | —                           | Microsoft's OpenAI service integration; GPT models, tight Microsoft 365 integration, enterprise security      |
+| **Microsoft Foundry** | —                           | Microsoft's unified AI platform; includes Azure OpenAI, GPT-5.2, reasoning models, AI agents                  |
+| **Anthropic**         | —                           | AI company offering Claude models; available via Bedrock, Azure, or direct API; strong reasoning capabilities |
+| **OpenAI**            | —                           | AI company offering GPT models; available via Azure OpenAI or direct API; DALL-E, Whisper, GPT-5.2            |
 
 ### Other Common Terms
 
-| Acronym  | Full Name                     | Plain English Definition                                   |
+| Acronym  | Full Name                     | Definition                                                 |
 | -------- | ----------------------------- | ---------------------------------------------------------- |
 | **SOTA** | State of the Art              | The best current performance on a task                     |
 | **OSS**  | Open Source Software          | Software with publicly available code                      |
