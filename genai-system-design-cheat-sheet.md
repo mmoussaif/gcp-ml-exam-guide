@@ -1779,15 +1779,15 @@ $$
 
 ### Training Methods
 
-| Acronym  | Full Name                                  | Plain English Definition                                                             |
-| -------- | ------------------------------------------ | ------------------------------------------------------------------------------------ |
-| **SFT**  | Supervised Fine-Tuning                     | Teaching a model using examples with correct answers (question → ideal answer pairs) |
-| **RLHF** | Reinforcement Learning from Human Feedback | Training models using human preferences ("this answer is better than that one")      |
-| **DPO**  | Direct Preference Optimization             | Simpler alternative to RLHF; directly learns from preference pairs                   |
-| **RL**   | Reinforcement Learning                     | Learning by trial and error with rewards, like training a dog with treats            |
-| **PPO**  | Proximal Policy Optimization               | Algorithm for RLHF; updates the model carefully to avoid breaking what works         |
-| **TRPO** | Trust Region Policy Optimization           | RL algorithm that limits how much the model can change per update                    |
-| **GRPO** | Group Relative Policy Optimization         | RL algorithm used in some LLMs (DeepSeek) for making models helpful                  |
+| Acronym  | Full Name                                  | Plain English Definition                                                                                                                        |
+| -------- | ------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| **SFT**  | Supervised Fine-Tuning                     | Teaching a model using examples with correct answers (question → ideal answer pairs)                                                            |
+| **RLHF** | Reinforcement Learning from Human Feedback | Training models using human preferences; requires a separate reward model trained on preferences, then uses RL (PPO) to optimize the main model |
+| **DPO**  | Direct Preference Optimization             | Simpler alternative to RLHF; directly learns from preference pairs without needing a separate reward model; more stable than RLHF               |
+| **RL**   | Reinforcement Learning                     | Learning by trial and error with rewards, like training a dog with treats                                                                       |
+| **PPO**  | Proximal Policy Optimization               | RL algorithm used in RLHF; optimizes the main model using rewards from a separate reward model; updates carefully to avoid breaking what works  |
+| **TRPO** | Trust Region Policy Optimization           | RL algorithm that limits how much the model can change per update                                                                               |
+| **GRPO** | Group Relative Policy Optimization         | RL algorithm used in some LLMs (DeepSeek) for making models helpful                                                                             |
 
 ### Fine-Tuning Methods
 
