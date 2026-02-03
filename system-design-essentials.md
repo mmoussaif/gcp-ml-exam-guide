@@ -1,45 +1,40 @@
-# System Design Essentials
+<div align="center">
 
-A concise guide to system design fundamentals, components, and patterns for building scalable, reliable distributed systems.
+# 🏗️ System Design Essentials
 
----
+**The complete reference for building scalable, reliable distributed systems**
 
-## Related Guide
-
-For **ML and GenAI system design** (LLM serving, **RAG** (retrieval-augmented generation) systems, agents, **MLOps** (ML operations)), see:
-
-📖 **[ML & GenAI System Design Guide](./system-design-genai.md)** - Specialized patterns for machine learning and generative AI systems.
+</div>
 
 ---
 
-## Table of Contents
-
-- [Core Concepts](#core-concepts) — ACID, CAP, Reliability/Scalability/Maintainability, Concurrency
-- [Cloud Computing & Security](#cloud-computing--security) — IAM, Encryption, Network Security, 3-Tier
-- [Networking & VPC](#networking--vpc) — VPC, DNS, TCP/IP, Proxies
-- [Key Components](#key-components) — Load Balancers, API Gateway, Rate Limiting
-- [Databases](#databases) — SQL vs NoSQL, Replication, Sharding
-- [Caching](#caching) — Strategies, Redis vs Memcached
-- [Message Queues & Pub/Sub](#message-queues--pubsub) — Kafka, Dead Letter Queues
-- [Storage](#storage) — Block/File/Object, CDN
-- [Scalability Patterns](#scalability-patterns) — Horizontal vs Vertical, Microservices, DR
-- [Distributed System Patterns](#distributed-system-patterns) — Consistent Hashing, Quorum, Leader Election
-- [Capacity Estimation](#capacity-estimation) — Latencies, QPS, Formulas
-- [Common Design Examples](#common-design-examples)
-  - [URL Shortener](#url-shortener) — Key-value, Base62, Caching
-  - [Chat Application](#chat-application) — WebSocket, Presence, Message Routing
-  - [Notification System](#notification-system) — Multi-channel, Fanout, Delivery Tracking
-- [Quick Reference](#quick-reference)
-  - [Interview Checklist](#system-design-interview-checklist)
-  - [Interview Mindset](#beyond-pattern-matching-the-interview-mindset)
-  - [Component Failure Analysis](#component-failure-analysis-framework)
-  - [Trade-off Matrix](#trade-off-decision-matrix)
+> 📖 **Related:** For ML and GenAI system design (LLM serving, RAG, agents, MLOps), see **[ML & GenAI System Design Guide](./system-design-genai.md)**
 
 ---
 
-## Core Concepts
+## 📑 Table of Contents
 
-### ACID Properties
+1. [Core Concepts](#1-core-concepts) — ACID, CAP theorem, RSM, concurrency patterns
+2. [Cloud Computing & Security](#2-cloud-computing--security) — IAM, encryption, VPC, 3-tier architecture
+3. [Networking & VPC](#3-networking--vpc) — DNS resolution, TCP/IP model, proxies
+4. [Key Components](#4-key-components) — Load balancers, API gateway, rate limiting
+5. [Databases](#5-databases) — SQL vs NoSQL, replication, sharding strategies
+6. [Caching](#6-caching) — Write strategies, Redis vs Memcached, invalidation
+7. [Message Queues & Pub/Sub](#7-message-queues--pubsub) — Kafka architecture, DLQ patterns
+8. [Storage](#8-storage) — Block/File/Object storage, CDN optimization
+9. [Scalability Patterns](#9-scalability-patterns) — Horizontal vs vertical, microservices, DR
+10. [Distributed System Patterns](#10-distributed-system-patterns) — Consistent hashing, quorum, leader election
+11. [Capacity Estimation](#11-capacity-estimation) — Latencies, QPS formulas, back-of-envelope math
+12. [Design Examples](#12-design-examples) — URL shortener, chat, notifications
+13. [Quick Reference](#13-quick-reference) — Checklist, mindset, failure analysis, trade-offs
+
+---
+
+## 1. Core Concepts
+
+**The foundational principles:** Every distributed system must grapple with these core trade-offs. ACID ensures data integrity. CAP forces you to choose between consistency and availability. Understanding these isn't optional—they dictate your architecture.
+
+### 🔐 ACID Properties
 
 **ACID** (Atomicity, Consistency, Isolation, Durability) ensures data integrity in database transactions—critical for financial systems, inventory, or any scenario where partial updates cause inconsistent states.
 
@@ -50,7 +45,7 @@ For **ML and GenAI system design** (LLM serving, **RAG** (retrieval-augmented ge
 | **Isolation** | Concurrent txns don't interfere | Two users booking last seat → one succeeds |
 | **Durability** | Committed = permanent | Survives crashes via write-ahead logging |
 
-### CAP Theorem
+### ⚖️ CAP Theorem
 
 The CAP theorem states distributed systems can only guarantee **two of three** properties: **Consistency**, **Availability**, **Partition Tolerance**. Since network partitions are inevitable, you're choosing between C and A.
 
@@ -66,7 +61,7 @@ The CAP theorem states distributed systems can only guarantee **two of three** p
 └────────────────────────────────┴──────────────────────────────────┘
 ```
 
-### Reliability, Scalability, Maintainability
+### 📊 Reliability, Scalability, Maintainability
 
 These three qualities define production success:
 
@@ -76,7 +71,7 @@ These three qualities define production success:
 | **Scalability** | Handles growth in users/data/load | Vertical (bigger) or horizontal (more machines) scaling |
 | **Maintainability** | Easy to operate, understand, evolve | Good docs, simple architecture, modular design |
 
-### Concurrency Control
+### 🔄 Concurrency Control
 
 When multiple transactions access shared data simultaneously, we need mechanisms to ensure correctness. Without proper concurrency control, you could end up with lost updates, dirty reads, or phantom reads.
 
@@ -87,24 +82,23 @@ When multiple transactions access shared data simultaneously, we need mechanisms
 
 The limitation of 2PC is that it's blocking—if the coordinator fails after sending PREPARE but before sending COMMIT, participants are stuck waiting. This is why many modern systems prefer eventual consistency patterns.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 TWO-PHASE COMMIT (2PC)                          │
-│                                                                 │
-│   Coordinator                Participants                       │
-│       │                      │         │                        │
-│       │──── PREPARE ────────►│         │                        │
-│       │──── PREPARE ──────────────────►│                        │
-│       │                      │         │                        │
-│       │◄─── VOTE YES ────────│         │                        │
-│       │◄─── VOTE YES ──────────────────│                        │
-│       │                      │         │                        │
-│       │──── COMMIT ─────────►│         │                        │
-│       │──── COMMIT ──────────────────►│                        │
-│       │                      │         │                        │
-│       │◄─── ACK ─────────────│         │                        │
-│       │◄─── ACK ────────────────────────│                        │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant C as Coordinator
+    participant P1 as Participant 1
+    participant P2 as Participant 2
+
+    Note over C,P2: Phase 1: Prepare
+    C->>P1: PREPARE
+    C->>P2: PREPARE
+    P1-->>C: VOTE YES
+    P2-->>C: VOTE YES
+
+    Note over C,P2: Phase 2: Commit
+    C->>P1: COMMIT
+    C->>P2: COMMIT
+    P1-->>C: ACK
+    P2-->>C: ACK
 ```
 
 **SAGA Pattern** is an alternative for long-running distributed transactions. Instead of locking resources across multiple services, a saga breaks the transaction into a sequence of local transactions, each with a compensating action that can undo its effects.
@@ -116,24 +110,27 @@ For example, in an e-commerce order:
 
 If T3 fails, the saga executes C2, then C1, rolling back the entire business transaction without distributed locks.
 
+```mermaid
+flowchart LR
+    subgraph Success["Happy Path"]
+        T1[T1: Reserve<br/>Inventory] --> T2[T2: Charge<br/>Payment]
+        T2 --> T3[T3: Ship<br/>Order]
+        T3 --> T4[T4: SUCCESS]
+    end
+
+    subgraph Rollback["On T3 Failure"]
+        T3 -.->|failure| C2[C2: Refund<br/>Payment]
+        C2 -.-> C1[C1: Release<br/>Inventory]
+    end
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                      SAGA PATTERN                               │
-│                                                                 │
-│   T1 ──► T2 ──► T3 ──► T4 ──► SUCCESS                         │
-│                  │                                              │
-│                  ▼ (failure)                                    │
-│                 C3 ◄── C2 ◄── C1  (compensating transactions)  │
-│                                                                 │
-│   Each step has a compensating action for rollback              │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+> **Saga vs 2PC:** Saga doesn't hold locks—each step commits locally. If step N fails, compensating transactions (C1...C(N-1)) undo previous work. Better for long-running distributed transactions.
 
 ---
 
-## Cloud Computing & Security
+## 2. Cloud Computing & Security
 
-### Cloud Computing Overview
+### ☁️ Cloud Computing Overview
 
 On-demand IT resources with pay-as-you-go pricing. Three main categories:
 
@@ -145,7 +142,7 @@ On-demand IT resources with pay-as-you-go pricing. Three main categories:
 
 All services communicate through **VPC** (Virtual Private Cloud)—your isolated network with custom IP ranges, subnets, and routing.
 
-### Security Fundamentals (Defense in Depth)
+### 🛡️ Security Fundamentals (Defense in Depth)
 
 Layer multiple security controls—if one fails, others protect your assets:
 
@@ -157,7 +154,7 @@ Layer multiple security controls—if one fails, others protect your assets:
 
 **Principle**: Least privilege—grant only minimum access needed for each task.
 
-### 3-Tier Application Security
+### 🏛️ 3-Tier Application Security
 
 A typical web application has three tiers, each with different security requirements. The key insight is that each tier should only communicate with its adjacent layers—the internet talks to the web tier, the web tier talks to the app tier, and the app tier talks to the database. No direct internet access to your database!
 
@@ -167,46 +164,38 @@ A typical web application has three tiers, each with different security requirem
 
 **Database Tier** is the most protected layer, also in a private subnet. It accepts connections only from the application tier on the database port (e.g., 3306 for MySQL). Enable encryption at rest using KMS and encryption in transit using SSL certificates. Never expose database ports to the internet.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         INTERNET                                │
-│                            │                                    │
-│                      ┌─────┴─────┐                              │
-│                      │ FIREWALL  │                              │
-│                      └─────┬─────┘                              │
-│  ════════════════════════════════════════════════════════════   │
-│                        PUBLIC SUBNET                            │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                    WEB TIER (EC2)                        │   │
-│  │                                                          │   │
-│  │   Security Group: Inbound 80/443 from Internet          │   │
-│  │                   Outbound to App Tier                   │   │
-│  │   Protocol: HTTPS (TLS/SSL)                              │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                            │                                    │
-│  ════════════════════════════════════════════════════════════   │
-│                       PRIVATE SUBNET                            │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                   APP TIER (EC2)                         │   │
-│  │                                                          │   │
-│  │   Security Group: Inbound from Web Tier only            │   │
-│  │                   SSH/RDP for admin (via bastion)        │   │
-│  │                   Outbound to DB Tier                    │   │
-│  └─────────────────────────────────────────────────────────┘   │
-│                            │                                    │
-│  ════════════════════════════════════════════════════════════   │
-│                       PRIVATE SUBNET                            │
-│  ┌─────────────────────────────────────────────────────────┐   │
-│  │                  DATABASE TIER (RDS)                     │   │
-│  │                                                          │   │
-│  │   Security Group: Inbound from App Tier only            │   │
-│  │                   No internet access                     │   │
-│  │   Encryption: At rest (KMS) + In transit (SSL)          │   │
-│  └─────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Internet["🌐 Internet"]
+        Users[Users]
+    end
+
+    subgraph Public["Public Subnet"]
+        FW[🔥 Firewall/WAF]
+        WEB[🖥️ Web Tier<br/>EC2 - Ports 80/443<br/>TLS/SSL]
+    end
+
+    subgraph Private1["Private Subnet 1"]
+        APP[⚙️ App Tier<br/>EC2 - From Web only<br/>SSH via Bastion]
+    end
+
+    subgraph Private2["Private Subnet 2"]
+        DB[(🗄️ Database Tier<br/>RDS - From App only<br/>Encrypted at rest)]
+    end
+
+    Users --> FW
+    FW --> WEB
+    WEB --> APP
+    APP --> DB
 ```
 
-### Security Groups vs NACLs
+| Tier | Subnet | Security Group Rules |
+|------|--------|---------------------|
+| **Web** | Public | Inbound: 80/443 from Internet |
+| **App** | Private | Inbound: From Web tier only, SSH via bastion |
+| **DB** | Private | Inbound: DB port from App tier only |
+
+### 🔒 Security Groups vs NACLs
 
 Both Security Groups and Network ACLs (NACLs) filter traffic, but they operate at different levels and have important behavioral differences.
 
@@ -249,9 +238,9 @@ Both Security Groups and Network ACLs (NACLs) filter traffic, but they operate a
 
 ---
 
-## Networking & VPC
+## 3. Networking & VPC
 
-### VPC Architecture
+### 🌐 VPC Architecture
 
 A Virtual Private Cloud (VPC) is your isolated network within the cloud. Think of it as your own private data center, but without the physical hardware to manage. When you create a VPC, you define a CIDR block (e.g., 172.31.0.0/16) that determines the IP address range for all resources within it.
 
@@ -263,50 +252,45 @@ A Virtual Private Cloud (VPC) is your isolated network within the cloud. Think o
 
 **NAT Gateway** allows private subnet resources to initiate outbound internet connections (e.g., to download software updates) while preventing unsolicited inbound connections. The internet can only respond to requests—it cannot initiate connections to your private resources.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                      AWS REGION                                 │
-│  ┌───────────────────────────────────────────────────────────┐ │
-│  │                    VPC (172.31.0.0/16)                     │ │
-│  │                                                            │ │
-│  │  ┌─────────────────────┐    ┌─────────────────────┐       │ │
-│  │  │   Availability      │    │   Availability      │       │ │
-│  │  │      Zone A         │    │      Zone B         │       │ │
-│  │  │                     │    │                     │       │ │
-│  │  │ ┌─────────────────┐ │    │ ┌─────────────────┐ │       │ │
-│  │  │ │ Public Subnet   │ │    │ │ Public Subnet   │ │       │ │
-│  │  │ │ 172.31.1.0/24   │ │    │ │ 172.31.3.0/24   │ │       │ │
-│  │  │ │  ┌───┐  ┌───┐   │ │    │ │  ┌───┐  ┌───┐   │ │       │ │
-│  │  │ │  │EC2│  │NAT│   │ │    │ │  │EC2│  │NAT│   │ │       │ │
-│  │  │ │  └───┘  └───┘   │ │    │ │  └───┘  └───┘   │ │       │ │
-│  │  │ └─────────────────┘ │    │ └─────────────────┘ │       │ │
-│  │  │                     │    │                     │       │ │
-│  │  │ ┌─────────────────┐ │    │ ┌─────────────────┐ │       │ │
-│  │  │ │ Private Subnet  │ │    │ │ Private Subnet  │ │       │ │
-│  │  │ │ 172.31.2.0/24   │ │    │ │ 172.31.4.0/24   │ │       │ │
-│  │  │ │  ┌───┐  ┌───┐   │ │    │ │  ┌───┐  ┌───┐   │ │       │ │
-│  │  │ │  │EC2│  │RDS│   │ │    │ │  │EC2│  │RDS│   │ │       │ │
-│  │  │ │  └───┘  └───┘   │ │    │ │  └───┘  └───┘   │ │       │ │
-│  │  │ └─────────────────┘ │    │ └─────────────────┘ │       │ │
-│  │  └─────────────────────┘    └─────────────────────┘       │ │
-│  │              │                         │                   │ │
-│  │              └───────────┬─────────────┘                   │ │
-│  │                    ┌─────┴─────┐                           │ │
-│  │                    │  Router   │                           │ │
-│  │                    │  (Route   │                           │ │
-│  │                    │   Table)  │                           │ │
-│  │                    └─────┬─────┘                           │ │
-│  └──────────────────────────│────────────────────────────────┘ │
-│                             │                                   │
-│                    ┌────────┴────────┐                         │
-│                    │ Internet Gateway │                         │
-│                    └────────┬────────┘                         │
-└─────────────────────────────│───────────────────────────────────┘
-                              │
-                         INTERNET
+```mermaid
+flowchart TB
+    subgraph Region["AWS Region"]
+        subgraph VPC["VPC (172.31.0.0/16)"]
+            subgraph AZA["Availability Zone A"]
+                subgraph PubA["Public Subnet<br/>172.31.1.0/24"]
+                    EC2A[EC2]
+                    NATA[NAT GW]
+                end
+                subgraph PrvA["Private Subnet<br/>172.31.2.0/24"]
+                    AppA[EC2]
+                    RDSA[(RDS)]
+                end
+            end
+            subgraph AZB["Availability Zone B"]
+                subgraph PubB["Public Subnet<br/>172.31.3.0/24"]
+                    EC2B[EC2]
+                    NATB[NAT GW]
+                end
+                subgraph PrvB["Private Subnet<br/>172.31.4.0/24"]
+                    AppB[EC2]
+                    RDSB[(RDS)]
+                end
+            end
+            RT[Route Table]
+        end
+        IGW[Internet Gateway]
+    end
+    Internet[🌐 Internet]
+
+    PubA & PubB --> RT
+    PrvA & PrvB --> RT
+    RT --> IGW
+    IGW --> Internet
 ```
 
-### DNS Resolution Flow
+> **Key insight:** Public subnets route to Internet Gateway. Private subnets route through NAT Gateway for outbound-only internet access. Database in private subnet = no direct internet exposure.
+
+### 🔍 DNS Resolution Flow
 
 **DNS** (Domain Name System) translates domain names to IP addresses. When you type a URL into your browser, a chain of queries performs that translation. This process typically takes milliseconds but involves multiple servers across the internet.
 
@@ -320,48 +304,27 @@ A Virtual Private Cloud (VPC) is your isolated network within the cloud. Think o
 
 **Step 7**: Your browser connects to the web server at the returned IP address.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    DNS RESOLUTION                               │
-│                                                                 │
-│   User types: www.example.com                                   │
-│                                                                 │
-│   ┌──────┐     ┌──────────┐     ┌──────────┐                   │
-│   │Client│────►│   DNS    │────►│   Root   │                   │
-│   │      │  1  │ Resolver │  2  │  Server  │                   │
-│   └──────┘     └──────────┘     └────┬─────┘                   │
-│                     │                 │                         │
-│                     │    ┌────────────┘                         │
-│                     │    │ 3 "Go to .com TLD"                   │
-│                     │    ▼                                      │
-│                     │  ┌──────────┐                             │
-│                     │  │   TLD    │                             │
-│                     │  │  Server  │                             │
-│                     │  │  (.com)  │                             │
-│                     │  └────┬─────┘                             │
-│                     │       │ 4 "Go to example.com NS"          │
-│                     │       ▼                                   │
-│                     │  ┌──────────────┐                         │
-│                     │  │Authoritative │                         │
-│                     │  │    Server    │                         │
-│                     │  │(example.com) │                         │
-│                     │  └──────┬───────┘                         │
-│                     │         │ 5 IP: 93.184.216.34             │
-│                     │◄────────┘                                 │
-│                     │                                           │
-│   ┌──────┐◄─────────┘ 6 Return IP to client                    │
-│   │Client│                                                      │
-│   └──┬───┘                                                      │
-│      │ 7 Connect to web server                                  │
-│      ▼                                                          │
-│   ┌──────────┐                                                  │
-│   │Web Server│                                                  │
-│   │93.184... │                                                  │
-│   └──────────┘                                                  │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+sequenceDiagram
+    participant C as Client
+    participant R as DNS Resolver
+    participant Root as Root Server
+    participant TLD as TLD Server (.com)
+    participant Auth as Authoritative NS
+    participant Web as Web Server
+
+    C->>R: 1. www.example.com?
+    R->>Root: 2. Query root
+    Root-->>R: 3. Go to .com TLD
+    R->>TLD: 4. Query .com TLD
+    TLD-->>R: 5. Go to example.com NS
+    R->>Auth: 6. Query authoritative
+    Auth-->>R: 7. IP: 93.184.216.34
+    R-->>C: 8. Return IP
+    C->>Web: 9. Connect to 93.184.216.34
 ```
 
-### TCP/IP Model
+### 📡 TCP/IP Model
 
 The TCP/IP model describes how data travels across networks in layers, with each layer handling specific responsibilities. Understanding this model helps you troubleshoot network issues and design systems that communicate efficiently.
 
@@ -411,7 +374,7 @@ The TCP/IP model describes how data travels across networks in layers, with each
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Proxies
+### 🔀 Proxies
 
 | Type | Acts For | Use Cases | Examples |
 |------|----------|-----------|----------|
@@ -425,9 +388,9 @@ Client → Forward Proxy → Internet → Reverse Proxy → Server
 
 ---
 
-## Key Components
+## 4. Key Components
 
-### Load Balancer with Auto Scaling
+### ⚖️ Load Balancer with Auto Scaling
 
 Load balancers distribute incoming traffic across multiple servers, preventing any single server from becoming overwhelmed and enabling horizontal scaling. Combined with auto-scaling, your application can automatically adjust capacity based on demand.
 
@@ -437,46 +400,37 @@ Load balancers distribute incoming traffic across multiple servers, preventing a
 
 **Key tip for high-traffic events**: Don't rely solely on reactive scaling. Pre-warm your load balancer and use scheduled scaling to have instances ready before the traffic arrives. The startup time for new instances includes launching the VM, running bootstrap scripts, and warming application caches—often several minutes.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    AUTO SCALING GROUP                           │
-│                                                                 │
-│                        INTERNET                                 │
-│                           │                                     │
-│                    ┌──────┴──────┐                              │
-│                    │    Route    │                              │
-│                    │     53      │                              │
-│                    └──────┬──────┘                              │
-│                           │                                     │
-│                    ┌──────┴──────┐                              │
-│                    │    Load     │                              │
-│                    │  Balancer   │                              │
-│                    │  (ALB/NLB)  │                              │
-│                    └──────┬──────┘                              │
-│                           │                                     │
-│         ┌─────────────────┼─────────────────┐                   │
-│         │                 │                 │                   │
-│         ▼                 ▼                 ▼                   │
-│    ┌─────────┐      ┌─────────┐      ┌─────────┐               │
-│    │   EC2   │      │   EC2   │      │   EC2   │               │
-│    │Instance │      │Instance │      │Instance │               │
-│    │   #1    │      │   #2    │      │   #3    │               │
-│    └─────────┘      └─────────┘      └─────────┘               │
-│         │                 │                 │                   │
-│         └─────────────────┼─────────────────┘                   │
-│                           │                                     │
-│    ┌──────────────────────┴──────────────────────┐             │
-│    │            AUTO SCALING POLICIES             │             │
-│    │                                              │             │
-│    │  • Min: 2 instances    • Max: 10 instances  │             │
-│    │  • Scale out: CPU > 70%                     │             │
-│    │  • Scale in:  CPU < 30%                     │             │
-│    │  • Scheduled scaling for peak events        │             │
-│    └──────────────────────────────────────────────┘             │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Internet[🌐 Internet]
+    DNS[Route 53<br/>DNS]
+    LB[⚖️ Load Balancer<br/>ALB/NLB]
+
+    subgraph ASG["Auto Scaling Group"]
+        EC1[EC2 #1]
+        EC2[EC2 #2]
+        EC3[EC2 #3]
+    end
+
+    subgraph Policies["Scaling Policies"]
+        P1["Min: 2 | Max: 10"]
+        P2["Scale out: CPU > 70%"]
+        P3["Scale in: CPU < 30%"]
+    end
+
+    Internet --> DNS
+    DNS --> LB
+    LB --> EC1 & EC2 & EC3
+    ASG -.-> Policies
 ```
 
-### Load Balancer Types
+| Policy Type | Trigger | Action |
+|-------------|---------|--------|
+| **Target Tracking** | CPU > 70% | Add instances |
+| **Step Scaling** | CPU > 90% | Add 2 instances |
+| **Scheduled** | 9am weekdays | Pre-warm to 5 instances |
+
+### 🔄 Load Balancer Types
 
 The choice between Layer 4 and Layer 7 load balancers depends on your requirements for performance versus intelligence.
 
@@ -520,7 +474,7 @@ The choice between Layer 4 and Layer 7 load balancers depends on your requiremen
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### API Gateway Pattern
+### 🚪 API Gateway Pattern
 
 An API Gateway serves as the single entry point for all client requests to your backend services. Instead of clients knowing about and connecting to multiple services directly, they connect to one gateway that handles routing, security, and cross-cutting concerns.
 
@@ -570,7 +524,7 @@ Without a gateway, every microservice must implement authentication, rate limiti
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Rate Limiting Algorithms
+### 🚦 Rate Limiting Algorithms
 
 Rate limiting protects your services from being overwhelmed by too many requests—whether from a misbehaving client, a DDoS attack, or simply unexpected viral traffic. Different algorithms offer different trade-offs between burst handling, fairness, and implementation complexity.
 
@@ -623,9 +577,9 @@ Rate limiting protects your services from being overwhelmed by too many requests
 
 ---
 
-## Databases
+## 5. Databases
 
-### SQL vs NoSQL
+### 📊 SQL vs NoSQL
 
 | Aspect | SQL (Relational) | NoSQL (Non-relational) |
 |--------|------------------|------------------------|
@@ -640,7 +594,7 @@ Rate limiting protects your services from being overwhelmed by too many requests
 
 **Note**: Lines are blurring—PostgreSQL has JSON support, Spanner offers SQL at scale. Don't choose NoSQL just because "it scales."
 
-### NoSQL Types
+### 🗃️ NoSQL Types
 
 NoSQL isn't a single technology—it's a family of databases optimized for different data models and access patterns.
 
@@ -682,7 +636,7 @@ NoSQL isn't a single technology—it's a family of databases optimized for diffe
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Database Replication
+### 📋 Database Replication
 
 Replication copies data across multiple servers for availability, durability, and read scalability. If one server fails, others continue serving requests. The key decision is how to handle writes.
 
@@ -736,7 +690,7 @@ Replication copies data across multiple servers for availability, durability, an
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Database Sharding
+### ⚡ Database Sharding
 
 When a single database server can't handle your data volume or write throughput, sharding (horizontal partitioning) distributes data across multiple database servers. Each shard holds a subset of the data.
 
@@ -788,9 +742,9 @@ When a single database server can't handle your data volume or write throughput,
 
 ---
 
-## Caching
+## 6. Caching
 
-### Cache Architecture
+### 🏎️ Cache Architecture
 
 A cache is a high-speed data storage layer that stores a subset of data so future requests can be served faster than querying the primary data store. Caches are typically stored in memory (RAM), which is orders of magnitude faster than disk-based databases.
 
@@ -803,14 +757,22 @@ A cache is a high-speed data storage layer that stores a subset of data so futur
 
 The application manages both the cache and database, giving full control over what gets cached and when. The downside is that the first request for any data always hits the database, and you must handle cache invalidation when data changes.
 
-**Measuring cache effectiveness**: The cache hit ratio (percentage of requests served from cache) directly impacts performance. Calculate your Effective Access Time (EAT):
+**Measuring cache effectiveness**: The cache hit ratio (percentage of requests served from cache) directly impacts performance.
 
-`EAT = (hit_ratio × cache_time) + (miss_ratio × db_time)`
+#### Effective Access Time (EAT)
 
-With a 95% hit rate, 1ms cache time, and 100ms database time:
-`EAT = (0.95 × 1) + (0.05 × 100) = 5.95ms`
+$$
+\text{EAT} = (h \times t_c) + ((1-h) \times t_d)
+$$
 
-Without caching: 100ms. With caching: ~6ms. That's a 17x improvement!
+> **Terms:** h = cache hit ratio (0-1), $t_c$ = cache access time, $t_d$ = database access time, $(1-h)$ = miss ratio
+
+**📝 Example:**
+```
+95% hit rate, 1ms cache, 100ms database:
+EAT = (0.95 × 1) + (0.05 × 100) = 5.95ms
+Without cache: 100ms → With cache: ~6ms (17× faster!)
+```
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -843,7 +805,7 @@ Without caching: 100ms. With caching: ~6ms. That's a 17x improvement!
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Caching Strategies
+### 📝 Caching Strategies
 
 Different write strategies offer trade-offs between consistency, performance, and complexity.
 
@@ -901,7 +863,7 @@ Different write strategies offer trade-offs between consistency, performance, an
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Redis vs Memcached
+### 🔴 Redis vs Memcached
 
 | Feature | Redis | Memcached |
 |---------|-------|-----------|
@@ -915,9 +877,9 @@ Different write strategies offer trade-offs between consistency, performance, an
 
 ---
 
-## Message Queues & Pub/Sub
+## 7. Message Queues & Pub/Sub
 
-### Message Queue Architecture
+### 📬 Message Queue Architecture
 
 Message queues decouple components by allowing asynchronous communication. Instead of Service A calling Service B directly (synchronous), Service A puts a message in a queue and continues its work. Service B processes the message when ready.
 
@@ -964,7 +926,7 @@ In **Pub/Sub**, each message is delivered to all subscribers of a topic. When a 
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Kafka Architecture
+### 🔶 Kafka Architecture
 
 Apache Kafka is a distributed streaming platform designed for high-throughput, fault-tolerant message handling. Unlike traditional queues, Kafka persists messages to disk and allows consumers to "replay" historical messages.
 
@@ -982,42 +944,48 @@ Apache Kafka is a distributed streaming platform designed for high-throughput, f
 - Kafka: High throughput, message replay, stream processing. Better for analytics, logs, event sourcing.
 - RabbitMQ: Lower latency, complex routing, traditional messaging. Better for task queues, RPC patterns.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    KAFKA ARCHITECTURE                           │
-│                                                                 │
-│   ┌──────────┐                              ┌──────────┐       │
-│   │Producer 1│──┐                       ┌──►│Consumer 1│       │
-│   └──────────┘  │                       │   └──────────┘       │
-│   ┌──────────┐  │    ┌─────────────┐    │   ┌──────────┐       │
-│   │Producer 2│──┼───►│   TOPIC     │────┼──►│Consumer 2│       │
-│   └──────────┘  │    │             │    │   └──────────┘       │
-│   ┌──────────┐  │    │ Partition 0 │    │   ┌──────────┐       │
-│   │Producer 3│──┘    │ ┌─┬─┬─┬─┬─┐│    └──►│Consumer 3│       │
-│   └──────────┘       │ │0│1│2│3│4││        └──────────┘       │
-│                      │ └─┴─┴─┴─┴─┘│                            │
-│                      │  ↑ offset   │       Consumer Group       │
-│                      │             │       (share partitions)   │
-│                      │ Partition 1 │                            │
-│                      │ ┌─┬─┬─┬─┐  │                            │
-│                      │ │0│1│2│3│  │  Messages ordered WITHIN   │
-│                      │ └─┴─┴─┴─┘  │  partition, not across     │
-│                      │             │                            │
-│                      │ Partition 2 │                            │
-│                      │ ┌─┬─┬─┐    │  Messages persisted to     │
-│                      │ │0│1│2│    │  disk, replayable          │
-│                      │ └─┴─┴─┘    │                            │
-│                      └─────────────┘                            │
-│                                                                 │
-│   Key features:                                                 │
-│   • High throughput (millions of messages/sec)                 │
-│   • Durable (persisted to disk, configurable retention)        │
-│   • Replayable (consumers can re-read historical messages)     │
-│   • Scalable (add partitions and brokers)                      │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    subgraph Producers
+        P1[Producer 1]
+        P2[Producer 2]
+        P3[Producer 3]
+    end
+
+    subgraph Kafka["Kafka Topic"]
+        subgraph Part0["Partition 0"]
+            M0[0│1│2│3│4]
+        end
+        subgraph Part1["Partition 1"]
+            M1[0│1│2│3]
+        end
+        subgraph Part2["Partition 2"]
+            M2[0│1│2]
+        end
+    end
+
+    subgraph CG["Consumer Group"]
+        C1[Consumer 1]
+        C2[Consumer 2]
+        C3[Consumer 3]
+    end
+
+    P1 & P2 & P3 --> Kafka
+    Part0 --> C1
+    Part1 --> C2
+    Part2 --> C3
 ```
 
-### Dead Letter Queue
+| Feature | Description |
+|---------|-------------|
+| **Ordering** | Guaranteed WITHIN partition, not across |
+| **Persistence** | Messages stored on disk, replayable |
+| **Throughput** | Millions of messages/sec |
+| **Consumer Groups** | Share partitions (queue) or broadcast (pub/sub) |
+
+> **Kafka vs RabbitMQ:** Kafka = log-based, replayable, high throughput (events, analytics). RabbitMQ = traditional queue, lower latency (tasks, RPC).
+
+### 💀 Dead Letter Queue
 
 When message processing fails repeatedly, you need a strategy to prevent one "poison pill" message from blocking your entire queue. Dead Letter Queues (DLQs) solve this by moving problematic messages aside for investigation.
 
@@ -1073,9 +1041,9 @@ When message processing fails repeatedly, you need a strategy to prevent one "po
 
 ---
 
-## Storage
+## 8. Storage
 
-### Storage Types Comparison
+### 💾 Storage Types Comparison
 
 | Type | How It Works | Characteristics | Use Cases |
 |------|--------------|-----------------|-----------|
@@ -1085,7 +1053,7 @@ When message processing fails repeatedly, you need a strategy to prevent one "po
 
 **Key insight**: Block for performance, File for sharing, Object for scale. S3 is NOT for databases (no POSIX, higher latency).
 
-### Storage Performance Comparison
+### ⚡ Storage Performance Comparison
 
 | Metric | Block (EBS) | File (EFS) | Object (S3) |
 |--------|-------------|------------|-------------|
@@ -1098,7 +1066,7 @@ When message processing fails repeatedly, you need a strategy to prevent one "po
 
 **Choose**: EBS for databases (latency), EFS for shared files (concurrency), S3 for archives (cost/scale).
 
-### CDN Architecture
+### 🌍 CDN Architecture
 
 Caches content at edge locations worldwide, serving users from the nearest location.
 
@@ -1117,9 +1085,9 @@ With CDN:    User → 5ms → Edge (cache hit!) → User (5ms total)
 
 ---
 
-## Scalability Patterns
+## 9. Scalability Patterns
 
-### Horizontal vs Vertical Scaling
+### 📈 Horizontal vs Vertical Scaling
 
 | Approach | How | Pros | Cons |
 |----------|-----|------|------|
@@ -1128,7 +1096,7 @@ With CDN:    User → 5ms → Edge (cache hit!) → User (5ms total)
 
 **Reality**: Use both. Vertical for databases (easier consistency), horizontal for stateless app servers.
 
-### Microservices Architecture
+### 🧩 Microservices Architecture
 
 Small, independent services that communicate over the network. Each owns its data and can scale independently.
 
@@ -1141,41 +1109,43 @@ Small, independent services that communicate over the network. Each owns its dat
 
 **When to use**: Large teams, large apps, different scaling needs. NOT for startups—start with a monolith, extract services when needed.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                  MICROSERVICES ARCHITECTURE                     │
-│                                                                 │
-│   ┌────────────────────────────────────────────────────────┐   │
-│   │                    API GATEWAY                          │   │
-│   │         (Auth, Rate Limiting, Routing)                  │   │
-│   └───────────────────────┬────────────────────────────────┘   │
-│                           │                                     │
-│       ┌───────────────────┼───────────────────┐                │
-│       │                   │                   │                │
-│       ▼                   ▼                   ▼                │
-│   ┌───────┐          ┌───────┐          ┌───────┐             │
-│   │ User  │          │ Order │          │Product│             │
-│   │Service│          │Service│          │Service│             │
-│   │ Team A│          │ Team B│          │ Team C│             │
-│   └───┬───┘          └───┬───┘          └───┬───┘             │
-│       │                  │                   │                 │
-│       ▼                  ▼                   ▼                 │
-│   ┌───────┐          ┌───────┐          ┌───────┐             │
-│   │User DB│          │OrderDB│          │ProdDB │             │
-│   └───────┘          └───────┘          └───────┘             │
-│                                                                 │
-│   Benefits:                     Challenges:                    │
-│   ✓ Independent scaling         ✗ Network latency/failures    │
-│   ✓ Technology flexibility      ✗ Data consistency            │
-│   ✓ Fault isolation             ✗ Operational complexity      │
-│   ✓ Team autonomy               ✗ Debugging (need tracing)    │
-│                                                                 │
-│   Start with a monolith. Extract services when there's clear  │
-│   benefit—don't start with microservices!                      │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    Client[📱 Clients]
+
+    subgraph Gateway["API Gateway"]
+        GW[Auth | Rate Limit | Routing]
+    end
+
+    subgraph Services["Microservices"]
+        US[👤 User Service<br/>Team A]
+        OS[📦 Order Service<br/>Team B]
+        PS[🏷️ Product Service<br/>Team C]
+    end
+
+    subgraph Databases["Databases"]
+        UDB[(User DB)]
+        ODB[(Order DB)]
+        PDB[(Product DB)]
+    end
+
+    Client --> GW
+    GW --> US & OS & PS
+    US --> UDB
+    OS --> ODB
+    PS --> PDB
 ```
 
-### Disaster Recovery
+| Benefits | Challenges |
+|----------|------------|
+| ✅ Independent scaling | ❌ Network latency/failures |
+| ✅ Technology flexibility | ❌ Data consistency (sagas) |
+| ✅ Fault isolation | ❌ Operational complexity |
+| ✅ Team autonomy | ❌ Debugging (need tracing) |
+
+> **Start with a monolith.** Extract services when there's clear benefit—don't start with microservices!
+
+### 🛡️ Disaster Recovery
 
 Disaster Recovery (DR) plans for the worst: entire region failures, natural disasters, or catastrophic bugs. Your DR strategy depends on two key metrics:
 
@@ -1236,9 +1206,9 @@ Route 53 (DNS) handles failover by directing traffic to the healthy region based
 
 ---
 
-## Distributed System Patterns
+## 10. Distributed System Patterns
 
-### Consistent Hashing
+### 🔄 Consistent Hashing
 
 Standard hashing (hash(key) % N) has a major problem: when you add or remove a node, almost all keys need to move. Consistent hashing solves this by mapping both keys and nodes onto a ring.
 
@@ -1282,11 +1252,19 @@ Standard hashing (hash(key) % N) has a major problem: when you add or remove a n
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Quorum
+### 🗳️ Quorum
 
 Quorum-based systems balance consistency and availability by requiring a minimum number of nodes to participate in reads and writes. This ensures that reads and writes have at least one node in common.
 
-**The formula**: For N replicas, configure W (write quorum) and R (read quorum). If W + R > N, every read will see at least one node that participated in the most recent write, ensuring strong consistency.
+#### Strong Consistency Condition
+
+$$
+W + R > N
+$$
+
+> **Terms:** N = total replicas, W = write quorum (nodes acknowledging write), R = read quorum (nodes responding to read)
+
+> **💡 Intuition:** If W + R > N, every read will see at least one node that participated in the most recent write—guaranteeing strong consistency.
 
 **Common configurations**:
 - **W=N, R=1**: Strong consistency on writes, fast reads. But writes fail if any node is down.
@@ -1327,7 +1305,7 @@ Quorum-based systems balance consistency and availability by requiring a minimum
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Leader Election
+### 👑 Leader Election
 
 Many distributed systems need a single "leader" to coordinate activities—processing writes, assigning work, or making decisions. Leader election algorithms ensure exactly one leader is chosen, even as nodes fail and recover.
 
@@ -1376,9 +1354,9 @@ Many distributed systems need a single "leader" to coordinate activities—proce
 
 ---
 
-## Capacity Estimation
+## 11. Capacity Estimation
 
-### Key Latencies & QPS
+### ⏱️ Key Latencies & QPS
 
 | Operation | Latency | Typical QPS |
 |-----------|---------|-------------|
@@ -1394,72 +1372,85 @@ Many distributed systems need a single "leader" to coordinate activities—proce
 **Why KV is 10x faster than SQL**: O(1) hash lookup vs B-tree traversal, no query parsing, no JOINs.
 **Key constant**: 86,400 seconds/day (24 × 60 × 60)—use for converting daily volume to QPS.
 
-### Estimation Formulas
+### 🧮 Estimation Formulas
 
 Back-of-the-envelope calculations help you quickly assess whether a design is feasible. The goal isn't precision—it's understanding the order of magnitude.
 
-**QPS (queries per second)**: Start with **DAU** (daily active users), multiply by average requests per user per day, divide by seconds in a day. Peak traffic is typically 2-3x average.
+#### QPS (Queries Per Second)
 
-**Storage**: Multiply records per day by record size. Account for replication (usually 3x for durability) and growth period.
+$$
+\text{QPS}_{\text{avg}} = \frac{\text{DAU} \times R}{86400}
+$$
 
-**Bandwidth**: Multiply QPS by average request/response size. Consider both ingress (uploads) and egress (downloads) separately.
+$$
+\text{QPS}_{\text{peak}} = \text{QPS}_{\text{avg}} \times M
+$$
 
-**Server Count**: Divide peak QPS by capacity per server. Add buffer for headroom (typically 30-50%).
+> **Terms:** DAU = daily active users, R = requests per user per day, 86400 = seconds per day, M = peak multiplier (typically 2-3×)
 
-**Common gotchas**:
+**📝 Example:** 1M DAU, 5 requests/user/day
+```
+Average = (1,000,000 × 5) / 86,400 = ~58 QPS
+Peak = 58 × 3 = ~174 QPS
+```
+
+---
+
+#### Storage
+
+$$
+S_{\text{daily}} = N \times s
+$$
+
+$$
+S_{\text{total}} = S_{\text{daily}} \times d \times r
+$$
+
+> **Terms:** N = records per day, s = record size (bytes), d = retention days, r = replication factor (typically 3×)
+
+**📝 Example:** 100M URLs/day, 500 bytes, 5 years, 3× replication
+```
+Daily = 100M × 500B = 50 GB
+5 Years = 50GB × 365 × 5 × 3 = ~275 TB
+```
+
+---
+
+#### Bandwidth
+
+$$
+\text{BW} = \text{QPS} \times \bar{s}
+$$
+
+> **Terms:** BW = bandwidth, $\bar{s}$ = average request/response size
+
+**📝 Example:** 100 QPS × 10KB = 1 MB/s = 8 Mbps
+
+---
+
+#### Servers Needed
+
+$$
+N_{\text{servers}} = \frac{\text{QPS}_{\text{peak}}}{C} \times 1.5
+$$
+
+> **Terms:** C = capacity per server (QPS), 1.5 = buffer factor for headroom
+
+**📝 Example:** 3,000 Peak QPS, 500 QPS/server = (3000/500) × 1.5 = **9 servers**
+
+---
+
+**Common gotchas:**
 - Don't forget replication factors
 - Consider read vs write ratios (often 10:1 or 100:1)
 - Peak traffic can be 10x+ average for spiky workloads
 - Storage grows over time—estimate for retention period
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                 CAPACITY ESTIMATION                             │
-│                                                                 │
-│   QPS (Queries Per Second)                                      │
-│   ─────────────────────────                                     │
-│   Average QPS = (DAU × requests_per_user) / 86,400             │
-│   Peak QPS = Average × 3 (typical multiplier)                  │
-│                                                                 │
-│   Example: 1M DAU, 5 requests/user/day                         │
-│   Average = (1,000,000 × 5) / 86,400 = ~58 QPS                 │
-│   Peak = 58 × 3 = ~174 QPS                                     │
-│                                                                 │
-│   ─────────────────────────────────────────────────────────     │
-│                                                                 │
-│   STORAGE                                                       │
-│   ───────                                                       │
-│   Daily = records_per_day × record_size                        │
-│   Total = daily × days × replication_factor                    │
-│                                                                 │
-│   Example: 100M URLs/day, 500 bytes, 5 years, 3x replication   │
-│   Daily = 100M × 500B = 50 GB                                  │
-│   5 Years = 50GB × 365 × 5 × 3 = ~275 TB                       │
-│                                                                 │
-│   ─────────────────────────────────────────────────────────     │
-│                                                                 │
-│   BANDWIDTH                                                     │
-│   ─────────                                                     │
-│   BW = QPS × avg_request_size                                  │
-│                                                                 │
-│   Example: 100 QPS × 10KB = 1 MB/s = 8 Mbps                   │
-│                                                                 │
-│   ─────────────────────────────────────────────────────────     │
-│                                                                 │
-│   SERVERS NEEDED                                                │
-│   ──────────────                                                │
-│   Servers = Peak_QPS / QPS_per_server × 1.5 (buffer)          │
-│                                                                 │
-│   Example: 3,000 Peak QPS, 500 QPS/server                      │
-│   Servers = (3,000 / 500) × 1.5 = 9 servers                    │
-└─────────────────────────────────────────────────────────────────┘
-```
-
 ---
 
-## Common Design Examples
+## 12. Design Examples
 
-### URL Shortener
+### 🔗 URL Shortener
 
 A URL shortener converts long URLs into short codes and redirects visitors to the original URL. Seems simple, but at scale it's a great example of key-value storage, encoding, and caching.
 
@@ -1475,41 +1466,35 @@ A URL shortener converts long URLs into short codes and redirects visitors to th
 
 5. **Redirection**: Use 301 (permanent) redirects if SEO matters, 302 (temporary) if you want to track clicks. Include analytics logging asynchronously.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    URL SHORTENER                                │
-│                                                                 │
-│   ┌──────┐     ┌─────────────┐     ┌───────────┐               │
-│   │Client│────►│Load Balancer│────►│API Servers│               │
-│   └──────┘     └─────────────┘     └─────┬─────┘               │
-│                                          │                      │
-│                          ┌───────────────┴───────────────┐      │
-│                          │                               │      │
-│                          ▼                               ▼      │
-│                    ┌───────────┐                  ┌───────────┐ │
-│                    │   Cache   │                  │ Database  │ │
-│                    │  (Redis)  │                  │ (Sharded) │ │
-│                    └───────────┘                  └───────────┘ │
-│                                                                 │
-│   WRITE FLOW:                                                   │
-│   1. Receive long URL: https://example.com/very/long/path      │
-│   2. Generate unique ID (Snowflake or random)                  │
-│   3. Encode to Base62: abc1234                                 │
-│   4. Store mapping: abc1234 → https://example.com/...          │
-│   5. Return: https://short.ly/abc1234                          │
-│                                                                 │
-│   READ FLOW:                                                    │
-│   1. Receive: https://short.ly/abc1234                         │
-│   2. Check cache (80%+ hit rate expected)                      │
-│   3. If miss, query database                                   │
-│   4. 301/302 redirect to original URL                          │
-│                                                                 │
-│   Encoding: Base62 (a-z, A-Z, 0-9)                             │
-│   7 chars = 62^7 = 3.5 trillion unique URLs                    │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart LR
+    Client[👤 Client]
+    LB[⚖️ Load Balancer]
+    API[🖥️ API Servers]
+    Cache[(⚡ Cache<br/>Redis)]
+    DB[(🗄️ Database<br/>Sharded)]
+
+    Client --> LB --> API
+    API --> Cache
+    API --> DB
 ```
 
-### Chat Application
+**Write Flow:**
+1. Receive long URL: `https://example.com/very/long/path`
+2. Generate unique ID (Snowflake or random)
+3. Encode to Base62: `abc1234`
+4. Store mapping: `abc1234 → https://example.com/...`
+5. Return: `https://short.ly/abc1234`
+
+**Read Flow:**
+1. Receive: `https://short.ly/abc1234`
+2. Check cache (80%+ hit rate expected)
+3. If miss, query database
+4. 301/302 redirect to original URL
+
+> **Encoding:** Base62 (a-z, A-Z, 0-9) → 7 chars = 62⁷ = **3.5 trillion** unique URLs
+
+### 💬 Chat Application
 
 A chat application requires real-time bidirectional communication—fundamentally different from request-response HTTP. Key challenges include maintaining persistent connections, delivering messages with low latency, and handling presence/typing indicators.
 
@@ -1521,45 +1506,38 @@ A chat application requires real-time bidirectional communication—fundamentall
 
 **Presence service** tracks online/offline status and typing indicators. These are ephemeral—no need to persist, but they must propagate quickly. Often implemented with Redis with TTL-based expiration.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    CHAT APPLICATION                             │
-│                                                                 │
-│   ┌──────┐     ┌──────┐                                        │
-│   │User A│     │User B│                                        │
-│   └──┬───┘     └──┬───┘                                        │
-│      │            │                                             │
-│      │ WebSocket  │ WebSocket (persistent, bidirectional)      │
-│      │            │                                             │
-│      ▼            ▼                                             │
-│   ┌────────────────────────────┐                               │
-│   │    Connection Manager      │  Tracks user ↔ server         │
-│   │  (Maintains WS sessions)   │  mapping                       │
-│   └────────────┬───────────────┘                               │
-│                │                                                │
-│                ▼                                                │
-│   ┌────────────────────────────┐                               │
-│   │      Message Router        │  Redis Pub/Sub for            │
-│   │      (Redis Pub/Sub)       │  cross-server routing         │
-│   └────────────┬───────────────┘                               │
-│                │                                                │
-│       ┌────────┴────────┐                                      │
-│       ▼                 ▼                                       │
-│   ┌───────────┐   ┌───────────┐                                │
-│   │ Messages  │   │ Presence  │  Online status,                │
-│   │    DB     │   │  Service  │  typing indicators             │
-│   │(Cassandra)│   │  (Redis)  │                                │
-│   └───────────┘   └───────────┘                                │
-│                                                                 │
-│   Key Design Decisions:                                         │
-│   • WebSocket for real-time bidirectional communication        │
-│   • Partition messages by conversation_id                      │
-│   • Redis pub/sub for cross-server message routing             │
-│   • TTL-based presence with heartbeats                         │
-└─────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Clients
+        UA[👤 User A]
+        UB[👤 User B]
+    end
+
+    subgraph Backend["Backend Services"]
+        CM[🔌 Connection Manager<br/>WebSocket Sessions]
+        MR[📨 Message Router<br/>Redis Pub/Sub]
+    end
+
+    subgraph Storage
+        MSG[(💬 Messages DB<br/>Cassandra)]
+        PRES[🟢 Presence Service<br/>Redis + TTL]
+    end
+
+    UA <-->|WebSocket| CM
+    UB <-->|WebSocket| CM
+    CM --> MR
+    MR --> MSG
+    MR --> PRES
 ```
 
-### Notification System
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Connection** | WebSocket | Persistent, bidirectional real-time |
+| **Routing** | Redis Pub/Sub | Cross-server message delivery |
+| **Messages** | Cassandra | Partition by conversation_id |
+| **Presence** | Redis + TTL | Online status, typing indicators |
+
+### 🔔 Notification System
 
 A notification system sends messages across multiple channels (push, SMS, email) to millions of users. Key challenges include high write volume, fanout to many recipients, and handling delivery failures gracefully.
 
@@ -1575,47 +1553,40 @@ A notification system sends messages across multiple channels (push, SMS, email)
 
 5. **Template management**: Separate notification content from delivery logic. Support variables, localization, and A/B testing.
 
+```mermaid
+flowchart TB
+    subgraph Ingestion
+        TS[🎯 Trigger Service]
+        NS[📝 Notification Service]
+        TPL[📋 Templates +<br/>User Preferences]
+    end
+
+    Q[📬 Priority Queue<br/>Kafka/SQS]
+
+    subgraph Workers["Channel Workers"]
+        PW[📱 Push<br/>FCM/APNs]
+        EW[📧 Email<br/>SendGrid/SES]
+        SW[💬 SMS<br/>Twilio]
+        DLQ[💀 DLQ]
+    end
+
+    DB[(📊 Delivery Status DB)]
+
+    TS --> NS
+    NS --> TPL
+    TPL --> Q
+    Q --> PW & EW & SW
+    Q -.->|failures| DLQ
+    PW & EW & SW --> DB
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                   NOTIFICATION SYSTEM                           │
-│                                                                 │
-│   ┌──────────┐     ┌─────────────┐     ┌───────────────────┐   │
-│   │Trigger   │────►│Notification │────►│ Priority Queue    │   │
-│   │Service   │     │   Service   │     │ (Kafka/SQS)       │   │
-│   └──────────┘     └──────┬──────┘     └─────────┬─────────┘   │
-│                           │                       │             │
-│                           ▼                       │             │
-│                    ┌──────────────┐               │             │
-│                    │  Templates   │               │             │
-│                    │  + User      │               │             │
-│                    │  Preferences │               │             │
-│                    └──────────────┘               │             │
-│                                                   │             │
-│           ┌───────────────┬───────────────┬──────┴──────┐      │
-│           ▼               ▼               ▼             ▼      │
-│   ┌─────────────┐ ┌─────────────┐ ┌─────────────┐ ┌─────────┐ │
-│   │Push Worker  │ │Email Worker │ │ SMS Worker  │ │  DLQ    │ │
-│   │   (FCM/     │ │ (SendGrid/  │ │  (Twilio)   │ │         │ │
-│   │    APNs)    │ │   SES)      │ │             │ │         │ │
-│   └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └─────────┘ │
-│          │               │               │                      │
-│          └───────────────┴───────────────┘                      │
-│                          │                                      │
-│                          ▼                                      │
-│                   ┌─────────────┐                               │
-│                   │  Delivery   │  Track: sent, delivered,      │
-│                   │   Status    │  opened, failed, retrying     │
-│                   │     DB      │                               │
-│                   └─────────────┘                               │
-│                                                                 │
-│   Key Design Decisions:                                         │
-│   • Async processing (queue decouples sender from delivery)    │
-│   • Channel-specific workers (different rate limits, retries)  │
-│   • User preferences (opt-out, channel priority, quiet hours)  │
-│   • Deduplication (prevent duplicate notifications)            │
-│   • Delivery tracking (sent → delivered → opened)              │
-└─────────────────────────────────────────────────────────────────┘
-```
+
+| Design Decision | Why |
+|-----------------|-----|
+| **Async queue** | Decouple sender from delivery, handle spikes |
+| **Channel workers** | Different rate limits, retry strategies |
+| **User preferences** | Opt-out, channel priority, quiet hours |
+| **Deduplication** | Prevent duplicate notifications |
+| **Delivery tracking** | sent → delivered → opened |
 
 **Scaling considerations**:
 - **Write-heavy**: Most operations are writes (send notification), reads are status checks
@@ -1625,9 +1596,9 @@ A notification system sends messages across multiple channels (push, SMS, email)
 
 ---
 
-## Quick Reference
+## 13. Quick Reference
 
-### Important Numbers
+### 🔢 Important Numbers
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1655,7 +1626,7 @@ A notification system sends messages across multiple channels (push, SMS, email)
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### System Design Interview Checklist
+### ✅ System Design Interview Checklist
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -1691,7 +1662,7 @@ A notification system sends messages across multiple channels (push, SMS, email)
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### Beyond Pattern Matching: The Interview Mindset
+### 🧠 Beyond Pattern Matching: The Interview Mindset
 
 The gap between knowing patterns and actually designing systems that scale comes down to **reasoning about trade-offs in real time**, not memorizing reference architectures.
 
@@ -1847,7 +1818,7 @@ The boxes and arrows come later, after the math basically forces your hand.
 
 That's how you build judgment instead of just pattern fluency.
 
-### Component Failure Analysis Framework
+### 💥 Component Failure Analysis Framework
 
 For every component in your design, systematically ask: **"What happens when X fails/degrades?"** This framework gives you the thinking model for each common component.
 
@@ -2107,7 +2078,7 @@ When the interviewer asks **"What happens when X fails?"**, use this structure:
 >
 > "If Redis fails completely, we'd detect it within 1-2 seconds via connection timeouts. The impact is that all traffic immediately hits the database—which is why we size the DB to handle peak load without cache (about 10K QPS in our case). The response is automatic: our cache client has a 100ms timeout and falls back to direct DB queries. We'd recover by restarting Redis and letting it warm up gradually—we use lazy population rather than pre-warming to avoid thundering herd. To prevent this being catastrophic, we run Redis in cluster mode with replicas, so single-node failure doesn't cause full cache loss."
 
-### Trade-off Decision Matrix
+### ⚖️ Trade-off Decision Matrix
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -2134,6 +2105,14 @@ When the interviewer asks **"What happens when X fails?"**, use this structure:
 
 ---
 
-*This guide provides foundational knowledge for system design. Real-world systems combine these patterns based on specific requirements, constraints, and trade-offs. The best design is the simplest one that meets your needs.*
+<div align="center">
+
+**System Design = Trade-offs + Scale + Failure Modes + Numbers**
+
+*This guide provides foundational knowledge for building production systems. The best design is the simplest one that meets your needs.*
+
+⭐ Star this repo if it helped you!
 
 *Last updated: February 2026*
+
+</div>
