@@ -1289,21 +1289,23 @@ flowchart LR
 
 ### 📝 Text Generation
 
-**Measuring text quality:** Perplexity measures how "surprised" the model is—lower means better language modeling. BLEU and ROUGE compare generated text to references using word overlap. BERTScore uses embeddings for semantic similarity, catching paraphrases that word-overlap metrics miss.
+**Measuring text quality:** Perplexity measures how "surprised" the model is—lower means better language modeling. BLEU and ROUGE compare generated text to references using word overlap. METEOR improved on BLEU by adding synonym matching. BERTScore uses neural embeddings for semantic similarity, catching paraphrases that word-overlap metrics miss.
 
-| Metric | Formula | Measures |
-|--------|---------|----------|
-| **Perplexity** | $PPL = \exp\left(-\frac{1}{N}\sum\log P(w_i)\right)$ | Model uncertainty (↓ better) |
-| **BLEU** | $BP \cdot \exp(\sum w_n \log p_n)$ | N-gram precision |
-| **ROUGE-N** | $\frac{\text{overlap n-grams}}{\text{reference n-grams}}$ | N-gram recall |
-| **ROUGE-L** | Based on LCS | Longest common subsequence |
-| **BERTScore** | Embedding similarity | Semantic match |
+| Metric | Year | Remember | Formula | What It Answers |
+|--------|------|----------|---------|-----------------|
+| **Perplexity** | — | **Surprise** | $PPL = \exp\left(-\frac{1}{N}\sum\log P(w_i)\right)$ | "How surprised is the model by this text?" PPL=10 means ~10 plausible next words on average. **Scores:** <20 excellent, 20-50 good, >100 poor. GPT-4 achieves ~8-15 on standard benchmarks. Lower = better. Used to evaluate language models themselves, not comparing to a reference. |
+| **BLEU** | 2002 | **Precision** | $BP \cdot \exp(\sum w_n \log p_n)$ | "Of what I generated, how much is correct?" Counts how many n-grams in your output appear in the reference. **Scores (0-100):** >50 excellent, 30-50 good, <20 poor. Human translations typically score 60-80. Penalizes short outputs. Best for: machine translation. |
+| **ROUGE-N** | 2004 | **Coverage** | $\frac{\text{overlap n-grams}}{\text{reference n-grams}}$ | "Did I capture the important content?" Counts how many n-grams from the reference appear in your output. **Scores (0-1):** >0.5 good, 0.3-0.5 acceptable, <0.3 poor. ROUGE-1 F1 of 0.45+ is strong for summarization. Best for: summarization. |
+| **ROUGE-L** | 2004 | **Flow** | Based on LCS | "Did I preserve word order?" Finds the longest in-order word sequence shared by both texts. **Scores (0-1):** >0.4 good, 0.25-0.4 acceptable. Typically 5-10% lower than ROUGE-1. Rewards outputs that maintain natural flow. |
+| **METEOR** | 2005 | **Synonyms** | F-mean + fragmentation penalty | "What if I said it differently?" Matches stems + WordNet synonyms ("big"→"large", "running"→"ran"). **Scores (0-1):** >0.5 good, 0.3-0.5 acceptable. Typically 10-20% higher than BLEU on same text. Better human correlation than BLEU. |
+| **BERTScore** | 2019 | **Meaning** | Cosine similarity of embeddings | "Do they mean the same thing?" Uses BERT embeddings for semantic similarity. "The cat sat" ≈ "A feline rested" despite zero word overlap. **Scores (0-1):** >0.9 excellent, 0.85-0.9 good, <0.8 poor. Best for: any task where paraphrasing is acceptable. |
 
 > **Terms:**
 > - **Perplexity:** N = number of tokens, $w_i$ = word/token at position i, $P(w_i)$ = model's predicted probability for that token. Lower perplexity = model is less "surprised" = better predictions.
 > - **BLEU:** BP = brevity penalty (penalizes short outputs), $w_n$ = weight for n-gram size (usually 0.25 each for 1-4 grams), $p_n$ = precision of n-grams (what fraction of generated n-grams appear in reference).
 > - **ROUGE-N:** "overlap n-grams" = n-grams appearing in both generated and reference, "reference n-grams" = total n-grams in reference. Measures recall (did we cover the reference?).
 > - **ROUGE-L:** LCS = Longest Common Subsequence between generated and reference text. Captures sentence-level structure.
+> - **METEOR:** Metric for Evaluation of Translation with Explicit ORdering. Matches exact words, stems, and synonyms via WordNet. Applies fragmentation penalty for discontiguous matches.
 > - **BERTScore:** Computes cosine similarity between BERT embeddings of generated and reference tokens, then aggregates. Catches semantic equivalence that word-overlap misses.
 
 ### 🖼️ Image Generation
@@ -1792,8 +1794,10 @@ For d=4096, crossover at n=4096 tokens.
 
 | Acronym | Full Name | Plain English Definition |
 |---------|-----------|--------------------------|
-| **BLEU** | Bilingual Evaluation Understudy | Measures text similarity by comparing word sequences |
-| **ROUGE** | Recall-Oriented Understudy for Gisting Evaluation | Measures how much reference text appears in output |
+| **BLEU** | Bilingual Evaluation Understudy | Measures translation quality by n-gram precision (2002) |
+| **ROUGE** | Recall-Oriented Understudy for Gisting Evaluation | Measures summary quality by n-gram recall (2004) |
+| **METEOR** | Metric for Evaluation of Translation with Explicit ORdering | Like BLEU but matches synonyms and stems (2005) |
+| **BERTScore** | BERT-based Score | Semantic similarity using neural embeddings (2019) |
 | **FID** | Fréchet Inception Distance | Measures how realistic generated images are; lower is better |
 | **IS** | Inception Score | Measures image quality and diversity; higher is better |
 | **FVD** | Fréchet Video Distance | Like FID but for videos |
