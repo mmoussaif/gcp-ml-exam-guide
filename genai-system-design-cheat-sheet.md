@@ -1762,20 +1762,20 @@ $$
 
 ### Architecture Terms
 
-| Acronym         | Full Name                      | Plain English Definition                                                                  |
-| --------------- | ------------------------------ | ----------------------------------------------------------------------------------------- |
-| **Transformer** | —                              | The neural network design behind all modern LLMs; processes text using "attention"        |
-| **MoE**         | Mixture of Experts             | Model design where only some "expert" parts activate per input, saving compute            |
-| **FFN**         | Feed-Forward Network           | Simple neural network layer inside Transformers; data flows one direction                 |
-| **FFNN**        | Feed-Forward Neural Network    | Basic neural network with no loops; data goes input → hidden layers → output              |
-| **CNN**         | Convolutional Neural Network   | Neural network for images; finds patterns using sliding filters                           |
-| **RNN**         | Recurrent Neural Network       | Neural network with memory for sequences; older approach replaced by Transformers         |
-| **LSTM**        | Long Short-Term Memory         | Improved RNN that remembers longer sequences using "gates" to control what to keep/forget |
-| **ViT**         | Vision Transformer             | Transformer adapted for images by treating image patches as "tokens"                      |
-| **DiT**         | Diffusion Transformer          | Transformer used in image/video generation (Sora) instead of U-Net                        |
-| **U-Net**       | —                              | Neural network shaped like a "U" used to remove noise in image generation                 |
-| **VAE**         | Variational Autoencoder        | Neural network that compresses images to smaller size and reconstructs them               |
-| **GAN**         | Generative Adversarial Network | Two networks competing: one creates fakes, one detects them                               |
+| Acronym         | Full Name                      | Plain English Definition                                                                                                        |
+| --------------- | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| **Transformer** | —                              | The neural network design behind all modern LLMs; processes text using "attention"                                              |
+| **MoE**         | Mixture of Experts             | Model design where only some "expert" parts activate per input, saving compute                                                  |
+| **FFN**         | Feed-Forward Network           | Simple neural network layer inside Transformers; data flows one direction                                                       |
+| **FFNN**        | Feed-Forward Neural Network    | Basic neural network with no loops; data goes input → hidden layers → output                                                    |
+| **CNN**         | Convolutional Neural Network   | Neural network for images; finds patterns using sliding filters                                                                 |
+| **RNN**         | Recurrent Neural Network       | Neural network with memory for sequences; older approach replaced by Transformers                                               |
+| **LSTM**        | Long Short-Term Memory         | Improved RNN that remembers longer sequences using "gates" to control what to keep/forget                                       |
+| **ViT**         | Vision Transformer             | Transformer adapted for images by treating image patches as "tokens"; video variants (ViViT, Timesformer) extend this for video |
+| **DiT**         | Diffusion Transformer          | Transformer used in image/video generation (Sora 2) instead of U-Net; handles both spatial and temporal dimensions              |
+| **U-Net**       | —                              | Neural network shaped like a "U" used to remove noise in image generation; legacy architecture replaced by DiT in modern models |
+| **VAE**         | Variational Autoencoder        | Neural network that compresses images/video to smaller size and reconstructs them; used in Stable Diffusion and Sora            |
+| **GAN**         | Generative Adversarial Network | Two networks competing: one creates fakes, one detects them; legacy approach largely replaced by diffusion models               |
 
 ### Training Methods
 
@@ -1899,14 +1899,14 @@ $$
 
 ### Image & Video Generation
 
-| Acronym  | Full Name                               | Plain English Definition                                          |
-| -------- | --------------------------------------- | ----------------------------------------------------------------- |
-| **CFG**  | Classifier-Free Guidance                | Makes images follow the text prompt more closely (typical: 7-15)  |
-| **DDPM** | Denoising Diffusion Probabilistic Model | Original diffusion method; removes noise gradually (1000 steps)   |
-| **DDIM** | Denoising Diffusion Implicit Model      | Faster diffusion (20-50 steps); used in production                |
-| **LDM**  | Latent Diffusion Model                  | Diffusion in compressed space; what Stable Diffusion uses         |
-| **CLIP** | Contrastive Language-Image Pre-training | Model understanding both text and images; guides image generation |
-| **SD**   | Stable Diffusion                        | Popular open-source image generation model                        |
+| Acronym  | Full Name                               | Plain English Definition                                                                          |
+| -------- | --------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| **CFG**  | Classifier-Free Guidance                | Makes images follow the text prompt more closely (typical: 7-15)                                  |
+| **DDPM** | Denoising Diffusion Probabilistic Model | Original diffusion method; removes noise gradually (1000 steps)                                   |
+| **DDIM** | Denoising Diffusion Implicit Model      | Faster diffusion (20-50 steps); used in production                                                |
+| **LDM**  | Latent Diffusion Model                  | Diffusion in compressed space; what Stable Diffusion uses                                         |
+| **CLIP** | Contrastive Language-Image Pre-training | Model understanding both text and images; guides image generation                                 |
+| **SD**   | Stable Diffusion                        | Popular open-source image generation model; latest is Stable Diffusion 3 Medium (2B params, 2024) |
 
 ### Agents & Reasoning
 
