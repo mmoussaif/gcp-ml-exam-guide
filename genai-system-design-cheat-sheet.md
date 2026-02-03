@@ -75,6 +75,88 @@ flowchart LR
 | **Training**  | Fit model to data by minimizing **loss** | Pretraining, SFT, RLHF        |
 | **Inference** | Apply trained model to new data          | API calls, production serving |
 
+### 📈 End-to-End ML Lifecycle
+
+**From data to production:** ML in production involves continuous iteration—collect data, train models, deploy, monitor performance, and retrain when quality degrades. This cycle ensures models stay accurate as data distributions change.
+
+```mermaid
+flowchart TB
+    subgraph Data["📊 Data"]
+        C[Collect Data]
+        L[Label Data]
+        V[Validate Quality]
+    end
+
+    subgraph Train["🎓 Training"]
+        P[Preprocess]
+        T[Train Model]
+        E[Evaluate]
+    end
+
+    subgraph Deploy["🚀 Deployment"]
+        D[Deploy Model]
+        S[Serve Predictions]
+    end
+
+    subgraph Monitor["📈 Monitoring"]
+        M[Monitor Performance]
+        DET[Detect Drift]
+        RET[Retrain]
+    end
+
+    C --> L --> V --> P --> T --> E --> D --> S --> M --> DET --> RET --> P
+
+    style Train fill:#e1f5ff
+    style Deploy fill:#fff4e1
+    style Monitor fill:#ffe1f5
+```
+
+> **Production ML flow:** Data flows through collection → training → deployment → monitoring. When monitoring detects performance degradation (data drift, concept drift), trigger retraining. This closed loop keeps models accurate in production.
+
+### 📊 Classification Metrics (Precision, Recall, F1)
+
+**Measuring classification performance:** For binary classification, predictions fall into four categories. Precision measures "of what we predicted positive, how many were correct?" Recall measures "of all actual positives, how many did we catch?"
+
+**Confusion Matrix:**
+
+|                     | Predicted Positive      | Predicted Negative      |
+| ------------------- | ----------------------- | ----------------------- |
+| **Actual Positive** | **TP** (True Positive)  | **FN** (False Negative) |
+| **Actual Negative** | **FP** (False Positive) | **TN** (True Negative)  |
+
+**Key Metrics:**
+
+$$
+\text{Precision} = \frac{TP}{TP + FP} = \frac{\text{Correct positives}}{\text{All predicted positives}}
+$$
+
+$$
+\text{Recall} = \frac{TP}{TP + FN} = \frac{\text{Correct positives}}{\text{All actual positives}}
+$$
+
+$$
+\text{F1 Score} = \frac{2 \times \text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}
+$$
+
+$$
+\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+$$
+
+> **Terms:** TP = True Positive (correctly predicted positive), TN = True Negative (correctly predicted negative), FP = False Positive (incorrectly predicted positive), FN = False Negative (missed positive)
+
+**When to use each:**
+
+- **Precision**: When false positives are costly (e.g., spam filter—don't block good emails)
+- **Recall**: When false negatives are costly (e.g., cancer screening—don't miss cases)
+- **F1**: Balance precision and recall (general classification)
+- **Accuracy**: Only for balanced classes (misleading with imbalanced data)
+
+**📝 Example:** Spam detection (100 emails: 10 spam, 90 not spam)
+
+- Model predicts 12 spam, 8 are actually spam → Precision = 8/12 = 67% (4 false alarms)
+- Of 10 actual spam, model found 8 → Recall = 8/10 = 80% (missed 2 spam)
+- F1 = 2 × (0.67 × 0.80) / (0.67 + 0.80) = 0.73
+
 ### 🔢 Key Formulas
 
 #### Loss Functions
