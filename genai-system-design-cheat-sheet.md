@@ -628,6 +628,181 @@ flowchart TB
 
 > **When to use RAFT:** When you have a stable document corpus and can invest in fine-tuning. RAFT-tuned models significantly outperform standard RAG on domain-specific Q&A, especially when retrieval returns noisy results.
 
+---
+
+#### Query Rewriting / Expansion
+
+**Turn vague queries into retrieval-friendly searches:** Users often ask questions poorly—ambiguous, missing context, or using different terminology than your documents. Query rewriting transforms the original query into one or more optimized versions.
+
+```mermaid
+flowchart LR
+    Q[User Query] --> LLM[LLM rewrites<br/>query]
+    LLM --> Q1[Query variant 1]
+    LLM --> Q2[Query variant 2]
+    LLM --> Q3[Query variant 3]
+    Q1 & Q2 & Q3 --> VS[(Vector Search)]
+    VS --> MERGE[Merge & Dedupe]
+    MERGE --> DOCS[Retrieved Docs]
+```
+
+**Rewriting strategies:**
+- **Decomposition**: Break complex query into sub-questions
+- **Expansion**: Add synonyms and related terms
+- **Step-back**: Ask a more general question first, then specific
+- **HyDE**: Generate hypothetical answer (covered above)
+
+> **When to use:** Complex multi-part questions, domain-specific jargon mismatches, or when users don't know the "right" terminology.
+
+---
+
+#### CRAG (Corrective RAG)
+
+**Catch weak evidence before generating answers:** Standard RAG trusts whatever the retriever returns. CRAG adds a validation step—an evaluator checks if retrieved documents actually support answering the question. If not, it triggers corrective actions.
+
+```mermaid
+flowchart TB
+    Q[Query] --> R[Retrieve Docs]
+    R --> E{Evaluator:<br/>Docs relevant?}
+    E -->|Correct| G[Generate Answer]
+    E -->|Ambiguous| WS[Web Search<br/>for more context]
+    E -->|Incorrect| REF[Refine query<br/>& re-retrieve]
+    WS --> G
+    REF --> R
+```
+
+**CRAG Actions:**
+| Evaluation | Action | Rationale |
+|------------|--------|-----------|
+| **Correct** | Proceed to generation | Retrieved docs support the answer |
+| **Incorrect** | Web search fallback | Knowledge base lacks the info |
+| **Ambiguous** | Decompose + re-retrieve | Partial relevance, need more |
+
+> **When to use:** High-stakes applications where hallucination is unacceptable (medical, legal, financial). Adds latency but significantly improves accuracy.
+
+---
+
+#### Self-RAG
+
+**Let the model decide when to retrieve:** Not every question needs retrieval—some are simple enough to answer directly. Self-RAG trains the model to output special tokens that control the RAG process: whether to retrieve, whether retrieved docs are relevant, and whether the answer is supported.
+
+```mermaid
+flowchart LR
+    Q[Query] --> M{Model decides:<br/>Retrieve?}
+    M -->|No| ANS1[Direct Answer]
+    M -->|Yes| R[Retrieve]
+    R --> M2{Relevant?}
+    M2 -->|No| R
+    M2 -->|Yes| G[Generate]
+    G --> M3{Supported?}
+    M3 -->|Yes| ANS2[Final Answer]
+    M3 -->|No| G
+```
+
+**Self-RAG Reflection Tokens:**
+- `[Retrieve]` — Should I retrieve for this query?
+- `[IsRel]` — Is this passage relevant?
+- `[IsSup]` — Is my response supported by the passage?
+- `[IsUse]` — Is this response useful?
+
+> **When to use:** When you want adaptive retrieval (save costs on simple queries) and built-in self-critique. Requires fine-tuning to add reflection capabilities.
+
+---
+
+#### GraphRAG
+
+**Retrieval over connected knowledge, not isolated chunks:** Traditional RAG retrieves independent text chunks. GraphRAG builds a knowledge graph from your documents—entities become nodes, relationships become edges—then retrieves along those connections.
+
+```mermaid
+flowchart LR
+    subgraph Build["Indexing Phase"]
+        D[Documents] --> E[Extract Entities<br/>& Relationships]
+        E --> KG[(Knowledge<br/>Graph)]
+    end
+
+    subgraph Query["Query Phase"]
+        Q[Query] --> ENT[Identify<br/>Entities]
+        ENT --> TRAV[Graph<br/>Traversal]
+        KG --> TRAV
+        TRAV --> CTX[Connected<br/>Context]
+        CTX --> LLM[Generate]
+    end
+```
+
+**Why GraphRAG wins:**
+| Challenge | Vector RAG | GraphRAG |
+|-----------|------------|----------|
+| **Multi-hop questions** | Struggles (needs all info in one chunk) | Traverses relationships |
+| **Entity disambiguation** | "Apple" = fruit or company? | Entity linking resolves |
+| **Global summarization** | Must retrieve all chunks | Community summaries |
+| **Source traceability** | Chunk-level | Entity + relationship level |
+
+> **When to use:** Complex domains with many entities and relationships (enterprise knowledge bases, scientific literature, legal documents). Higher upfront cost to build the graph, but superior for multi-hop reasoning.
+
+---
+
+#### Agentic RAG
+
+**RAG as a tool in an agent's toolkit:** Instead of a fixed retrieve-then-generate pipeline, Agentic RAG gives an agent access to retrieval as one of many tools. The agent decides when to search, what to search for, and whether to search again based on results.
+
+```mermaid
+flowchart TB
+    Q[User Query] --> A[Agent]
+
+    subgraph Tools["Agent Tools"]
+        RAG[🔍 RAG Search]
+        SQL[🗄️ SQL Query]
+        WEB[🌐 Web Search]
+        CALC[🧮 Calculator]
+    end
+
+    A -->|"Need docs?"| RAG
+    A -->|"Need data?"| SQL
+    A -->|"Need current info?"| WEB
+    A -->|"Need math?"| CALC
+
+    RAG & SQL & WEB & CALC --> A
+    A -->|"Enough info?"| ANS[Answer]
+    A -->|"Need more?"| Tools
+```
+
+**Agentic RAG patterns:**
+- **Router**: Agent chooses which retrieval source (vector DB, SQL, API)
+- **Iterative**: Agent retrieves, evaluates, retrieves more if needed
+- **Multi-source**: Agent synthesizes from multiple knowledge bases
+- **Tool-augmented**: RAG + code execution + web search
+
+> **When to use:** When a single retrieval isn't enough—queries need multiple sources, iterative refinement, or tool use beyond just document search.
+
+---
+
+#### Parent-Document Retrieval
+
+**Retrieve the chunk, return the parent:** Small chunks improve retrieval precision (less noise) but lose context. Parent-document retrieval gets the best of both: embed small chunks for matching, but return the larger parent document for generation.
+
+```mermaid
+flowchart TB
+    subgraph Index["Indexing"]
+        DOC[Full Document] --> CHUNKS[Small Chunks<br/>for embedding]
+        DOC --> STORE[(Store full doc)]
+        CHUNKS --> EMB[Embeddings]
+    end
+
+    subgraph Query["Querying"]
+        Q[Query] --> MATCH[Match small<br/>chunks]
+        MATCH --> PARENT[Retrieve parent<br/>documents]
+        STORE --> PARENT
+        PARENT --> LLM[Generate with<br/>full context]
+    end
+```
+
+| Approach | Chunk Size | Retrieval | Context |
+|----------|------------|-----------|---------|
+| **Small chunks only** | ~200 tokens | Precise | Limited context |
+| **Large chunks only** | ~2000 tokens | Noisy | Full context |
+| **Parent-document** | Embed small, return large | Precise | Full context ✓ |
+
+> **When to use:** When your documents have important context that spans multiple paragraphs—sections that need to be read together to make sense.
+
 ### 📊 RAG Evaluation (RAGAS)
 
 **Measure RAG quality without gold-standard answers:** RAGAS evaluates your RAG pipeline using the LLM itself as a judge. It checks four dimensions: Is the answer faithful to the retrieved context? Is it relevant to the question? Did we retrieve the right chunks? Did we retrieve enough of the relevant chunks?
@@ -1486,6 +1661,10 @@ For d=4096, crossover at n=4096 tokens.
 | **RAG** | Retrieval-Augmented Generation | Finding relevant documents and giving them to an LLM to answer accurately |
 | **HyDE** | Hypothetical Document Embeddings | Generate a hypothetical answer first, then use its embedding for retrieval |
 | **RAFT** | Retrieval Augmented Fine-Tuning | Fine-tune model to use retrieved docs better, including handling distractors |
+| **CRAG** | Corrective RAG | Validate retrieved docs support the answer; trigger corrections if not |
+| **Self-RAG** | Self-Reflective RAG | Model decides when to retrieve and self-critiques its answers |
+| **GraphRAG** | Graph-based RAG | Retrieval over knowledge graphs instead of isolated text chunks |
+| **Agentic RAG** | Agent-based RAG | RAG as a tool in an agent's toolkit; agent decides when/what to retrieve |
 | **Embedding** | — | Converting text into numbers (a vector) where similar meanings are close together |
 | **Vector DB** | Vector Database | Database for finding similar embeddings quickly (Pinecone, FAISS) |
 | **HNSW** | Hierarchical Navigable Small World | Fast algorithm for finding similar vectors; default choice |
