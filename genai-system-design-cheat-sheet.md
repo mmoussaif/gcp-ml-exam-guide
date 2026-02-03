@@ -836,6 +836,117 @@ $$
 
 > **Terms for all retrieval metrics:** K = number of results to consider, "relevant" = ground truth relevant documents, "top-K" = retrieved documents, $\text{rank}_i$ = position of first relevant result for query i, |Q| = number of queries, DCG = Discounted Cumulative Gain (relevance weighted by position), IDCG = Ideal DCG (perfect ranking)
 
+#### 📝 Applied Example
+
+**Scenario:** User searches "How to fine-tune LLaMA?" Your vector DB returns 5 documents. You have ground truth labels for which docs are actually relevant.
+
+```
+Retrieved Results (Top-5):
+┌─────┬─────────────────────────────────┬───────────┐
+│ Pos │ Document                        │ Relevant? │
+├─────┼─────────────────────────────────┼───────────┤
+│  1  │ "LoRA fine-tuning guide"        │ ✅ Yes    │
+│  2  │ "LLaMA model architecture"      │ ❌ No     │
+│  3  │ "QLoRA memory optimization"     │ ✅ Yes    │
+│  4  │ "GPT-4 API tutorial"            │ ❌ No     │
+│  5  │ "LLaMA fine-tuning examples"    │ ✅ Yes    │
+└─────┴─────────────────────────────────┴───────────┘
+
+Ground truth: 4 relevant docs exist in total (one wasn't retrieved)
+```
+
+---
+
+**Precision@5** — "Of the 5 docs we retrieved, how many were relevant?"
+
+$$
+\text{Precision@5} = \frac{|\text{relevant} \cap \text{top-5}|}{5} = \frac{3}{5} = 0.6 = 60\%
+$$
+
+> *We retrieved 3 relevant docs out of 5 total. 60% precision.*
+
+---
+
+**Recall@5** — "Of all 4 relevant docs that exist, how many did we find?"
+
+$$
+\text{Recall@5} = \frac{|\text{relevant} \cap \text{top-5}|}{|\text{relevant}|} = \frac{3}{4} = 0.75 = 75\%
+$$
+
+> *We found 3 of the 4 relevant docs. 75% recall—we missed one.*
+
+---
+
+**MRR (Mean Reciprocal Rank)** — "How quickly do we find the first relevant doc?"
+
+For a single query, reciprocal rank = 1/position of first relevant result.
+
+$$
+\text{RR} = \frac{1}{\text{rank}_1} = \frac{1}{1} = 1.0
+$$
+
+> *First relevant doc at position 1 → perfect RR of 1.0*
+
+**MRR across multiple queries:**
+
+```
+Query 1: First relevant at position 1 → RR = 1/1 = 1.0
+Query 2: First relevant at position 3 → RR = 1/3 = 0.33
+Query 3: First relevant at position 2 → RR = 1/2 = 0.5
+```
+
+$$
+\text{MRR} = \frac{1}{3}(1.0 + 0.33 + 0.5) = \frac{1.83}{3} = 0.61
+$$
+
+> *Average MRR of 0.61—room to improve ranking.*
+
+---
+
+**NDCG@5** — "Are the most relevant docs ranked highest?"
+
+NDCG uses graded relevance (not just yes/no). Let's say: highly relevant = 2, somewhat relevant = 1, not relevant = 0.
+
+```
+Position:   1    2    3    4    5
+Relevance:  2    0    1    0    2
+```
+
+**DCG (Discounted Cumulative Gain):**
+
+$$
+\text{DCG@5} = \sum_{i=1}^{5} \frac{rel_i}{\log_2(i+1)} = \frac{2}{\log_2 2} + \frac{0}{\log_2 3} + \frac{1}{\log_2 4} + \frac{0}{\log_2 5} + \frac{2}{\log_2 6}
+$$
+
+$$
+= \frac{2}{1} + \frac{0}{1.58} + \frac{1}{2} + \frac{0}{2.32} + \frac{2}{2.58} = 2 + 0 + 0.5 + 0 + 0.78 = 3.28
+$$
+
+**IDCG (Ideal DCG)** — perfect ranking would be [2, 2, 1, 0, 0]:
+
+$$
+\text{IDCG@5} = \frac{2}{1} + \frac{2}{1.58} + \frac{1}{2} + \frac{0}{2.32} + \frac{0}{2.58} = 2 + 1.26 + 0.5 + 0 + 0 = 3.76
+$$
+
+**NDCG:**
+
+$$
+\text{NDCG@5} = \frac{\text{DCG@5}}{\text{IDCG@5}} = \frac{3.28}{3.76} = 0.87
+$$
+
+> *NDCG of 0.87—good but not perfect. The highly relevant doc at position 5 should be ranked higher.*
+
+---
+
+**Quick Reference:**
+
+| Metric | Question It Answers | Good Score | Interpretation |
+|--------|---------------------|------------|----------------|
+| **Precision@K** | How clean are results? | > 0.8 | Low = too much noise |
+| **Recall@K** | Are we missing relevant docs? | > 0.8 | Low = retriever too narrow |
+| **MRR** | How fast do users find answers? | > 0.7 | Low = poor first-result ranking |
+| **NDCG@K** | Are best docs ranked highest? | > 0.8 | Low = reranking needed |
+
 ---
 
 ## 7. Agent Patterns
