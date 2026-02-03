@@ -1523,14 +1523,33 @@ flowchart TB
 
 ### 📐 Model → GPU Sizing
 
-**Rule of thumb: 2 bytes per parameter in FP16.** A 7B model needs ~14GB, a 70B model needs ~140GB. For inference, you need the model weights plus KV cache. For training, multiply by 16-20× for gradients and optimizer states.
+**Rule of thumb: 2 bytes per parameter in FP16.** Memory requirements differ dramatically between inference and training. Inference needs model weights + KV cache. Training needs weights + gradients + optimizer states + activations (16-20× more memory).
 
-| Model Size | Memory (FP16) | GPUs Needed  |
-| ---------- | ------------- | ------------ |
-| 7B         | ~14GB         | 1× L4/A10    |
-| 13B        | ~26GB         | 1× A100-40GB |
-| 70B        | ~140GB        | 2× H100      |
-| 405B       | ~810GB        | 8× H100      |
+#### 🚀 Inference GPU Requirements
+
+**Memory needed:** Model weights (2 bytes/param) + KV cache (grows with context length). KV cache typically adds 10-30% overhead depending on sequence length.
+
+| Model Size | Weights (FP16) | Inference Memory | GPUs Needed  |
+| ---------- | -------------- | ---------------- | ------------ |
+| 7B         | ~14GB          | ~16-18GB         | 1× L4/A10    |
+| 13B        | ~26GB          | ~30-35GB         | 1× A100-40GB |
+| 70B        | ~140GB         | ~160-180GB       | 2× H100      |
+| 405B       | ~810GB         | ~900GB-1TB       | 8× H100      |
+
+> **Note:** Inference memory = weights + KV cache. KV cache size depends on batch size and context length. For long contexts (32K+ tokens), add 20-40% overhead.
+
+#### 🎓 Training GPU Requirements
+
+**Memory needed:** Model weights (2 bytes/param) + gradients (2 bytes/param) + optimizer states (8 bytes/param for Adam) + activations (2-4× weights). Total: **16-20× model size**.
+
+| Model Size | Weights (FP16) | Training Memory | GPUs Needed                   |
+| ---------- | -------------- | --------------- | ----------------------------- |
+| 7B         | ~14GB          | ~224-280GB      | 2-4× A100-80GB or 1× H100     |
+| 13B        | ~26GB          | ~416-520GB      | 4-8× A100-80GB or 2× H100     |
+| 70B        | ~140GB         | ~2.2-2.8TB      | 16-32× A100-80GB or 8× H100   |
+| 405B       | ~810GB         | ~13-16TB        | 64-128× A100-80GB or 32× H100 |
+
+> **Note:** Training memory varies with batch size, sequence length, and optimizer choice. ZeRO/FSDP can reduce memory by sharding optimizer states and gradients across GPUs, enabling training with fewer GPUs.
 
 ---
 
