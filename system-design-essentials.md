@@ -27,6 +27,7 @@
 11. [Capacity Estimation](#11-capacity-estimation) — Latencies, QPS formulas, back-of-envelope math
 12. [Design Examples](#12-design-examples) — URL shortener, chat, notifications
 13. [Quick Reference](#13-quick-reference) — Checklist, mindset, failure analysis, trade-offs
+14. [Glossary](#14-glossary) — 100+ acronyms explained in plain English
 
 ---
 
@@ -2102,6 +2103,172 @@ When the interviewer asks **"What happens when X fails?"**, use this structure:
 │   specific requirements, constraints, and priorities.          │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 14. Glossary
+
+**Quick reference for all acronyms and terms used in this guide.** Organized by category for easy lookup.
+
+### Core Concepts
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **ACID** | Atomicity, Consistency, Isolation, Durability | Four properties that guarantee database transactions are processed reliably |
+| **CAP** | Consistency, Availability, Partition Tolerance | Theorem stating distributed systems can only guarantee two of three properties |
+| **BASE** | Basically Available, Soft state, Eventually consistent | Alternative to ACID for distributed systems prioritizing availability |
+| **2PC** | Two-Phase Commit | Protocol ensuring all participants in a distributed transaction commit or abort together |
+| **SAGA** | — | Pattern for long-running distributed transactions using compensating actions |
+| **RSM** | Replicated State Machine | Approach to building fault-tolerant systems by replicating state across nodes |
+
+### Cloud & Networking
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **VPC** | Virtual Private Cloud | Your isolated network within the cloud with custom IP ranges and routing |
+| **IAM** | Identity and Access Management | Controls who can do what in your cloud environment |
+| **CIDR** | Classless Inter-Domain Routing | Notation for IP address ranges (e.g., 10.0.0.0/16) |
+| **DNS** | Domain Name System | Translates domain names (example.com) to IP addresses |
+| **TLD** | Top-Level Domain | The last part of a domain name (.com, .org, .io) |
+| **NAT** | Network Address Translation | Allows private subnet resources to access the internet without exposing them |
+| **IGW** | Internet Gateway | Enables communication between VPC and the internet |
+| **SG** | Security Group | Instance-level firewall; stateful, allow-only rules |
+| **NACL** | Network Access Control List | Subnet-level firewall; stateless, allow and deny rules |
+| **TCP** | Transmission Control Protocol | Reliable, connection-oriented protocol for data transmission |
+| **UDP** | User Datagram Protocol | Fast, connectionless protocol; no delivery guarantee |
+| **IP** | Internet Protocol | Protocol for routing packets across networks using addresses |
+| **HTTP/HTTPS** | Hypertext Transfer Protocol (Secure) | Protocol for web communication; HTTPS adds encryption |
+| **TLS/SSL** | Transport Layer Security / Secure Sockets Layer | Protocols for encrypting data in transit |
+| **WAF** | Web Application Firewall | Protects web apps by filtering malicious HTTP traffic |
+| **VPN** | Virtual Private Network | Encrypted tunnel between networks over the internet |
+| **AZ** | Availability Zone | Isolated data center within a cloud region |
+| **MFA** | Multi-Factor Authentication | Requires multiple verification methods for access |
+
+### Databases
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **SQL** | Structured Query Language | Language for managing relational databases; also refers to relational DBs |
+| **NoSQL** | Not Only SQL | Family of non-relational databases (key-value, document, graph, columnar) |
+| **RDBMS** | Relational Database Management System | Database that stores data in tables with relationships (MySQL, PostgreSQL) |
+| **IOPS** | Input/Output Operations Per Second | Measure of storage performance (reads + writes per second) |
+| **RDS** | Relational Database Service | AWS managed relational database service |
+| **KV** | Key-Value | Database type storing data as key-value pairs (Redis, DynamoDB) |
+| **ORM** | Object-Relational Mapping | Converts between database records and programming objects |
+| **MVCC** | Multi-Version Concurrency Control | Database technique allowing concurrent transactions without locking |
+
+### Caching
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **TTL** | Time To Live | How long cached data remains valid before expiring |
+| **EAT** | Effective Access Time | Weighted average of cache hit and miss times |
+| **LRU** | Least Recently Used | Eviction policy removing the least recently accessed items first |
+| **LFU** | Least Frequently Used | Eviction policy removing the least often accessed items first |
+| **CDN** | Content Delivery Network | Globally distributed cache serving content from edge locations |
+
+### Messaging & Queues
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **DLQ** | Dead Letter Queue | Queue for messages that repeatedly fail processing |
+| **Pub/Sub** | Publish-Subscribe | Messaging pattern where publishers broadcast to multiple subscribers |
+| **MQ** | Message Queue | System for asynchronous communication between services |
+| **FIFO** | First In, First Out | Queue ordering where oldest messages are processed first |
+| **ACK** | Acknowledgment | Confirmation that a message was received/processed |
+
+### Load Balancing & Components
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **LB** | Load Balancer | Distributes incoming traffic across multiple servers |
+| **ALB** | Application Load Balancer | Layer 7 load balancer routing based on HTTP content |
+| **NLB** | Network Load Balancer | Layer 4 load balancer routing based on IP/port; ultra-low latency |
+| **L4** | Layer 4 (Transport) | Network layer dealing with TCP/UDP; IP addresses and ports |
+| **L7** | Layer 7 (Application) | Network layer dealing with HTTP/HTTPS; URLs, headers, cookies |
+| **RPS** | Requests Per Second | Measure of throughput; how many requests a system handles |
+| **API** | Application Programming Interface | Contract defining how software components communicate |
+| **REST** | Representational State Transfer | Architectural style for APIs using HTTP methods |
+| **gRPC** | gRPC Remote Procedure Call | High-performance RPC framework using Protocol Buffers |
+| **JWT** | JSON Web Token | Compact, self-contained token for secure information exchange |
+| **CORS** | Cross-Origin Resource Sharing | Mechanism allowing web pages to request resources from other domains |
+
+### Scalability & Reliability
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **HA** | High Availability | System designed to minimize downtime; typically 99.9%+ uptime |
+| **DR** | Disaster Recovery | Plans and systems for recovering from catastrophic failures |
+| **RTO** | Recovery Time Objective | Maximum acceptable downtime after a failure |
+| **RPO** | Recovery Point Objective | Maximum acceptable data loss (time since last backup) |
+| **SPOF** | Single Point of Failure | Component whose failure causes entire system failure |
+| **MTTR** | Mean Time To Recovery | Average time to restore service after failure |
+| **MTTD** | Mean Time To Detect | Average time to detect a failure |
+| **SLA** | Service Level Agreement | Contract specifying uptime and performance guarantees |
+| **SLO** | Service Level Objective | Internal targets for service performance |
+| **SLI** | Service Level Indicator | Metrics used to measure SLO compliance |
+
+### Distributed Systems
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **Raft** | — | Consensus algorithm for leader election and log replication |
+| **Paxos** | — | Consensus algorithm for distributed agreement (more complex than Raft) |
+| **ZK** | ZooKeeper | Distributed coordination service for leader election, config, locks |
+| **etcd** | — | Distributed key-value store used by Kubernetes for coordination |
+| **W/R/N** | Write quorum / Read quorum / Total replicas | Quorum parameters: W+R>N guarantees strong consistency |
+| **KL** | Kullback-Leibler (divergence) | Measure of difference between probability distributions |
+
+### Capacity & Performance
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **QPS** | Queries Per Second | Rate of requests a system processes |
+| **TPS** | Transactions Per Second | Rate of database transactions processed |
+| **DAU** | Daily Active Users | Number of unique users per day |
+| **MAU** | Monthly Active Users | Number of unique users per month |
+| **P50/P95/P99** | Percentile latencies | 50th/95th/99th percentile response times |
+| **TTFB** | Time To First Byte | Time from request to receiving first byte of response |
+
+### Storage
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **EBS** | Elastic Block Store | AWS block storage for EC2 instances |
+| **EFS** | Elastic File System | AWS managed NFS file system |
+| **S3** | Simple Storage Service | AWS object storage with unlimited capacity |
+| **NFS** | Network File System | Protocol for sharing files over a network |
+| **HDFS** | Hadoop Distributed File System | Distributed file system for big data processing |
+| **SSD** | Solid State Drive | Fast storage using flash memory; no moving parts |
+| **HDD** | Hard Disk Drive | Traditional storage using spinning magnetic disks |
+
+### AWS Services
+
+| Acronym | Full Name | Plain English Definition |
+|---------|-----------|--------------------------|
+| **EC2** | Elastic Compute Cloud | AWS virtual machine service |
+| **ECS** | Elastic Container Service | AWS managed container orchestration |
+| **EKS** | Elastic Kubernetes Service | AWS managed Kubernetes |
+| **Lambda** | — | AWS serverless compute; runs code without managing servers |
+| **SQS** | Simple Queue Service | AWS managed message queue |
+| **SNS** | Simple Notification Service | AWS managed pub/sub messaging |
+| **Route 53** | — | AWS DNS and traffic management service |
+| **CloudFront** | — | AWS CDN for content delivery |
+| **ElastiCache** | — | AWS managed Redis/Memcached |
+| **DynamoDB** | — | AWS managed NoSQL key-value database |
+| **KMS** | Key Management Service | AWS service for creating and managing encryption keys |
+| **HSM** | Hardware Security Module | Physical device for secure key storage and cryptographic operations |
+
+### Data Units
+
+| Unit | Size | Context |
+|------|------|---------|
+| **KB** | 1,024 bytes | Small files, API responses |
+| **MB** | 1,024 KB | Images, small documents |
+| **GB** | 1,024 MB | Videos, databases |
+| **TB** | 1,024 GB | Large databases, data warehouses |
+| **PB** | 1,024 TB | Big data, enterprise storage |
+| **Gbps** | Gigabits per second | Network bandwidth (divide by 8 for MB/s) |
 
 ---
 
