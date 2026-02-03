@@ -1179,6 +1179,12 @@ flowchart LR
     end
 ```
 
+**How it works (concrete example):** Prompt: "a cat wearing a hat"
+
+1. **Training:** Show model a clean cat photo → add noise (like TV static) → ask "what noise was added?" → model learns to predict noise
+2. **Generation:** Start with pure noise → model predicts noise → subtract it → repeat 20-50 times → cat with hat emerges
+3. **Text control:** At each step, cross-attention asks "what should appear here?" → text embeddings guide which patches become "cat" vs "hat" vs "background"
+
 > **Why it works:** The model never learns to generate images directly—it learns to predict and remove noise. This is easier to train and gives remarkable quality. The text prompt guides the denoising: at each step, the model removes noise in a direction that makes the image more consistent with "a cat wearing a hat."
 
 **Forward Process (Add Noise):**
@@ -1199,13 +1205,15 @@ $$
 
 ### 🔧 Diffusion Components
 
-| Component        | Purpose                            |
-| ---------------- | ---------------------------------- |
-| **Text Encoder** | CLIP/T5 → text embeddings          |
-| **U-Net / DiT**  | Predicts noise to remove           |
-| **DDIM Sampler** | Faster sampling (20-50 steps)      |
-| **CFG**          | Balance text vs diversity (w=7-15) |
-| **VAE**          | Latent space compression (512×)    |
+| Component        | Purpose                            | How It Works                                     |
+| ---------------- | ---------------------------------- | ------------------------------------------------ |
+| **Text Encoder** | CLIP/T5 → text embeddings          | "cat wearing hat" → [0.23, -0.14, 0.87, ...]     |
+| **U-Net / DiT**  | Predicts noise to remove           | U-Net: zoom out/in; DiT: read patches like text  |
+| **DDIM Sampler** | Faster sampling (20-50 steps)      | Deterministic path (vs 1000 steps in DDPM)       |
+| **CFG**          | Balance text vs diversity (w=7-15) | Combines conditional + unconditional predictions |
+| **VAE**          | Latent space compression (512×)    | 512×512 image → 64×64 latent (512× smaller)      |
+
+**Architecture choice:** U-Net (Stable Diffusion, DALL-E 2) uses encoder-decoder with skip connections. DiT (Sora, newer models) cuts images into 16×16 patches and processes them like text tokens with Transformer attention.
 
 **Classifier-Free Guidance:**
 
@@ -1255,17 +1263,25 @@ flowchart LR
     TSR --> F[Final Video]
 ```
 
+**How it works (concrete example):** Prompt: "a ball rolling left"
+
+1. **3D patches:** Cut video into cubes (16×16 pixels × 4 frames) instead of flat 2D patches—captures motion across time
+2. **Temporal attention:** Frame 1 has ball on left, Frame 5 has it on right → attention connects these, understanding "ball moved"
+3. **Generation:** Start with noisy 3D patches → denoise 20-50 steps → low-res video (160×90, 8fps) emerges
+4. **Super-resolution:** Spatial SR (160×90 → 1280×720) then temporal SR (8fps → 24fps) → final 5s video at 720p
+
 > **The cascade approach:** Generate at low resolution and frame rate first (easier, captures structure), then super-resolve spatially (sharper details) and temporally (smoother motion). This coarse-to-fine approach is computationally tractable and produces better results than direct high-resolution generation.
 
 ### 🎬 Video Components
 
-| Component                | Purpose                   |
-| ------------------------ | ------------------------- |
-| **Temporal Attention**   | Consistency across frames |
-| **Temporal Convolution** | Local motion patterns     |
-| **VAE Compression**      | 8× temporal + 8×8 spatial |
-| **Spatial SR**           | 160×90 → 1280×720         |
-| **Temporal SR**          | 8fps → 24fps              |
+| Component                | Purpose                   | How It Works                                         |
+| ------------------------ | ------------------------- | ---------------------------------------------------- |
+| **3D Patches**           | Spatiotemporal cubes      | 16×16 pixels × 4 frames (vs 2D patches for images)   |
+| **Temporal Attention**   | Consistency across frames | Each patch "looks at" same spot in other frames      |
+| **Temporal Convolution** | Local motion patterns     | Detects smooth motion (blur = fast movement)         |
+| **VAE Compression**      | 8× temporal + 8×8 spatial | 5s video (120 frames) → 15 frames; 1280×720 → 160×90 |
+| **Spatial SR**           | 160×90 → 1280×720         | Separate diffusion model upsamples each frame        |
+| **Temporal SR**          | 8fps → 24fps              | Frame interpolation model adds intermediate frames   |
 
 ---
 
