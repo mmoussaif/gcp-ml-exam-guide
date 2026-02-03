@@ -257,21 +257,21 @@ flowchart TB
     subgraph Region["AWS Region"]
         subgraph VPC["VPC (172.31.0.0/16)"]
             subgraph AZA["Availability Zone A"]
-                subgraph PubA["Public Subnet<br/>172.31.1.0/24"]
+                subgraph PubA["Public Subnet • 172.31.1.0/24"]
                     EC2A[EC2]
                     NATA[NAT GW]
                 end
-                subgraph PrvA["Private Subnet<br/>172.31.2.0/24"]
+                subgraph PrvA["Private Subnet • 172.31.2.0/24"]
                     AppA[EC2]
                     RDSA[(RDS)]
                 end
             end
             subgraph AZB["Availability Zone B"]
-                subgraph PubB["Public Subnet<br/>172.31.3.0/24"]
+                subgraph PubB["Public Subnet • 172.31.3.0/24"]
                     EC2B[EC2]
                     NATB[NAT GW]
                 end
-                subgraph PrvB["Private Subnet<br/>172.31.4.0/24"]
+                subgraph PrvB["Private Subnet • 172.31.4.0/24"]
                     AppB[EC2]
                     RDSB[(RDS)]
                 end
