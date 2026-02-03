@@ -2136,6 +2136,266 @@ The boxes and arrows come later, after the math basically forces your hand.
 
 That's how you build judgment instead of just pattern fluency.
 
+### Component Failure Analysis Framework
+
+For every component in your design, systematically ask: **"What happens when X fails/degrades?"** This framework gives you the thinking model for each common component.
+
+---
+
+#### 🗄️ DATABASE
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Primary goes down** | Writes fail, reads may fail | Health checks, connection errors | Promote replica, redirect traffic |
+| **Writes succeed, reads lag** | Users see stale data | Replication lag metrics | Read-your-writes pattern, sticky sessions |
+| **Disk fills up** | Writes rejected, possible corruption | Disk usage alerts (>80%) | Auto-expand, archive old data, alert |
+| **Connection pool exhausted** | New requests timeout | Pool metrics, error rates | Increase pool, add read replicas, queue requests |
+| **Split-brain (multi-master)** | Data divergence, conflicts | Quorum failures, conflict detection | Fencing tokens, quorum writes, manual resolution |
+| **Slow queries** | Cascading timeouts, resource starvation | P99 latency, slow query log | Query optimization, read replicas, caching |
+| **Corruption** | Silent data loss | Checksums, backup validation | Point-in-time recovery, checksums on read |
+
+**Design Questions:**
+```
+• What's the failover time? (seconds vs minutes matters)
+• Can we tolerate stale reads? For how long?
+• What's our backup/recovery RPO and RTO?
+• How do we detect silent corruption?
+```
+
+---
+
+#### ⚡ CACHE (Redis, Memcached)
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Cache miss storm** | All requests hit DB simultaneously | DB load spike, cache hit rate drop | Circuit breaker, request coalescing, staggered TTL |
+| **Cache goes down entirely** | 100% traffic to DB | Health check failure | Graceful degradation, DB can handle (or reject overflow) |
+| **Stale data after write** | Users see old data | Requires monitoring writes | Write-through, cache invalidation, short TTL |
+| **Thundering herd on expiry** | Spike when popular key expires | Traffic patterns, expiry timing | Probabilistic early expiration, mutex/lock |
+| **Memory pressure / eviction** | Important keys evicted | Eviction metrics, miss rate | Increase memory, tune eviction policy, tiered caching |
+| **Hot key** | Single node overwhelmed | Per-key metrics, node CPU | Key replication, local caching, key splitting |
+| **Network partition from app** | Timeouts, fallback to DB | Connection errors, latency | Fast timeout + fallback, don't block on cache |
+
+**Design Questions:**
+```
+• What's the cache hit rate? Is caching worth it? (>80% usually needed)
+• What's the invalidation strategy? (TTL, event-based, write-through)
+• Can we survive total cache failure? (DB must handle peak if not)
+• What's the consistency model? (eventual OK, or need strong?)
+```
+
+---
+
+#### ⚖️ LOAD BALANCER
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **LB itself fails** | Total outage | DNS/anycast failover, health checks | Redundant LBs, DNS failover, anycast |
+| **Health checks pass but service deadlocked** | Traffic to broken servers | Application-level health, request latency | Deep health checks (not just TCP), liveness + readiness |
+| **Uneven distribution** | Some servers overloaded | Per-server metrics, latency variance | Review algorithm (round-robin vs least-conn), consistent hashing |
+| **Sticky session server dies** | User session lost | Session errors, re-auth rate | Session externalization (Redis), graceful degradation |
+| **Slow backend not removed** | Cascading slowdowns | P99 latency, queue depth | Active health checks, circuit breaker, timeout-based ejection |
+| **SSL termination overload** | Connection failures | CPU usage, connection errors | Dedicated SSL offload, hardware acceleration |
+
+**Design Questions:**
+```
+• What's the failover mechanism for the LB itself?
+• How quickly are unhealthy backends removed? (seconds matter)
+• What's the health check—TCP, HTTP, or application-specific?
+• How do we handle session affinity without coupling?
+```
+
+---
+
+#### 📬 MESSAGE QUEUE (Kafka, SQS, RabbitMQ)
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Consumer falls behind** | Queue backlog grows, memory pressure | Consumer lag metrics, queue depth | Scale consumers, increase batch size, alert on lag |
+| **Duplicate messages** | Action performed twice | Idempotency key collisions | Idempotent consumers, deduplication layer |
+| **Message loss** | Data lost, inconsistent state | End-to-end tracking, checksums | Acks, replication, dead-letter queue |
+| **Poison message** | Consumer crashes repeatedly | Consumer crash rate, DLQ growth | Dead-letter queue, circuit breaker, manual review |
+| **Broker failure** | Partition unavailable | Broker health, under-replicated partitions | Replication factor ≥3, automatic leader election |
+| **Out of order processing** | Logic errors, race conditions | Sequence gaps, business logic errors | Partition by ordering key, sequence numbers |
+| **Consumer rebalance storm** | Processing paused during rebalance | Rebalance events, processing gaps | Stable consumer groups, cooperative rebalancing |
+
+**Design Questions:**
+```
+• What's our guarantee? (at-most-once, at-least-once, exactly-once)
+• How do we handle duplicates? (idempotency keys)
+• What happens to failed messages? (DLQ, retry, alert)
+• What's acceptable consumer lag? (seconds, minutes, hours)
+```
+
+---
+
+#### 🌐 API GATEWAY / SERVICE MESH
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Rate limit misconfigured** | Legitimate traffic rejected | 429 error rate, customer complaints | Gradual rollout, per-tenant limits, bypass for critical |
+| **Gateway becomes bottleneck** | All services degraded | Gateway latency, CPU | Horizontal scaling, edge caching, bypass for internal |
+| **Auth service down** | All authenticated requests fail | Auth error rate | Cache tokens, graceful degradation, retry with backoff |
+| **Circuit breaker stuck open** | Service appears down when recovered | Circuit state, manual override | Time-based reset, health check override, monitoring |
+| **Timeout too aggressive** | Slow but valid requests killed | Timeout errors vs actual failures | Adaptive timeouts, P99-based, separate read/write |
+| **Cascading failure** | One slow service affects all | Cross-service latency correlation | Bulkheads, circuit breakers, async where possible |
+
+**Design Questions:**
+```
+• What's the timeout strategy? (too short = false failures, too long = resource exhaustion)
+• How do circuit breakers reset? (automatic vs manual)
+• What's the rate limiting granularity? (per user, per IP, per tenant)
+• What happens when auth is down? (fail open vs fail closed)
+```
+
+---
+
+#### 💾 DISTRIBUTED STORAGE (S3, GCS, HDFS)
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Region outage** | Data unavailable | Region health, availability metrics | Multi-region replication, cross-region failover |
+| **Throttling** | Requests rejected | 503/429 errors, request metrics | Exponential backoff, request spreading, higher tier |
+| **Eventual consistency bite** | Read after write returns old data | Application logic errors | Strong read (if available), read-your-writes pattern |
+| **Large object timeout** | Upload/download fails | Transfer errors, partial uploads | Multipart upload, resumable transfers, chunking |
+| **Cost explosion** | Unexpected bills | Cost monitoring, usage alerts | Lifecycle policies, tiered storage, cleanup jobs |
+| **Accidental deletion** | Data loss | Audit logs, versioning | Versioning, soft delete, MFA delete, backups |
+
+**Design Questions:**
+```
+• What's the consistency model? (strong vs eventual)
+• What's the durability guarantee? (11 9s for S3, but region matters)
+• How do we handle large files? (multipart, streaming)
+• What's the access pattern? (random vs sequential affects storage choice)
+```
+
+---
+
+#### 🔍 SEARCH / ELASTICSEARCH
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Index lag** | Search returns stale results | Index freshness metrics | Near-real-time indexing, user expectations |
+| **Query of death** | Cluster overwhelmed | CPU spike, timeout rate | Query validation, circuit breaker, query timeout |
+| **Shard imbalance** | Hot spots, uneven performance | Per-shard metrics | Rebalancing, shard allocation awareness |
+| **Split brain** | Data inconsistency | Cluster health, node count | Minimum master nodes, dedicated masters |
+| **Memory pressure** | Slow queries, OOM | JVM heap, GC metrics | Heap tuning, circuit breakers, field data limits |
+| **Mapping explosion** | Index bloat, performance degradation | Field count, mapping size | Strict mappings, dynamic template limits |
+
+**Design Questions:**
+```
+• What's acceptable index lag? (real-time vs near-real-time vs batch)
+• How do we handle query of death? (validation, timeouts, circuit breakers)
+• What's the reindexing strategy? (zero-downtime, aliases)
+• How do we scale? (more shards vs more nodes vs both)
+```
+
+---
+
+#### 🔗 EXTERNAL API / THIRD-PARTY SERVICE
+
+**Failure Modes:**
+
+| Scenario | What Happens | Detection | Response |
+|----------|--------------|-----------|----------|
+| **Service down** | Dependent feature fails | Health checks, error rate | Circuit breaker, fallback, graceful degradation |
+| **Rate limited** | Requests rejected | 429 errors | Backoff, request queuing, caching, higher tier |
+| **Slow response** | Timeout, resource holding | Latency metrics | Aggressive timeouts, async, don't block critical path |
+| **Breaking API change** | Integration fails | Schema validation, error patterns | Contract testing, versioned clients, monitoring |
+| **Cost overrun** | Unexpected charges | Usage tracking, billing alerts | Caching, batching, usage caps |
+| **Data quality issues** | Incorrect data in our system | Validation, anomaly detection | Input validation, sanity checks, alerts |
+
+**Design Questions:**
+```
+• What's the SLA of the external service? (matches our needs?)
+• What's the fallback when it's down? (cached data, degraded mode, error)
+• How do we prevent our system from failing when theirs does?
+• What's the cost model? (per request, per data volume)
+```
+
+---
+
+#### 🧠 THE UNIVERSAL FAILURE CHECKLIST
+
+For **ANY** component, ask these questions:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│              UNIVERSAL COMPONENT FAILURE CHECKLIST              │
+│                                                                 │
+│   1. DETECTION                                                  │
+│      □ How do we know it's failing? (metrics, alerts)          │
+│      □ How do we know it's slow vs down? (latency vs errors)   │
+│      □ How do we detect silent failures? (data corruption)     │
+│                                                                 │
+│   2. IMPACT                                                     │
+│      □ What breaks if this fails? (blast radius)               │
+│      □ Can we operate in degraded mode? (graceful degradation) │
+│      □ What's the user-visible impact? (error vs slow vs none) │
+│                                                                 │
+│   3. RECOVERY                                                   │
+│      □ How long to detect? (MTTD)                              │
+│      □ How long to recover? (MTTR)                             │
+│      □ Is recovery automatic or manual?                        │
+│      □ What data is lost during recovery? (RPO)                │
+│                                                                 │
+│   4. PREVENTION                                                 │
+│      □ Redundancy: Is there a backup? (replicas, regions)      │
+│      □ Isolation: Does failure cascade? (bulkheads)            │
+│      □ Limits: Can it be overwhelmed? (rate limiting, quotas)  │
+│                                                                 │
+│   5. TESTING                                                    │
+│      □ Have we tested this failure? (chaos engineering)        │
+│      □ Do we have runbooks? (what to do when X fails)          │
+│      □ When was the last failover test?                        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 🎯 INTERVIEW APPLICATION
+
+When the interviewer asks **"What happens when X fails?"**, use this structure:
+
+```
+1. ACKNOWLEDGE the failure mode specifically
+   "If the primary database fails mid-transaction..."
+
+2. DETECT how we'd know
+   "We'd detect this via connection errors and health check failures within 5 seconds..."
+
+3. IMPACT what breaks
+   "In-flight writes would fail, users would see errors for ~30 seconds..."
+
+4. RESPOND what the system does automatically
+   "The replica would be promoted automatically, connections would retry..."
+
+5. RECOVER to normal state
+   "After failover, we'd verify data consistency and clear any stuck transactions..."
+
+6. PREVENT or mitigate in future
+   "To minimize this, we use synchronous replication for zero data loss..."
+```
+
+**Example Answer:**
+> "What happens when the cache fails?"
+>
+> "If Redis fails completely, we'd detect it within 1-2 seconds via connection timeouts. The impact is that all traffic immediately hits the database—which is why we size the DB to handle peak load without cache (about 10K QPS in our case). The response is automatic: our cache client has a 100ms timeout and falls back to direct DB queries. We'd recover by restarting Redis and letting it warm up gradually—we use lazy population rather than pre-warming to avoid thundering herd. To prevent this being catastrophic, we run Redis in cluster mode with replicas, so single-node failure doesn't cause full cache loss."
+
 ### Trade-off Decision Matrix
 
 ```
