@@ -887,13 +887,15 @@ $$
 
 > *First relevant doc at position 1 → perfect RR of 1.0*
 
-**MRR across multiple queries:**
+**MRR across multiple queries** *(hypothetical evaluation set):*
 
-```
-Query 1: First relevant at position 1 → RR = 1/1 = 1.0
-Query 2: First relevant at position 3 → RR = 1/3 = 0.33
-Query 3: First relevant at position 2 → RR = 1/2 = 0.5
-```
+| Query | Example Question | First Relevant Position | RR |
+|-------|-----------------|------------------------|-----|
+| 1 | "How to fine-tune LLaMA?" | 1 | 1/1 = 1.0 |
+| 2 | "What is RLHF?" | 3 | 1/3 = 0.33 |
+| 3 | "Explain KV cache" | 2 | 1/2 = 0.5 |
+
+> *Note: MRR requires an evaluation dataset with multiple labeled queries. These are example queries, not derived from the single-query table above.*
 
 $$
 \text{MRR} = \frac{1}{3}(1.0 + 0.33 + 0.5) = \frac{1.83}{3} = 0.61
