@@ -1114,7 +1114,7 @@ flowchart TB
     Client[📱 Clients]
 
     subgraph Gateway["API Gateway"]
-        GW[Auth | Rate Limit | Routing]
+        GW["Auth • Rate Limit • Routing"]
     end
 
     subgraph Services["Microservices"]
