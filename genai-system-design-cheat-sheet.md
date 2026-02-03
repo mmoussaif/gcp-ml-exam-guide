@@ -564,6 +564,70 @@ flowchart LR
 | **Retrieval** | Dense, BM25, Hybrid (RRF) | Hybrid often best |
 | **Reranking** | Cross-encoder (ms-marco) | Top-20 → Top-5 |
 
+### 🚀 Advanced RAG Techniques
+
+#### HyDE (Hypothetical Document Embeddings)
+
+**Fix the query-document mismatch problem:** User queries are often short and colloquial ("how do I fix the login bug?"), while documents are detailed and technical. HyDE bridges this gap by first generating a *hypothetical* answer, then using that answer's embedding for retrieval instead of the query's embedding.
+
+```mermaid
+flowchart LR
+    Q[User Query] --> LLM[LLM generates<br/>hypothetical answer]
+    LLM --> HE[Embed hypothetical<br/>answer]
+    HE --> VS[(Vector Search)]
+    VS --> DOCS[Retrieved Docs]
+    Q --> LLM2[LLM generates<br/>final answer]
+    DOCS --> LLM2
+    LLM2 --> A[Answer]
+```
+
+> **Why it works:** The hypothetical answer is in the same "language" as your documents—detailed, technical, complete sentences. This makes the embedding much more likely to match relevant documents than a short query would. Trade-off: adds one LLM call, but significantly improves retrieval quality for ambiguous queries.
+
+| Aspect | Standard RAG | HyDE |
+|--------|--------------|------|
+| **Embed** | Query directly | Hypothetical answer |
+| **Best for** | Clear, specific queries | Ambiguous, short queries |
+| **Latency** | Lower | +1 LLM call |
+| **Retrieval quality** | Baseline | Often 10-20% better recall |
+
+---
+
+#### RAFT (Retrieval Augmented Fine-Tuning)
+
+**Train the model to use retrieved documents better:** Standard RAG assumes the LLM can effectively use retrieved context, but models often ignore relevant passages or get confused by irrelevant ones. RAFT fine-tunes the model specifically on the task of answering questions given retrieved documents—including distractor documents that aren't helpful.
+
+```mermaid
+flowchart TB
+    subgraph Training["RAFT Training Data"]
+        Q[Question] --> CTX["Context: D* + D1 + D2"]
+        CTX --> COT["Chain-of-Thought<br/>reasoning"]
+        COT --> ANS["Answer with<br/>citations"]
+    end
+
+    subgraph Legend["Document Types"]
+        DS["D* = Oracle doc<br/>(has the answer)"]
+        DD["D1, D2 = Distractors<br/>(retrieved but irrelevant)"]
+    end
+```
+
+> **The key insight:** By training on a mix of helpful (oracle) and unhelpful (distractor) documents, the model learns to identify which retrieved passages are actually relevant and extract the answer from them—rather than hallucinating or being misled by noise.
+
+**RAFT Training Recipe:**
+1. For each question, include the **oracle document** (contains the answer)
+2. Add **distractor documents** (retrieved but irrelevant)
+3. Train the model to produce **chain-of-thought reasoning** that cites the oracle document
+4. Some training examples have **no oracle** (all distractors) to teach the model to say "I don't know"
+
+| Aspect | Standard RAG | RAFT |
+|--------|--------------|------|
+| **Model** | General LLM | Fine-tuned for RAG |
+| **Distractors** | Confuse the model | Model learns to ignore |
+| **Citations** | Often missing | Trained to cite sources |
+| **"I don't know"** | Rare (hallucinates) | Trained to abstain |
+| **Domain** | General | Domain-specific (your docs) |
+
+> **When to use RAFT:** When you have a stable document corpus and can invest in fine-tuning. RAFT-tuned models significantly outperform standard RAG on domain-specific Q&A, especially when retrieval returns noisy results.
+
 ### 📊 RAG Evaluation (RAGAS)
 
 **Measure RAG quality without gold-standard answers:** RAGAS evaluates your RAG pipeline using the LLM itself as a judge. It checks four dimensions: Is the answer faithful to the retrieved context? Is it relevant to the question? Did we retrieve the right chunks? Did we retrieve enough of the relevant chunks?
@@ -577,7 +641,7 @@ flowchart LR
 
 ### 🔍 Retrieval Metrics
 
-**Classic IR metrics for measuring retrieval quality:** These formulas help you understand if your vector search is returning the right documents. Precision asks "of what we retrieved, how much was relevant?" Recall asks "of what was relevant, how much did we retrieve?" MRR and NDCG care about ranking—good results should appear first.
+**Classic IR (Information Retrieval) metrics for measuring retrieval quality:** These formulas help you understand if your vector search is returning the right documents. Precision asks "of what we retrieved, how much was relevant?" Recall asks "of what was relevant, how much did we retrieve?" MRR and NDCG care about ranking—good results should appear first.
 
 $$
 \text{Precision@K} = \frac{|\text{relevant} \cap \text{top-K}|}{K}
@@ -1420,11 +1484,14 @@ For d=4096, crossover at n=4096 tokens.
 | Acronym | Full Name | Plain English Definition |
 |---------|-----------|--------------------------|
 | **RAG** | Retrieval-Augmented Generation | Finding relevant documents and giving them to an LLM to answer accurately |
+| **HyDE** | Hypothetical Document Embeddings | Generate a hypothetical answer first, then use its embedding for retrieval |
+| **RAFT** | Retrieval Augmented Fine-Tuning | Fine-tune model to use retrieved docs better, including handling distractors |
 | **Embedding** | — | Converting text into numbers (a vector) where similar meanings are close together |
 | **Vector DB** | Vector Database | Database for finding similar embeddings quickly (Pinecone, FAISS) |
 | **HNSW** | Hierarchical Navigable Small World | Fast algorithm for finding similar vectors; default choice |
 | **IVF** | Inverted File Index | Vector search using clusters; uses less memory |
 | **ANN** | Approximate Nearest Neighbor | Finding "close enough" matches quickly instead of exact search |
+| **IR** | Information Retrieval | Field of finding relevant documents from a collection; basis for RAG metrics |
 | **BM25** | Best Matching 25 | Classic keyword search based on word frequency |
 | **RRF** | Reciprocal Rank Fusion | Method to combine vector and keyword search results |
 | **RAGAS** | RAG Assessment | Framework for measuring RAG quality |
