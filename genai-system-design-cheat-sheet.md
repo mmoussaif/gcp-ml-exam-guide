@@ -1312,42 +1312,42 @@ flowchart LR
 
 **Measuring image quality:** FID compares the distribution of generated images to real images—lower means generated images look more realistic. Inception Score measures both quality and diversity. CLIPScore checks if the image matches the text prompt. LPIPS measures perceptual similarity (how humans see differences).
 
-| Metric | Target | Measures |
-|--------|--------|----------|
-| **FID** | < 10 | Distribution similarity |
-| **IS** | > 10 | Quality × diversity |
-| **CLIPScore** | > 0.3 | Text-image alignment |
-| **LPIPS** | Lower | Perceptual similarity |
+| Metric | Remember | Target | What It Answers |
+|--------|----------|--------|-----------------|
+| **FID** | **Realism** | <10 excellent, <50 good, >100 poor | "Do generated images look like real ones?" Compares feature distributions. DALL-E 3 achieves ~10. |
+| **IS** | **Variety** | >10 good, >50 excellent | "Are images both high-quality AND diverse?" Low = blurry or repetitive. |
+| **CLIPScore** | **Match** | >0.3 good, >0.35 excellent | "Does the image match the prompt?" Uses CLIP to compare text↔image. |
+| **LPIPS** | **Human-eye** | <0.1 similar, >0.5 different | "Would a human see these as similar?" Learned perceptual distance. |
 
 ### 🎬 Video Generation
 
 **Measuring video quality:** Video adds the temporal dimension—frames must be good individually AND consistent across time. FVD extends FID to videos. Temporal consistency measures smoothness (no flickering or jumpy motion).
 
-| Metric | Target | Measures |
-|--------|--------|----------|
-| **FVD** | < 300 | Fréchet Video Distance |
-| **FID (per-frame)** | < 15 | Average frame quality |
-| **Temporal Consistency** | > 4/5 | Smoothness |
+| Metric | Remember | Target | What It Answers |
+|--------|----------|--------|-----------------|
+| **FVD** | **Realism** | <300 good, <100 excellent | "Do generated videos look like real ones?" FID extended to temporal. |
+| **FID (per-frame)** | **Frames** | <15 good, <10 excellent | "Is each individual frame high quality?" Ignores temporal coherence. |
+| **Temporal Consistency** | **Smooth** | >4/5 good | "Is motion smooth without flickering?" Measures frame-to-frame stability. |
 
 ### 🔒 Safety
 
 **Measuring harm prevention:** Safety metrics track how often your system produces harmful outputs. Toxicity rate measures offensive content. PII leak rate measures privacy violations. Jailbreak success rate measures how often attackers bypass safety controls. All should be as close to zero as possible.
 
-| Metric | Target |
-|--------|--------|
-| **Toxicity Rate** | < 0.1% |
-| **PII Leak Rate** | 0% |
-| **Jailbreak Success** | < 1% |
+| Metric | Remember | Target | What It Answers |
+|--------|----------|--------|-----------------|
+| **Toxicity Rate** | **Harmful** | <0.1% good, 0% ideal | "How often does output contain offensive content?" |
+| **PII Leak Rate** | **Privacy** | 0% required | "Does the model leak names, emails, SSNs from training data?" |
+| **Jailbreak Success** | **Bypass** | <1% good, <0.1% excellent | "How often do adversarial prompts bypass safety filters?" |
 
 ### ⚡ Performance
 
 **Measuring speed and throughput:** TTFT (Time To First Token) is what users feel as "responsiveness"—how long until the model starts typing. Latency percentiles (P50/P95/P99) show the distribution of response times. Throughput measures tokens per second across all requests—your system's capacity.
 
-| Metric | What It Measures |
-|--------|------------------|
-| **TTFT** | Time to first token |
-| **Latency P50/P95/P99** | Response time distribution |
-| **Throughput** | Tokens/second |
+| Metric | Remember | Target | What It Answers |
+|--------|----------|--------|-----------------|
+| **TTFT** | **Responsive** | <200ms good, <100ms excellent | "How long until the first token appears?" What users feel as snappy. |
+| **Latency P50/P95/P99** | **Tail** | P99 <2s for chat apps | "What's the worst-case response time?" P99 = slowest 1% of requests. |
+| **Throughput** | **Capacity** | Depends on GPU; A100 ~2-4K tok/s | "How many tokens/second can we serve?" System-wide capacity. |
 
 ---
 
