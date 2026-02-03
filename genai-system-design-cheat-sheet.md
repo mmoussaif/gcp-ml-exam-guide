@@ -1680,17 +1680,19 @@ $$
 
 ## 18. Model Quick Reference
 
-**The major players:** This table summarizes the leading models. GPT-4o and Gemini 1.5 Pro are multimodal SOTA. Claude 3.5 excels at reasoning. LLaMA 3 and Mixtral are the best open-source options. Stable Diffusion and Sora lead image/video generation.
+**The major players (2026):** This table summarizes the leading models as of early 2026. GPT-5.2 leads professional knowledge work. Claude Opus 4.5 excels at coding (80.9% SWE-bench). Gemini 3 broke the 1500 Elo barrier with 1M context. LLaMA 4 and Mixtral are top open-source options. Sora 2 and Stable Diffusion 3 lead video/image generation.
 
-| Model                | Type             | Params                 | Notes              |
-| -------------------- | ---------------- | ---------------------- | ------------------ |
-| **GPT-4o**           | Decoder-only     | ~1.7T (rumored MoE)    | Multimodal, SOTA   |
-| **Gemini 1.5 Pro**   | MoE              | Undisclosed            | 1M context         |
-| **Claude 3.5**       | Decoder-only     | Undisclosed            | Strong reasoning   |
-| **LLaMA 3**          | Decoder-only     | 8B-405B                | Open-source        |
-| **Mixtral 8×22B**    | MoE              | 141B total, 39B active | Open-source        |
-| **Stable Diffusion** | Latent Diffusion | ~1B                    | Open-source images |
-| **Sora**             | DiT + temporal   | Undisclosed            | Video generation   |
+| Model                         | Type             | Params                    | Notes                                    |
+| ----------------------------- | ---------------- | ------------------------- | ---------------------------------------- |
+| **GPT-5.2**                   | Decoder-only     | Undisclosed               | Professional knowledge work, multimodal  |
+| **Gemini 3 / 2.0**            | MoE              | Undisclosed               | 1M context, native multimodal, 1500+ Elo |
+| **Claude Opus 4.5**           | Decoder-only     | Undisclosed               | Best coding (80.9% SWE-bench), reasoning |
+| **LLaMA 4**                   | MoE              | 17B (Scout/Maverick)      | Open-source, native multimodality        |
+| **Mixtral 8×7B**              | MoE              | 46.7B total, 12.9B active | Open-source, efficient inference         |
+| **DeepSeek R1**               | Decoder-only     | Various sizes             | Reasoning model, comparable to o1        |
+| **Qwen 2.5**                  | Decoder-only     | Up to 32B                 | Open-source, strong coding/math          |
+| **Stable Diffusion 3 Medium** | Latent Diffusion | 2B                        | Open-source images, improved typography  |
+| **Sora 2**                    | DiT + temporal   | Undisclosed               | Video + synchronized audio (Sept 2025)   |
 
 ---
 
