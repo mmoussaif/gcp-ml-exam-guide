@@ -29,7 +29,8 @@
 17. [Platform Comparison](#17-platform-comparison)
 18. [Model Quick Reference](#18-model-quick-reference)
 19. [Interview Framework](#19-interview-framework)
-20. [Glossary](#20-glossary)
+20. [Production & Business Operations](#20-production--business-operations)
+21. [Glossary](#21-glossary)
 
 ---
 
@@ -1860,7 +1861,182 @@ $$
 
 ---
 
-## 20. Glossary
+## 20. Production & Business Operations
+
+**From prototype to production:** This section covers the business and operational aspects of running GenAI systems at scale—cost optimization strategies, ROI frameworks, production checklists, and real-world architecture patterns.
+
+### 💰 Cost Optimization: The 70-20-10 Rule
+
+**Intelligent model routing for cost efficiency:** Route traffic by complexity to balance cost and quality. Most queries are simple and can use cheaper models; only complex queries need premium models.
+
+| Traffic Split | Model Tier      | Examples                  | Use Case                                  |
+| ------------- | --------------- | ------------------------- | ----------------------------------------- |
+| **70%**       | Cheap models    | GPT-4o-mini, Gemini Flash | Simple Q&A, classification, basic tasks   |
+| **20%**       | Mid-tier models | Claude 3 Haiku, GPT-4o    | Moderate complexity, multi-step reasoning |
+| **10%**       | Premium models  | GPT-4, Claude 3.5 Sonnet  | Complex reasoning, critical decisions     |
+
+**Result:** 60% cost reduction with 95% quality retention. Route based on query complexity (intent classification) or confidence thresholds.
+
+### 📊 ROI Calculator Framework
+
+**Measure business value:** ROI = (Benefits - Costs) / Costs × 100%
+
+**Benefits:**
+
+- **Time savings**: Hours saved × hourly rate (e.g., 10 hours/day × $50/hr × 250 days = $125K/year)
+- **Quality improvement**: Error reduction value (e.g., 20% fewer mistakes × cost per mistake)
+- **Scale enablement**: New capabilities value (e.g., 24/7 support, multilingual)
+- **Cost reduction**: Automation savings (e.g., reduce support staff by 30%)
+
+**Costs:**
+
+- **Infrastructure**: Compute, storage, network
+- **API costs**: LLM tokens, embeddings, vector DB
+- **Development**: Initial build, iteration, technical debt
+- **Operations**: Monitoring, support, maintenance
+
+**📝 Example:** Customer service agent automation
+
+- Investment: $200K (development + infrastructure)
+- Annual savings: $1.8M (reduced support staff, faster resolution)
+- ROI: (1.8M - 0.2M) / 0.2M × 100% = **800%**
+
+### 💵 Total Cost of Ownership (TCO)
+
+**Complete cost breakdown for GenAI systems:**
+
+| Category           | Components                                | Typical % of TCO |
+| ------------------ | ----------------------------------------- | ---------------- |
+| **API Costs**      | LLM tokens, embeddings, vector DB queries | 40-60%           |
+| **Infrastructure** | Compute (GPU/CPU), storage, network       | 20-30%           |
+| **Operations**     | Monitoring, support, maintenance          | 10-15%           |
+| **Development**    | Initial build, iteration, technical debt  | 10-20%           |
+
+**📝 Example:** 10M tokens/day processing
+
+- AWS Bedrock (Claude 3.5): ~$9,000/month (pay-as-you-go)
+- Azure OpenAI (GPT-4 with PTU): ~$3,150/month (70% savings with reservations)
+- Self-hosted (Llama 3.1): ~$5,000/month (4× A100 GPUs + ops)
+
+### 📈 Production Metrics Dashboard
+
+**Key metrics with targets and alert thresholds:**
+
+| Category        | Metric               | Target    | Alert Threshold | Why It Matters           |
+| --------------- | -------------------- | --------- | --------------- | ------------------------ |
+| **Performance** | P95 Latency          | <500ms    | >1000ms         | User experience          |
+|                 | Throughput           | >1000 QPS | <500 QPS        | System capacity          |
+|                 | Error Rate           | <0.1%     | >1%             | Reliability              |
+| **Quality**     | Response Relevance   | >90%      | <80%            | User satisfaction        |
+|                 | Hallucination Rate   | <5%       | >10%            | Trust & accuracy         |
+|                 | User Satisfaction    | >4.0/5    | <3.5/5          | Business impact          |
+| **Cost**        | Cost per 1K requests | <$5       | >$10            | Budget control           |
+|                 | Token Efficiency     | >80%      | <60%            | Optimization opportunity |
+|                 | Cache Hit Rate       | >30%      | <10%            | Cost savings             |
+
+### ✅ Production Deployment Checklist
+
+**Pre-Deployment:**
+
+- [ ] Load testing completed (expected peak traffic × 2)
+- [ ] Failover mechanisms tested (circuit breakers, retries)
+- [ ] Security review passed (input validation, guardrails, PII handling)
+- [ ] Cost estimation approved (with 20% buffer)
+- [ ] Monitoring dashboards configured (latency, cost, quality)
+- [ ] Runbooks documented (incident response, scaling procedures)
+- [ ] On-call rotation established
+
+**Post-Deployment:**
+
+- [ ] Error rate < 0.1% (sustained for 24 hours)
+- [ ] P95 latency within SLO (<500ms)
+- [ ] Cost tracking enabled (real-time alerts)
+- [ ] User feedback collection active (satisfaction scores)
+- [ ] A/B testing framework ready (model comparison)
+- [ ] Incident response plan tested (drill completed)
+
+### ⚠️ Risk Assessment Matrix
+
+**Business risks and mitigation strategies:**
+
+| Risk                            | Likelihood | Impact   | Mitigation                                                   |
+| ------------------------------- | ---------- | -------- | ------------------------------------------------------------ |
+| **Hallucination in production** | High       | High     | Human-in-the-loop, confidence thresholds, citations          |
+| **Data privacy breach**         | Medium     | Critical | PII redaction, on-premise deployment, encryption             |
+| **Vendor lock-in**              | Medium     | Medium   | Multi-cloud strategy, open-source models, abstraction layers |
+| **Cost overruns**               | High       | Medium   | Rate limiting, quotas, monitoring, 70-20-10 routing          |
+| **Model obsolescence**          | Low        | Medium   | Abstraction layers, model versioning, A/B testing            |
+
+### 🏗️ Real-World Architecture Patterns
+
+#### Enterprise RAG System
+
+```mermaid
+flowchart TB
+    CLIENT[Client] --> CDN[CDN + WAF]
+    CDN --> GATEWAY[API Gateway]
+    GATEWAY --> AUTH[Auth Service]
+    AUTH --> ORCH[Orchestrator]
+    ORCH --> RAG[RAG Pipeline]
+    RAG --> GUARD[Model Armor]
+    GUARD --> LLM[LLM]
+    RAG --> VDB[Vector DB]
+    RAG --> STORAGE[Blob Storage]
+```
+
+**Key components:** CDN/WAF (DDoS protection), API Gateway (rate limiting), RAG Pipeline (hybrid search + re-ranking), Model Armor (input/output filtering), Vector DB (metadata filtering).
+
+#### Multi-Agent Customer Support
+
+```mermaid
+flowchart TB
+    QUERY[User Query] --> CLASSIFIER[Intent Classifier]
+    CLASSIFIER -->|FAQ| FAQ[FAQ Agent]
+    CLASSIFIER -->|Technical| TECH[Tech Support Agent]
+    CLASSIFIER -->|Billing| BILL[Billing Agent]
+    CLASSIFIER -->|Escalation| HUMAN[Human Agent]
+    FAQ & TECH & BILL --> SYNTH[Synthesizer]
+    SYNTH --> POLICY[Policy Checker]
+    POLICY --> RESPONSE[Response]
+```
+
+**Results:** 70% automated resolution, 30s average response time.
+
+#### Healthcare AI (HIPAA-Compliant)
+
+```mermaid
+flowchart TB
+    EHR[EHR System] --> VPN[VPN/Private Link]
+    VPN --> DEID[PHI De-identification]
+    DEID --> AUDIT[Audit Logger]
+    AUDIT --> LLM[HIPAA-Compliant LLM]
+    LLM --> ENCRYPT[Encryption]
+    ENCRYPT --> STORE[Encrypted Storage]
+```
+
+**Compliance:** BAA signed, AES-256 encryption, audit trails, data residency requirements.
+
+### 🌐 Multi-Cloud Strategy
+
+**Avoid vendor lock-in and improve resilience:**
+
+```mermaid
+flowchart TB
+    REQUEST[Request] --> ROUTER[Multi-Cloud Router]
+    ROUTER -->|OpenAI models| AZURE[Azure OpenAI]
+    ROUTER -->|Claude models| AWS[AWS Bedrock]
+    ROUTER -->|Long context| GCP[Vertex AI]
+    ROUTER -->|Fallback| BACKUP[Backup Provider]
+    AZURE & AWS & GCP --> BREAKER{Circuit Breaker}
+    BREAKER -->|Failure| BACKUP
+    BREAKER -->|Success| RESPONSE[Response]
+```
+
+**Benefits:** Redundancy, cost optimization (route to cheapest provider), avoid lock-in, leverage best models per use case.
+
+---
+
+## 21. Glossary
 
 <details>
 <summary><b>Click to expand full glossary (all acronyms spelled out, no jargon)</b></summary>
