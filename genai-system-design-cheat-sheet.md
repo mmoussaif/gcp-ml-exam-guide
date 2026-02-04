@@ -76,6 +76,27 @@ flowchart LR
 | **Training**  | Fit model to data by minimizing **loss** | Pretraining, SFT, RLHF        |
 | **Inference** | Apply trained model to new data          | API calls, production serving |
 
+### 🎯 Discriminative vs Generative Models
+
+**Two fundamental approaches to ML:** Discriminative models learn to distinguish between classes (P(Y|X)). Generative models learn the data distribution to create new samples (P(X) or P(X,Y)).
+
+**Discriminative Models:**
+- **What they learn:** Conditional probability P(Y|X) — "Given input X, what's the class Y?"
+- **Purpose:** Classify or predict continuous values
+- **Examples:** Fraud detection (legitimate vs fraudulent), movie rating prediction
+- **Common algorithms:** Logistic regression, SVMs, Decision trees, KNN, Neural networks
+- **Limitation:** Cannot generate new data instances
+
+**Generative Models:**
+- **What they learn:** Data distribution P(X) or joint P(X,Y) — "What does the data look like?"
+- **Purpose:** Generate new samples that resemble training data
+- **Examples:** Text generation, image generation, speech synthesis
+- **Categories:**
+  - **Classical:** Naive Bayes, GMMs, HMMs, Boltzmann machines (good for structured data)
+  - **Modern:** VAEs, GANs, Diffusion models, Autoregressive models (excel at complex unstructured data)
+
+> **Key difference:** Discriminative models answer "Is this fraud?" Generative models answer "What does a new face look like?"
+
 ### 📈 End-to-End ML Lifecycle
 
 **From data to production:** ML in production involves continuous iteration—collect data, train models, deploy, monitor performance, and retrain when quality degrades. This cycle ensures models stay accurate as data distributions change.
@@ -419,13 +440,13 @@ flowchart TB
 
 **How different sampling methods work and their trade-offs:**
 
-| Method | How It Works | Pros | Cons | Best For |
-|--------|--------------|------|------|----------|
-| **Greedy** | Always picks highest probability token | Deterministic, fast, coherent | Repetitive, low diversity | Code, factual Q&A |
-| **Beam Search** | Keeps top-K sequences, picks best overall | High quality, coherent | Slower, less diverse, can be generic | Translation, summarization |
-| **Top-k** | Sample from k most likely tokens | Prevents weird tokens, moderate diversity | Fixed size (not adaptive), may miss good tokens | General purpose |
-| **Top-p (Nucleus)** | Sample from tokens covering probability mass p | Adaptive to confidence, good diversity | More complex, requires sorting | Creative tasks, chat |
-| **Temperature** | Rescale logits before sampling | Controls randomness level | Affects all tokens uniformly | Fine-tuning creativity |
+| Method              | How It Works                                   | Pros                                      | Cons                                            | Best For                   |
+| ------------------- | ---------------------------------------------- | ----------------------------------------- | ----------------------------------------------- | -------------------------- |
+| **Greedy**          | Always picks highest probability token         | Deterministic, fast, coherent             | Repetitive, low diversity                       | Code, factual Q&A          |
+| **Beam Search**     | Keeps top-K sequences, picks best overall      | High quality, coherent                    | Slower, less diverse, can be generic            | Translation, summarization |
+| **Top-k**           | Sample from k most likely tokens               | Prevents weird tokens, moderate diversity | Fixed size (not adaptive), may miss good tokens | General purpose            |
+| **Top-p (Nucleus)** | Sample from tokens covering probability mass p | Adaptive to confidence, good diversity    | More complex, requires sorting                  | Creative tasks, chat       |
+| **Temperature**     | Rescale logits before sampling                 | Controls randomness level                 | Affects all tokens uniformly                    | Fine-tuning creativity     |
 
 **How sampling affects quality and creativity:**
 
@@ -550,41 +571,134 @@ flowchart LR
 
 **From raw text to helpful assistant:** Training an LLM is a three-stage journey. First, pretrain on the entire internet to learn language (expensive, done by labs). Then, fine-tune on instruction examples to learn to follow directions. Finally, use human feedback to align the model—making it helpful, harmless, and honest.
 
-### 📊 Data Considerations
+### 📊 Data Preparation in GenAI
 
-**Data quality determines model quality:** The data you use for training directly impacts model performance, fairness, and safety. Consider sources, sensitivity, bias, quality, and preprocessing.
+**Data quality determines model quality:** Preparing unstructured data for generative models shifts focus from feature engineering to collecting vast amounts of high-quality, safe data and efficiently storing/retrieving it at scale.
+
+```mermaid
+flowchart LR
+    subgraph Sources["Various Data Sources"]
+        W[Web]
+        E[Email]
+        D[Documents]
+        M[Mobile]
+        L[Laptop]
+        B[Books]
+        S[Social Media]
+        DB[Databases]
+    end
+    
+    Sources --> Collect[Data Collection]
+    Collect --> Raw[Collected Raw Data]
+    Raw --> Clean[Data Cleaning]
+    Clean --> Final[Clean Data]
+```
 
 **Data Sources:**
-- **Diversity:** Web crawl, books, code repositories, scientific papers, conversations
-- **Scale:** Pretraining needs trillions of tokens; fine-tuning needs 10K-100K high-quality examples
+
+- **Diversity:** Web crawl, books, code repositories, scientific papers, conversations, social media, databases
+- **Scale:** Pretraining needs trillions of tokens (e.g., Llama 3: 15 trillion tokens = 50TB = 85,000 years of reading)
 - **Collection:** Web scraping, licensed datasets, user-generated content (with consent)
+- **Synthetic Data:** AI-generated content to augment training data (pros: diversity, scalability; cons: quality concerns, representation issues)
 
 **Data Sensitivity:**
+
 - **Personal data:** Names, emails, addresses → requires anonymization or exclusion
 - **Financial data:** Account numbers, transactions → encryption, access controls
 - **Medical data:** PHI (Protected Health Information) → HIPAA compliance, de-identification
 - **Mitigation:** PII detection tools (Presidio, DLP APIs), data residency requirements, on-premise training
 
 **Bias Detection & Mitigation:**
+
 - **Demographic bias:** Underrepresentation of certain groups in training data
 - **Geographical bias:** Overrepresentation of certain regions/languages
 - **Temporal bias:** Outdated information or perspectives
 - **Detection:** Statistical analysis, demographic parity metrics, bias audits
 - **Mitigation:** Balanced sampling, data augmentation, debiasing techniques, fairness constraints
 
+**Data Collection:**
+
+**Scale Requirements:**
+- **Large models:** Billions of parameters require vast training data to capture complex patterns
+- **Example:** Llama 3 trained on 15 trillion tokens from internet sources (equivalent to 50TB)
+- **Collection process:** Scraping text from websites, social media, forums, books, code repositories
+
+**Synthetic Data Augmentation:**
+
+```mermaid
+flowchart LR
+    R[Real Data] --> P1[Data Processing]
+    P1 --> P2[Data Processing]
+    P2 --> C[Clean Data]
+    G[GenAI Model] --> S[Synthetic Data]
+    R -.->|Train| G
+    C --> T[Training Dataset]
+    S --> T
+```
+
+**Pros:**
+- **Improving data diversity:** Adds variety, enhances generalization, especially with limited/imbalanced data
+- **Scalability:** Provides scalable way to create large datasets difficult to gather manually
+
+**Cons:**
+- **Quality concerns:** Quality depends on original model; poor data spreads biases/errors
+- **Representation issues:** May not represent original data well; ensuring diversity/representativeness is challenging
+- **Real-world distribution gaps:** May not capture complexity of real-world scenarios, risking omission of important details
+
+**Data Cleaning:**
+
+**Common Data Cleaning Steps:**
+
+```mermaid
+flowchart TB
+    subgraph Filters["Data Cleaning Pipeline"]
+        H[Harm Detection]
+        L[Low-Quality Filtering]
+        D[Deduplication]
+        N[NSFW Detection]
+    end
+    
+    Filters --> Clean[Clean Data]
+```
+
+**Key Cleaning Techniques:**
+
+- **Harm Detection:** Filter harmful, violent, or dangerous content
+- **Low-Quality Filtering:** Remove noisy, irrelevant, or low-quality data (quality scores, coherence metrics)
+- **Deduplication:** Remove duplicate content to prevent memorization and ensure diversity
+- **NSFW Detection:** Filter Not Safe For Work content (images, text)
+- **Representativeness:** Ensure data is diverse and balanced (demographic, geographical, temporal)
+
+**Why it matters:** Very large internet datasets are noisy. Careful cleaning avoids introducing biases, misinformation, or harmful material that affects model performance and safety.
+
+**Data Efficiency:**
+
+**Efficient Storage:**
+- **Distributed storage:** HDFS, Amazon S3 for massive unstructured data across multiple machines
+- **Columnar formats:** Parquet, ORC for structured data (better compression, faster queries)
+- **Cost optimization:** Traditional tools expensive/slow for massive datasets
+
+**Efficient Retrieval:**
+- **Sharding:** Split data across multiple devices for parallel access and faster retrieval/processing
+- **Indexing:** Apache Lucene, Elasticsearch for quick data location and search
+- **Pre-loading/Caching:** Frequently accessed data in memory to reduce I/O delays during retrieval
+
 **Data Quality:**
+
 - **Filtering:** Remove low-quality, irrelevant, or noisy data
 - **Outliers:** Detect and handle anomalies (statistical methods, domain expertise)
 - **Deduplication:** Remove duplicate content to prevent memorization
 - **Quality metrics:** Perplexity, coherence scores, human evaluation
 
 **Inappropriate Content:**
+
 - **NSFW detection:** Image classifiers, text filters (toxicity detection)
 - **Harmful content:** Violence, hate speech, misinformation
 - **Removal:** Automated filters + human review, content moderation pipelines
 - **Tools:** OpenAI Moderation API, Perspective API, custom classifiers
 
 **Data Preprocessing:**
+
 - **Text:** Tokenization (BPE, SentencePiece), normalization, encoding
 - **Multimodal:** Image → patches/embeddings, audio → spectrograms, video → frames
 - **Format:** Convert to model's expected input format (tokens, embeddings, tensors)
@@ -619,31 +733,34 @@ flowchart LR
 **How training works for different algorithms:**
 
 **Diffusion Training:**
+
 - **Forward process:** Gradually add noise to clean images (T steps)
 - **Reverse process:** Model learns to predict and remove noise
 - **Loss:** MSE between predicted noise and actual noise
 - **Challenge:** Requires many steps (1000+ for DDPM, 20-50 for DDIM)
 
 **Adversarial Training (GANs):**
+
 - **Generator:** Creates fake samples from noise
 - **Discriminator:** Distinguishes real from fake
 - **Loss:** Minimax game—generator minimizes discriminator's success
 - **Challenge:** Training instability, mode collapse, requires careful balancing
 
 **Autoregressive Training (LLMs):**
+
 - **Process:** Predict next token given previous tokens
 - **Loss:** Cross-entropy over vocabulary
 - **Challenge:** Sequential dependency limits parallelization; long sequences expensive
 
 **Training Challenges & Mitigations:**
 
-| Challenge | Cause | Mitigation |
-|-----------|-------|------------|
-| **Vanishing Gradients** | Deep networks, long sequences | Residual connections, layer normalization, gradient clipping |
-| **Overfitting** | Limited data, large model | Dropout, weight decay, early stopping, data augmentation |
-| **Training Instability** | GANs, large learning rates | Learning rate scheduling, gradient penalty, spectral normalization |
-| **Memory Constraints** | Large models, long sequences | Gradient checkpointing, ZeRO, quantization, mixed precision (AMP) |
-| **Slow Convergence** | Poor initialization, learning rate | Warmup, learning rate schedules, better optimizers (AdamW) |
+| Challenge                | Cause                              | Mitigation                                                         |
+| ------------------------ | ---------------------------------- | ------------------------------------------------------------------ |
+| **Vanishing Gradients**  | Deep networks, long sequences      | Residual connections, layer normalization, gradient clipping       |
+| **Overfitting**          | Limited data, large model          | Dropout, weight decay, early stopping, data augmentation           |
+| **Training Instability** | GANs, large learning rates         | Learning rate scheduling, gradient penalty, spectral normalization |
+| **Memory Constraints**   | Large models, long sequences       | Gradient checkpointing, ZeRO, quantization, mixed precision (AMP)  |
+| **Slow Convergence**     | Poor initialization, learning rate | Warmup, learning rate schedules, better optimizers (AdamW)         |
 
 ### 🎯 ML Objectives & Loss Functions
 
@@ -651,27 +768,30 @@ flowchart LR
 
 **Common ML Objectives:**
 
-| Objective | Task | Pros | Cons |
-|-----------|------|------|------|
-| **Next-token Prediction** | Language modeling | Simple, effective, learns language | May not optimize for downstream tasks |
-| **Contrastive Learning** | Embeddings, CLIP | Learns semantic similarity | Requires negative samples |
-| **Reconstruction Loss** | Autoencoders, VAEs | Learns compressed representations | May produce blurry outputs |
-| **Adversarial Loss** | GANs | Sharp, realistic outputs | Training instability |
-| **Reward Maximization** | RLHF | Aligns with human preferences | Requires reward model |
+| Objective                 | Task               | Pros                               | Cons                                  |
+| ------------------------- | ------------------ | ---------------------------------- | ------------------------------------- |
+| **Next-token Prediction** | Language modeling  | Simple, effective, learns language | May not optimize for downstream tasks |
+| **Contrastive Learning**  | Embeddings, CLIP   | Learns semantic similarity         | Requires negative samples             |
+| **Reconstruction Loss**   | Autoencoders, VAEs | Learns compressed representations  | May produce blurry outputs            |
+| **Adversarial Loss**      | GANs               | Sharp, realistic outputs           | Training instability                  |
+| **Reward Maximization**   | RLHF               | Aligns with human preferences      | Requires reward model                 |
 
 **Loss Functions:**
 
 **Single Loss Functions:**
+
 - **Cross-Entropy (CE):** Standard for classification and language modeling. Measures probability distribution mismatch.
 - **MSE (Mean Squared Error):** For regression and diffusion models (noise prediction). Sensitive to outliers.
 - **BCE (Binary Cross-Entropy):** For binary classification tasks (e.g., toxicity detection).
 
 **Multiple Loss Functions (Combined):**
+
 - **Weighted Sum:** $\mathcal{L} = \alpha \mathcal{L}_1 + \beta \mathcal{L}_2$ (e.g., reconstruction + KL divergence in VAEs)
 - **Purpose:** Balance different objectives (quality vs diversity, accuracy vs safety)
 - **Example:** Diffusion models use MSE for noise prediction + optional perceptual loss for image quality
 
 **Loss Function Selection:**
+
 - **Task alignment:** Classification → CE, Regression → MSE, Generation → CE or adversarial
 - **Training stability:** CE is stable; adversarial loss can be unstable
 - **Multi-objective:** Combine losses when optimizing for multiple goals (e.g., quality + safety)
@@ -718,30 +838,46 @@ $$
 
 **Choose the right algorithm for your task:** Different generative algorithms excel at different tasks. Understanding trade-offs helps you select the best approach for quality, efficiency, and ease of use.
 
-| Algorithm | Best For | Quality | Stability | Ease of Use | Scalability |
-|-----------|----------|---------|-----------|-------------|-------------|
-| **Diffusion Models** | Images, video, high-quality generation | ★★★★★ | ★★★★★ | ★★★☆☆ | ★★★★☆ |
-| **VAEs** | Latent representations, compression | ★★★☆☆ | ★★★★☆ | ★★★★☆ | ★★★★☆ |
-| **GANs** | Sharp images, face generation | ★★★★☆ | ★★☆☆☆ | ★★☆☆☆ | ★★★☆☆ |
-| **Autoregressive (LLMs)** | Text, sequences, language | ★★★★★ | ★★★★★ | ★★★★☆ | ★★★★★ |
+**Classical vs Modern Generative Algorithms:**
+
+**Classical Algorithms** (good for structured data):
+- **Naive Bayes:** Probabilistic model based on Bayes' theorem
+- **Gaussian Mixture Models (GMMs):** Represent data as mixture of Gaussian distributions
+- **Hidden Markov Models (HMMs):** Model joint probability of observed sequences and hidden states
+- **Boltzmann Machines:** Energy-based models for feature learning or dimensionality reduction
+- **Limitation:** Struggle with complex or unstructured data
+
+**Modern Algorithms** (excel at complex unstructured data):
+
+| Algorithm                 | Best For                               | Quality | Stability | Ease of Use | Scalability |
+| ------------------------- | -------------------------------------- | ------- | --------- | ----------- | ----------- |
+| **Diffusion Models**      | Images, video, high-quality generation | ★★★★★   | ★★★★★     | ★★★☆☆       | ★★★★☆       |
+| **VAEs**                  | Latent representations, compression    | ★★★☆☆   | ★★★★☆     | ★★★★☆       | ★★★★☆       |
+| **GANs**                  | Sharp images, face generation          | ★★★★☆   | ★★☆☆☆     | ★★☆☆☆       | ★★★☆☆       |
+| **Autoregressive (LLMs)** | Text, sequences, language              | ★★★★★   | ★★★★★     | ★★★★☆       | ★★★★★       |
 
 **Diffusion Models:**
+- **How it works:** Learn complex data distributions through reverse diffusion process
 - **Strengths:** Highest quality, stable training, excellent for images/video
 - **Weaknesses:** Slow sampling (20-50 steps), computationally expensive
 - **Use cases:** Text-to-image (DALL-E, Stable Diffusion), video generation (Sora)
-- **Scalability:** Good—latent diffusion reduces compute; can adapt to new modalities
 
 **VAEs (Variational Autoencoders):**
+- **How it works:** Encode data to latent space, then reconstruct using decoder
 - **Strengths:** Fast inference, good for compression, stable training
 - **Weaknesses:** Lower quality than diffusion, blurrier outputs
 - **Use cases:** Latent space compression (Stable Diffusion uses VAE), anomaly detection
-- **Scalability:** Excellent—efficient encoding/decoding
 
 **GANs (Generative Adversarial Networks):**
+- **How it works:** Generator creates realistic data, discriminator distinguishes real from fake
 - **Strengths:** Sharp, realistic images; fast generation
 - **Weaknesses:** Training instability, mode collapse, difficult to train
 - **Use cases:** Face generation (StyleGAN), legacy image generation
-- **Scalability:** Limited—largely replaced by diffusion models
+
+**Autoregressive Models:**
+- **How it works:** Generate data by predicting each element based on preceding elements
+- **Strengths:** Excellent for sequences, stable training, widely used
+- **Use cases:** Text generation (GPT, LLaMA), time series forecasting
 
 **Trade-offs Summary:**
 - **Quality vs Speed:** Diffusion = best quality, slowest; GANs = fast but lower quality
@@ -1439,6 +1575,7 @@ flowchart LR
 **Trade compute for memory:** Gradient checkpointing reduces memory usage during training by saving only a selected subset of activations. During backward pass, missing activations are recomputed from saved checkpoints. Reduces memory usage significantly (often 50-80%) at the cost of ~33% more compute.
 
 **How it works:**
+
 1. **Forward pass:** Save activations only at checkpoint layers (e.g., every N layers)
 2. **Backward pass:** Recompute activations between checkpoints when needed for gradients
 3. **Trade-off:** Memory saved = activations not stored; Compute cost = recomputation overhead
@@ -1688,14 +1825,14 @@ flowchart LR
 
 **Which metrics assess effectiveness in production?**
 
-| Metric | Measures | Aligns with Business Goal |
-|--------|----------|---------------------------|
-| **Click-Through Rate (CTR)** | User engagement with generated content | Boosting engagement |
-| **Conversion Rate** | Desired actions completed | Driving product innovation/purchases |
-| **User Satisfaction** | Direct feedback scores | Enhancing user experience |
-| **User Retention** | Continued usage over time | Long-term value |
-| **Latency** | Response time | User experience quality |
-| **Churn Rate** | Users leaving system | Product health |
+| Metric                       | Measures                               | Aligns with Business Goal            |
+| ---------------------------- | -------------------------------------- | ------------------------------------ |
+| **Click-Through Rate (CTR)** | User engagement with generated content | Boosting engagement                  |
+| **Conversion Rate**          | Desired actions completed              | Driving product innovation/purchases |
+| **User Satisfaction**        | Direct feedback scores                 | Enhancing user experience            |
+| **User Retention**           | Continued usage over time              | Long-term value                      |
+| **Latency**                  | Response time                          | User experience quality              |
+| **Churn Rate**               | Users leaving system                   | Product health                       |
 
 #### Bias Evaluation
 
@@ -1872,15 +2009,16 @@ flowchart TB
 
 **Complete GenAI system architecture:** Production systems require multiple components working together—preprocessing, core model, post-processing, content filtering, and quality enhancement.
 
-| Component | Role | Example |
-|-----------|------|---------|
-| **Preprocessing** | Prepare inputs for model | Tokenization, image resizing, audio normalization |
-| **Core Model** | Generate content | LLM, diffusion model, VAE |
-| **Content Filtering** | Safety checks | NSFW detection, toxicity filters, PII redaction |
-| **Post-processing** | Enhance outputs | Upscaling, formatting, citation addition |
-| **Quality Enhancement** | Improve quality | Super-resolution models, style transfer |
+| Component               | Role                     | Example                                           |
+| ----------------------- | ------------------------ | ------------------------------------------------- |
+| **Preprocessing**       | Prepare inputs for model | Tokenization, image resizing, audio normalization |
+| **Core Model**          | Generate content         | LLM, diffusion model, VAE                         |
+| **Content Filtering**   | Safety checks            | NSFW detection, toxicity filters, PII redaction   |
+| **Post-processing**     | Enhance outputs          | Upscaling, formatting, citation addition          |
+| **Quality Enhancement** | Improve quality          | Super-resolution models, style transfer           |
 
 **Example pipeline:**
+
 ```
 User Input → Preprocessing → Core Model → Content Filter → Post-processing → Quality Enhancement → Output
 ```
@@ -1901,11 +2039,13 @@ User Input → Preprocessing → Core Model → Content Filter → Post-processi
 **Improving models over time:** Production systems need feedback loops to adapt and improve.
 
 **Feedback Collection:**
+
 - **Explicit:** User ratings, thumbs up/down, surveys
 - **Implicit:** Click-through rates, completion rates, time spent
 - **Human Review:** Expert evaluation, A/B testing results
 
 **Feedback Loop Mechanisms:**
+
 1. **Collect feedback** → Store in feedback database
 2. **Analyze patterns** → Identify common failure modes
 3. **Create training data** → Convert feedback to (prompt, better_response) pairs
@@ -1914,6 +2054,7 @@ User Input → Preprocessing → Core Model → Content Filter → Post-processi
 6. **Deploy** → Roll out improved model
 
 **Retraining Strategy:**
+
 - **Incremental:** Add new feedback data periodically (weekly/monthly)
 - **Full retrain:** Major updates (quarterly/yearly)
 - **Online learning:** Continuous updates (challenging, requires careful monitoring)
