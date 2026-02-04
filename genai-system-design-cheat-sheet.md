@@ -415,6 +415,32 @@ flowchart TB
 
 > **💡 Key insight:** Temperature rescales probabilities (T<1 sharpens, T>1 flattens). Top-p adapts to distribution shape (confident = few tokens, uncertain = many). Top-k is fixed-size filtering. Max tokens controls cost and prevents infinite generation.
 
+### 🎲 Sampling Methods Deep Dive
+
+**How different sampling methods work and their trade-offs:**
+
+| Method | How It Works | Pros | Cons | Best For |
+|--------|--------------|------|------|----------|
+| **Greedy** | Always picks highest probability token | Deterministic, fast, coherent | Repetitive, low diversity | Code, factual Q&A |
+| **Beam Search** | Keeps top-K sequences, picks best overall | High quality, coherent | Slower, less diverse, can be generic | Translation, summarization |
+| **Top-k** | Sample from k most likely tokens | Prevents weird tokens, moderate diversity | Fixed size (not adaptive), may miss good tokens | General purpose |
+| **Top-p (Nucleus)** | Sample from tokens covering probability mass p | Adaptive to confidence, good diversity | More complex, requires sorting | Creative tasks, chat |
+| **Temperature** | Rescale logits before sampling | Controls randomness level | Affects all tokens uniformly | Fine-tuning creativity |
+
+**How sampling affects quality and creativity:**
+
+- **High creativity (T>1, top-p=0.95):** More diverse outputs, unexpected ideas, but may be less coherent
+- **Balanced (T=0.7-1.0, top-p=0.9):** Natural variation, good coherence, suitable for most tasks
+- **Deterministic (T→0, greedy):** Consistent, accurate, but repetitive and lacks creativity
+
+**Making sampling faster:**
+
+- **Speculative Decoding:** Small draft model generates tokens quickly, large model verifies (2-3× speedup)
+- **KV Cache:** Store computed attention values (already standard)
+- **Early Stopping:** Stop when EOS token or confidence threshold reached
+- **Batch Sampling:** Process multiple sequences in parallel
+- **Quantization:** Use INT8/INT4 models for faster inference
+
 ---
 
 ## 3. Architectures
@@ -524,6 +550,45 @@ flowchart LR
 
 **From raw text to helpful assistant:** Training an LLM is a three-stage journey. First, pretrain on the entire internet to learn language (expensive, done by labs). Then, fine-tune on instruction examples to learn to follow directions. Finally, use human feedback to align the model—making it helpful, harmless, and honest.
 
+### 📊 Data Considerations
+
+**Data quality determines model quality:** The data you use for training directly impacts model performance, fairness, and safety. Consider sources, sensitivity, bias, quality, and preprocessing.
+
+**Data Sources:**
+- **Diversity:** Web crawl, books, code repositories, scientific papers, conversations
+- **Scale:** Pretraining needs trillions of tokens; fine-tuning needs 10K-100K high-quality examples
+- **Collection:** Web scraping, licensed datasets, user-generated content (with consent)
+
+**Data Sensitivity:**
+- **Personal data:** Names, emails, addresses → requires anonymization or exclusion
+- **Financial data:** Account numbers, transactions → encryption, access controls
+- **Medical data:** PHI (Protected Health Information) → HIPAA compliance, de-identification
+- **Mitigation:** PII detection tools (Presidio, DLP APIs), data residency requirements, on-premise training
+
+**Bias Detection & Mitigation:**
+- **Demographic bias:** Underrepresentation of certain groups in training data
+- **Geographical bias:** Overrepresentation of certain regions/languages
+- **Temporal bias:** Outdated information or perspectives
+- **Detection:** Statistical analysis, demographic parity metrics, bias audits
+- **Mitigation:** Balanced sampling, data augmentation, debiasing techniques, fairness constraints
+
+**Data Quality:**
+- **Filtering:** Remove low-quality, irrelevant, or noisy data
+- **Outliers:** Detect and handle anomalies (statistical methods, domain expertise)
+- **Deduplication:** Remove duplicate content to prevent memorization
+- **Quality metrics:** Perplexity, coherence scores, human evaluation
+
+**Inappropriate Content:**
+- **NSFW detection:** Image classifiers, text filters (toxicity detection)
+- **Harmful content:** Violence, hate speech, misinformation
+- **Removal:** Automated filters + human review, content moderation pipelines
+- **Tools:** OpenAI Moderation API, Perspective API, custom classifiers
+
+**Data Preprocessing:**
+- **Text:** Tokenization (BPE, SentencePiece), normalization, encoding
+- **Multimodal:** Image → patches/embeddings, audio → spectrograms, video → frames
+- **Format:** Convert to model's expected input format (tokens, embeddings, tensors)
+
 ```mermaid
 flowchart LR
     subgraph PT["Stage 1: Pretraining"]
@@ -548,6 +613,68 @@ flowchart LR
 | **Pretraining** | Trillions of tokens         | Next-token prediction    | Base model                  |
 | **SFT**         | 10K-100K (prompt, response) | Same, instruction format | Instruction-tuned           |
 | **RLHF**        | Human preference rankings   | Maximize reward          | Aligned (helpful, harmless) |
+
+### 🎓 Training Methodology
+
+**How training works for different algorithms:**
+
+**Diffusion Training:**
+- **Forward process:** Gradually add noise to clean images (T steps)
+- **Reverse process:** Model learns to predict and remove noise
+- **Loss:** MSE between predicted noise and actual noise
+- **Challenge:** Requires many steps (1000+ for DDPM, 20-50 for DDIM)
+
+**Adversarial Training (GANs):**
+- **Generator:** Creates fake samples from noise
+- **Discriminator:** Distinguishes real from fake
+- **Loss:** Minimax game—generator minimizes discriminator's success
+- **Challenge:** Training instability, mode collapse, requires careful balancing
+
+**Autoregressive Training (LLMs):**
+- **Process:** Predict next token given previous tokens
+- **Loss:** Cross-entropy over vocabulary
+- **Challenge:** Sequential dependency limits parallelization; long sequences expensive
+
+**Training Challenges & Mitigations:**
+
+| Challenge | Cause | Mitigation |
+|-----------|-------|------------|
+| **Vanishing Gradients** | Deep networks, long sequences | Residual connections, layer normalization, gradient clipping |
+| **Overfitting** | Limited data, large model | Dropout, weight decay, early stopping, data augmentation |
+| **Training Instability** | GANs, large learning rates | Learning rate scheduling, gradient penalty, spectral normalization |
+| **Memory Constraints** | Large models, long sequences | Gradient checkpointing, ZeRO, quantization, mixed precision (AMP) |
+| **Slow Convergence** | Poor initialization, learning rate | Warmup, learning rate schedules, better optimizers (AdamW) |
+
+### 🎯 ML Objectives & Loss Functions
+
+**Choosing the right objective for your task:**
+
+**Common ML Objectives:**
+
+| Objective | Task | Pros | Cons |
+|-----------|------|------|------|
+| **Next-token Prediction** | Language modeling | Simple, effective, learns language | May not optimize for downstream tasks |
+| **Contrastive Learning** | Embeddings, CLIP | Learns semantic similarity | Requires negative samples |
+| **Reconstruction Loss** | Autoencoders, VAEs | Learns compressed representations | May produce blurry outputs |
+| **Adversarial Loss** | GANs | Sharp, realistic outputs | Training instability |
+| **Reward Maximization** | RLHF | Aligns with human preferences | Requires reward model |
+
+**Loss Functions:**
+
+**Single Loss Functions:**
+- **Cross-Entropy (CE):** Standard for classification and language modeling. Measures probability distribution mismatch.
+- **MSE (Mean Squared Error):** For regression and diffusion models (noise prediction). Sensitive to outliers.
+- **BCE (Binary Cross-Entropy):** For binary classification tasks (e.g., toxicity detection).
+
+**Multiple Loss Functions (Combined):**
+- **Weighted Sum:** $\mathcal{L} = \alpha \mathcal{L}_1 + \beta \mathcal{L}_2$ (e.g., reconstruction + KL divergence in VAEs)
+- **Purpose:** Balance different objectives (quality vs diversity, accuracy vs safety)
+- **Example:** Diffusion models use MSE for noise prediction + optional perceptual loss for image quality
+
+**Loss Function Selection:**
+- **Task alignment:** Classification → CE, Regression → MSE, Generation → CE or adversarial
+- **Training stability:** CE is stable; adversarial loss can be unstable
+- **Multi-objective:** Combine losses when optimizing for multiple goals (e.g., quality + safety)
 
 ### 🎯 RLHF Objective
 
@@ -586,6 +713,41 @@ $$
 | **Agents**             | LLM loop: think → act → observe    | Multi-step tasks             |
 | **Guardrails**         | Filter input/output                | Safety, compliance           |
 | **Grounding**          | Verify claims against sources      | Reduce hallucination         |
+
+### 🎨 Generative Algorithm Selection
+
+**Choose the right algorithm for your task:** Different generative algorithms excel at different tasks. Understanding trade-offs helps you select the best approach for quality, efficiency, and ease of use.
+
+| Algorithm | Best For | Quality | Stability | Ease of Use | Scalability |
+|-----------|----------|---------|-----------|-------------|-------------|
+| **Diffusion Models** | Images, video, high-quality generation | ★★★★★ | ★★★★★ | ★★★☆☆ | ★★★★☆ |
+| **VAEs** | Latent representations, compression | ★★★☆☆ | ★★★★☆ | ★★★★☆ | ★★★★☆ |
+| **GANs** | Sharp images, face generation | ★★★★☆ | ★★☆☆☆ | ★★☆☆☆ | ★★★☆☆ |
+| **Autoregressive (LLMs)** | Text, sequences, language | ★★★★★ | ★★★★★ | ★★★★☆ | ★★★★★ |
+
+**Diffusion Models:**
+- **Strengths:** Highest quality, stable training, excellent for images/video
+- **Weaknesses:** Slow sampling (20-50 steps), computationally expensive
+- **Use cases:** Text-to-image (DALL-E, Stable Diffusion), video generation (Sora)
+- **Scalability:** Good—latent diffusion reduces compute; can adapt to new modalities
+
+**VAEs (Variational Autoencoders):**
+- **Strengths:** Fast inference, good for compression, stable training
+- **Weaknesses:** Lower quality than diffusion, blurrier outputs
+- **Use cases:** Latent space compression (Stable Diffusion uses VAE), anomaly detection
+- **Scalability:** Excellent—efficient encoding/decoding
+
+**GANs (Generative Adversarial Networks):**
+- **Strengths:** Sharp, realistic images; fast generation
+- **Weaknesses:** Training instability, mode collapse, difficult to train
+- **Use cases:** Face generation (StyleGAN), legacy image generation
+- **Scalability:** Limited—largely replaced by diffusion models
+
+**Trade-offs Summary:**
+- **Quality vs Speed:** Diffusion = best quality, slowest; GANs = fast but lower quality
+- **Stability:** Diffusion/VAEs = stable; GANs = unstable training
+- **Ease of Use:** VAEs/LLMs = easier; Diffusion = moderate; GANs = difficult
+- **Future-proofing:** Diffusion models most flexible for new modalities (text→image→video)
 
 ### ⚡ LoRA (Low-Rank Adaptation)
 
@@ -1255,12 +1417,35 @@ flowchart LR
 | **Pipeline Parallelism** | Split layers sequentially  | Very large models |
 | **ZeRO/FSDP**            | Shard optimizer states     | Train 70B+        |
 
+**How they work:**
+
+**Data Parallelism (DP):** Each GPU has a full copy of the model. Different batches go to different GPUs. Gradients are averaged across GPUs. Simple but requires model to fit on one GPU.
+
+**Tensor Parallelism (TP):** Splits matrix operations within a layer across GPUs. For column-wise splitting: GPU 0 computes A × W₁, GPU 1 computes A × W₂, then outputs are concatenated. Enables training models larger than single GPU memory.
+
+**Pipeline Parallelism (PP):** Splits layers across GPUs sequentially. GPU 0 has layers 0-5, GPU 1 has layers 6-11, etc. Data flows through pipeline. Enables training very large models but has pipeline bubbles (some GPUs idle during startup/shutdown).
+
+**Hybrid Parallelism:** Combines DP + TP + PP for maximum efficiency. Example: 8 GPUs = 2× DP × 2× TP × 2× PP. Reduces memory usage by distributing both model and data across devices.
+
 **ZeRO Stages:**
 | Stage | Shards | Memory Reduction |
 |-------|--------|------------------|
 | ZeRO-1 | Optimizer states | ~4× |
 | ZeRO-2 | + Gradients | ~8× |
 | ZeRO-3 | + Parameters | ~N× (N = GPUs) |
+
+### 💾 Gradient Checkpointing
+
+**Trade compute for memory:** Gradient checkpointing reduces memory usage during training by saving only a selected subset of activations. During backward pass, missing activations are recomputed from saved checkpoints. Reduces memory usage significantly (often 50-80%) at the cost of ~33% more compute.
+
+**How it works:**
+1. **Forward pass:** Save activations only at checkpoint layers (e.g., every N layers)
+2. **Backward pass:** Recompute activations between checkpoints when needed for gradients
+3. **Trade-off:** Memory saved = activations not stored; Compute cost = recomputation overhead
+
+**When to use:** Training large models with limited GPU memory. Essential for training 70B+ models on consumer hardware. Often combined with ZeRO/FSDP for maximum memory efficiency.
+
+**Example:** Without checkpointing, 7B model needs ~280GB. With checkpointing (every 4 layers), needs ~140GB but takes 1.3× longer to train.
 
 ---
 
@@ -1481,6 +1666,65 @@ flowchart LR
 | **Latency P50/P95/P99** | **Tail**       | P99 <2s for chat apps            | "What's the worst-case response time?" P99 = slowest 1% of requests. |
 | **Throughput**          | **Capacity**   | Depends on GPU; A100 ~2-4K tok/s | "How many tokens/second can we serve?" System-wide capacity.         |
 
+### 📊 Evaluation Framework: Key Talking Points
+
+**Comprehensive evaluation strategy:** Evaluating generative models requires multiple perspectives—offline metrics for quality, online metrics for business impact, bias detection, robustness testing, and human evaluation.
+
+#### Offline Metrics
+
+**Which metrics best evaluate quality and accuracy?**
+
+- **Text Generation:** Perplexity (lower = better), BLEU (translation), ROUGE (summarization), METEOR (synonyms), BERTScore (semantic similarity)
+- **Image Generation:** FID (realism, lower = better), IS (quality + diversity), LPIPS (perceptual similarity)
+- **Video Generation:** FVD (temporal realism), temporal consistency scores
+
+**How do metrics measure diversity, realism, and coherence?**
+
+- **Diversity:** IS (Inception Score) measures variety; low diversity = repetitive outputs
+- **Realism:** FID compares feature distributions to real images; lower FID = more realistic
+- **Coherence:** BLEU/ROUGE measure how well output matches reference; BERTScore captures semantic meaning
+
+#### Online Metrics
+
+**Which metrics assess effectiveness in production?**
+
+| Metric | Measures | Aligns with Business Goal |
+|--------|----------|---------------------------|
+| **Click-Through Rate (CTR)** | User engagement with generated content | Boosting engagement |
+| **Conversion Rate** | Desired actions completed | Driving product innovation/purchases |
+| **User Satisfaction** | Direct feedback scores | Enhancing user experience |
+| **User Retention** | Continued usage over time | Long-term value |
+| **Latency** | Response time | User experience quality |
+| **Churn Rate** | Users leaving system | Product health |
+
+#### Bias Evaluation
+
+**How to evaluate model bias:**
+
+- **Demographic parity:** Check if outputs favor certain groups (gender, race, age)
+- **Representation analysis:** Measure distribution of sensitive attributes in outputs
+- **Fairness audits:** Statistical tests (chi-square, demographic parity metrics)
+- **Mitigation:** Balanced training data, debiasing techniques, output filtering
+
+#### Robustness & Security
+
+**Resilience to adversarial attacks:**
+
+- **Prompt injection:** Test with malicious prompts designed to override instructions
+- **Jailbreaking:** Attempt to bypass safety filters through roleplay or encoding tricks
+- **Adversarial examples:** Slight perturbations that cause incorrect outputs
+- **Testing:** Red team exercises, automated adversarial testing, monitoring for anomalies
+- **Defense:** Input validation, guardrails, output filtering, rate limiting
+
+#### Human Evaluation
+
+**Complementing automatic evaluation:**
+
+- **Methods:** Surveys, A/B testing, expert reviews, user studies
+- **When needed:** Creative tasks (writing, art), subjective quality, safety assessment
+- **Mitigating subjectivity:** Multiple reviewers, inter-rater agreement, clear rubrics, calibration sessions
+- **Integration:** Human-in-the-loop for high-stakes decisions, feedback loops for continuous improvement
+
 ---
 
 ## 13. Cost & Optimization
@@ -1624,11 +1868,89 @@ flowchart TB
 | **NeMo Guardrails**    | NVIDIA (OSS) | Topical rails, fact-checking, moderation                    |
 | **LlamaGuard**         | Meta (OSS)   | Safety classification model                                 |
 
+### 🏗️ System Components
+
+**Complete GenAI system architecture:** Production systems require multiple components working together—preprocessing, core model, post-processing, content filtering, and quality enhancement.
+
+| Component | Role | Example |
+|-----------|------|---------|
+| **Preprocessing** | Prepare inputs for model | Tokenization, image resizing, audio normalization |
+| **Core Model** | Generate content | LLM, diffusion model, VAE |
+| **Content Filtering** | Safety checks | NSFW detection, toxicity filters, PII redaction |
+| **Post-processing** | Enhance outputs | Upscaling, formatting, citation addition |
+| **Quality Enhancement** | Improve quality | Super-resolution models, style transfer |
+
+**Example pipeline:**
+```
+User Input → Preprocessing → Core Model → Content Filter → Post-processing → Quality Enhancement → Output
+```
+
+### 🛡️ Safety Mechanisms
+
+**Content moderation and safety:**
+
+- **NSFW Filters:** Image classifiers (CLIP-based), text toxicity detection (Perspective API, OpenAI Moderation)
+- **Harmful Content Detection:** Violence, hate speech, misinformation classifiers
+- **PII Protection:** Detection (Presidio, DLP APIs) → redaction/anonymization before generation
+- **Output Validation:** Post-generation checks for safety, appropriateness, compliance
+
+**How it works:** Multi-layer defense—input validation → model guardrails → output filtering → human review (for high-stakes content).
+
+### 🔄 User Feedback & Continuous Learning
+
+**Improving models over time:** Production systems need feedback loops to adapt and improve.
+
+**Feedback Collection:**
+- **Explicit:** User ratings, thumbs up/down, surveys
+- **Implicit:** Click-through rates, completion rates, time spent
+- **Human Review:** Expert evaluation, A/B testing results
+
+**Feedback Loop Mechanisms:**
+1. **Collect feedback** → Store in feedback database
+2. **Analyze patterns** → Identify common failure modes
+3. **Create training data** → Convert feedback to (prompt, better_response) pairs
+4. **Fine-tune model** → Retrain on improved dataset
+5. **A/B test** → Compare new vs old model
+6. **Deploy** → Roll out improved model
+
+**Retraining Strategy:**
+- **Incremental:** Add new feedback data periodically (weekly/monthly)
+- **Full retrain:** Major updates (quarterly/yearly)
+- **Online learning:** Continuous updates (challenging, requires careful monitoring)
+
+**Challenges:** Feedback quality, bias in feedback (only unhappy users respond), cost of retraining, versioning and rollback.
+
+### 🔒 Security Considerations
+
+**User privacy and data protection:**
+
+- **Data Privacy:** Encrypt sensitive data, use on-premise deployment for PHI/PII, data residency requirements
+- **Personalized Content:** Generate without storing user data, use differential privacy, anonymize training data
+- **Adversarial Attacks:** Input validation, rate limiting, anomaly detection, monitoring for attack patterns
+- **Model Tampering:** Secure model storage, version control, access controls, integrity checks
+- **Data Leakage:** Prevent training data extraction, output filtering, audit logs
+
+**Bias Mitigation Strategies:**
+
+- **Detection:** Statistical analysis, demographic parity metrics, bias audits
+- **Training:** Balanced datasets, debiasing techniques, fairness constraints in loss function
+- **Post-processing:** Output filtering, bias correction algorithms, fairness-aware ranking
+- **Monitoring:** Track bias metrics over time, alert on bias drift
+
+**Robustness to Adversarial Attacks:**
+
+- **Prompt Injection:** Input validation, prompt hardening, instruction hierarchy
+- **Jailbreaking:** Safety training (RLHF), guardrails, pattern detection
+- **Adversarial Examples:** Robust training, input sanitization, ensemble methods
+- **Production Monitoring:** Detect anomalies, track attack patterns, automated blocking
+
 ---
 
 ## 15. Scalability Patterns
 
 **Right-sizing your infrastructure:** GPU choice and configuration dramatically affect both cost and capability. Understand the memory requirements of your models, match them to appropriate hardware, and know when to scale horizontally vs. vertically.
+
+**How the system scales as demand increases:** Production GenAI systems must handle variable load efficiently. Scaling strategies include horizontal scaling (add more instances), vertical scaling (larger GPUs), distributed inference (model parallelism), and intelligent load balancing. Resource allocation adapts to demand patterns—auto-scaling adds instances during peak hours, spot instances reduce costs during off-peak.
 
 ### 🖥️ GPU Quick Reference
 
