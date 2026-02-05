@@ -81,6 +81,7 @@ flowchart LR
 **Two fundamental approaches to ML:** Discriminative models learn to distinguish between classes (P(Y|X)). Generative models learn the data distribution to create new samples (P(X) or P(X,Y)).
 
 **Discriminative Models:**
+
 - **What they learn:** Conditional probability P(Y|X) — "Given input X, what's the class Y?"
 - **Purpose:** Classify or predict continuous values
 - **Examples:** Fraud detection (legitimate vs fraudulent), movie rating prediction
@@ -88,6 +89,7 @@ flowchart LR
 - **Limitation:** Cannot generate new data instances
 
 **Generative Models:**
+
 - **What they learn:** Data distribution P(X) or joint P(X,Y) — "What does the data look like?"
 - **Purpose:** Generate new samples that resemble training data
 - **Examples:** Text generation, image generation, speech synthesis
@@ -587,7 +589,7 @@ flowchart LR
         S[Social Media]
         DB[Databases]
     end
-    
+
     Sources --> Collect[Data Collection]
     Collect --> Raw[Collected Raw Data]
     Raw --> Clean[Data Cleaning]
@@ -619,6 +621,7 @@ flowchart LR
 **Data Collection:**
 
 **Scale Requirements:**
+
 - **Large models:** Billions of parameters require vast training data to capture complex patterns
 - **Example:** Llama 3 trained on 15 trillion tokens from internet sources (equivalent to 50TB)
 - **Collection process:** Scraping text from websites, social media, forums, books, code repositories
@@ -637,10 +640,12 @@ flowchart LR
 ```
 
 **Pros:**
+
 - **Improving data diversity:** Adds variety, enhances generalization, especially with limited/imbalanced data
 - **Scalability:** Provides scalable way to create large datasets difficult to gather manually
 
 **Cons:**
+
 - **Quality concerns:** Quality depends on original model; poor data spreads biases/errors
 - **Representation issues:** May not represent original data well; ensuring diversity/representativeness is challenging
 - **Real-world distribution gaps:** May not capture complexity of real-world scenarios, risking omission of important details
@@ -657,7 +662,7 @@ flowchart TB
         D[Deduplication]
         N[NSFW Detection]
     end
-    
+
     Filters --> Clean[Clean Data]
 ```
 
@@ -674,11 +679,13 @@ flowchart TB
 **Data Efficiency:**
 
 **Efficient Storage:**
+
 - **Distributed storage:** HDFS, Amazon S3 for massive unstructured data across multiple machines
 - **Columnar formats:** Parquet, ORC for structured data (better compression, faster queries)
 - **Cost optimization:** Traditional tools expensive/slow for massive datasets
 
 **Efficient Retrieval:**
+
 - **Sharding:** Split data across multiple devices for parallel access and faster retrieval/processing
 - **Indexing:** Apache Lucene, Elasticsearch for quick data location and search
 - **Pre-loading/Caching:** Frequently accessed data in memory to reduce I/O delays during retrieval
@@ -841,6 +848,7 @@ $$
 **Classical vs Modern Generative Algorithms:**
 
 **Classical Algorithms** (good for structured data):
+
 - **Naive Bayes:** Probabilistic model based on Bayes' theorem
 - **Gaussian Mixture Models (GMMs):** Represent data as mixture of Gaussian distributions
 - **Hidden Markov Models (HMMs):** Model joint probability of observed sequences and hidden states
@@ -857,29 +865,34 @@ $$
 | **Autoregressive (LLMs)** | Text, sequences, language              | ★★★★★   | ★★★★★     | ★★★★☆       | ★★★★★       |
 
 **Diffusion Models:**
+
 - **How it works:** Learn complex data distributions through reverse diffusion process
 - **Strengths:** Highest quality, stable training, excellent for images/video
 - **Weaknesses:** Slow sampling (20-50 steps), computationally expensive
 - **Use cases:** Text-to-image (DALL-E, Stable Diffusion), video generation (Sora)
 
 **VAEs (Variational Autoencoders):**
+
 - **How it works:** Encode data to latent space, then reconstruct using decoder
 - **Strengths:** Fast inference, good for compression, stable training
 - **Weaknesses:** Lower quality than diffusion, blurrier outputs
 - **Use cases:** Latent space compression (Stable Diffusion uses VAE), anomaly detection
 
 **GANs (Generative Adversarial Networks):**
+
 - **How it works:** Generator creates realistic data, discriminator distinguishes real from fake
 - **Strengths:** Sharp, realistic images; fast generation
 - **Weaknesses:** Training instability, mode collapse, difficult to train
 - **Use cases:** Face generation (StyleGAN), legacy image generation
 
 **Autoregressive Models:**
+
 - **How it works:** Generate data by predicting each element based on preceding elements
 - **Strengths:** Excellent for sequences, stable training, widely used
 - **Use cases:** Text generation (GPT, LLaMA), time series forecasting
 
 **Trade-offs Summary:**
+
 - **Quality vs Speed:** Diffusion = best quality, slowest; GANs = fast but lower quality
 - **Stability:** Diffusion/VAEs = stable; GANs = unstable training
 - **Ease of Use:** VAEs/LLMs = easier; Diffusion = moderate; GANs = difficult
